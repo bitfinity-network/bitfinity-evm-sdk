@@ -31,7 +31,7 @@ impl OracleCanister {
         self.state.reset(settings);
 
         #[cfg(target_arch = "wasm32")]
-        crate::timer::wasm32::init_timer(&mut self.state);
+        crate::timer::wasm32::init_timer(self.state.pair_price);
     }
 
     /// Returns principal of canister owner.

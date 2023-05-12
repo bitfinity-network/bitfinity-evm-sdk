@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 use crate::state::{PairKey, LATEST_TIME_MEMORY_ID, PAIR_MEMORY_ID, PRICE_MEMORY_ID};
 
 /// Map of cryptocurrency pairs -> timestamp -> price, like (eth_usdt(), Time, Price);
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct PairPrice {}
 
 impl PairPrice {
