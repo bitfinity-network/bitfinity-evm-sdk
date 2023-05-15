@@ -75,7 +75,7 @@ pub fn http(req: HttpRequest, now: u64, pair_price: &PairPrice) -> HttpResponse 
             s.push_str("The following will display the latest 100 pieces of data of each pair in the format of (timestamp in nano sec, price * 1_0000_0000):\n\n");
             s.push_str(&format!("now: {now}\n\n"));
 
-            let pairs: Vec<PairKey> = pair_price.get_pairs().iter().cloned().collect();
+            let pairs: Vec<PairKey> = pair_price.get_pairs().to_vec();
 
             for pair in pairs {
                 let prices = pair_price.get_prices(&pair, 100);

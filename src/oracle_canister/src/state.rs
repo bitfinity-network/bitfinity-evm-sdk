@@ -76,7 +76,7 @@ mod tests {
     use crate::state::PairKey;
 
     #[test]
-    fn principal_key_serialization() {
+    fn pair_key_serialization() {
         let pair_key = PairKey("abdcd2332*&(\n".to_string());
         let encoded = pair_key.to_bytes();
         let decoded = PairKey::from_bytes(encoded);

@@ -14,15 +14,15 @@ pub mod wasm32 {
     use crate::timer::sync_price;
 
     pub fn init_timer(mut pair_price: PairPrice) {
-        set_timer_interval(Duration::from_secs(10), move || {
-            let pairs: Vec<PairKey> = pair_price.get_pairs().iter().cloned().collect();
+        // Every 5 mins will update the price
+        set_timer_interval(Duration::from_secs(300), move || {
+            let pairs: Vec<PairKey> = pair_price.get_pairs().to_vec();
 
             ic_cdk::spawn(async move {
                 for pair_key in pairs {
                     let now = ic::time();
 
-                    let res = sync_price(pair_key, now, &mut pair_price).await;
-                    ic_cdk::print(format!("{:?}", res));
+                    let _ = sync_price(pair_key, now, &mut pair_price).await;
                 }
             })
         });

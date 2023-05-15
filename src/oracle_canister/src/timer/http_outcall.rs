@@ -10,11 +10,17 @@ use crate::state::{PairKey, PairPrice, PRICE_MULTIPLE};
 
 #[derive(Debug, Default, Deserialize)]
 struct ResBody {
-    pub symbol: String,
-    pub price: String,
+    pub data: CoinBaseData,
 }
 
-pub async fn http_outcall(
+#[derive(Debug, Default, Deserialize)]
+struct CoinBaseData {
+    pub base: String,
+    pub currency: String,
+    pub amount: String,
+}
+
+async fn http_outcall(
     url: String,
     method: HttpMethod,
     body: Option<Vec<u8>>,
@@ -53,34 +59,11 @@ pub async fn http_outcall(
 }
 
 pub fn transform(raw: TransformArgs) -> HttpResponse {
-    let mut sanitized = raw.response;
-    sanitized.headers = vec![
-        HttpHeader {
-            name: "Content-Security-Policy".to_string(),
-            value: "default-src 'self'".to_string(),
-        },
-        HttpHeader {
-            name: "Referrer-Policy".to_string(),
-            value: "strict-origin".to_string(),
-        },
-        HttpHeader {
-            name: "Permissions-Policy".to_string(),
-            value: "geolocation=(self)".to_string(),
-        },
-        HttpHeader {
-            name: "Strict-Transport-Security".to_string(),
-            value: "max-age=63072000".to_string(),
-        },
-        HttpHeader {
-            name: "X-Frame-Options".to_string(),
-            value: "DENY".to_string(),
-        },
-        HttpHeader {
-            name: "X-Content-Type-Options".to_string(),
-            value: "nosniff".to_string(),
-        },
-    ];
-    sanitized
+    HttpResponse {
+        status: raw.response.status,
+        body: raw.response.body,
+        ..Default::default()
+    }
 }
 
 pub async fn sync_price(
@@ -88,16 +71,18 @@ pub async fn sync_price(
     timestamp: u64,
     pair_price: &mut PairPrice,
 ) -> Result<()> {
-    let mut base_url = "https://api.binance.com/api/v3/ticker/price?symbol=".to_string();
+    let mut base_url = "https://api.coinbase.com/v2/prices/".to_string();
     base_url.push_str(&pair_key.0);
-    let res = http_outcall(base_url, HttpMethod::GET, None, Some(1024)).await?;
+    base_url.push_str("/spot");
+    let res = http_outcall(base_url, HttpMethod::GET, None, Some(8000)).await?;
 
     let json_body = serde_json::from_slice::<ResBody>(&res.body)
         .map_err(|e| Error::HttpError(format!("serde_json err: {e}")))?;
 
-    let price_f64 = json_body.price.parse::<f64>().unwrap();
+    let price_f64 = json_body.data.amount.parse::<f64>().unwrap();
     let price_u64 = (price_f64 * PRICE_MULTIPLE).round() as u64;
-    if json_body.symbol != pair_key.0 {
+    let base_currency = format!("{}-{}", json_body.data.base, json_body.data.currency);
+    if base_currency != pair_key.0 {
         return Err(Error::Internal(
             "http response's symbol isn't the pair key".to_string(),
         ));
