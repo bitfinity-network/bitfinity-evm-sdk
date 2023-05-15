@@ -66,3 +66,7 @@ With the library provided by dfinity, [ic-cdk-timers](https://github.com/dfinity
 Finally, the canister can also be used as an http server. You can directly access the canister in the browser. For example, our demo canister can be accessed through: https://p6xvw-7iaaa-aaaap-aaana-cai.raw.ic0.app/
 
 Accessing smart contracts directly in the browser can eliminate some centralization risks. The frontend of dapps on other blockchains, such as uniswap, is centralized, and there are some acts of [abuse of rights](https://www.coindesk.com/tech/2022/08/22/popular-uniswap-frontend-blocks-over-250-crypto-addresses-related-to-defi-crimes/).
+
+## Summarize
+
+Due to the versatility of http outcalls, we can easily integrate data from coinbase, coinecko, coinmarketcap and so on. For example, for the `brc-20` token that was very popular a while ago, chainlink cannot provide their price-feeding service, but oracle canister can. Moreover, because http outcalls are cheap and have few restrictions, this will cause a revolution in oracle. Oracle are no longer exclusive to high-net-profit services(such as DeFi at the top), but will greatly enhance blockchain's access to the real world and derive many unexpected gameplay.
