@@ -50,7 +50,7 @@ impl Default for Settings {
     }
 }
 
-/// Storable String. used as a stable storage key.
+/// Storable String. used as a stable storage pair name.
 #[derive(Default, Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct PairKey(pub String);
 
@@ -65,7 +65,7 @@ impl Storable for PairKey {
 }
 
 impl BoundedStorable for PairKey {
-    const MAX_SIZE: u32 = 16;
+    const MAX_SIZE: u32 = 32;
     const IS_FIXED_SIZE: bool = false;
 }
 

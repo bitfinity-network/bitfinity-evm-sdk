@@ -45,7 +45,7 @@ impl PairPrice {
     /// Add pair to the oracle canister, need to check permission in external function
     /// If pair already exists, returns Error::PairExist.
     pub fn add_pair(&mut self, pair: PairKey) -> Result<()> {
-        if pair.0.as_bytes().len() > 16 {
+        if pair.0.as_bytes().len() > 32 {
             return Err(Error::PairKeyTooLong(pair.0.as_bytes().len() as u64));
         }
         if PAIR_VEC.with(|pairs| pairs.borrow().iter().any(|i| i == pair)) {
@@ -81,7 +81,21 @@ impl PairPrice {
             return Err(Error::PairNotExist);
         }
 
-        PRICE_MAP.with(|map| map.borrow_mut().insert(&pair, &timestamp, &price));
+        PRICE_MAP.with(|map| {
+            let len = map.borrow().len();
+            if len > 100 {
+                let keys = map
+                    .borrow()
+                    .range(&pair)
+                    .take(len - 100)
+                    .map(|(k, _)| k)
+                    .collect::<Vec<u64>>();
+                for key in keys {
+                    map.borrow_mut().remove(&pair, &key);
+                }
+            }
+            map.borrow_mut().insert(&pair, &timestamp, &price)
+        });
 
         LATEST_TIME_MAP.with(|map| map.borrow_mut().insert(pair, timestamp));
 
