@@ -22,8 +22,8 @@ rlp = { workspace = true }
 tokio = { workspace = true }
 hex = { workspace = true }
 ic-exports = { workspace = true, features = ["state-machine"] }
-eth-signer = { path = "../eth-signer" }
-did = { path = "../did" }
-evm_adapter = { path = "../evm-adapter" }
+eth-signer = { workspace = true }
+did = { workspace = true }
+evm_adapter = { workspace = true }
 clap = { workspace = true }
 dirs = { workspace = true }
