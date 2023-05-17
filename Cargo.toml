@@ -1,23 +1,37 @@
-[package]
-name = "register_agent"
+[workspace]
+# members = ["src/oracle_canister", "src/register_agent"]
+members = ["src/oracle_canister"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
+
+[workspace.dependencies]
+anyhow = "1.0"
 candid = "0.8"
+# infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
 ethers-core = { git = "https://github.com/infinity-swap/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
+serde_bytes = "0.11"
+clap = { version = "4.2.4", features = ["derive"] }
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
 ic-agent = "0.23.0"
 serde = "1.0"
 serde_json = "1.0"
 thiserror = "1.0"
-anyhow = "1.0"
 rlp = "0.5"
 tokio = { version = "1.24", features = ["macros", "rt"] }
 hex = "0.4"
-ic-exports = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-exports", tag = "v0.3.42" }
+ic-exports = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-exports", tag = "v0.3.45" }
+ic-stable-structures = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-stable-structures", tag = "v0.3.45" }
+ic-canister = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-canister", tag = "v0.3.45" }
 eth-signer = { git = "ssh://git@github.com/infinity-swap/evm-canister", package = "eth-signer" }
 did = { git = "ssh://git@github.com/infinity-swap/evm-canister", package = "did" }
 evm_adapter = { git = "ssh://git@github.com/infinity-swap/evm-canister", package = "evm_adapter" }
-clap = { version = "4.2.4", features = ["derive"] }
 dirs = "4.0.0"
+url = { version = "2.3.1", default-features = false }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
