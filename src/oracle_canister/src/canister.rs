@@ -1,5 +1,5 @@
 use candid::{CandidType, Deserialize};
-use ic_canister::{generate_idl, init, query, update, Canister, Idl, PreUpdate};
+use ic_canister::{generate_idl, init, post_upgrade, query, update, Canister, Idl, PreUpdate};
 use ic_exports::ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_exports::ic_kit::ic;
 use ic_exports::Principal;
@@ -163,6 +163,12 @@ impl OracleCanister {
     #[query]
     fn transform(&self, raw: TransformArgs) -> HttpResponse {
         transform(raw)
+    }
+
+    #[post_upgrade]
+    fn post_upgrade(&self) {
+        #[cfg(target_arch = "wasm32")]
+        crate::timer::wasm32::init_timer(self.state.pair_price);
     }
 
     /// Returns candid IDL.
