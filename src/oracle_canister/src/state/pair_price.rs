@@ -82,7 +82,7 @@ impl PairPrice {
         }
 
         PRICE_MAP.with(|map| {
-            let len = map.borrow().len();
+            let len = map.borrow().range(&pair).count();
             if len > 100 {
                 let keys = map
                     .borrow()
