@@ -79,7 +79,7 @@ pub fn http(req: HttpRequest, now: u64, pair_price: &PairPrice) -> HttpResponse 
 
             for pair in pairs {
                 let prices = pair_price.get_prices(&pair, 100);
-                s.push_str(&pair.0);
+                s.push_str(&coin_name_to_symbol(pair.0));
                 s.push('\n');
                 s.push_str(&format!("{prices:?}"));
                 s.push_str("\n\n");
@@ -100,5 +100,20 @@ pub fn http(req: HttpRequest, now: u64, pair_price: &PairPrice) -> HttpResponse 
             streaming_strategy: None,
             upgrade: None,
         },
+    }
+}
+
+fn coin_name_to_symbol(name: String) -> String {
+    match name.as_ref() {
+        "bitcoin" => "BTC-USD".to_string(),
+        "ethereum" => "ETH-USD".to_string(),
+        "internet-computer" => "ICP-USD".to_string(),
+        "ordinals" => "ORDI-USD".to_string(),
+        "dfuk" => "DFUK-USD".to_string(),
+        "pepebrc" => "PEPE(Ordinals)-USD".to_string(),
+        "pizabrc" => "PIZA(Ordinals)-USD".to_string(),
+        "biso" => "BISO-USD".to_string(),
+        "meme-brc-20" => "MEME(Ordinals)-USD".to_string(),
+        _ => format!("{}-USD", name),
     }
 }

@@ -1,5 +1,5 @@
 use candid::{CandidType, Deserialize};
-use ic_canister::{generate_idl, init, query, update, Canister, Idl, PreUpdate};
+use ic_canister::{generate_idl, init, post_upgrade, query, update, Canister, Idl, PreUpdate};
 use ic_exports::ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_exports::ic_kit::ic;
 use ic_exports::Principal;
@@ -7,7 +7,7 @@ use ic_exports::Principal;
 use crate::error::{Error, Result};
 use crate::state::http::{http, HttpRequest as ServeRequest, HttpResponse as ServeHttpResponse};
 use crate::state::{PairKey, Settings, State};
-use crate::timer::{sync_price, transform};
+use crate::timer::{sync_coinbase_price, sync_coingecko_price, transform};
 
 /// A canister to transfer funds between IC token canisters and EVM canister contracts.
 #[derive(Canister)]
@@ -124,16 +124,23 @@ impl OracleCanister {
     }
 
     #[update]
-    pub async fn update_price(&mut self, pair: String) -> Result<()> {
+    pub async fn update_price(&mut self, pairs: Vec<String>, api: ApiType) -> Result<()> {
         self.check_owner(ic::caller())?;
-        let now = ic::time();
 
-        let pair_key = PairKey(pair);
-        if !self.state.pair_price.is_exist(&pair_key) {
-            return Err(Error::PairNotExist);
+        let mut pair_keys = Vec::new();
+        for pair_key in pairs.into_iter().map(|p| PairKey(p)) {
+            if !self.state.pair_price.is_exist(&pair_key) {
+                return Err(Error::PairNotExist);
+            }
+            pair_keys.push(pair_key);
         }
 
-        sync_price(pair_key, now, &mut self.state.pair_price).await
+        match api {
+            ApiType::Coinbase => {
+                sync_coinbase_price(pair_keys[0].clone(), &mut self.state.pair_price).await
+            }
+            ApiType::Coingecko => sync_coingecko_price(pair_keys, &mut self.state.pair_price).await,
+        }
     }
 
     #[query]
@@ -158,6 +165,12 @@ impl OracleCanister {
         transform(raw)
     }
 
+    #[post_upgrade]
+    fn post_upgrade(&self) {
+        #[cfg(target_arch = "wasm32")]
+        crate::timer::wasm32::init_timer(self.state.pair_price);
+    }
+
     /// Returns candid IDL.
     /// This should be the last fn to see previous endpoints in macro.
     pub fn idl() -> Idl {
@@ -165,12 +178,18 @@ impl OracleCanister {
     }
 }
 
-/// Minter canister initialization data.
+/// Oracle canister initialization data.
 #[derive(Debug, Deserialize, CandidType, Clone, Copy)]
 pub struct InitData {
     /// Principal of canister's owner.
     pub owner: Principal,
 
-    /// Principal of EVM canister, in which minter canister will mint/burn tokens.
+    /// Principal of EVM canister, in which Oracle canister will mint/burn tokens.
     pub evmc_principal: Principal,
+}
+
+#[derive(Debug, Deserialize, CandidType, Clone, Copy)]
+pub enum ApiType {
+    Coinbase,
+    Coingecko,
 }
