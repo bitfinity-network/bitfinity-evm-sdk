@@ -128,7 +128,7 @@ impl OracleCanister {
         self.check_owner(ic::caller())?;
 
         let mut pair_keys = Vec::new();
-        for pair_key in pairs.into_iter().map(|p| PairKey(p)) {
+        for pair_key in pairs.into_iter().map(PairKey) {
             if !self.state.pair_price.is_exist(&pair_key) {
                 return Err(Error::PairNotExist);
             }
