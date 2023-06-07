@@ -1,17 +1,15 @@
 [package]
 name = "register_agent"
-categories = [ ]
+categories = []
 description = ""
-edition = "2021"
 homepage = "https://github.com/infinity-swap/register-evm-agent"
 include = ["src/**/*", "README.md"]
-keywords = [ ]
+keywords = []
 readme = "README.md"
 repository = "https://github.com/infinity-swap/register-evm-agent"
-version = "0.1.0"
 
-"version.workspace" = true
-"edition.workspace" = true
+version.workspace = true
+edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -28,7 +26,6 @@ dirs = { workspace = true }
 env_logger = { workspace = true }
 eth-signer = { workspace = true }
 ethers-core = { workspace = true }
-evm_adapter = { workspace = true }
 hex = { workspace = true }
 ic-agent = { workspace = true }
 ic-exports = { workspace = true, features = ["state-machine"] }

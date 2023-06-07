@@ -20,6 +20,8 @@ pub enum Error {
     CouldNotCheckRegistrationStatus(String, Principal),
     #[error("failed to get agent principal: {0}")]
     CouldNotGetPrincipal(String),
+    #[error("failed to get registration info: {0}")]
+    CouldNotGetRegistrationInfo(String),
     #[error("could not decode transaction: {0}")]
     Decoder(DecoderError),
     #[error("EVM error: {0}")]

@@ -16,3 +16,5 @@ pub const METHOD_ADDRESS_REGISTERED: &str = "is_address_registered";
 pub const METHOD_MINT_EVM_TOKENS: &str = "mint_evm_tokens";
 /// method to query account basic for wallet address
 pub const METHOD_ACCOUNT_BASIC: &str = "account_basic";
+/// method to query registration minter address and registration fee
+pub const METHOD_REGISTRATION_IC_AGENT_INFO: &str = "registration_ic_agent_info";
