@@ -20,8 +20,8 @@ jobs:
             runs-on: ubuntu-latest
             container-image: ghcr.io/infinity-swap/ic-dev-full:rust1.68-dfx0.13-rc-2022-09-30
             git-fetch-depth: "0"
-            skip-test: ${{ github.ref_type == 'tag' }}
-            audit-allow-warnings: true
+            skip-test: true
+            audit-allow-warnings: false
             cargo-clippy-extra-args: "-- -D warnings"
             output-artifact: artifact-evmc
             enable-target-cache: true
