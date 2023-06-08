@@ -11,7 +11,7 @@ use ic_agent::Agent;
 
 use crate::agent::{init_agent, user_principal};
 use crate::constant::{
-    AMOUNT_TO_MINT, METHOD_ACCOUNT_BASIC, METHOD_ADDRESS_REGISTERED, METHOD_MINT_EVM_TOKENS,
+    AMOUNT_TO_MINT, METHOD_ACCOUNT_BASIC, METHOD_ADDRESS_REGISTERED, METHOD_MINT_NATIVE_TOKENS,
     METHOD_REGISTER_IC_AGENT, METHOD_REGISTRATION_IC_AGENT_INFO, METHOD_VERIFY_REGISTRATION,
     NETWORK_IC,
 };
@@ -75,8 +75,8 @@ impl<'a> RegistrationService<'a> {
 
         // mint tokens to be able to pay registration fee (only on testnets)
         if self.network != NETWORK_IC {
-            info!("test net: minting EVM tokens for address");
-            self.mint_evm_tokens_to_address().await?;
+            info!("test net: minting native tokens for address");
+            self.mint_native_tokens_to_address().await?;
         }
 
         let res = self
@@ -173,14 +173,14 @@ impl<'a> RegistrationService<'a> {
         Ok(tx)
     }
 
-    async fn mint_evm_tokens_to_address(&self) -> Result<()> {
+    async fn mint_native_tokens_to_address(&self) -> Result<()> {
         let address = H160::from(self.wallet.address());
         info!("minting EVM tokens to {address}");
         let payload = Encode!(&address, &did::U256::from(AMOUNT_TO_MINT))?;
 
         let res = self
             .agent
-            .update(&self.evmc_canister_id, METHOD_MINT_EVM_TOKENS)
+            .update(&self.evmc_canister_id, METHOD_MINT_NATIVE_TOKENS)
             .with_arg(payload)
             .call_and_wait()
             .await?;

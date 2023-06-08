@@ -8,7 +8,7 @@ use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 
 use super::registration::RegistrationService;
-use crate::constant::NETWORK_LOCAL;
+use crate::constant::{DEFAULT_CHAIN_ID, NETWORK_LOCAL};
 use crate::error::Error;
 
 /// CLI tool for generating wallet & registering minter principal to the evmc
@@ -32,7 +32,7 @@ pub enum Commands {
 #[derive(Args)]
 pub struct RegisterArgs {
     /// chain id
-    #[arg(short = 'c', long = "chain-id")]
+    #[arg(short = 'c', long = "chain-id", default_value_t = DEFAULT_CHAIN_ID)]
     pub chain_id: u64,
 
     /// Path to your identity pem file
