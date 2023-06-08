@@ -199,7 +199,7 @@ impl<'a> RegistrationService<'a> {
         let args = Encode!()?;
 
         let res = agent
-            .query(&evmc_canister_id, METHOD_REGISTRATION_IC_AGENT_INFO)
+            .query(evmc_canister_id, METHOD_REGISTRATION_IC_AGENT_INFO)
             .with_arg(args)
             .call()
             .await?;
