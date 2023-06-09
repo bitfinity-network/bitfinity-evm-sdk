@@ -1,8 +1,17 @@
 [package]
 name = "simple_canister"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+export-api = []
 
 [dependencies]
+candid = { workspace = true }
+ic-canister = { workspace = true }
+ic-exports = { workspace = true }
+ic-stable-structures = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
