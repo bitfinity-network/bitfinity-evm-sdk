@@ -8,7 +8,7 @@ use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 
 use super::registration::RegistrationService;
-use crate::constant::{DEFAULT_CHAIN_ID, NETWORK_LOCAL};
+use crate::constant::{DEFAULT_CHAIN_ID, NETWORK_IC, NETWORK_LOCAL};
 use crate::error::Error;
 
 /// CLI tool for generating wallet & registering minter principal to the evmc
@@ -31,6 +31,9 @@ pub enum Commands {
 
 #[derive(Args)]
 pub struct RegisterArgs {
+    /// amount of native tokens to mint on testnets for this wallet
+    #[arg(short = 'a', long = "amount-to-mint")]
+    pub amount_to_mint: Option<u64>,
     /// chain id
     #[arg(short = 'c', long = "chain-id", default_value_t = DEFAULT_CHAIN_ID)]
     pub chain_id: u64,
@@ -46,7 +49,7 @@ pub struct RegisterArgs {
 
     /// wallet signing key
     #[arg(short = 'k', long = "key")]
-    pub signing_key: Option<String>,
+    pub signing_key: String,
 
     /// IC Network (ic, local or custom url)
     #[arg(short, long, default_value_t = String::from(NETWORK_LOCAL))]
@@ -55,16 +58,17 @@ pub struct RegisterArgs {
 
 impl RegisterArgs {
     pub async fn exec(&self) -> Result<()> {
-        let wallet = get_wallet(self.signing_key.as_deref())?;
+        let wallet = get_wallet(self.signing_key.as_str())?;
         let address = wallet.address();
 
         match RegistrationService::new(
+            self.amount_to_mint,
             self.chain_id,
             self.evmc,
             self.register_canister_id,
             wallet,
             &self.identity,
-            self.network.clone(),
+            &network_url(&self.network),
         )
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?
@@ -93,16 +97,11 @@ impl RegisterArgs {
     }
 }
 
-/// Generate a new wallet or parse an existing one.
-fn get_wallet<'a>(signing_key: Option<&str>) -> Result<Wallet<'a, SigningKey>> {
-    match signing_key {
-        Some(key_hex) => {
-            let key_bytes = hex::decode(key_hex)?;
-            let wallet = Wallet::from_bytes(&key_bytes)?;
-            Ok(wallet)
-        }
-        None => generate_wallet(),
-    }
+/// Parse an existing wallet
+fn get_wallet<'a>(signing_key: &str) -> Result<Wallet<'a, SigningKey>> {
+    let key_bytes = hex::decode(signing_key)?;
+    let wallet = Wallet::from_bytes(&key_bytes)?;
+    Ok(wallet)
 }
 
 /// generate a brand new wallet
@@ -121,4 +120,13 @@ pub fn generate_wallet<'a>() -> Result<Wallet<'a, SigningKey>> {
         address.to_hex_str(),
     );
     Ok(wallet)
+}
+
+/// make network url from network name
+fn network_url(network: &str) -> &str {
+    match network {
+        NETWORK_LOCAL => "http://localhost:8000",
+        NETWORK_IC => "https://ic0.app",
+        url => url,
+    }
 }

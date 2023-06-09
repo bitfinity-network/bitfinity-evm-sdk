@@ -1,6 +1,3 @@
-/// Amount to mint on testnet
-pub const AMOUNT_TO_MINT: u128 = 10_u128.pow(18);
-
 /// network name for production
 pub const NETWORK_IC: &str = "ic";
 /// network name for local replica

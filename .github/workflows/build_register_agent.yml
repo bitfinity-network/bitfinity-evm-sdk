@@ -23,7 +23,6 @@ jobs:
             skip-test: true
             audit-allow-warnings: false
             cargo-clippy-extra-args: "-- -D warnings"
-            output-artifact: artifact-evmc
             enable-target-cache: true
         secrets:
             gh_token: ${{ secrets.GH_PKG_TOKEN }}

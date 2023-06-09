@@ -11,17 +11,16 @@ use ic_agent::Agent;
 
 use crate::agent::{init_agent, user_principal};
 use crate::constant::{
-    AMOUNT_TO_MINT, METHOD_ACCOUNT_BASIC, METHOD_ADDRESS_REGISTERED, METHOD_MINT_NATIVE_TOKENS,
+    METHOD_ACCOUNT_BASIC, METHOD_ADDRESS_REGISTERED, METHOD_MINT_NATIVE_TOKENS,
     METHOD_REGISTER_IC_AGENT, METHOD_REGISTRATION_IC_AGENT_INFO, METHOD_VERIFY_REGISTRATION,
-    NETWORK_IC,
 };
 use crate::error::{Error, Result};
 
 pub struct RegistrationService<'a> {
     agent: Agent,
+    amount_to_mint: Option<u64>,
     chain_id: u64,
     evmc_canister_id: Principal,
-    network: String,
     register_canister_id: Principal,
     registration_info: RegistrationInfo,
     wallet: Wallet<'a, SigningKey>,
@@ -29,15 +28,16 @@ pub struct RegistrationService<'a> {
 
 impl<'a> RegistrationService<'a> {
     pub async fn new(
+        amount_to_mint: Option<u64>,
         chain_id: u64,
         evmc_canister_id: Principal,
         register_canister_id: Principal,
         wallet: Wallet<'a, SigningKey>,
         identity: &Path,
-        network: String,
+        network_url: &str,
     ) -> Result<RegistrationService<'a>> {
         info!("initializing agent...");
-        let agent = init_agent(identity, &network).await?;
+        let agent = init_agent(identity, network_url).await?;
         info!("registration service initialized");
 
         info!("collecting registration info");
@@ -45,9 +45,9 @@ impl<'a> RegistrationService<'a> {
 
         Ok(Self {
             agent,
+            amount_to_mint,
             chain_id,
             evmc_canister_id,
-            network,
             register_canister_id,
             registration_info,
             wallet,
@@ -74,9 +74,9 @@ impl<'a> RegistrationService<'a> {
         let args = Encode!(&Transaction::from(tx), &self.register_canister_id)?;
 
         // mint tokens to be able to pay registration fee (only on testnets)
-        if self.network != NETWORK_IC {
-            info!("test net: minting native tokens for address");
-            self.mint_native_tokens_to_address().await?;
+        if let Some(amount_to_mint) = self.amount_to_mint {
+            info!("minting native tokens for address");
+            self.mint_native_tokens_to_address(amount_to_mint).await?;
         }
 
         let res = self
@@ -173,10 +173,10 @@ impl<'a> RegistrationService<'a> {
         Ok(tx)
     }
 
-    async fn mint_native_tokens_to_address(&self) -> Result<()> {
+    async fn mint_native_tokens_to_address(&self, amount_to_mint: u64) -> Result<()> {
         let address = H160::from(self.wallet.address());
         info!("minting EVM tokens to {address}");
-        let payload = Encode!(&address, &did::U256::from(AMOUNT_TO_MINT))?;
+        let payload = Encode!(&address, &did::U256::from(amount_to_mint))?;
 
         let res = self
             .agent
