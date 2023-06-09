@@ -8,8 +8,13 @@ use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 
 use super::registration::RegistrationService;
-use crate::constant::{DEFAULT_CHAIN_ID, NETWORK_IC, NETWORK_LOCAL};
 use crate::error::Error;
+
+const DEFAULT_CHAIN_ID: u64 = 355113;
+/// network name for production
+const NETWORK_IC: &str = "ic";
+/// network name for local replica
+const NETWORK_LOCAL: &str = "local";
 
 /// CLI tool for generating wallet & registering minter principal to the evmc
 #[derive(Parser)]

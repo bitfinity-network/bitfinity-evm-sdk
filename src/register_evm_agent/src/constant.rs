@@ -1,8 +1,3 @@
-/// network name for production
-pub const NETWORK_IC: &str = "ic";
-/// network name for local replica
-pub const NETWORK_LOCAL: &str = "local";
-
 /// method to register an IC agent on the EVMC
 pub const METHOD_REGISTER_IC_AGENT: &str = "register_ic_agent";
 /// method to verify registration of IC agent on the EMVC
