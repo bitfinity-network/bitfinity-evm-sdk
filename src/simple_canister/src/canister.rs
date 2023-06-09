@@ -4,7 +4,11 @@ use ic_exports::ic_kit::ic;
 use ic_exports::Principal;
 
 use crate::error::{Error, Result};
-use crate::state::{Settings, State};
+use crate::state::{
+    evm::did::{Transaction, H160, H256, U256},
+    evm::EvmCanister,
+    Settings, State,
+};
 
 /// A canister to transfer funds between IC token canisters and EVM canister contracts.
 #[derive(Canister)]
@@ -61,6 +65,38 @@ impl TempCanister {
         self.check_owner(ic::caller())?;
         self.state.config.set_evmc(evmc_id);
         Ok(())
+    }
+
+    #[query]
+    pub fn get_account(&self) -> Result<H160> {
+        self.state.evm.get_account()
+    }
+
+    #[update]
+    pub async fn register_account(
+        &mut self,
+        transaction: Transaction,
+        signing_key: Vec<u8>,
+    ) -> Result<()> {
+        self.check_owner(ic::caller())?;
+        self.state
+            .evm
+            .register_account(transaction, signing_key)
+            .await
+    }
+
+    #[update]
+    pub async fn transact(&mut self, value: U256, to: H160, data: Vec<u8>) -> Result<H256> {
+        self.check_owner(ic::caller())?;
+
+        self.state.evm.transact(value, to, data).await
+    }
+
+    #[update]
+    pub async fn create_contract(&mut self, value: U256, code: Vec<u8>) -> Result<H256> {
+        self.check_owner(ic::caller())?;
+
+        self.state.evm.create_contract(value, code).await
     }
 
     fn check_owner(&self, principal: Principal) -> Result<()> {

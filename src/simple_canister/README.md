@@ -112,7 +112,7 @@ dfx canister --network ic call evmc account_basic '("0x20bc9e20dfef8378034935677
 (record { balance = "0x1079c1"; nonce = "0x2" })
 ```
 
-## Build
+## Build simple canister
 
 Install [ic-wasm](https://github.com/dfinity/ic-wasm) first, and run:
 ```sh
@@ -124,4 +124,55 @@ ic-wasm target/wasm32-unknown-unknown/release/simple_canister.wasm -o ./.artifac
 
 ```
 
-## registy
+## deploy and test simple canister
+
+You need to create a canister on ic first, and change the `simple_canister`'s id in the [canister_ids.json](../../canister_ids.json) to the one you just created. Here, I use the canister id I created to complete the example.
+
+### deploy
+```sh
+dfx build simple_canister --network ic
+
+dfx canister install simple_canister --argument "record { owner=principal \"$(dfx identity get-principal)\";evmc=principal \"4fe7g-7iaaa-aaaak-aegcq-cai\"}" --network ic -m=reinstall
+...
+Reinstalling code for canister simple_canister, with canister ID chu2x-jyaaa-aaaah-aaqra-cai
+
+dfx canister call simple_canister get_evm_canister_id --network ic --query
+(principal "4fe7g-7iaaa-aaaak-aegcq-cai")
+
+dfx canister call simple_canister get_owner --network ic --query
+(principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")
+```
+
+### Generate private key & signature
+```sh
+cd register-evm-agent
+
+cargo run --bin signature
+private key: [205, 146, 244, 60, 253, 62, 173, 41, 157, 78, 64, 26, 238, 133, 139, 201, 226, 85, 55, 40, 68, 75, 137, 157, 91, 89, 215, 143, 104, 248, 231, 40]
+r: 0x33f30f8cb9a78503939bc95d60337cd3927bf8894e8b9b559c616d7e2ca220c5, s: 0x2b602328d168c888503046e2a90759b56ba6517c3039d5c9bdb3f93fcf65c149, v: 0xad675
+tx hash: 0xdc31589be8d55865d63c7054c7460a88a4d68e242afd3f147b06e05d1543fdae
+tx: Legacy(TransactionRequest { from: Some(0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c), to: Some(Address(0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b)), gas: Some(21000), gas_price: Some(10), value: Some(100000), data: None, nonce: Some(0), chain_id: Some(355113) })
+```
+
+### call simple_canister register_account
+
+This will bind this address `0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c` to the `simple_canister` id.
+```sh
+# recharge to the new address
+dfx canister --network ic call evmc mint_evm_tokens '("0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c", "0x186a00")'
+(variant { Ok = "0x186a00" })
+
+# call register_account 
+dfx canister --network ic call simple_canister register_account '(record {r="0x33f30f8cb9a78503939bc95d60337cd3927bf8894e8b9b559c616d7e2ca220c5";s="0x2b602328d168c888503046e2a90759b56ba6517c3039d5c9bdb3f93fcf65c149";v="0xad675";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c";hash="0xdc31589be8d55865d63c7054c7460a88a4d68e242afd3f147b06e05d1543fdae";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, vec {205:nat8;146:nat8;244:nat8;60:nat8;253:nat8;62:nat8;173:nat8;41:nat8;157:nat8;78:nat8;64:nat8;26:nat8;238:nat8;133:nat8;139:nat8;201:nat8;226:nat8;85:nat8;55:nat8;40:nat8;68:nat8;75:nat8;137:nat8;157:nat8;91:nat8;89:nat8;215:nat8;143:nat8;104:nat8;248:nat8;231:nat8;40:nat8;})'
+(variant { Ok })
+
+dfx canister --network ic call simple_canister get_account --query
+(variant { Ok = "0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c" })
+
+dfx canister --network ic call simple_canister transact '("0x100", "0x000000000000000000000000000000000000dddd", vec{})'
+(
+  variant {
+    Ok = "0xc770cc15ce5d8f6186e8050462266da805e2c513d159e04ea62dbfd450b05a39"
+  },
+)
+```
