@@ -1,19 +1,10 @@
 {
     "canisters": {
-        "oracle_canister": {
+        "simple_canister": {
             "build": "",
-            "candid": ".artifact/oracle_canister.did",
-            "wasm": ".artifact/oracle_canister.wasm",
+            "candid": ".artifact/simple_canister.did",
+            "wasm": ".artifact/simple_canister.wasm",
             "type": "custom"
-        }
-    },
-    "networks": {
-        "local": {
-            "bind": "127.0.0.1:8000",
-            "type": "ephemeral",
-            "replica": {
-                "subnet_type": "system"
-            }
         }
     }
 }
