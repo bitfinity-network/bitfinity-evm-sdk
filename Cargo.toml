@@ -1,5 +1,5 @@
 [workspace]
-members = ["src/oracle_canister", "src/register_agent"]
+members = ["src/oracle_canister", "src/register_evm_agent"]
 
 [workspace.package]
 version = "0.1.0"

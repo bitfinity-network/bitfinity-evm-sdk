@@ -1,5 +1,5 @@
 [package]
-name = "register_agent"
+name = "register_evm_agent"
 categories = []
 description = ""
 homepage = "https://github.com/infinity-swap/register-evm-agent"
@@ -14,7 +14,7 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name = "register_agent"
+name = "register-evm-agent"
 path = "src/main.rs"
 
 [dependencies]

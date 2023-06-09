@@ -6529,7 +6529,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "436b050e76ed2903236f032a59761c1eb99e1b0aead2c257922771dab1fc8c78"
 
 [[package]]
-name = "register_agent"
+name = "register_evm_agent"
 version = "0.1.0"
 dependencies = [
  "anyhow",
