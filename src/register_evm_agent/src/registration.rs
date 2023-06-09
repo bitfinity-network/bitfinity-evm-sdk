@@ -1,15 +1,14 @@
-use std::path::Path;
-
 use candid::{Decode, Encode, Principal};
 use did::error::EvmError;
-use did::{registration_info::RegistrationInfo, BasicAccount, Transaction, H160};
+use did::registration_info::RegistrationInfo;
+use did::{BasicAccount, Transaction, H160};
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::TransactionRequest;
 use ic_agent::Agent;
 
-use crate::agent::{init_agent, user_principal};
+use crate::agent::user_principal;
 use crate::constant::{
     METHOD_ACCOUNT_BASIC, METHOD_ADDRESS_REGISTERED, METHOD_MINT_NATIVE_TOKENS,
     METHOD_REGISTER_IC_AGENT, METHOD_REGISTRATION_IC_AGENT_INFO, METHOD_VERIFY_REGISTRATION,
@@ -28,20 +27,16 @@ pub struct RegistrationService<'a> {
 
 impl<'a> RegistrationService<'a> {
     pub async fn new(
+        agent: Agent,
         amount_to_mint: Option<u64>,
         chain_id: u64,
         evmc_canister_id: Principal,
         register_canister_id: Principal,
         wallet: Wallet<'a, SigningKey>,
-        identity: &Path,
-        network_url: &str,
     ) -> Result<RegistrationService<'a>> {
-        info!("initializing agent...");
-        let agent = init_agent(identity, network_url).await?;
-        info!("registration service initialized");
-
         info!("collecting registration info");
         let registration_info = Self::get_registration_info(&agent, &evmc_canister_id).await?;
+        info!("registration service initialized");
 
         Ok(Self {
             agent,

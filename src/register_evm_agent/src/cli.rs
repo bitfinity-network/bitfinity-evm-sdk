@@ -8,6 +8,7 @@ use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 
 use super::registration::RegistrationService;
+use crate::agent::init_agent;
 use crate::error::Error;
 
 const DEFAULT_CHAIN_ID: u64 = 355113;
@@ -70,14 +71,17 @@ impl RegisterArgs {
         let wallet = get_wallet(self.signing_key.as_str())?;
         let address = wallet.address();
 
+        info!("initializing agent...");
+        let network = network_url(&self.network);
+        let agent = init_agent(&self.identity, &network).await?;
+
         match RegistrationService::new(
+            agent,
             self.amount_to_mint,
             self.chain_id,
             self.evmc,
             self.register_canister_id,
             wallet,
-            &self.identity,
-            &network_url(&self.network),
         )
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?
