@@ -39,26 +39,30 @@ pub struct RegisterArgs {
     /// amount of native tokens to mint on testnets for this wallet
     #[arg(short = 'a', long = "amount-to-mint")]
     pub amount_to_mint: Option<u64>,
+
     /// chain id
-    #[arg(short = 'c', long = "chain-id", default_value_t = DEFAULT_CHAIN_ID)]
+    #[arg(short = 'C', long = "chain-id", default_value_t = DEFAULT_CHAIN_ID)]
     pub chain_id: u64,
 
     /// Path to your identity pem file
+    #[arg(short = 'i', long = "identity")]
     pub identity: PathBuf,
 
     /// Evmc canister principal
+    #[arg(short = 'e', long = "evmc")]
     pub evmc: Principal,
 
+    /// IC Network (ic, local or custom url)
+    #[arg(short, long, default_value_t = String::from(NETWORK_LOCAL))]
+    pub network: String,
+
     /// Principal of the canister to register
+    #[arg(short = 'c', long = "canister-id")]
     pub register_canister_id: Principal,
 
     /// wallet signing key
     #[arg(short = 'k', long = "key")]
     pub signing_key: String,
-
-    /// IC Network (ic, local or custom url)
-    #[arg(short, long, default_value_t = String::from(NETWORK_LOCAL))]
-    pub network: String,
 }
 
 impl RegisterArgs {

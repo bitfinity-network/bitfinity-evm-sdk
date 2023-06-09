@@ -40,7 +40,7 @@ Wallet:
 In order to register a canister the following command needs to be run
 
 ```sh
-register-evm-agent register -k <private_key> -n <network> <identity_path> <evmc_principal> <register_canister_principal>
+register-evm-agent register -k <private_key> -n <network> -i <identity_path> --evmc <evmc_principal> --canister-id <register_canister_principal>
 ```
 
 Where:
@@ -68,5 +68,5 @@ register-evm-agent register --help
 - **Specify the chain id**: you can specify the cain id providing the id as an argument
 
     ```sh
-    register-evm-agent register -k ... -c <custom-chain-id>
+    register-evm-agent register -k ... -C <custom-chain-id>
     ```
