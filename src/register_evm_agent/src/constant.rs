@@ -10,5 +10,3 @@ pub const METHOD_MINT_NATIVE_TOKENS: &str = "mint_native_tokens";
 pub const METHOD_ACCOUNT_BASIC: &str = "account_basic";
 /// method to query registration minter address and registration fee
 pub const METHOD_REGISTRATION_IC_AGENT_INFO: &str = "registration_ic_agent_info";
-
-pub const DEFAULT_CHAIN_ID: u64 = 355113;

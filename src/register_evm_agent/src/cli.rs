@@ -73,7 +73,7 @@ impl RegisterArgs {
 
         info!("initializing agent...");
         let network = network_url(&self.network);
-        let agent = init_agent(&self.identity, &network).await?;
+        let agent = init_agent(&self.identity, network).await?;
 
         match RegistrationService::new(
             agent,
