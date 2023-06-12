@@ -12,7 +12,7 @@ struct RegistrationInfo {
 
 #[tokio::main]
 async fn main() {
-    let minter_address = get_minter_address().await.expect("call evmc error");
+    let registration_info = get_minter_address().await.expect("call evmc error");
 
     let wallet = LocalWallet::new(&mut rand::thread_rng());
     println!("private key: {:?}", wallet.signer().to_bytes().to_vec());
@@ -20,8 +20,8 @@ async fn main() {
     // ======== generate evm registry tx ========
     let tx = TransactionRequest::new()
         .from(wallet.address())
-        .to(minter_address.as_str()) // MINTER_ADDRESS
-        .value(100_000) // REGISTRATION_FEE
+        .to(registration_info.minter_address.as_str()) // MINTER_ADDRESS
+        .value(registration_info.registration_fee) // REGISTRATION_FEE
         .chain_id(355113) // evmc testnet chain id
         .gas(21000) // gas limit
         .gas_price(10) // use min gas price
@@ -39,7 +39,7 @@ async fn main() {
     println!("tx: {:?}", tx);
 }
 
-async fn get_minter_address() -> Result<String, AgentError> {
+async fn get_minter_address() -> Result<RegistrationInfo, AgentError> {
     let identity = AnonymousIdentity {};
     let transport = ReqwestHttpReplicaV2Transport::create("https://ic0.app")?;
 
@@ -57,5 +57,5 @@ async fn get_minter_address() -> Result<String, AgentError> {
         .await?;
 
     let res = Decode!(res.as_slice(), RegistrationInfo).expect("decode response error");
-    Ok(res.minter_address)
+    Ok(res)
 }
