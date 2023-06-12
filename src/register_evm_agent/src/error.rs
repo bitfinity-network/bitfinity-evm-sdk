@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use candid::Principal;
-use did::error::EvmError;
 use eth_signer::WalletError;
+use evmc_did::error::EvmError;
 use ic_agent::identity::PemError;
 use ic_agent::AgentError;
 use rlp::DecoderError;

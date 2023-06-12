@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use anyhow::Result;
 use candid::Principal;
 use clap::{Args, Parser, Subcommand};
-use did::H160;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
+use evmc_did::H160;
 
 use super::registration::RegistrationService;
 use crate::agent::init_agent;

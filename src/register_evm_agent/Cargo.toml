@@ -21,11 +21,11 @@ path = "src/main.rs"
 anyhow = { workspace = true }
 candid = { workspace = true }
 clap = { workspace = true }
-did = { workspace = true }
 dirs = { workspace = true }
 env_logger = { workspace = true }
 eth-signer = { workspace = true }
 ethers-core = { workspace = true }
+evmc-did = { workspace = true }
 hex = { workspace = true }
 ic-agent = { workspace = true }
 ic-exports = { workspace = true, features = ["state-machine"] }
