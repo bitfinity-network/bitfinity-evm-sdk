@@ -79,9 +79,11 @@ impl TempCanister {
         signing_key: Vec<u8>,
     ) -> Result<()> {
         self.check_owner(ic::caller())?;
+        let canister_id = ic::id();
+
         self.state
             .evm
-            .register_account(transaction, signing_key)
+            .register_account(transaction, signing_key, canister_id)
             .await
     }
 
@@ -89,14 +91,22 @@ impl TempCanister {
     pub async fn transact(&mut self, value: U256, to: H160, data: Vec<u8>) -> Result<H256> {
         self.check_owner(ic::caller())?;
 
-        self.state.evm.transact(value, to, data).await
+        self.state.evm.transact(value, to, data, None).await
     }
 
     #[update]
-    pub async fn create_contract(&mut self, value: U256, code: Vec<u8>) -> Result<H256> {
+    pub async fn create_contract(
+        &mut self,
+        value: U256,
+        code: Vec<u8>,
+        gas_limit: u64,
+    ) -> Result<H256> {
         self.check_owner(ic::caller())?;
 
-        self.state.evm.create_contract(value, code).await
+        self.state
+            .evm
+            .create_contract(value, code, Some(gas_limit))
+            .await
     }
 
     fn check_owner(&self, principal: Principal) -> Result<()> {

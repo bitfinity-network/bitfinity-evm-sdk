@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 
-use candid::{CandidType, Deserialize};
+use candid::{CandidType, Deserialize, Principal};
 use ic_stable_structures::{StableCell, Storable};
 
 use crate::error::{Error, Result};
@@ -9,7 +9,7 @@ use crate::state::ACCOUNT_MEMORY_ID;
 
 use super::did::{decode, encode, Transaction, H160};
 use super::EvmCanister;
-use super::{EvmCanisterImpl, REGISTRATION_FEE};
+use super::{EvmCanisterImpl, MINT_AMOUNT};
 
 #[derive(Default, Clone)]
 pub struct Account {}
@@ -32,6 +32,7 @@ impl Account {
         &mut self,
         transaction: Transaction,
         signing_key: Vec<u8>,
+        self_canister_id: Principal,
     ) -> Result<()> {
         // check if account is alrewady registered or in process
         if ACCOUNT_DATA_CELL.with(|account| {
@@ -53,7 +54,10 @@ impl Account {
         let address = transaction.from.clone();
 
         // check if the address is regestry
-        match evm_impl.is_address_registered(address.clone()).await {
+        match evm_impl
+            .is_address_registered(address.clone(), self_canister_id)
+            .await
+        {
             Err(err) => {
                 self.reset();
                 return Err(err);
@@ -71,7 +75,7 @@ impl Account {
 
         // mint EVM native tokens to from address
         if let Err(err) = evm_impl
-            .mint_evm_tokens(address.clone(), REGISTRATION_FEE.into())
+            .mint_evm_tokens(address.clone(), MINT_AMOUNT.into())
             .await
         {
             self.reset();
@@ -79,13 +83,19 @@ impl Account {
         }
 
         // register ic agent
-        if let Err(err) = evm_impl.register_ic_agent(transaction).await {
+        if let Err(err) = evm_impl
+            .register_ic_agent(transaction, self_canister_id)
+            .await
+        {
             self.reset();
             return Err(err);
         }
 
         // verify the key
-        if let Err(err) = evm_impl.verify_registration(signing_key).await {
+        if let Err(err) = evm_impl
+            .verify_registration(signing_key, self_canister_id)
+            .await
+        {
             self.reset();
             return Err(err);
         }

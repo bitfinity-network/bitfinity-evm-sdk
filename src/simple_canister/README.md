@@ -51,7 +51,7 @@ and signature's r, s, v and tx's hash.
 
 Obviously, this address should not be registered, but let's double check: 
 ```sh
-dfx canister --network ic call evmc is_address_registered '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
+dfx canister --network ic call evmc is_address_registered '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
 (false)
 ```
 
@@ -66,25 +66,25 @@ dfx canister --network ic call evmc account_basic '("0x20bc9e20dfef8378034935677
 (record { balance = "0x186a00"; nonce = "0x0" })
 ```
 
-### call register_ic_agent
+### call evmc register_ic_agent
 
 Use data from above:
 ```sh
-dfx canister --network ic call evmc register_ic_agent '(record {r="0xdbb3af3eda0d65ff1e71dcd720a14bde8f4daeda54b2910c7bb32f26ed53d02c";s="0x1cd0c88b0feb607772c9d59fe716fbb29d920238baeda4786e0191fc44e0c57a";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x20bc9e20dfef83780349356779b9b688552ccbb0";hash="0x41b56fadd83a943582c91c62411f9e302d36c177dd8ba18ff257f1750d678a93";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"})'
+dfx canister --network ic call evmc register_ic_agent '(record {r="0xdbb3af3eda0d65ff1e71dcd720a14bde8f4daeda54b2910c7bb32f26ed53d02c";s="0x1cd0c88b0feb607772c9d59fe716fbb29d920238baeda4786e0191fc44e0c57a";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x20bc9e20dfef83780349356779b9b688552ccbb0";hash="0x41b56fadd83a943582c91c62411f9e302d36c177dd8ba18ff257f1750d678a93";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")'
 (variant { Ok })
 ```
 Success!
 
-### call verify_registration
+### call evmc verify_registration
 
 Use data from above:
 ```sh
-dfx canister --network ic call evmc verify_registration '(vec {81:nat8;72:nat8;69:nat8;68:nat8;94:nat8;35:nat8;255:nat8;67:nat8;238:nat8;77:nat8;189:nat8;96:nat8;235:nat8;181:nat8;172:nat8;162:nat8;60:nat8;166:nat8;12:nat8;240:nat8;207:nat8;30:nat8;28:nat8;188:nat8;136:nat8;11:nat8;249:nat8;108:nat8;197:nat8;123:nat8;241:nat8;190:nat8})'
+dfx canister --network ic call evmc verify_registration '(vec {81:nat8;72:nat8;69:nat8;68:nat8;94:nat8;35:nat8;255:nat8;67:nat8;238:nat8;77:nat8;189:nat8;96:nat8;235:nat8;181:nat8;172:nat8;162:nat8;60:nat8;166:nat8;12:nat8;240:nat8;207:nat8;30:nat8;28:nat8;188:nat8;136:nat8;11:nat8;249:nat8;108:nat8;197:nat8;123:nat8;241:nat8;190:nat8}, principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")'
 (variant { Ok })
 ```
 Success, let's check that:
 ```sh
-dfx canister --network ic call evmc is_address_registered '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
+dfx canister --network ic call evmc is_address_registered '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
 (true)
 
 dfx canister --network ic call evmc account_basic '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
@@ -121,7 +121,6 @@ cargo run -p simple_canister --features "export-api" > ./.artifact/simple_canist
 cargo build --target wasm32-unknown-unknown --release --package simple_canister --features "export-api"
 
 ic-wasm target/wasm32-unknown-unknown/release/simple_canister.wasm -o ./.artifact/simple_canister.wasm shrink
-
 ```
 
 ## deploy and test simple canister
@@ -148,31 +147,54 @@ dfx canister call simple_canister get_owner --network ic --query
 cd register-evm-agent
 
 cargo run --bin signature
-private key: [205, 146, 244, 60, 253, 62, 173, 41, 157, 78, 64, 26, 238, 133, 139, 201, 226, 85, 55, 40, 68, 75, 137, 157, 91, 89, 215, 143, 104, 248, 231, 40]
-r: 0x33f30f8cb9a78503939bc95d60337cd3927bf8894e8b9b559c616d7e2ca220c5, s: 0x2b602328d168c888503046e2a90759b56ba6517c3039d5c9bdb3f93fcf65c149, v: 0xad675
-tx hash: 0xdc31589be8d55865d63c7054c7460a88a4d68e242afd3f147b06e05d1543fdae
-tx: Legacy(TransactionRequest { from: Some(0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c), to: Some(Address(0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b)), gas: Some(21000), gas_price: Some(10), value: Some(100000), data: None, nonce: Some(0), chain_id: Some(355113) })
+private key: [22, 61, 28, 1, 194, 244, 15, 43, 50, 157, 198, 16, 19, 92, 223, 2, 154, 46, 55, 125, 36, 79, 186, 148, 29, 202, 58, 210, 39, 12, 223, 143]
+r: 0x59643861ba80b938a0d8d27e455f4372fadbc2dff7fa48705ecd8ebf4bca6ac7, s: 0x200f8b4d6dfc1faa20a2cb589fc29342c84b73dd2972b46b4fcbcc6d69618696, v: 0xad676
+tx hash: 0x5737a2054a8e71432632e9955bbd395c2991061ea586b2d07cd32164ae4d870a
+tx: Legacy(TransactionRequest { from: Some(0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4), to: Some(Address(0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b)), gas: Some(21000), gas_price: Some(10), value: Some(100000), data: None, nonce: Some(0), chain_id: Some(355113) })
 ```
 
-### call simple_canister register_account
+### register a address for simple_canister
 
-This will bind this address `0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c` to the `simple_canister` id.
+This will bind this address `0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4` to the `simple_canister` id.
 ```sh
-# recharge to the new address
-dfx canister --network ic call evmc mint_evm_tokens '("0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c", "0x186a00")'
-(variant { Ok = "0x186a00" })
+dfx canister id simple_canister --network ic
+chu2x-jyaaa-aaaah-aaqra-cai
 
-# call register_account 
-dfx canister --network ic call simple_canister register_account '(record {r="0x33f30f8cb9a78503939bc95d60337cd3927bf8894e8b9b559c616d7e2ca220c5";s="0x2b602328d168c888503046e2a90759b56ba6517c3039d5c9bdb3f93fcf65c149";v="0xad675";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c";hash="0xdc31589be8d55865d63c7054c7460a88a4d68e242afd3f147b06e05d1543fdae";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, vec {205:nat8;146:nat8;244:nat8;60:nat8;253:nat8;62:nat8;173:nat8;41:nat8;157:nat8;78:nat8;64:nat8;26:nat8;238:nat8;133:nat8;139:nat8;201:nat8;226:nat8;85:nat8;55:nat8;40:nat8;68:nat8;75:nat8;137:nat8;157:nat8;91:nat8;89:nat8;215:nat8;143:nat8;104:nat8;248:nat8;231:nat8;40:nat8;})'
-(variant { Ok })
+dfx canister --network ic call evmc is_address_registered '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
+(false)
 
 dfx canister --network ic call simple_canister get_account --query
-(variant { Ok = "0x86fceba569c36a4cd7a7479cea5fb3c00e1a163c" })
+(variant { Err = variant { Internal = "Account no registered yet" } })
 
-dfx canister --network ic call simple_canister transact '("0x100", "0x000000000000000000000000000000000000dddd", vec{})'
+dfx canister --network ic call evmc account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
+(record { balance = "0x0"; nonce = "0x0" })
+
+
+# call simple_canister, simple_canister will check is_address_registered, mint_evm_tokens, register_ic_agent, verify_registration
+dfx canister --network ic call simple_canister register_account '(record {r="0x59643861ba80b938a0d8d27e455f4372fadbc2dff7fa48705ecd8ebf4bca6ac7";s="0x200f8b4d6dfc1faa20a2cb589fc29342c84b73dd2972b46b4fcbcc6d69618696";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4";hash="0x5737a2054a8e71432632e9955bbd395c2991061ea586b2d07cd32164ae4d870a";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, vec {22:nat8;61:nat8;28:nat8;1:nat8;194:nat8;244:nat8;15:nat8;43:nat8;50:nat8;157:nat8;198:nat8;16:nat8;19:nat8;92:nat8;223:nat8;2:nat8;154:nat8;46:nat8;55:nat8;125:nat8;36:nat8;79:nat8;186:nat8;148:nat8;29:nat8;202:nat8;58:nat8;210:nat8;39:nat8;12:nat8;223:nat8;143:nat8})'
+(variant { Ok })
+
+dfx canister --network ic call evmc is_address_registered '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
+(true)
+
+dfx canister --network ic call simple_canister get_account --query
+(variant { Ok = "0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4" })
+
+dfx canister --network ic call evmc account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
+(record { balance = "0x93db90"; nonce = "0x1" })
+
+dfx canister --network ic call simple_canister transact '("0xff", "0x000000000000000000000000000000000000ffff", vec{})'
 (
   variant {
-    Ok = "0xc770cc15ce5d8f6186e8050462266da805e2c513d159e04ea62dbfd450b05a39"
+    Ok = "0x10130ead963a9505e94ccd39a79e477cb7743c2e2bdee541cb95d9100c9469aa"
   },
 )
+```
+
+Success, we can see result in [explorer](https://explorer.bitfinity.network/tx/0x10130ead963a9505e94ccd39a79e477cb7743c2e2bdee541cb95d9100c9469aa)
+
+and the account state of `0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4` changed.
+```sh
+dfx canister --network ic call evmc account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
+(record { balance = "0x90a641"; nonce = "0x2" })
 ```

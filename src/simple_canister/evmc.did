@@ -64,7 +64,6 @@ type EvmError = variant {
     Token : TxError;
     BlockDoesNotExist : text;
     NoHistoryDataForBlock : text;
-    UnexpectedNonce;
     InvalidGasPrice : text;
     NotProcessableTransactionError : HaltError;
     RegistrationCheckFailed;
@@ -174,17 +173,21 @@ type MetricsMap = record {
 type MetricsStorage = record { metrics : MetricsMap };
 type Permission = variant { ReadLogs; Admin; UpdateLogsConfiguration };
 type PermissionList = record { permissions : vec Permission };
-type Result = variant { Ok : text; Err : EvmError };
-type Result_1 = variant { Ok : text; Err : EvmError };
+type RegistrationInfo = record {
+    minter_address : text;
+    registration_fee : nat64;
+};
+type Result = variant { Ok : PermissionList; Err : EvmError };
+type Result_1 = variant { Ok; Err : EvmError };
 type Result_10 = variant { Ok : Account; Err : EvmError };
-type Result_2 = variant { Ok : BlockResult; Err : EvmError };
-type Result_3 = variant { Ok : nat64; Err : EvmError };
-type Result_4 = variant { Ok : opt Transaction; Err : EvmError };
-type Result_5 = variant { Ok : opt TransactionReceipt; Err : EvmError };
-type Result_6 = variant { Ok : vec text; Err : EvmError };
-type Result_7 = variant { Ok : PermissionList; Err : EvmError };
-type Result_8 = variant { Ok : EvmStats; Err : EvmError };
-type Result_9 = variant { Ok; Err : EvmError };
+type Result_2 = variant { Ok : text; Err : EvmError };
+type Result_3 = variant { Ok : text; Err : EvmError };
+type Result_4 = variant { Ok : BlockResult; Err : EvmError };
+type Result_5 = variant { Ok : nat64; Err : EvmError };
+type Result_6 = variant { Ok : opt Transaction; Err : EvmError };
+type Result_7 = variant { Ok : opt TransactionReceipt; Err : EvmError };
+type Result_8 = variant { Ok : vec text; Err : EvmError };
+type Result_9 = variant { Ok : EvmStats; Err : EvmError };
 type StreamingStrategy = variant {
     Callback : record { token : record {}; callback : func() -> () };
 };
@@ -268,34 +271,40 @@ service : (EvmcInitData) -> {
     get_curr_metrics : () -> (MetricsData) query;
     get_metrics : () -> (MetricsStorage) query;
     account_basic : (text) -> (BasicAccount) query;
-    call_message : (TransactionParams, text, text) -> (Result);
-    create_contract : (TransactionParams, text) -> (Result);
+    admin_ic_permissions_add : (principal, vec Permission) -> (Result);
+    admin_ic_permissions_get : (principal) -> (Result) query;
+    admin_ic_permissions_remove : (principal, vec Permission) -> (Result);
+    admin_set_block_gas_limit : (nat64) -> (Result_1);
+    admin_set_history_size : (nat64) -> (Result_1);
+    admin_set_min_gas_price : (text) -> (Result_1);
+    call_message : (TransactionParams, text, text) -> (Result_2);
+    create_contract : (TransactionParams, text) -> (Result_2);
     deposit_account : () -> (Account) query;
-    deposit_tokens : (text, text) -> (Result_1);
+    deposit_tokens : (text, text) -> (Result_3);
     eth_accounts : () -> (vec text) query;
     eth_block_number : () -> (nat64) query;
     eth_call : (opt text, opt text, opt text, nat64, opt text, opt text) -> (
-        Result_1
+        Result_3
     ) query;
     eth_chain_id : () -> (nat64) query;
-    eth_estimate_gas : (text, opt text, nat64, text, text) -> (Result_1) query;
-    eth_get_balance : (text, text) -> (Result_1) query;
-    eth_get_block_by_hash : (text, bool) -> (Result_2) query;
-    eth_get_block_by_number : (text, bool) -> (Result_2) query;
-    eth_get_block_transaction_count_by_block_number : (text) -> (Result_3) query;
+    eth_estimate_gas : (text, opt text, nat64, text, text) -> (Result_3) query;
+    eth_get_balance : (text, text) -> (Result_3) query;
+    eth_get_block_by_hash : (text, bool) -> (Result_4) query;
+    eth_get_block_by_number : (text, bool) -> (Result_4) query;
+    eth_get_block_transaction_count_by_block_number : (text) -> (Result_5) query;
     eth_get_block_transaction_count_by_hash : (text) -> (nat64) query;
-    eth_get_block_transaction_count_by_number : (text) -> (Result_3) query;
-    eth_get_code : (text, text) -> (Result_1) query;
-    eth_get_storage_at : (text, text, text) -> (Result_1) query;
+    eth_get_block_transaction_count_by_number : (text) -> (Result_5) query;
+    eth_get_code : (text, text) -> (Result_3) query;
+    eth_get_storage_at : (text, text, text) -> (Result_3) query;
     eth_get_transaction_by_block_hash_and_index : (text, nat64) -> (
         opt Transaction
     ) query;
     eth_get_transaction_by_block_number_and_index : (text, nat64) -> (
-        Result_4
+        Result_6
     ) query;
     eth_get_transaction_by_hash : (text) -> (opt Transaction) query;
-    eth_get_transaction_count : (text, text) -> (Result_1) query;
-    eth_get_transaction_receipt : (text) -> (Result_5) query;
+    eth_get_transaction_count : (text, text) -> (Result_3) query;
+    eth_get_transaction_receipt : (text) -> (Result_7) query;
     eth_hashrate : () -> (nat64) query;
     eth_mining : () -> (bool) query;
     eth_protocol_version : () -> (nat64) query;
@@ -307,25 +316,20 @@ service : (EvmcInitData) -> {
     get_tx_indexes : () -> (vec text) query;
     http_request : (HttpRequest) -> (HttpResponse) query;
     http_request_update : (HttpRequest) -> (HttpResponse);
-    ic_logs : (nat64) -> (Result_6);
-    ic_permissions_add : (principal, vec Permission) -> (Result_7);
-    ic_permissions_get : (principal) -> (Result_7) query;
-    ic_permissions_remove : (principal, vec Permission) -> (Result_7);
-    ic_stats : () -> (Result_8) query;
-    is_address_registered : (text) -> (bool) query;
-    mint_evm_tokens : (text, text) -> (Result_1);
+    ic_logs : (nat64) -> (Result_8);
+    ic_stats : () -> (Result_9) query;
+    is_address_registered : (text, principal) -> (bool) query;
+    mint_evm_tokens : (text, text) -> (Result_3);
     net_listening : () -> (bool) query;
     net_peer_count : () -> (nat64) query;
     net_version : () -> (nat64) query;
-    register_ic_agent : (Transaction) -> (Result_9);
-    send_raw_transaction : (Transaction) -> (Result_1);
-    set_block_gas_limit : (nat64) -> (Result_9);
-    set_history_size : (nat64) -> (Result_9);
-    set_logger_filter : (text) -> (Result_9);
-    set_min_gas_price : (text) -> (Result_9);
+    register_ic_agent : (Transaction, principal) -> (Result_1);
+    registration_ic_agent_info : () -> (RegistrationInfo) query;
+    send_raw_transaction : (Transaction) -> (Result_3);
+    set_logger_filter : (text) -> (Result_1);
     token_deposit_account : () -> (Result_10) query;
-    verify_registration : (vec nat8) -> (Result_9);
+    verify_registration : (vec nat8, principal) -> (Result_1);
     web3_client_version : () -> (text) query;
-    web3_sha3 : (text) -> (Result_1) query;
-    withdraw_tokens : (text, opt vec nat8, text) -> (Result_1);
+    web3_sha3 : (text) -> (Result_3) query;
+    withdraw_tokens : (text, opt vec nat8, text) -> (Result_3);
 };
