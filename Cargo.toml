@@ -1,0 +1,43 @@
+[package]
+authors = ["Bitfinity Network"]
+categories = ["cryptography::cryptocurrencies"]
+description = "Trait to sign an Ethereum transaction with a private key"
+edition = "2021"
+homepage = "https://github.com/infinity-swap/eth-signer"
+include = ["src/**/*", "LICENSE", "README.md"]
+license = "MIT"
+name = "eth-signer"
+repository = "https://github.com/infinity-swap/eth-signer"
+version = "0.2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1"
+# infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
+ethers-core = { git = "https://github.com/infinity-swap/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
+hex = "0.4"
+sha2 = "0.10"
+thiserror = "1.0"
+
+[dev-dependencies]
+rand = { version = "0.8", features = ["std_rng", "small_rng"] }
+tokio = { version = "1.24", features = ["macros", "rt"] }
+
+[profile.dev]
+debug = true
+
+# Set the settings for all dependencies (but not this crate itself or any workspace member).
+# This includes build dependencies.
+# Level range is from 0 (default for dev) to 3 (default for release)
+[profile.dev.package."*"]
+opt-level = 0
+
+# Set the settings for build scripts and proc-macros.
+[profile.dev.build-override]
+opt-level = 2
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
