@@ -5,8 +5,7 @@ use std::fmt::Debug;
 use candid::{CandidType, Deserialize, Func};
 use serde_bytes::ByteBuf;
 
-use crate::state::PairKey;
-use crate::state::PairPrice;
+use crate::state::{PairKey, PairPrice};
 
 #[derive(Clone, Debug, CandidType, Deserialize)]
 pub struct Token {}

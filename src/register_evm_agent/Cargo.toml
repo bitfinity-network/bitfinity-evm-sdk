@@ -1,0 +1,38 @@
+[package]
+name = "register_evm_agent"
+categories = []
+description = ""
+homepage = "https://github.com/infinity-swap/register-evm-agent"
+include = ["src/**/*", "README.md"]
+keywords = []
+readme = "README.md"
+repository = "https://github.com/infinity-swap/register-evm-agent"
+
+version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "register-evm-agent"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+candid = { workspace = true }
+clap = { workspace = true }
+dirs = { workspace = true }
+env_logger = { workspace = true }
+eth-signer = { workspace = true }
+ethers-core = { workspace = true }
+evmc-did = { workspace = true }
+hex = { workspace = true }
+ic-agent = { workspace = true }
+ic-exports = { workspace = true, features = ["state-machine"] }
+log = { workspace = true }
+rand = { workspace = true }
+rlp = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }

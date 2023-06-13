@@ -4,7 +4,8 @@ use ic_exports::ic_cdk::api::management_canister::http_request::{
     TransformContext,
 };
 use ic_exports::ic_kit::ic;
-use serde_json::{value::from_value, Value};
+use serde_json::value::from_value;
+use serde_json::Value;
 use url::Url;
 
 use crate::error::{Error, Result};
