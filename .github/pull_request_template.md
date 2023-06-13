@@ -9,9 +9,6 @@ Issue ticket link: <>
 - [ ] I have performed a self-review of my code
 - [ ] Every new function is documented
 - [ ] Object names are auto explicative
-- [ ] The PR follows the [project conventions](https://infinityswap.atlassian.net/wiki/spaces/CPROD/pages/23330839/Conventions)
-- [ ] The code follows the [style guidelines of the project](https://infinityswap.atlassian.net/wiki/spaces/CPROD/pages/24444929/Rust+Conventions)
-- [ ] The code follows the [project security best practices](https://infinityswap.atlassian.net/wiki/spaces/CPROD/pages/35225620/Security+Considerations)
 
 ### Security
 
