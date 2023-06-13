@@ -30,3 +30,15 @@ serde_bytes = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 url = { workspace = true }
+
+[[example]]
+name = "signature"
+
+[dev-dependencies]
+candid = { workspace = true }
+ethers = { workspace = true }
+ic-agent = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }

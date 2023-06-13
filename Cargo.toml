@@ -1,6 +1,6 @@
 [workspace]
-# members = ["src/simple_canister", "src/signature", "src/register_agent"]
-members = ["src/simple_canister", "src/signature"]
+# members = ["src/simple_canister", "src/register_agent"]
+members = ["src/simple_canister"]
 
 [workspace.package]
 version = "0.1.0"

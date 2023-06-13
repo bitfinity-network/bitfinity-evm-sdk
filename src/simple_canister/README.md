@@ -32,7 +32,7 @@ So, Let's start:
 ```sh
 cd register-evm-agent
 
-cargo run --bin signature
+cargo run -p simple_canister --example signature
 private key: [81, 72, 69, 68, 94, 35, 255, 67, 238, 77, 189, 96, 235, 181, 172, 162, 60, 166, 12, 240, 207, 30, 28, 188, 136, 11, 249, 108, 197, 123, 241, 190]
 r: 0xdbb3af3eda0d65ff1e71dcd720a14bde8f4daeda54b2910c7bb32f26ed53d02c, s: 0x1cd0c88b0feb607772c9d59fe716fbb29d920238baeda4786e0191fc44e0c57a, v: 0xad676
 tx hash: 0x41b56fadd83a943582c91c62411f9e302d36c177dd8ba18ff257f1750d678a93
@@ -146,7 +146,7 @@ dfx canister call simple_canister get_owner --network ic --query
 ```sh
 cd register-evm-agent
 
-cargo run --bin signature
+cargo run -p simple_canister --example signature
 private key: [22, 61, 28, 1, 194, 244, 15, 43, 50, 157, 198, 16, 19, 92, 223, 2, 154, 46, 55, 125, 36, 79, 186, 148, 29, 202, 58, 210, 39, 12, 223, 143]
 r: 0x59643861ba80b938a0d8d27e455f4372fadbc2dff7fa48705ecd8ebf4bca6ac7, s: 0x200f8b4d6dfc1faa20a2cb589fc29342c84b73dd2972b46b4fcbcc6d69618696, v: 0xad676
 tx hash: 0x5737a2054a8e71432632e9955bbd395c2991061ea586b2d07cd32164ae4d870a

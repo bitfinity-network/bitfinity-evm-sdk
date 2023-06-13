@@ -992,14 +992,14 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-epoch"
-version = "0.9.14"
+version = "0.9.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46bd5f3f85273295a9d14aedfb86f6aadbff6d8f5295c4a9edb08e819dcf5695"
+checksum = "ae211234986c545741a7dc064309f67ee1e5ad243d0e48335adc0484d960bcc7"
 dependencies = [
  "autocfg",
  "cfg-if",
  "crossbeam-utils",
- "memoffset 0.8.0",
+ "memoffset 0.9.0",
  "scopeguard",
 ]
 
@@ -3622,9 +3622,9 @@ dependencies = [
 
 [[package]]
 name = "memoffset"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d61c719bcfbcf5d62b3a09efa6088de8c54bc0bfcd3ea7ae39fcc186108b8de1"
+checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
 dependencies = [
  "autocfg",
 ]
@@ -5086,19 +5086,6 @@ dependencies = [
 
 [[package]]
 name = "signature"
-version = "0.1.0"
-dependencies = [
- "candid",
- "ethers",
- "ic-agent",
- "rand",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "signature"
 version = "1.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74233d3b3b2f6d4b006dc19dee745e73e2a6bfb6f93607cd3b02bd5b00797d7c"
@@ -5145,8 +5132,10 @@ dependencies = [
  "chrono",
  "derive_more 0.99.17",
  "ethereum-types",
+ "ethers",
  "ethers-core 2.0.3",
  "hex",
+ "ic-agent",
  "ic-canister 0.2.3 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.45)",
  "ic-exports 0.2.0 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.45)",
  "ic-stable-structures 0.4.0 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.45)",
@@ -5154,11 +5143,13 @@ dependencies = [
  "jsonrpc-core",
  "mockall",
  "once_cell",
+ "rand",
  "rlp",
  "serde",
  "serde_bytes",
  "serde_json",
  "thiserror",
+ "tokio",
  "url",
 ]
 
@@ -5529,9 +5520,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-rustls"
-version = "0.24.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0d409377ff5b1e3ca6437aa86c1eb7d40c134bfec254e44c830defa92669db5"
+checksum = "c28327cf380ac148141087fbfb9de9d7bd4e84ab5d2c28fbc911d753de8a7081"
 dependencies = [
  "rustls 0.21.1",
  "tokio",
