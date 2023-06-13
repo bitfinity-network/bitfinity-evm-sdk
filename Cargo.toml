@@ -12,10 +12,10 @@ candid = "0.8"
 clap = { version = "4.2.4", features = ["derive"] }
 dirs = "5.0"
 env_logger = "^0.10"
-eth-signer = { git = "https://github.com/infinity-swap/eth-signer" }
+eth-signer = { git = "https://github.com/infinity-swap/eth-signer", tag = "v0.2.0" }
 # infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
 ethers-core = { git = "https://github.com/infinity-swap/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
-evmc-did = { git = "https://github.com/infinity-swap/evmc-did" }
+evmc-did = { git = "https://github.com/infinity-swap/evmc-did", tag = "v0.2.0" }
 hex = "0.4"
 ic-agent = "0.24.0"
 ic-canister = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-canister", tag = "v0.3.45" }
