@@ -1952,6 +1952,18 @@ dependencies = [
 [[package]]
 name = "eth-signer"
 version = "0.2.0"
+source = "git+https://github.com/infinity-swap/eth-signer?tag=v0.2.0#a98d15d7fb673303879c611db12847c807487770"
+dependencies = [
+ "async-trait",
+ "ethers-core",
+ "hex",
+ "sha2 0.10.6",
+ "thiserror",
+]
+
+[[package]]
+name = "eth-signer"
+version = "0.2.0"
 source = "git+https://github.com/infinity-swap/eth-signer#a98d15d7fb673303879c611db12847c807487770"
 dependencies = [
  "async-trait",
@@ -2043,12 +2055,12 @@ checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 [[package]]
 name = "evmc-did"
 version = "0.2.0"
-source = "git+https://github.com/infinity-swap/evmc-did#d06791f0d53d62eecbb2ac22751f31ba226e7d35"
+source = "git+https://github.com/infinity-swap/evmc-did?tag=v0.2.0#d06791f0d53d62eecbb2ac22751f31ba226e7d35"
 dependencies = [
  "bytes",
  "candid",
  "derive_more 0.99.17",
- "eth-signer",
+ "eth-signer 0.2.0 (git+https://github.com/infinity-swap/eth-signer)",
  "ethereum-types",
  "ethers-core",
  "hex",
@@ -7060,7 +7072,7 @@ dependencies = [
  "clap 4.3.0",
  "dirs",
  "env_logger",
- "eth-signer",
+ "eth-signer 0.2.0 (git+https://github.com/infinity-swap/eth-signer?tag=v0.2.0)",
  "ethers-core",
  "evmc-did",
  "hex",
