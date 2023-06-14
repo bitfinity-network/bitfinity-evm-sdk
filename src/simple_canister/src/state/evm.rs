@@ -1,22 +1,21 @@
 use std::cell::RefCell;
 
+use account::Account;
 use async_trait::async_trait;
 use candid::Principal;
-use ic_exports::ic_kit::ic;
-use ic_exports::ic_kit::RejectionCode;
+// use
+use evmc_did::{
+    error::{EvmError, TransactionPoolError},
+    BasicAccount, Transaction, TransactionParams, TransactionReceipt, H160, H256, U256,
+};
+use ic_exports::ic_kit::{ic, RejectionCode};
 use ic_stable_structures::StableCell;
 use mockall::automock;
-
-use account::Account;
-use did::{BasicAccount, Transaction, TransactionParams, TransactionReceipt, H160, H256, U256};
-use error::{EvmError, TransactionPoolError};
 
 use crate::error::Error;
 use crate::state::{State, NONCE_MEMORY_ID};
 
 mod account;
-pub mod did;
-pub mod error;
 
 // Registry agent fee + other transfer example
 pub const MINT_AMOUNT: u64 = 10_000_000;

@@ -36,7 +36,7 @@ async fn main() {
     );
     println!("tx hash: {:#x}", tx.hash(&signature));
 
-    println!("tx: {:?}", tx);
+    println!("tx: {tx:?}");
 }
 
 async fn get_minter_address() -> Result<RegistrationInfo, AgentError> {

@@ -1,14 +1,12 @@
 use candid::{CandidType, Deserialize};
+use evmc_did::{Transaction, H160, H256, U256};
 use ic_canister::{generate_idl, init, query, update, Canister, Idl, PreUpdate};
 use ic_exports::ic_kit::ic;
 use ic_exports::Principal;
 
 use crate::error::{Error, Result};
-use crate::state::{
-    evm::did::{Transaction, H160, H256, U256},
-    evm::EvmCanister,
-    Settings, State,
-};
+use crate::state::evm::EvmCanister;
+use crate::state::{Settings, State};
 
 /// A canister to transfer funds between IC token canisters and EVM canister contracts.
 #[derive(Canister)]

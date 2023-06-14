@@ -10,26 +10,16 @@ export-api = []
 
 [dependencies]
 async-trait = { workspace = true }
-bytes = { workspace = true }
 candid = { workspace = true }
 chrono = { workspace = true }
-derive_more = { workspace = true }
-ethereum-types = { workspace = true }
-ethers-core = { workspace = true }
+evmc-did = { workspace = true }
 hex = { workspace = true }
 ic-canister = { workspace = true }
 ic-exports = { workspace = true }
 ic-stable-structures = { workspace = true }
-is20-token = { workspace = true }
-jsonrpc-core = { workspace = true }
-once_cell = { workspace = true }
-rlp = { workspace = true }
 mockall = { workspace = true }
 serde = { workspace = true }
-serde_bytes = { workspace = true }
-serde_json = { workspace = true }
 thiserror = { workspace = true }
-url = { workspace = true }
 
 [[example]]
 name = "signature"
@@ -39,6 +29,4 @@ candid = { workspace = true }
 ethers = { workspace = true }
 ic-agent = { workspace = true }
 rand = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
 tokio = { workspace = true }
