@@ -1,5 +1,5 @@
 [workspace]
-members = ["src/oracle_canister", "src/register_evm_agent"]
+members = ["src/simple_canister", "src/register_evm_agent"]
 
 [workspace.package]
 version = "0.1.0"
@@ -8,11 +8,15 @@ edition = "2021"
 
 [workspace.dependencies]
 anyhow = "1.0"
+async-trait = "0.1"
 candid = "0.8"
+# Using fixed chrono version. See: https://infinityswap.atlassian.net/browse/EPROD-45
+chrono = "=0.4.19"
 clap = { version = "4.2.4", features = ["derive"] }
 dirs = "5.0"
 env_logger = "^0.10"
 eth-signer = { git = "https://github.com/infinity-swap/eth-signer", tag = "v0.2.0" }
+ethers = "2.0.6"
 # infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
 ethers-core = { git = "https://github.com/infinity-swap/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
 evmc-did = { git = "https://github.com/infinity-swap/evmc-did", tag = "v0.2.0" }
@@ -22,6 +26,7 @@ ic-canister = { git = "https://github.com/infinity-swap/canister-sdk", package =
 ic-exports = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-exports", tag = "v0.3.45" }
 ic-stable-structures = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-stable-structures", tag = "v0.3.45" }
 log = "^0.4"
+mockall = "0.11.4"
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
 rlp = "0.5"
 serde = "1.0"
@@ -29,7 +34,7 @@ serde_bytes = "0.11"
 serde_json = "1.0"
 thiserror = "1.0"
 tokio = { version = "1.24", features = ["macros", "rt"] }
-url = { version = "2.3.1", default-features = false }
+
 
 [profile.release]
 opt-level = "z"

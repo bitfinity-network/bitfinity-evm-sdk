@@ -12,20 +12,8 @@ pub enum Error {
     #[error("the user has no permission to call this method")]
     NotAuthorized,
 
-    #[error("cryptocurrency pair already exists")]
-    PairExist,
-
-    #[error("cryptocurrency pair doesn't exist")]
-    PairNotExist,
-
-    #[error("pair key is too long: {0} > 16")]
-    PairKeyTooLong(u64),
-
     #[error("stable pair not found: {0}")]
     StableError(String),
-
-    #[error("http outcall error: {0}")]
-    HttpError(String),
 }
 
 impl From<StableError> for Error {

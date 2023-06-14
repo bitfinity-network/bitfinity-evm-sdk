@@ -1,11 +1,10 @@
 mod canister;
 pub mod error;
 mod state;
-mod timer;
 
-pub use crate::canister::OracleCanister;
+pub use crate::canister::TempCanister;
 
 pub fn idl() -> String {
-    let idl = OracleCanister::idl();
+    let idl = TempCanister::idl();
     candid::bindings::candid::compile(&idl.env.env, &Some(idl.actor))
 }

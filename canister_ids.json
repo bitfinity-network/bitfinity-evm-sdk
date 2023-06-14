@@ -1,5 +1,8 @@
 {
-	"oracle_canister": {
-		"ic": "p6xvw-7iaaa-aaaap-aaana-cai"
+	"simple_canister": {
+		"ic": "chu2x-jyaaa-aaaah-aaqra-cai"
+	},
+	"evmc": {
+		"ic": "4fe7g-7iaaa-aaaak-aegcq-cai"
 	}
 }
