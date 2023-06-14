@@ -1,0 +1,28 @@
+name: "Build Register agent tool"
+
+on:
+    pull_request:
+        branches: [main, develop]
+        paths-ignore:
+            - "**/README.md"
+    push:
+        branches: [main, develop]
+        tags:
+            - "v*"
+        paths-ignore:
+            - "**/README.md"
+
+jobs:
+    build-test:
+        name: "Build and Test"
+        uses: infinity-swap/ci-wf/.github/workflows/build-n-test.yml@main
+        with:
+            runs-on: ubuntu-latest
+            container-image: ghcr.io/infinity-swap/ic-dev-full:rust1.68-dfx0.13-rc-2022-09-30
+            git-fetch-depth: "0"
+            audit-allow-warnings: true
+            cargo-clippy-extra-args: "-- -D warnings"
+            enable-target-cache: true
+        secrets:
+            gh_token: ${{ secrets.GH_PKG_TOKEN }}
+            gh_login: ${{ secrets.GH_PKG_LOGIN }}
