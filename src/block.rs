@@ -5,6 +5,7 @@ use ethers_core::types::Log as EthersLog;
 use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::Serialize;
+use serde_json::{json, Value};
 
 use super::transaction::Bloom;
 use super::{H160, H256, U256};
@@ -457,10 +458,10 @@ pub enum BlockResult {
     /// No block found
     NoBlockFound,
 
-    /// Block with transaction
+    /// Block with transactions
     WithTransaction(Block<Transaction>),
 
-    /// Block with hash
+    /// Block with hashes
     WithHash(Block<H256>),
 }
 
@@ -469,7 +470,7 @@ impl BlockResult {
         match self {
             BlockResult::WithHash(block) => json!(block),
             BlockResult::WithTransaction(block) => json!(block),
-            BlockResult::NoBlock => Value::Null,
+            BlockResult::NoBlockFound => Value::Null,
         }
     }
 }
