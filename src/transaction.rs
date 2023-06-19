@@ -6,7 +6,7 @@ use eth_signer::Wallet;
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::transaction::eip2930;
-use ethers_core::types::Signature;
+use ethers_core::types::Signature as EthersSignature;
 use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::{Deserializer, Serialize, Serializer};
@@ -83,6 +83,34 @@ impl From<U64> for BlockNumber {
 impl From<u64> for BlockNumber {
     fn from(n: u64) -> Self {
         Self::Number(n.into())
+    }
+}
+
+/// ECDSA signature representation
+#[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
+pub struct Signature {
+    pub v: U64,
+    pub r: U256,
+    pub s: U256,
+}
+
+impl From<Signature> for EthersSignature {
+    fn from(value: Signature) -> Self {
+        Self {
+            r: value.r.into(),
+            s: value.s.into(),
+            v: value.v.into(),
+        }
+    }
+}
+
+impl From<EthersSignature> for Signature {
+    fn from(value: EthersSignature) -> Self {
+        Self {
+            r: value.r.into(),
+            s: value.s.into(),
+            v: value.v.into(),
+        }
     }
 }
 
@@ -187,7 +215,7 @@ pub enum SigningMethod<'a> {
     None,
     // Precalculated signature
     // Could be used only for the cases when the transaction is executed ReadOnly
-    Signature(Signature),
+    Signature(EthersSignature),
     /// Use signing key to generate signature in `calculate_hash_and_build` method
     SigningKey(&'a SigningKey),
 }
@@ -966,7 +994,7 @@ mod test {
             gas: 10_000u64.into(),
             gas_price: Some(20_000u64.into()),
             input: Vec::new(),
-            signature: SigningMethod::Signature(Signature {
+            signature: SigningMethod::Signature(EthersSignature {
                 r: 1u64.into(),
                 s: 2u64.into(),
                 v: 3u64,
@@ -1113,5 +1141,17 @@ mod test {
         assert_eq!(receipt.contract_address, None);
         assert_eq!(receipt.block_hash, exe_result.block_hash);
         assert_eq!(receipt.output, None);
+    }
+
+    #[test]
+    fn signature_conversion_roundtrip() {
+        let signature = Signature {
+            r: U256::max_value(),
+            s: U256::max_value() - U256::one(),
+            v: U64::max_value(),
+        };
+        let ethers_signature = EthersSignature::from(signature.clone());
+        let roundtrip_signature = Signature::from(ethers_signature);
+        assert_eq!(signature, roundtrip_signature);
     }
 }
