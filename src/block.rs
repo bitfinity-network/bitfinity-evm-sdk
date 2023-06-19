@@ -5,6 +5,7 @@ use ethers_core::types::Log as EthersLog;
 use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::Serialize;
+use serde_json::{json, Value};
 
 use super::transaction::Bloom;
 use super::{H160, H256, U256};
@@ -450,6 +451,30 @@ impl Default for TransactOut {
     }
 }
 
+/// enum representing the BlockResult
+
+#[derive(Debug, CandidType, Deserialize, PartialEq, Eq, Serialize)]
+pub enum BlockResult {
+    /// No block found
+    NoBlockFound,
+
+    /// Block with transactions
+    WithTransaction(Block<Transaction>),
+
+    /// Block with hashes
+    WithHash(Block<H256>),
+}
+
+impl BlockResult {
+    pub fn to_json(&self) -> Value {
+        match self {
+            BlockResult::WithHash(block) => json!(block),
+            BlockResult::WithTransaction(block) => json!(block),
+            BlockResult::NoBlockFound => Value::Null,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
 
@@ -679,5 +704,44 @@ mod test {
         let decoded_value: StorableExecutionResult = serde_json::from_value(encoded_value).unwrap();
 
         assert_eq!(exe_result, decoded_value);
+    }
+
+    #[test]
+    fn test_block_result() {
+        let block = Block::<Transaction> {
+            author: ethereum_types::H160::random().into(),
+            number: U64::from(rand::random::<u64>()),
+            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
+            nonce: ethereum_types::H64::random().into(),
+            transactions: vec![create_transaction(
+                Some(U256::from(rand::random::<u64>())),
+                1,
+            )],
+            mix_hash: ethereum_types::H256::random().into(),
+            hash: Default::default(),
+            parent_hash: ethereum_types::H256::random().into(),
+            uncles_hash: ethereum_types::H256::random().into(),
+            state_root: ethereum_types::H256::random().into(),
+            transactions_root: ethereum_types::H256::random().into(),
+            receipts_root: ethereum_types::H256::random().into(),
+            gas_used: U256::from(rand::random::<u64>()),
+            gas_limit: U256::from(rand::random::<u64>()),
+            extra_data: Default::default(),
+            timestamp: U256::from(rand::random::<u64>()),
+            difficulty: U256::from(rand::random::<u64>()),
+            total_difficulty: Default::default(),
+            seal_fields: Vec::new(),
+            uncles: Vec::new(),
+            size: None,
+            base_fee_per_gas: Some(U256::from(rand::random::<u64>())),
+        };
+
+        let block_result = BlockResult::WithTransaction(block);
+
+        let encoded_value = serde_json::json!(&block_result);
+
+        let decoded_value: BlockResult = serde_json::from_value(encoded_value).unwrap();
+
+        assert_eq!(block_result, decoded_value);
     }
 }
