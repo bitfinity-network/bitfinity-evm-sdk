@@ -15,7 +15,7 @@ version = "0.2.0"
 [dependencies]
 bytes = "1.3"
 candid = "0.8"
-eth-signer = { git = "https://github.com/infinity-swap/eth-signer" }
+eth-signer = { git = "https://github.com/infinity-swap/eth-signer", tag = "v0.2.0" }
 derive_more = "0.99"
 ethereum-types = "0.14"
 # infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
@@ -38,21 +38,3 @@ thiserror = "1.0"
 
 [dev-dependencies]
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
-
-[profile.dev]
-debug = true
-
-# Set the settings for all dependencies (but not this crate itself or any workspace member).
-# This includes build dependencies.
-# Level range is from 0 (default for dev) to 3 (default for release)
-[profile.dev.package."*"]
-opt-level = 0
-
-# Set the settings for build scripts and proc-macros.
-[profile.dev.build-override]
-opt-level = 2
-
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1

@@ -273,6 +273,8 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
         }
 
         transaction.hash = transaction.hash();
+        transaction.chain_id = Some(self.chain_id.into());
+
         Ok(transaction.into())
     }
 }
@@ -982,6 +984,7 @@ mod test {
         assert_eq!(tx.v, U64::zero());
         assert_eq!(tx.r, U256::zero());
         assert_eq!(tx.s, U256::zero());
+        assert_eq!(tx.chain_id, Some(31540u64.into()));
     }
 
     #[test]
@@ -999,13 +1002,14 @@ mod test {
                 s: 2u64.into(),
                 v: 3u64,
             }),
-            chain_id: 31540,
+            chain_id: 31541,
         };
         let tx = transaction_builder.calculate_hash_and_build().unwrap();
 
         assert_eq!(tx.v, U64::from(3u64));
         assert_eq!(tx.r, U256::from(1u64));
         assert_eq!(tx.s, U256::from(2u64));
+        assert_eq!(tx.chain_id, Some(31541u64.into()));
     }
 
     #[test]
@@ -1036,6 +1040,39 @@ mod test {
         assert_eq!(tx.v, signature.v.into());
         assert_eq!(tx.r, signature.r);
         assert_eq!(tx.s, signature.s);
+        assert_eq!(tx.chain_id, Some(chain_id.into()));
+    }
+
+    #[test]
+    fn test_build_transaction_with_signing_key_should_include_chain_id() {
+        let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
+        let from = utils::secret_key_to_address(&key);
+        let chain_id = 31540;
+        let transaction_builder = TransactionBuilder {
+            from: &from.into(),
+            to: None,
+            nonce: U256::zero(),
+            value: U256::zero(),
+            gas: 10_000u64.into(),
+            gas_price: Some(20_000u64.into()),
+            input: Vec::new(),
+            signature: SigningMethod::SigningKey(&key),
+            chain_id,
+        };
+
+        let tx: ethers_core::types::Transaction = transaction_builder
+            .calculate_hash_and_build()
+            .unwrap()
+            .into();
+        let mut typed_tx: TypedTransaction = (&tx).into();
+        typed_tx.set_chain_id(chain_id + 1);
+        let wallet = LocalWallet::new_with_signer(Cow::Borrowed(&key), from, chain_id);
+        let signature_with_different_chain_id = wallet.sign_transaction_sync(&typed_tx).unwrap();
+
+        assert_ne!(tx.v, signature_with_different_chain_id.v.into());
+        assert_ne!(tx.r, signature_with_different_chain_id.r);
+        assert_ne!(tx.s, signature_with_different_chain_id.s);
+        assert_eq!(tx.chain_id, Some(chain_id.into()));
     }
 
     #[test]
@@ -1153,5 +1190,31 @@ mod test {
         let ethers_signature = EthersSignature::from(signature.clone());
         let roundtrip_signature = Signature::from(ethers_signature);
         assert_eq!(signature, roundtrip_signature);
+    }
+
+    #[test]
+    fn test_build_transaction_should_have_recoverable_from() {
+        let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
+        let from = utils::secret_key_to_address(&key);
+        let chain_id = 31540;
+        let transaction_builder = TransactionBuilder {
+            from: &from.into(),
+            to: None,
+            nonce: U256::zero(),
+            value: U256::zero(),
+            gas: 10_000u64.into(),
+            gas_price: Some(20_000u64.into()),
+            input: Vec::new(),
+            signature: SigningMethod::SigningKey(&key),
+            chain_id,
+        };
+
+        let tx: ethers_core::types::Transaction = transaction_builder
+            .calculate_hash_and_build()
+            .unwrap()
+            .into();
+
+        let recovered_from = tx.recover_from().unwrap();
+        assert_eq!(from, recovered_from);
     }
 }
