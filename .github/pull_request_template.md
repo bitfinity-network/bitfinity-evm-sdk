@@ -1,7 +1,15 @@
+<<<<<<< HEAD
 # Issue ticket
 
 Issue ticket link: <>
 
+=======
+## Issue ticket
+
+Issue ticket link: <>
+
+
+>>>>>>> did/main
 ## Checklist before requesting a review
 
 ### Code conventions
@@ -10,12 +18,21 @@ Issue ticket link: <>
 - [ ] Every new function is documented
 - [ ] Object names are auto explicative
 
+<<<<<<< HEAD
 ### Security
+=======
+### Security 
+>>>>>>> did/main
 
 - [ ] The PR does not break APIs backward compatibility
 - [ ] The PR does not break the stable storage backward compatibility
 
+<<<<<<< HEAD
 ### Testing
+=======
+
+### Testing 
+>>>>>>> did/main
 
 - [ ] Every function is properly unit tested
 - [ ] I have added integration tests that prove my fix is effective or that my feature works

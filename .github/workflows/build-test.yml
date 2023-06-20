@@ -24,6 +24,9 @@ jobs:
             audit-allow-warnings: true
             cargo-clippy-extra-args: "-- -D warnings"
             enable-target-cache: true
+            test-script: |
+                export RUST_BACKTRACE="full"
+                cargo test
         secrets:
             gh_token: ${{ secrets.GH_PKG_TOKEN }}
             gh_login: ${{ secrets.GH_PKG_LOGIN }}
