@@ -1,4 +1,4 @@
-use candid::{CandidType, Deserialize};
+use candid::{CandidType, Deserialize, Principal};
 
 use super::H160;
 
@@ -7,4 +7,15 @@ use super::H160;
 pub struct RegistrationInfo {
     pub minter_address: H160,
     pub registration_fee: u64,
+}
+
+/// EVM address registration status
+#[derive(Debug, Clone, CandidType, Deserialize, PartialEq, Eq)]
+pub enum AddressRegistrationStatus {
+    /// No principal registered for this address
+    Unregistered,
+    /// Address is registered but not verified
+    Registered,
+    /// Address is verified for the given principal
+    Verified(Principal),
 }
