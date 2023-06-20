@@ -1,0 +1,41 @@
+[package]
+categories = ["cryptography::cryptocurrencies"]
+description = "API types definition for EVMC"
+include = ["src/**/*", "../../LICENSE", "../../README.md"]
+name = "did"
+
+authors.workspace = true
+homepage.workspace = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bytes = { workspace = true }
+candid = { workspace = true }
+eth-signer = { path = "../eth-signer" }
+derive_more = { workspace = true }
+ethereum-types = { workspace = true }
+# infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
+ethers-core = { workspace = true }
+hex = { workspace = true }
+ic-stable-structures = { workspace = true }
+ic-storage = { workspace = true }
+is20-token = { workspace = true }
+jsonrpc-core = { workspace = true }
+log = { workspace = true }
+num = { workspace = true }
+once_cell = { workspace = true }
+rlp = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+sha3 = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+rand = { workspace = true }

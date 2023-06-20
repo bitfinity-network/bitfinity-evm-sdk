@@ -4,7 +4,7 @@ use account::Account;
 use async_trait::async_trait;
 use candid::Principal;
 // use
-use evmc_did::{
+use did::{
     error::{EvmError, TransactionPoolError},
     BasicAccount, Transaction, TransactionParams, TransactionReceipt, H160, H256, U256,
 };

@@ -1,11 +1,11 @@
 use candid::{Decode, Encode, Principal};
+use did::error::EvmError;
+use did::registration_info::RegistrationInfo;
+use did::{BasicAccount, Transaction, H160};
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::TransactionRequest;
-use evmc_did::error::EvmError;
-use evmc_did::registration_info::RegistrationInfo;
-use evmc_did::{BasicAccount, Transaction, H160};
 use ic_agent::Agent;
 
 use crate::agent::user_principal;
@@ -171,7 +171,7 @@ impl<'a> RegistrationService<'a> {
     async fn mint_native_tokens_to_address(&self, amount_to_mint: u64) -> Result<()> {
         let address = H160::from(self.wallet.address());
         info!("minting EVM tokens to {address}");
-        let payload = Encode!(&address, &evmc_did::U256::from(amount_to_mint))?;
+        let payload = Encode!(&address, &did::U256::from(amount_to_mint))?;
 
         let res = self
             .agent
@@ -180,7 +180,7 @@ impl<'a> RegistrationService<'a> {
             .call_and_wait()
             .await?;
 
-        Decode!(res.as_slice(), std::result::Result<evmc_did::U256, EvmError>)??;
+        Decode!(res.as_slice(), std::result::Result<did::U256, EvmError>)??;
 
         info!("tokens minted");
 

@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 
 use candid::{CandidType, Deserialize, Principal};
-use evmc_did::codec::{decode, encode};
-use evmc_did::{Transaction, H160};
+use did::codec::{decode, encode};
+use did::{Transaction, H160};
 use ic_stable_structures::{StableCell, Storable};
 
 use super::{EvmCanister, EvmCanisterImpl, MINT_AMOUNT};

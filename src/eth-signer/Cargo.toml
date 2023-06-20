@@ -1,0 +1,25 @@
+[package]
+categories = ["cryptography::cryptocurrencies"]
+description = "API types definition for EVMC"
+include = ["src/**/*", "../../LICENSE", "../../README.md"]
+name = "eth-signer"
+
+authors.workspace = true
+homepage.workspace = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = { workspace = true }
+ethers-core = { workspace = true }
+hex = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+rand = { workspace = true }
+tokio = { workspace = true }
