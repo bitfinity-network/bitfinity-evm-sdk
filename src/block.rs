@@ -581,7 +581,7 @@ mod test {
         let rlp_data = rlp::encode(&block);
         let mut recovered_block: Block<Transaction> = rlp::decode(&rlp_data).unwrap();
 
-        // Chain id isn't being explicetly serialized, but is encoded in signature
+        // Chain id isn't being explicitly serialized, but is encoded in signature
         // So it is absent in serialized block but present in de-serialized
         assert_eq!(
             recovered_block.transactions[0].chain_id,
