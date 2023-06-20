@@ -55,8 +55,8 @@ pub enum EvmError {
     #[error("Transaction Signature error: {0}")]
     TransactionSignature(String),
 
-    #[error("gas limit is too low, expected: {expected}, actual {actual}")]
-    GasLimitTooLow { expected: U256, actual: U256 },
+    #[error("gas is too low, minimum required: {minimum}")]
+    GasTooLow { minimum: U256 },
 
     #[error("anonymous caller is not allowed")]
     AnonymousPrincipal,
