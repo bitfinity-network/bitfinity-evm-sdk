@@ -579,15 +579,7 @@ mod test {
         };
 
         let rlp_data = rlp::encode(&block);
-        let mut recovered_block: Block<Transaction> = rlp::decode(&rlp_data).unwrap();
-
-        // Chain id isn't being explicetly serialized, but is encoded in signature
-        // So it is absent in serialized block but present in de-serialized
-        assert_eq!(
-            recovered_block.transactions[0].chain_id,
-            Some(chain_id.into())
-        );
-        recovered_block.transactions[0].chain_id = None;
+        let recovered_block: Block<Transaction> = rlp::decode(&rlp_data).unwrap();
 
         assert_eq!(block, recovered_block);
     }
@@ -624,15 +616,7 @@ mod test {
         };
 
         let rlp_data = rlp::encode(&block);
-        let mut recovered_block: Block<Transaction> = rlp::decode(&rlp_data).unwrap();
-
-        // Chain id isn't being explicetly serialized, but is encoded in signature
-        // So it is absent in serialized block but present in de-serialized
-        assert_eq!(
-            recovered_block.transactions[0].chain_id,
-            Some(chain_id.into())
-        );
-        recovered_block.transactions[0].chain_id = None;
+        let recovered_block: Block<Transaction> = rlp::decode(&rlp_data).unwrap();
 
         assert_eq!(block, recovered_block);
     }
