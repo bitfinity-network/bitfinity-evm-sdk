@@ -1,0 +1,32 @@
+[package]
+name = "simple_canister"
+version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+export-api = []
+
+[dependencies]
+async-trait = { workspace = true }
+candid = { workspace = true }
+chrono = { workspace = true }
+evmc-did = { workspace = true }
+hex = { workspace = true }
+ic-canister = { workspace = true }
+ic-exports = { workspace = true }
+ic-stable-structures = { workspace = true }
+mockall = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[[example]]
+name = "signature"
+
+[dev-dependencies]
+candid = { workspace = true }
+ethers = { workspace = true }
+ic-agent = { workspace = true }
+rand = { workspace = true }
+tokio = { workspace = true }

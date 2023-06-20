@@ -1,0 +1,15 @@
+{
+    "canisters": {
+        "simple_canister": {
+            "build": "",
+            "candid": ".artifact/simple_canister.did",
+            "wasm": ".artifact/simple_canister.wasm",
+            "type": "custom"
+        },
+        "evmc": {
+            "candid": "./src/simple_canister/evmc.did",
+            "wasm": "",
+            "type": "custom"
+        }
+    }
+}
