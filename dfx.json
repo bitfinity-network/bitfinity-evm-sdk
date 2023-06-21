@@ -1,0 +1,17 @@
+{
+      "canisters": {
+            "test_canister": {
+                  "build": "bash ./src/eth-signer/test_canister/scripts/build.sh",
+                  "candid": "./src/eth-signer/test_canister/test_canister.did",
+                  "wasm": "target/wasm32-unknown-unknown/release/ic_sign_test_canister_opt.wasm.gz",
+                  "type": "custom"
+            }
+      },
+      "networks": {
+            "local": {
+                  "bind": "127.0.0.1:8000",
+                  "type": "ephemeral"
+            }
+      },
+      "version": 1
+}

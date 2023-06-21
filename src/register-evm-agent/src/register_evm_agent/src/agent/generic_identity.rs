@@ -53,9 +53,9 @@ impl From<BasicIdentity> for GenericIdentity {
 #[cfg(test)]
 mod test {
 
-    use super::*;
-
     use std::path::Path;
+
+    use super::*;
 
     #[test]
     fn should_get_identity_from_pem_file() {
