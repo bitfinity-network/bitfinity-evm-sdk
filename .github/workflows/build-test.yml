@@ -18,7 +18,7 @@ jobs:
         uses: infinity-swap/ci-wf/.github/workflows/build-n-test.yml@main
         with:
             runs-on: ubuntu-latest
-            container-image: ghcr.io/infinity-swap/ic-dev-full:rust1.68-dfx0.13-rc-2022-09-30
+            container-image: ghcr.io/infinity-swap/ic-dev-full:rust1.70-dfx0.14-rc-2022-09-30
             git-fetch-depth: "0"
             skip-test: false
             audit-allow-warnings: true
