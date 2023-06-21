@@ -1,0 +1,19 @@
+[package]
+name = "evmc-client"
+version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+ic-agent-client = ["dep:ic-agent"]
+
+[dependencies]
+candid = { workspace = true }
+did = { path = "../did" }
+ic-exports = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+ic-agent = { workspace = true, optional = true }
