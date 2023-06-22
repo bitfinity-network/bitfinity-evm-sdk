@@ -4,11 +4,13 @@ use did::codec;
 use ic_exports::ic_cdk::api::call;
 use serde::Deserialize;
 
-use crate::client::EvmCanisterClient;
-use crate::IcResult;
+use crate::client::CanisterClient;
+use crate::{CanisterClientError, CanisterClientResult};
 
+/// This client is used to interact with the IC canister.
 #[derive(Debug)]
 pub struct IcCanisterClient {
+    /// The canister id of the Evm canister
     canister_id: Principal,
 }
 
@@ -21,26 +23,28 @@ impl IcCanisterClient {
 }
 
 #[async_trait::async_trait]
-impl EvmCanisterClient for IcCanisterClient {
-    async fn update<T, R>(&self, method: &str, args: T) -> IcResult<R>
+impl CanisterClient for IcCanisterClient {
+    async fn update<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
     where
         T: ArgumentEncoder + Send,
         R: for<'de> Deserialize<'de> + CandidType,
     {
-        let raw_args = encode_args(args).expect("encode args failed");
+        let raw_args = encode_args(args)?;
         call::call_raw(self.canister_id, method, raw_args, 0)
             .await
+            .map_err(CanisterClientError::CanisterError)
             .map(|r| codec::decode(&r))
     }
 
-    async fn query<T, R>(&self, method: &str, args: T) -> IcResult<R>
+    async fn query<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
     where
         T: ArgumentEncoder + Send,
         R: for<'de> Deserialize<'de> + CandidType,
     {
-        let raw_args = encode_args(args).expect("encode args failed");
+        let raw_args = encode_args(args)?;
         call::call_raw(self.canister_id, method, raw_args, 0)
             .await
+            .map_err(CanisterClientError::CanisterError)
             .map(|r| codec::decode(&r))
     }
 }

@@ -8,10 +8,15 @@ use did::{
 use ic_exports::icrc_types::icrc1::account::Subaccount;
 use serde::Deserialize;
 
-use crate::{EvmResult, IcError, IcResult};
+use crate::{CanisterClientError, CanisterClientResult, EvmResult};
 
+/// Generic client for interacting with a canister.
+/// This is used to abstract away the differences between the IC Agent and the
+/// IC Canister.
+/// The IC Agent is used for interaction through the dfx tool, while the IC
+/// Canister is used for interacting with the EVM canister in wasm environments.
 #[async_trait::async_trait]
-pub trait EvmCanisterClient {
+pub trait CanisterClient {
     /// Call an update method on the canister.
     ///
     /// # Arguments
@@ -22,7 +27,7 @@ pub trait EvmCanisterClient {
     /// # Returns
     ///
     /// The result of the method call.
-    async fn update<T, R>(&self, method: &str, args: T) -> IcResult<R>
+    async fn update<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
     where
         T: ArgumentEncoder + Send,
         R: for<'de> Deserialize<'de> + CandidType;
@@ -37,7 +42,7 @@ pub trait EvmCanisterClient {
     /// # Returns
     ///
     /// The result of the method call.
-    async fn query<T, R>(&self, method: &str, args: T) -> IcResult<R>
+    async fn query<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
     where
         T: ArgumentEncoder + Send,
         R: for<'de> Deserialize<'de> + CandidType;
@@ -47,13 +52,13 @@ pub trait EvmCanisterClient {
 #[derive(Debug)]
 pub struct EvmcClient<C>
 where
-    C: EvmCanisterClient,
+    C: CanisterClient,
 {
     /// The canister client.
     client: C,
 }
 
-impl<C: EvmCanisterClient> EvmcClient<C> {
+impl<C: CanisterClient> EvmcClient<C> {
     /// Create a new EVMC client.
     ///
     /// # Arguments
@@ -74,13 +79,14 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
     pub async fn eth_get_transaction_receipt_by_hash(
         &self,
         hash: H256,
-    ) -> Result<Option<TransactionReceipt>, IcError> {
+    ) -> Result<Option<TransactionReceipt>, CanisterClientError> {
         self.client
             .query("eth_get_transaction_receipt_by_hash", (hash,))
             .await
     }
 
     /// Sends a raw transaction to the EVM canister
+    /// See [eth_sendRawTransaction](https://eth.wiki/json-rpc/API#eth_sendrawtransaction)
     ///
     /// # Arguments
     /// * `transaction` - The transaction to send
@@ -91,7 +97,7 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
     pub async fn send_raw_transaction(
         &self,
         transaction: Transaction,
-    ) -> IcResult<EvmResult<H256>> {
+    ) -> CanisterClientResult<EvmResult<H256>> {
         self.client
             .update("send_raw_transaction", (transaction,))
             .await
@@ -111,7 +117,7 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
         tx_params: TransactionParams,
         to: H160,
         data: String,
-    ) -> IcResult<EvmResult<H256>> {
+    ) -> CanisterClientResult<EvmResult<H256>> {
         self.client
             .update("call_message", (tx_params, to, data))
             .await
@@ -131,7 +137,7 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
         &self,
         tx_params: TransactionParams,
         data: String,
-    ) -> IcResult<EvmResult<H256>> {
+    ) -> CanisterClientResult<EvmResult<H256>> {
         self.client
             .update("create_contract", (tx_params, data))
             .await
@@ -153,7 +159,7 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
         &self,
         transaction: Transaction,
         principal: Principal,
-    ) -> IcResult<EvmResult<()>> {
+    ) -> CanisterClientResult<EvmResult<()>> {
         self.client
             .update("register_ic_agent", (transaction, principal))
             .await
@@ -168,11 +174,12 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
     /// The account information
     ///  - nonce
     ///  - balance
-    pub async fn account_basic(&self, address: H160) -> Result<BasicAccount, IcError> {
+    pub async fn account_basic(&self, address: H160) -> Result<BasicAccount, CanisterClientError> {
         self.client.query("account_basic", (address,)).await
     }
 
     /// Get the code of a contract
+    /// See [eth_getCode](https://eth.wiki/json-rpc/API#eth_getcode)
     ///
     /// # Arguments
     /// * `address` - The address of the contract
@@ -186,7 +193,7 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
         &self,
         address: H160,
         block_number: BlockNumber,
-    ) -> IcResult<EvmResult<String>> {
+    ) -> CanisterClientResult<EvmResult<String>> {
         self.client
             .query("eth_get_code", (address, block_number))
             .await
@@ -200,7 +207,7 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
     ///
     /// # Returns
     /// The amount of tokens deposited
-    pub async fn deposit(&self, to: H160, amount: U256) -> IcResult<EvmResult<U256>> {
+    pub async fn deposit(&self, to: H160, amount: U256) -> CanisterClientResult<EvmResult<U256>> {
         self.client.update("deposit_tokens", (to, amount)).await
     }
 
@@ -220,13 +227,14 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
         from: H160,
         to: Option<Subaccount>,
         amount: U256,
-    ) -> IcResult<EvmResult<U256>> {
+    ) -> CanisterClientResult<EvmResult<U256>> {
         self.client
             .update("withdraw_tokens", (from, to, amount))
             .await
     }
 
     /// Get the storage of a contract
+    /// See [eth_getStorageAt](https://eth.wiki/json-rpc/API#eth_getstorageat)
     ///
     /// # Arguments
     /// * `address` - The address of the contract
@@ -241,7 +249,7 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
         address: H160,
         index: H256,
         block_number: BlockNumber,
-    ) -> IcResult<EvmResult<H256>> {
+    ) -> CanisterClientResult<EvmResult<H256>> {
         self.client
             .query("eth_get_storage_at", (address, index, block_number))
             .await
@@ -262,13 +270,14 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
         &self,
         signing_key: &[u8],
         principal: Principal,
-    ) -> IcResult<EvmResult<()>> {
+    ) -> CanisterClientResult<EvmResult<()>> {
         self.client
             .update("verify_registration", (signing_key, principal))
             .await
     }
 
     /// Get the the transaction by hash
+    /// See [eth_getTransactionByHash](https://eth.wiki/json-rpc/API#eth_gettransactionbyhash)
     ///
     /// # Arguments
     /// * `hash` - The hash of the transaction
@@ -276,18 +285,30 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
     /// # Returns
     ///
     /// Result of the transaction or None if the transaction does not exist
-    pub async fn eth_get_transaction_by_hash(&self, hash: H256) -> IcResult<Option<Transaction>> {
+    pub async fn eth_get_transaction_by_hash(
+        &self,
+        hash: H256,
+    ) -> CanisterClientResult<Option<Transaction>> {
         self.client
             .query("eth_get_transaction_by_hash", (hash,))
             .await
     }
 
     /// Get the balance of an address
+    /// See [eth_getBalance](https://eth.wiki/json-rpc/API#eth_getbalance)
+    ///
+    /// # Arguments
+    /// * `address` - The address of the account
+    /// * `block_number` - The block number or tag
+    ///
+    /// # Returns
+    ///
+    /// The balance of the account
     pub async fn eth_get_balance(
         &self,
         address: H160,
         block_number: BlockNumber,
-    ) -> IcResult<EvmResult<U256>> {
+    ) -> CanisterClientResult<EvmResult<U256>> {
         self.client
             .query("eth_get_balance", (address, block_number))
             .await
@@ -295,36 +316,42 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
 
     /// Mint Native to an address
     /// Note: This works on the testnet only
-    pub async fn mint(&self, address: H160, amount: U256) -> IcResult<EvmResult<U256>> {
+    pub async fn mint(&self, address: H160, amount: U256) -> CanisterClientResult<EvmResult<U256>> {
         self.client
             .update("mint_native_tokens", (address, amount))
             .await
     }
 
     /// Get the latest block number
-    pub async fn eth_block_number(&self) -> Result<usize, IcError> {
+    /// See [eth_blockNumber](https://eth.wiki/json-rpc/API#eth_blocknumber)
+    ///
+    /// # Returns
+    /// The latest block number
+    pub async fn eth_block_number(&self) -> Result<usize, CanisterClientError> {
         self.client.query("eth_block_number", ()).await
     }
 
     /// Get the block by hash
+    /// See [eth_getBlockByHash](https://eth.wiki/json-rpc/API#eth_getblockbyhash)
     ///
     /// # Arguments
     /// * `hash` - The hash of the block
     /// * `include_transactions` - Whether to include the transactions in the
     /// block
-    ///
-    ///
+    /// # Returns
+    /// The block at the given hash
     pub async fn eth_get_block_by_hash(
         &self,
         hash: H256,
         include_transactions: bool,
-    ) -> IcResult<EvmResult<BlockResult>> {
+    ) -> CanisterClientResult<EvmResult<BlockResult>> {
         self.client
             .query("eth_get_block_by_hash", (hash, include_transactions))
             .await
     }
 
     /// Get the block by number
+    /// See [eth_getBlockByNumber](https://eth.wiki/json-rpc/API#eth_getblockbynumber)
     ///
     /// # Arguments
     /// * `block_number` - The block number or tag
@@ -338,7 +365,7 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
         &self,
         block_number: BlockNumber,
         include_transactions: bool,
-    ) -> IcResult<EvmResult<BlockResult>> {
+    ) -> CanisterClientResult<EvmResult<BlockResult>> {
         self.client
             .query(
                 "eth_get_block_by_number",
@@ -348,23 +375,38 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
     }
 
     /// Get the transaction count of an address at a given block number
+    /// See [eth_getTransactionCount](https://eth.wiki/json-rpc/API#eth_gettransactioncount)
     ///
     /// # Arguments
     ///
     /// * `address` - The address to get the transaction count for
     /// * `block_number` - The block number to get the transaction count at
     ///
+    /// # Returns
+    /// The transaction count of the address at the given block number
     pub async fn eth_get_transaction_count(
         &self,
         address: H160,
         block_number: BlockNumber,
-    ) -> IcResult<EvmResult<U256>> {
+    ) -> CanisterClientResult<EvmResult<U256>> {
         self.client
             .query("eth_get_transaction_count", (address, block_number))
             .await
     }
 
     /// Execute a call on the EVM without modifying the state
+    /// See [eth_call](https://eth.wiki/json-rpc/API#eth_call)
+    ///
+    /// # Arguments
+    /// * `from` - The address of the caller
+    /// * `to` - The address of the contract to call
+    /// * `value` - The value to send to the contract
+    /// * `gas_limit` - The gas limit for the call
+    /// * `gas_price` - The gas price for the call
+    /// * `data` - The data to send to the contract
+    ///
+    /// # Returns
+    /// The result of the call
     pub async fn eth_call(
         &self,
         from: Option<H160>,
@@ -373,7 +415,7 @@ impl<C: EvmCanisterClient> EvmcClient<C> {
         gas_limit: u64,
         gas_price: Option<U256>,
         data: Option<Bytes>,
-    ) -> IcResult<EvmResult<String>> {
+    ) -> CanisterClientResult<EvmResult<String>> {
         self.client
             .query("eth_call", (from, to, value, gas_limit, gas_price, data))
             .await

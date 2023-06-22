@@ -2,17 +2,14 @@
 pub mod agent;
 
 pub mod client;
+pub mod error;
 pub mod ic_client;
 
-pub use client::EvmcClient;
-use did::error::EvmError;
-use ic_exports::ic_kit::RejectionCode;
+pub use client::{CanisterClient, EvmcClient};
 
-/// This tuple is returned incase of IC errors such as Network, canister error.
-pub type IcError = (RejectionCode, String);
+#[cfg(feature = "ic-agent-client")]
+pub use agent::{AgentError, IcAgentClient};
 
-/// This is the result type for all IC calls.
-pub type IcResult<R> = Result<R, IcError>;
+pub use error::{CanisterClientError, CanisterClientResult, EvmResult, IcError, IcResult};
 
-/// This is the result type for all EVM calls.
-pub type EvmResult<T> = Result<T, EvmError>;
+pub use ic_client::IcCanisterClient;

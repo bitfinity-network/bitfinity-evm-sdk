@@ -6,12 +6,12 @@ use candid::utils::ArgumentEncoder;
 use candid::{encode_args, CandidType, Principal};
 use did::codec;
 use ic_agent::identity::PemError;
-use ic_exports::ic_kit::RejectionCode;
+
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::client::EvmCanisterClient;
-use crate::IcResult;
+use crate::client::CanisterClient;
+use crate::{CanisterClientError, CanisterClientResult};
 
 #[derive(Error, Debug)]
 pub enum AgentError {
@@ -53,35 +53,35 @@ impl IcAgentClient {
 }
 
 #[async_trait::async_trait]
-impl EvmCanisterClient for IcAgentClient {
-    async fn query<T, R>(&self, method: &str, args: T) -> IcResult<R>
+impl CanisterClient for IcAgentClient {
+    async fn query<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
     where
         T: ArgumentEncoder + Send,
         R: for<'de> Deserialize<'de> + CandidType,
     {
-        let args = encode_args(args).expect("encode args failed");
+        let args = encode_args(args)?;
 
         self.agent
             .query(&self.canister_id, method)
             .with_arg(&args)
             .call()
             .await
-            .map_err(|e| (RejectionCode::CanisterReject, e.to_string()))
+            .map_err(CanisterClientError::IcAgentError)
             .map(|r| codec::decode(&r))
     }
 
-    async fn update<T, R>(&self, method: &str, args: T) -> IcResult<R>
+    async fn update<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
     where
         T: ArgumentEncoder + Send,
         R: for<'de> Deserialize<'de> + CandidType,
     {
-        let args = encode_args(args).expect("encode args failed");
+        let args = encode_args(args)?;
         self.agent
             .update(&self.canister_id, method)
             .with_arg(&args)
             .call_and_wait()
             .await
-            .map_err(|e| (RejectionCode::CanisterReject, e.to_string()))
+            .map_err(CanisterClientError::IcAgentError)
             .map(|r| codec::decode(&r))
     }
 }
