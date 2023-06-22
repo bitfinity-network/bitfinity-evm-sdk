@@ -93,7 +93,6 @@ impl<C: CanisterClient> EvmcClient<C> {
     ///
     /// # Returns
     /// The hash of the transaction
-    ///
     pub async fn send_raw_transaction(
         &self,
         transaction: Transaction,
@@ -111,7 +110,6 @@ impl<C: CanisterClient> EvmcClient<C> {
     ///
     /// # Returns
     /// The hash of the transaction
-    ///
     pub async fn call_message(
         &self,
         tx_params: TransactionParams,
@@ -132,7 +130,6 @@ impl<C: CanisterClient> EvmcClient<C> {
     /// # Returns
     ///
     /// The hash of the transaction
-    ///
     pub async fn create_contract(
         &self,
         tx_params: TransactionParams,
@@ -188,7 +185,6 @@ impl<C: CanisterClient> EvmcClient<C> {
     /// # Returns
     ///
     /// The code of the contract
-    ///
     pub async fn get_contract_code(
         &self,
         address: H160,
@@ -221,7 +217,6 @@ impl<C: CanisterClient> EvmcClient<C> {
     /// # Returns
     ///
     /// The amount withdrawn
-    ///
     pub async fn withdraw(
         &self,
         from: H160,
@@ -383,6 +378,7 @@ impl<C: CanisterClient> EvmcClient<C> {
     /// * `block_number` - The block number to get the transaction count at
     ///
     /// # Returns
+    ///
     /// The transaction count of the address at the given block number
     pub async fn eth_get_transaction_count(
         &self,
@@ -406,6 +402,7 @@ impl<C: CanisterClient> EvmcClient<C> {
     /// * `data` - The data to send to the contract
     ///
     /// # Returns
+    ///
     /// The result of the call
     pub async fn eth_call(
         &self,

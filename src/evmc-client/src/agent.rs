@@ -6,7 +6,6 @@ use candid::utils::ArgumentEncoder;
 use candid::{encode_args, CandidType, Principal};
 use did::codec;
 use ic_agent::identity::PemError;
-
 use serde::Deserialize;
 use thiserror::Error;
 
