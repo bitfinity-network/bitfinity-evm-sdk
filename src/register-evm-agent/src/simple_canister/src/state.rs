@@ -1,8 +1,7 @@
 use candid::Principal;
-use ic_exports::stable_structures::memory_manager::MemoryId;
-
 use config::Config;
 use evm::EvmCanisterImpl;
+use ic_exports::stable_structures::memory_manager::MemoryId;
 
 mod config;
 pub mod evm;
