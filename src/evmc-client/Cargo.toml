@@ -1,7 +1,16 @@
 [package]
 name = "evmc-client"
+categories = ["cryptography::cryptocurrencies"]
+description = "Client for interacting with the Evm Canister"
+include = ["src/**/*", "../../LICENSE", "../../README.md"]
+
+authors.workspace = true
+homepage.workspace = true
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
