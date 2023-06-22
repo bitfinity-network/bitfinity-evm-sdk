@@ -23,7 +23,6 @@ path = "src/main.rs"
 anyhow = { workspace = true }
 candid = { workspace = true }
 clap = { workspace = true }
-dirs = { workspace = true }
 env_logger = { workspace = true }
 eth-signer = { path = "../../../eth-signer" }
 ethers-core = { workspace = true }

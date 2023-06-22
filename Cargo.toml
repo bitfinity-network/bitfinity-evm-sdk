@@ -17,104 +17,39 @@ include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 name = "evmc-sdk"
 repository = "https://github.com/infinity-swap/evmc-sdk"
-version = "0.2.3"
+version = "0.2.4"
 
 [workspace.dependencies]
 anyhow = "1.0"
-arc-swap = "1.6"
 async-trait = "0.1"
-auto_impl = "1.0"
-bincode = "1.3"
 bytes = "1.3"
 candid = "0.8"
 # Using fixed chrono version. See: https://infinityswap.atlassian.net/browse/EPROD-45
 chrono = "=0.4.19"
 clap = { version = "4", features = ["derive"] }
-criterion = "0.5"
-csv = "1.1"
 derive_more = "0.99"
-dirs = "5.0"
-elsa = "1.7"
 env_logger = { version = "0.10.0", default-features = false }
 ethereum-types = "0.14"
 ethers = "2.0.6"
 # infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
 ethers-core = { git = "https://github.com/infinity-swap/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
-flate2 = "1"
-futures = { version = "0.3", default-features = false }
 hash-db = "0.15"
-hashbrown = { version = "0.13" }
 hex = "0.4"
-humantime = { version = "2.1", default-features = false }
 ic-agent = "0.24"
-ic-auction = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-auction", tag = "v0.3.54" }
-ic-canister = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-canister", tag = "v0.3.54" }
-ic-exports = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-exports", tag = "v0.3.54" }
-ic-helpers = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-helpers", tag = "v0.3.54" }
-ic-metrics = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-metrics", tag = "v0.3.54", features = [
-    "export-api",
-] }
-ic-payments = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-payments", tag = "v0.3.54" }
-ic-storage = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-storage", tag = "v0.3.54" }
-ic-stable-structures = { git = "https://github.com/infinity-swap/canister-sdk", branch = "EPROD-381-investigate-the-evmc-canister-upgrade-problems", package = "ic-stable-structures" }
-ic-test-utils = { git = "https://github.com/infinity-swap/ic-test-utils.git", tag = "v0.2.10" }
-is20-token = { git = "https://github.com/infinity-swap/IS20", tag = "v1.10.44" }
-is20-token-canister = { git = "https://github.com/infinity-swap/IS20", tag = "v1.10.44" }
-is20-token-factory = { git = "https://github.com/infinity-swap/IS20", package = "token-factory", tag = "v1.10.44" }
-itertools = "0.10"
+ic-canister = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-canister", tag = "v0.3.x" }
+ic-exports = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-exports", tag = "v0.3.x" }
+ic-stable-structures = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-stable-structures", tag = "v0.3.x" }
+is20-token = { git = "https://github.com/infinity-swap/IS20", tag = "v1.x" }
 jsonrpc-core = "18.0"
-k256 = { version = "0.13", default-features = false }
 log = "0.4"
 mockall = "0.11"
 num = "0.4"
-once_cell = "1.16"
-ordinal = "0.3"
-plain_hasher = "0.2"
-proptest = { version = "1.1.0", default-features = false, features = ["std"] }
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
-rayon = "1"
 reqwest = { version = "0.11", default-features = false }
-revm = { version = "3.2", default-features = false }
-ringbuffer = "0.13"
 serde = "1.0"
-serde_bytes = "0.11"
 serde_json = "1.0"
-serde_with = "2.0"
-smallvec = "1.10.0"
-stable_deref_trait = "1.2"
-ripemd = "0.1"
 rlp = "0.5"
 sha2 = "0.10"
 sha3 = "0.10"
-sputnik_evm = { package = "evm", version = "0.39", default-features = false }
-static_assertions = "1.1.0"
-tar = "0.4"
 thiserror = "1.0"
 tokio = { version = "1.24", features = ["macros", "rt"] }
-triehash = "0.8"
-vergen = { version = "8.1", default-features = false, features = [
-    "build",
-    "cargo",
-    "rustc",
-    "si",
-] }
-walkdir = "2"
-zeropool-bn = { version = "0.5", default-features = false }
-
-[profile.dev]
-debug = true
-
-# Set the settings for all dependencies (but not this crate itself or any workspace member).
-# This includes build dependencies.
-# Level range is from 0 (default for dev) to 3 (default for release)
-[profile.dev.package."*"]
-opt-level = 0
-
-# Set the settings for build scripts and proc-macros.
-[profile.dev.build-override]
-opt-level = 2
-
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1

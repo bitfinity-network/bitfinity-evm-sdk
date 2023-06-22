@@ -882,13 +882,13 @@ dependencies = [
 
 [[package]]
 name = "canister-sdk"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54#3fe97e183caa227a553678ad14613ea0b29eec62"
+version = "0.3.55"
+source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
 dependencies = [
  "ic-canister",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
+ "ic-exports",
  "ic-helpers",
- "ic-metrics 0.3.53",
+ "ic-metrics 0.3.55",
  "ic-storage",
 ]
 
@@ -1711,7 +1711,7 @@ dependencies = [
 
 [[package]]
 name = "did"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "bytes",
  "candid",
@@ -1720,17 +1720,14 @@ dependencies = [
  "ethereum-types",
  "ethers-core 2.0.3",
  "hex",
- "ic-stable-structures 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?branch=EPROD-381-investigate-the-evmc-canister-upgrade-problems)",
- "ic-storage",
+ "ic-stable-structures 0.3.55",
  "is20-token",
  "jsonrpc-core",
  "log",
  "num",
- "once_cell",
  "rand",
  "rlp",
  "serde",
- "serde_bytes",
  "serde_json",
  "sha2 0.10.7",
  "sha3",
@@ -1771,15 +1768,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dirs"
-version = "5.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44c45a9d03d6676652bcb5e724c7e988de1acad23a711b5217ab9cbecbec2225"
-dependencies = [
- "dirs-sys",
-]
-
-[[package]]
 name = "dirs-next"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1787,18 +1775,6 @@ checksum = "b98cf8ebf19c3d1b223e151f99a4f9f0690dca41414773390fc824184ac833e1"
 dependencies = [
  "cfg-if",
  "dirs-sys-next",
-]
-
-[[package]]
-name = "dirs-sys"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
-dependencies = [
- "libc",
- "option-ext",
- "redox_users",
- "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -2046,14 +2022,14 @@ dependencies = [
 
 [[package]]
 name = "eth-signer"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "async-trait",
  "candid",
  "ethers-core 2.0.3",
  "hex",
  "ic-canister",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
+ "ic-exports",
  "rand",
  "sha2 0.10.7",
  "thiserror",
@@ -3113,11 +3089,11 @@ dependencies = [
 
 [[package]]
 name = "ic-canister"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54#3fe97e183caa227a553678ad14613ea0b29eec62"
+version = "0.3.55"
+source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
 dependencies = [
  "ic-canister-macros",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
+ "ic-exports",
 ]
 
 [[package]]
@@ -3127,8 +3103,8 @@ source = "git+https://github.com/dfinity/ic?rev=07293961dc498062a2fdf5ed69dd0b0f
 
 [[package]]
 name = "ic-canister-macros"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54#3fe97e183caa227a553678ad14613ea0b29eec62"
+version = "0.3.55"
+source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
 dependencies = [
  "lazy_static",
  "proc-macro2",
@@ -4190,8 +4166,8 @@ dependencies = [
 
 [[package]]
 name = "ic-exports"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54#3fe97e183caa227a553678ad14613ea0b29eec62"
+version = "0.3.55"
+source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
 dependencies = [
  "cycles-minting-canister",
  "ic-base-types",
@@ -4214,33 +4190,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-exports"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?branch=EPROD-381-investigate-the-evmc-canister-upgrade-problems#061bf0b56dbe1edad56d21dccd177878fa571b53"
-dependencies = [
- "cycles-minting-canister",
- "ic-base-types",
- "ic-cdk 0.8.1",
- "ic-cdk-macros",
- "ic-cdk-timers",
- "ic-crypto-sha",
- "ic-ic00-types",
- "ic-icrc1",
- "ic-icrc1-index",
- "ic-icrc1-ledger",
- "ic-kit",
- "ic-ledger-canister-core",
- "ic-ledger-core",
- "ic-stable-structures 0.5.4",
- "icp-ledger",
- "icrc-ledger-types",
- "ledger-canister",
-]
-
-[[package]]
 name = "ic-helpers"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54#3fe97e183caa227a553678ad14613ea0b29eec62"
+version = "0.3.55"
+source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
 dependencies = [
  "async-trait",
  "auto_ops",
@@ -4249,7 +4201,7 @@ dependencies = [
  "crypto-bigint 0.5.2",
  "getrandom 0.2.10",
  "ic-canister",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
+ "ic-exports",
  "ic-storage",
  "k256 0.13.1",
  "num-bigint 0.4.3",
@@ -4519,12 +4471,12 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54#3fe97e183caa227a553678ad14613ea0b29eec62"
+version = "0.3.55"
+source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
 dependencies = [
  "candid",
  "ic-canister",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
+ "ic-exports",
  "ic-storage",
  "serde",
 ]
@@ -4792,19 +4744,10 @@ dependencies = [
 
 [[package]]
 name = "ic-stable-structures"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54#3fe97e183caa227a553678ad14613ea0b29eec62"
+version = "0.3.55"
+source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
 dependencies = [
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
- "thiserror",
-]
-
-[[package]]
-name = "ic-stable-structures"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?branch=EPROD-381-investigate-the-evmc-canister-upgrade-problems#061bf0b56dbe1edad56d21dccd177878fa571b53"
-dependencies = [
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?branch=EPROD-381-investigate-the-evmc-canister-upgrade-problems)",
+ "ic-exports",
  "thiserror",
 ]
 
@@ -4938,11 +4881,11 @@ dependencies = [
 
 [[package]]
 name = "ic-storage"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54#3fe97e183caa227a553678ad14613ea0b29eec62"
+version = "0.3.55"
+source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
 dependencies = [
  "candid",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
+ "ic-exports",
  "ic-storage-derive",
  "serde",
  "thiserror",
@@ -4950,8 +4893,8 @@ dependencies = [
 
 [[package]]
 name = "ic-storage-derive"
-version = "0.3.53"
-source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54#3fe97e183caa227a553678ad14613ea0b29eec62"
+version = "0.3.55"
+source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -5173,7 +5116,7 @@ dependencies = [
  "eth-signer",
  "ethers-core 2.0.3",
  "ic-canister",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
+ "ic-exports",
 ]
 
 [[package]]
@@ -5351,14 +5294,14 @@ dependencies = [
 
 [[package]]
 name = "is20-token"
-version = "1.10.44"
-source = "git+https://github.com/infinity-swap/IS20?tag=v1.10.44#68df042226e2aa311a3692dc5a179b0d8e9aec9b"
+version = "1.10.45"
+source = "git+https://github.com/infinity-swap/IS20?tag=v1.x#5fd36dcd01c859b1266d98bff415eaeb9b6d58cb"
 dependencies = [
  "async-std",
  "candid",
  "canister-sdk",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
- "ic-stable-structures 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
+ "ic-exports",
+ "ic-stable-structures 0.3.55",
  "num-traits",
  "serde",
  "serde_cbor",
@@ -6188,12 +6131,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "option-ext"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
-
-[[package]]
 name = "os_str_bytes"
 version = "6.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6392,9 +6329,9 @@ checksum = "9b2a4787296e9989611394c33f193f676704af1686e70b8f8033ab5ba9a35a94"
 
 [[package]]
 name = "pest"
-version = "2.6.1"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16833386b02953ca926d19f64af613b9bf742c48dcd5e09b32fbfc9740bf84e2"
+checksum = "f73935e4d55e2abf7f130186537b19e7a4abc886a0252380b59248af473a3fc9"
 dependencies = [
  "thiserror",
  "ucd-trie",
@@ -6402,9 +6339,9 @@ dependencies = [
 
 [[package]]
 name = "pest_derive"
-version = "2.6.1"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7763190f9406839f99e5197afee8c9e759969f7dbfa40ad3b8dbee8757b745b5"
+checksum = "aef623c9bbfa0eedf5a0efba11a5ee83209c326653ca31ff019bec3a95bfff2b"
 dependencies = [
  "pest",
  "pest_generator",
@@ -6412,9 +6349,9 @@ dependencies = [
 
 [[package]]
 name = "pest_generator"
-version = "2.6.1"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "249061b22e99973da1f5f5f1410284419e283bb60b79255bf5f42a94b66a2e00"
+checksum = "b3e8cba4ec22bada7fc55ffe51e2deb6a0e0db2d0b7ab0b103acc80d2510c190"
 dependencies = [
  "pest",
  "pest_meta",
@@ -6425,9 +6362,9 @@ dependencies = [
 
 [[package]]
 name = "pest_meta"
-version = "2.6.1"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "457c310cfc9cf3f22bc58901cc7f0d3410ac5d6298e432a4f9a6138565cb6df6"
+checksum = "a01f71cb40bd8bb94232df14b946909e14660e33fc05db3e50ae2a82d7ea0ca0"
 dependencies = [
  "once_cell",
  "pest",
@@ -7028,19 +6965,18 @@ checksum = "436b050e76ed2903236f032a59761c1eb99e1b0aead2c257922771dab1fc8c78"
 
 [[package]]
 name = "register_evm_agent"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "anyhow",
  "candid",
  "clap 4.3.5",
  "did",
- "dirs",
  "env_logger",
  "eth-signer",
  "ethers-core 2.0.3",
  "hex",
  "ic-agent",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
+ "ic-exports",
  "log",
  "rand",
  "rlp",
@@ -7381,9 +7317,9 @@ dependencies = [
 
 [[package]]
 name = "scale-info"
-version = "2.7.0"
+version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b569c32c806ec3abdf3b5869fb8bf1e0d275a7c1c9b0b05603d9464632649edf"
+checksum = "ad560913365790f17cbf12479491169f01b9d46d29cfc7422bf8c64bdc61b731"
 dependencies = [
  "cfg-if",
  "derive_more 0.99.17",
@@ -7393,9 +7329,9 @@ dependencies = [
 
 [[package]]
 name = "scale-info-derive"
-version = "2.6.0"
+version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53012eae69e5aa5c14671942a5dd47de59d4cdcff8532a6dd0e081faf1119482"
+checksum = "19df9bd9ace6cc2fe19387c96ce677e823e07d017ceed253e7bb3d1d1bd9c73b"
 dependencies = [
  "proc-macro-crate 1.3.1",
  "proc-macro2",
@@ -7733,7 +7669,7 @@ dependencies = [
 
 [[package]]
 name = "simple_canister"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "async-trait",
  "candid",
@@ -7743,8 +7679,8 @@ dependencies = [
  "hex",
  "ic-agent",
  "ic-canister",
- "ic-exports 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.54)",
- "ic-stable-structures 0.3.53 (git+https://github.com/infinity-swap/canister-sdk?branch=EPROD-381-investigate-the-evmc-canister-upgrade-problems)",
+ "ic-exports",
+ "ic-stable-structures 0.3.55",
  "mockall",
  "rand",
  "serde",
@@ -8491,9 +8427,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.25"
+version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8803eee176538f94ae9a14b55b2804eb7e1441f8210b1c31290b3bccdccff73b"
+checksum = "5f4f31f56159e98206da9efd823404b79b6ef3143b4a7ab76e67b1751b25a4ab"
 dependencies = [
  "proc-macro2",
  "quote",
