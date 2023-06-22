@@ -1,0 +1,19 @@
+[package]
+name = "ic-eth-client"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+bitfinity = []
+
+[dependencies]
+did = { path = "../did" }
+
+ic-canister = { workspace = true }
+ic-exports = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+ethers-core = { workspace = true }
+jsonrpc-core = { workspace = true }
+thiserror = { workspace = true }

@@ -4110,6 +4110,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-eth-client"
+version = "0.1.0"
+dependencies = [
+ "candid",
+ "did",
+ "ethers-core 2.0.3",
+ "ic-canister",
+ "ic-exports",
+ "jsonrpc-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "ic-execution-environment"
 version = "0.8.0"
 source = "git+https://github.com/dfinity/ic?rev=07293961dc498062a2fdf5ed69dd0b0f4d123e31#07293961dc498062a2fdf5ed69dd0b0f4d123e31"
@@ -4743,6 +4758,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-sign-test-canister"
+version = "0.1.0"
+dependencies = [
+ "candid",
+ "eth-signer",
+ "ethers-core 2.0.3",
+ "ic-canister",
+ "ic-exports",
+]
+
+[[package]]
 name = "ic-stable-structures"
 version = "0.3.55"
 source = "git+https://github.com/infinity-swap/canister-sdk?tag=v0.3.x#bdab2ab4a5dd46061c07ea149a91d8a7dd8a84e9"
@@ -5109,14 +5135,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic_sign_test_canister"
-version = "0.1.0"
+name = "iceth-client-test-canister"
+version = "0.2.4"
 dependencies = [
  "candid",
- "eth-signer",
+ "did",
  "ethers-core 2.0.3",
  "ic-canister",
+ "ic-eth-client",
  "ic-exports",
+ "ic-storage",
+ "jsonrpc-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

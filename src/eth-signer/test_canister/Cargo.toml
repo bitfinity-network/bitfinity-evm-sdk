@@ -1,5 +1,5 @@
 [package]
-name = "ic_sign_test_canister"
+name = "ic-sign-test-canister"
 version = "0.1.0"
 edition = "2021"
 
