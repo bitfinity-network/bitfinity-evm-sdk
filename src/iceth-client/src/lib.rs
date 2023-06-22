@@ -6,6 +6,7 @@ use ic_exports::ic_kit::RejectionCode;
 use jsonrpc_core::Output;
 use thiserror::Error;
 
+/// Iceth client error
 #[derive(Debug, Clone, Error, Deserialize, CandidType, Eq, PartialEq)]
 pub enum Error {
     #[error("inter-canister call failed with code {0:?}: {1}")]
@@ -39,6 +40,7 @@ impl From<jsonrpc_core::Failure> for Error {
     }
 }
 
+/// Iceth canister error.
 #[derive(Debug, Clone, Error, Deserialize, CandidType, Eq, PartialEq)]
 pub enum IcethError {
     #[error("no permission")]
@@ -63,9 +65,10 @@ pub enum IcethError {
     HttpRequestError { code: u32, message: String },
 }
 
+/// Client for iceht canister. Wraps JSON-RPC API to Rust functions.
 pub struct Client {
-    iceth_principal: Principal,
-    url: String,
+    pub iceth_principal: Principal,
+    pub node_url: String,
 }
 
 impl Client {
@@ -73,28 +76,23 @@ impl Client {
     pub fn new(iceth_principal: Principal, url: String) -> Self {
         Self {
             iceth_principal,
-            url,
+            node_url: url,
         }
-    }
-
-    /// Returns information about the external evm.
-    pub fn get_url(&self) -> &str {
-        &self.url
     }
 
     /// Returns balance of the given address.
     pub async fn get_balance(&self, address: &H160, block: BlockNumber) -> Result<U256, Error> {
         let data = format!(
-            r#"{{"jsonrpc":"2.0","id":1,"method":"eth_getBalance","params":["{address:#x}", "{block}"]}}"#,
+            r#"{{"jsonrpc":"2.0","id":0,"method":"eth_getBalance","params":["{address:#x}", "{block}"]}}"#,
         );
-        let result = self.json_rpc_call(&data).await?;
+        let result = self.json_rpc_call(&data, 1024).await?;
         self.process_json_rpc_response(&result)
     }
 
     /// Returns minimal gas price.
     pub async fn gas_price(&self) -> Result<U256, Error> {
         let data = r#"{"jsonrpc":"2.0","id":1,"method":"eth_gasPrice","params":[]}"#;
-        let result = self.json_rpc_call(data).await?;
+        let result = self.json_rpc_call(data, 1024).await?;
         self.process_json_rpc_response(&result)
     }
 
@@ -105,9 +103,9 @@ impl Client {
         block: BlockNumber,
     ) -> Result<U256, Error> {
         let data = format!(
-            r#"{{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionCount","params":["{address:#x}", "{block}"]}}"#,
+            r#"{{"jsonrpc":"2.0","id":2,"method":"eth_getTransactionCount","params":["{address:#x}", "{block}"]}}"#,
         );
-        let result = self.json_rpc_call(&data).await?;
+        let result = self.json_rpc_call(&data, 1024).await?;
         self.process_json_rpc_response(&result)
     }
 
@@ -116,7 +114,7 @@ impl Client {
         let data = format!(
             r#"{{"jsonrpc":"2.0","id":"3","method":"eth_sendRawTransaction","params":["0x{transaction_bytes:x}"]}}"#,
         );
-        let result = self.json_rpc_call(&data).await?;
+        let result = self.json_rpc_call(&data, 1024).await?;
         self.process_json_rpc_response(&result)
     }
 
@@ -126,9 +124,9 @@ impl Client {
         tx_hash: H256,
     ) -> Result<Option<EthTransaction>, Error> {
         let data = format!(
-            r#"{{"jsonrpc":"2.0","id":"3","method":"eth_getTransactionByHash","params":["{tx_hash:#x}"]}}"#,
+            r#"{{"jsonrpc":"2.0","id":"4","method":"eth_getTransactionByHash","params":["{tx_hash:#x}"]}}"#,
         );
-        let result = self.json_rpc_call(&data).await?;
+        let result = self.json_rpc_call(&data, 8192).await?;
         self.process_json_rpc_response(&result)
     }
 
@@ -138,19 +136,19 @@ impl Client {
         tx_hash: &H256,
     ) -> Result<Option<TransactionReceipt>, Error> {
         let data = format!(
-            r#"{{"jsonrpc":"2.0","id":"3","method":"eth_getTransactionReceipt","params":["{tx_hash:#x}"]}}"#,
+            r#"{{"jsonrpc":"2.0","id":"5","method":"eth_getTransactionReceipt","params":["{tx_hash:#x}"]}}"#,
         );
-        let result = self.json_rpc_call(&data).await?;
+        let result = self.json_rpc_call(&data, 8192).await?;
         self.process_json_rpc_response(&result)
     }
 
-    async fn json_rpc_call(&self, data: &str) -> Result<Vec<u8>, Error> {
+    async fn json_rpc_call(&self, data: &str, max_response_bytes: u64) -> Result<Vec<u8>, Error> {
         Ok(virtual_canister_call!(
             self.iceth_principal,
             "json_rpc_request",
-            (data, &self.url, 2048_u64),
+            (data, &self.node_url, max_response_bytes),
             Result<Vec<u8>, IcethError>,
-            628644000000 // TODO: calculate
+            self.json_rpc_cycles_cost(data, max_response_bytes)
         )
         .await??)
     }
@@ -168,6 +166,14 @@ impl Client {
 
         Ok(serde_json::from_value::<T>(result)?)
     }
+
+    pub fn json_rpc_cycles_cost(&self, payload: &str, max_response_bytes: u64) -> u64 {
+        let ingress_bytes = (payload.len() + self.node_url.len()) as u64 + INGRESS_OVERHEAD_BYTES;
+        INGRESS_MESSAGE_RECEIVED_COST
+            + INGRESS_MESSAGE_BYTE_RECEIVED_COST * ingress_bytes
+            + HTTP_OUTCALL_REQUEST_COST
+            + HTTP_OUTCALL_BYTE_RECEIEVED_COST * (ingress_bytes + max_response_bytes)
+    }
 }
 
 /// Methods available only for bitfinity EVM implementation.
@@ -178,7 +184,14 @@ impl Client {
         let data = format!(
             r#"{{"jsonrpc":"2.0","id":"3","method":"ic_mintEVMToken","params":["{address:#x}", "{amount:#x}"]}}"#,
         );
-        let result = self.json_rpc_call(&data).await?;
+        let result = self.json_rpc_call(&data, 1024).await?;
         self.process_json_rpc_response(&result)
     }
 }
+
+// Cost constants copied from ICETH source: https://github.com/jplevyak/iceth/blob/7432a4b03f8d706dbeaf59f78640e8f058a6cacb/src/main.rs#L23
+const INGRESS_OVERHEAD_BYTES: u64 = 100;
+const INGRESS_MESSAGE_RECEIVED_COST: u64 = 1_200_000;
+const INGRESS_MESSAGE_BYTE_RECEIVED_COST: u64 = 2_000;
+const HTTP_OUTCALL_REQUEST_COST: u64 = 400_000_000;
+const HTTP_OUTCALL_BYTE_RECEIEVED_COST: u64 = 100_000;
