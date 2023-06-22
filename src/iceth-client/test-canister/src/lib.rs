@@ -56,7 +56,7 @@ impl CounterCanister {
         let (chain_id, client) = {
             let state = self.state.borrow();
             let chain_id = state.chain_id;
-            let client = ic_eth_client::Client::new(state.iceth, state.url.clone());
+            let client = iceth_client::Client::new(state.iceth, state.url.clone());
             (chain_id, client)
         };
 
