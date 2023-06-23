@@ -31,6 +31,7 @@ hex = { workspace = true }
 ic-agent = { workspace = true }
 ic-exports = { workspace = true, features = ["state-machine"] }
 log = { workspace = true }
+openssl = {version="0.10.55", features = ["vendored"] } 
 rand = { workspace = true }
 rlp = { workspace = true }
 serde = { workspace = true }
