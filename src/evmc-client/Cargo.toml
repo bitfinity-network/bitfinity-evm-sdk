@@ -1,0 +1,28 @@
+[package]
+name = "evmc-client"
+categories = ["cryptography::cryptocurrencies"]
+description = "Client for interacting with the Evm Canister"
+include = ["src/**/*", "../../LICENSE", "../../README.md"]
+
+authors.workspace = true
+homepage.workspace = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+ic-agent-client = ["dep:ic-agent"]
+
+[dependencies]
+candid = { workspace = true }
+did = { path = "../did" }
+ic-exports = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+ic-agent = { workspace = true, optional = true }

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "src/did",
+    "src/evmc-client",
     "src/eth-signer",
     "src/eth-signer/test_canister",
     "src/register-evm-agent/src/simple_canister",
@@ -31,9 +32,8 @@ derive_more = "0.99"
 env_logger = { version = "0.10.0", default-features = false }
 ethereum-types = "0.14"
 ethers = "2.0.6"
-# infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
 ethers-core = { git = "https://github.com/infinity-swap/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
-hash-db = "0.15"
+hash-db = "0.16"
 hex = "0.4"
 ic-agent = "0.24"
 ic-canister = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-canister", tag = "v0.3.x" }
