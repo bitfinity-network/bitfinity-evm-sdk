@@ -8,7 +8,7 @@ use did::{
 use ic_exports::icrc_types::icrc1::account::Subaccount;
 use serde::Deserialize;
 
-use crate::{CanisterClientError, CanisterClientResult, EvmResult};
+use crate::{CanisterClientResult, EvmResult};
 
 /// Generic client for interacting with a canister.
 /// This is used to abstract away the differences between the IC Agent and the
