@@ -3,6 +3,7 @@ members = [
     "src/did",
     "src/evmc-client",
     "src/eth-signer",
+    "src/eth-signer/test_canister",
     "src/register-evm-agent/src/simple_canister",
     "src/register-evm-agent/src/register_evm_agent",
 ]

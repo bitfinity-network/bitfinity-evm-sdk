@@ -11,7 +11,8 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+ic_sign = ["ic-canister", "ic-exports", "candid"]
 
 [dependencies]
 async-trait = { workspace = true }
@@ -20,6 +21,12 @@ hex = { workspace = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true }
 
+# Dependencies for ic-siginig
+ic-exports = { workspace = true, optional = true }
+ic-canister = { workspace = true, optional = true }
+candid = { workspace = true, optional = true }
+
 [dev-dependencies]
 rand = { workspace = true }
 tokio = { workspace = true }
+
