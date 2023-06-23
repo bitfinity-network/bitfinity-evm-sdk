@@ -76,12 +76,12 @@ impl<C: CanisterClient> EvmcClient<C> {
     /// # Returns
     ///
     /// The transaction receipt.
-    pub async fn eth_get_transaction_receipt_by_hash(
+    pub async fn eth_get_transaction_receipt(
         &self,
         hash: H256,
     ) -> Result<Option<TransactionReceipt>, CanisterClientError> {
         self.client
-            .query("eth_get_transaction_receipt_by_hash", (hash,))
+            .query("eth_get_transaction_receipt", (hash,))
             .await
     }
 
@@ -271,6 +271,17 @@ impl<C: CanisterClient> EvmcClient<C> {
             .await
     }
 
+    /// Check if an address is registered
+    pub async fn is_address_registered(
+        &self,
+        address: H160,
+        principal: Principal,
+    ) -> std::result::Result<bool, CanisterClientError> {
+        self.client
+            .query("is_address_registered", (address, principal))
+            .await
+    }
+
     /// Get the the transaction by hash
     /// See [eth_getTransactionByHash](https://eth.wiki/json-rpc/API#eth_gettransactionbyhash)
     ///
@@ -286,6 +297,47 @@ impl<C: CanisterClient> EvmcClient<C> {
     ) -> CanisterClientResult<Option<Transaction>> {
         self.client
             .query("eth_get_transaction_by_hash", (hash,))
+            .await
+    }
+
+    /// Gets the transaction by block hash and transaction index position
+    /// See [eth_getTransactionByBlockHashAndIndex](https://eth.wiki/json-rpc/API#eth_gettransactionbyblockhashandindex)
+    ///
+    /// # Arguments
+    /// * `hash` - The hash of the block
+    /// * `index` - The index of the transaction
+    ///
+    /// # Returns
+    /// Result of the transaction or None if the transaction does not exist
+    pub async fn eth_get_transaction_by_block_hash_and_index(
+        &self,
+        hash: H256,
+        index: U256,
+    ) -> CanisterClientResult<Option<Transaction>> {
+        self.client
+            .query("eth_get_transaction_by_block_hash_and_index", (hash, index))
+            .await
+    }
+
+    /// Gets the transaction by block number and transaction index position
+    /// See [eth_getTransactionByBlockNumberAndIndex](https://eth.wiki/json-rpc/API#eth_gettransactionbyblocknumberandindex)
+    ///
+    /// # Arguments
+    /// * `block_number` - The block number or tag
+    /// * `index` - The index of the transaction
+    ///
+    /// # Returns
+    /// Result of the transaction or None if the transaction does not exist
+    pub async fn eth_get_transaction_by_block_number_and_index(
+        &self,
+        block_number: BlockNumber,
+        index: U256,
+    ) -> CanisterClientResult<Option<Transaction>> {
+        self.client
+            .query(
+                "eth_get_transaction_by_block_number_and_index",
+                (block_number, index),
+            )
             .await
     }
 
