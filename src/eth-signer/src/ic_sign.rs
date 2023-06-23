@@ -20,7 +20,7 @@ pub enum IcSignerError {
     SigningFailed(RejectionCode, String),
 
     #[error("from address is not specified in transaction")]
-    FromAdderessNotPresent,
+    FromAddressNotPresent,
 
     #[error("invalid public key")]
     InvalidPublicKey,
@@ -105,7 +105,7 @@ impl IcSigner {
         // The only thing we can do: try to recover address and, if failed,
         // assume that recovery id should be increased.
         let recovered = signature.recover(hash.0)?;
-        let tx_from = tx.from().ok_or(IcSignerError::FromAdderessNotPresent)?;
+        let tx_from = tx.from().ok_or(IcSignerError::FromAddressNotPresent)?;
         if &recovered != tx_from {
             signature.v += 1;
         };
