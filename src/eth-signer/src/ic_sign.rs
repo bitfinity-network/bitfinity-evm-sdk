@@ -20,7 +20,7 @@ pub enum IcSignerError {
     SigningFailed(RejectionCode, String),
 
     #[error("from address is not specified in transaction")]
-    FromAdderessNotPresent,
+    FromAddressNotPresent,
 
     #[error("invalid public key")]
     InvalidPublicKey,
