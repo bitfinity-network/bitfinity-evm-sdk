@@ -7,11 +7,5 @@
                   "type": "custom"
             }
       },
-      "networks": {
-            "local": {
-                  "bind": "127.0.0.1:8000",
-                  "type": "ephemeral"
-            }
-      },
       "version": 1
 }
