@@ -8,6 +8,7 @@
 - [did](./src/did): Data types for [evm-canister](https://github.com/infinity-swap/evm-canister)
 - [eth-signer](./src/eth-signer/): A library which provides a trait for signing transactions and messages.
 - [register-evm-agent](./src/register-evm-agent/src/register_evm_agent/): A Cli tool for generating an ETH Wallet & registering a canister to the EVMC
+- [evmc-client](./src/evmc-client/): A library for interacting with the EVMC
 
 ## License
 
