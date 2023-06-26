@@ -3,6 +3,8 @@
 [![license-mit](https://img.shields.io/badge/License-MIT-teal.svg)](https://opensource.org/licenses/MIT)
 [![build-ci](https://github.com/infinity-swap/evmc-sdk/workflows/Build%20Test/badge.svg)](https://github.com/infinity-swap/evmc-sdk/workflows/Build%20Test)
 
+![github](https://github.com/bitfinity-network/bitfinity-evm-sdk/assets/25309184/4775bc4b-1033-4528-ab4b-64ed05b6dcbf)
+
 ## Components
 
 - [did](./src/did): Data types for [evm-canister](https://github.com/infinity-swap/evm-canister)
