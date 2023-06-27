@@ -160,7 +160,8 @@ impl Encodable for Block<Transaction> {
         s.begin_list(self.transactions.len());
         for transaction in &self.transactions {
             let transaction = ethers_core::types::Transaction::from(transaction.clone());
-            s.append_raw(&transaction.rlp(), 1);
+            let tx_rlp = transaction.rlp();
+            s.append(&tx_rlp.to_vec());
         }
 
         // Uncles block headers. Currently not supported
@@ -233,10 +234,11 @@ impl Decodable for Block<Transaction> {
         let transactions = r.at(1)?;
         let transactions_count = transactions.item_count()?;
         block.transactions.reserve(transactions_count);
-        for i in 0..transactions_count {
-            let transaction_rlp = transactions.at(i)?;
-            let tx = ethers_core::types::Transaction::decode(&transaction_rlp)?;
 
+        for i in 0..transactions_count {
+            let tx_data = &transactions.at(i)?.data()?;
+
+            let tx: ethers_core::types::Transaction = rlp::decode(tx_data)?;
             block.transactions.push(tx.into());
         }
 
@@ -482,6 +484,8 @@ mod test {
 
     use candid::{Decode, Encode};
     use ethers_core::k256::ecdsa::SigningKey;
+    use ethers_core::types::transaction::eip2930::AccessList;
+    use pretty_assertions::assert_eq;
 
     use super::*;
     use crate::test_utils::read_all_files_to_json;
@@ -548,6 +552,110 @@ mod test {
         }
         .calculate_hash_and_build()
         .unwrap()
+    }
+
+    fn create_different_type_transaction(tx_type: Option<u64>) -> Transaction {
+        let mut tx = ethers_core::types::Transaction {
+            gas_price: Some(10_u64.into()),
+            from: H160::from_slice(&[0u8; 20]).into(),
+            to: None,
+            nonce: U256::zero().into(),
+            value: U256::zero().into(),
+            gas: 20u64.into(),
+            chain_id: Some(35514.into()),
+            ..Default::default()
+        };
+
+        tx.transaction_type = tx_type.map(|v| v.into());
+
+        match tx_type {
+            Some(1) => {
+                tx.access_list = Some(AccessList::default());
+            }
+            Some(2) => {
+                tx.access_list = Some(AccessList::default());
+                tx.max_fee_per_gas = Some(10_u64.into());
+                tx.max_priority_fee_per_gas = Some(10_u64.into());
+                tx.gas_price = None;
+            }
+            _ => {}
+        }
+
+        tx.hash = tx.hash();
+        tx.into()
+    }
+
+    #[test]
+    fn test_block_rlp_serialization_roundtrip_non_legacy() {
+        let block = Block::<Transaction> {
+            author: H160::from_slice(&[3u8; 20]),
+            number: U64::from(12u64),
+            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
+            nonce: H64::zero(),
+            transactions: vec![
+                create_different_type_transaction(Some(2)),
+                create_different_type_transaction(Some(1)),
+            ],
+            mix_hash: Default::default(), // during the serialization empty value is equivalent to the default
+            hash: Default::default(),
+            parent_hash: H256::from_slice(&[1u8; 32]),
+            uncles_hash: H256::from_slice(&[4u8; 32]),
+            state_root: H256::from_slice(&[5u8; 32]),
+            transactions_root: H256::from_slice(&[6u8; 32]),
+            receipts_root: H256::from_slice(&[7u8; 32]),
+            gas_used: U256::from(20u64),
+            gas_limit: U256::from(30u64),
+            extra_data: Default::default(),
+            timestamp: U256::from(40u64),
+            difficulty: U256::from(50u64),
+            total_difficulty: Default::default(),
+            seal_fields: Vec::new(),
+            uncles: Vec::new(),
+            size: None,
+            base_fee_per_gas: None,
+        };
+
+        let rlp_data = rlp::encode(&block);
+        let recovered_block: Block<Transaction> = rlp::decode(&rlp_data).unwrap();
+
+        assert_eq!(block, recovered_block);
+    }
+
+    #[test]
+    fn test_block_rlp_serialization_roundtrip_legacy_and_non_legacy() {
+        let block = Block::<Transaction> {
+            author: H160::from_slice(&[3u8; 20]),
+            number: U64::from(12u64),
+            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
+            nonce: H64::zero(),
+            transactions: vec![
+                create_different_type_transaction(Some(2)),
+                create_different_type_transaction(Some(1)),
+                create_transaction(Some(Default::default()), 35514),
+            ],
+            mix_hash: Default::default(), // during the serialization empty value is equivalent to the default
+            hash: Default::default(),
+            parent_hash: H256::from_slice(&[1u8; 32]),
+            uncles_hash: H256::from_slice(&[4u8; 32]),
+            state_root: H256::from_slice(&[5u8; 32]),
+            transactions_root: H256::from_slice(&[6u8; 32]),
+            receipts_root: H256::from_slice(&[7u8; 32]),
+            gas_used: U256::from(20u64),
+            gas_limit: U256::from(30u64),
+            extra_data: Default::default(),
+            timestamp: U256::from(40u64),
+            difficulty: U256::from(50u64),
+            total_difficulty: Default::default(),
+            seal_fields: Vec::new(),
+            uncles: Vec::new(),
+            size: None,
+            base_fee_per_gas: None,
+        };
+
+        let rlp_data = rlp::encode(&block);
+        let recovered_block: Block<Transaction> = rlp::decode(&rlp_data).unwrap();
+
+        assert_eq!(block, recovered_block);
     }
 
     #[test]
