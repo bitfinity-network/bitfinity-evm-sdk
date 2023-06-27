@@ -1,35 +1,66 @@
 name: "Build Test"
 
 on:
-    pull_request:
-        branches: [main, develop]
-        paths-ignore:
-            - "**/README.md"
-    push:
-        branches: [main, develop]
-        tags:
-            - "v*"
-        paths-ignore:
-            - "**/README.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**/README.md"
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+    paths-ignore:
+      - "**/README.md"
 
 jobs:
-    build-test:
-        name: "Build and Test"
-        uses: infinity-swap/ci-wf/.github/workflows/build-n-test.yml@main
+  build-test:
+    name: "Build and Test"
+    uses: infinity-swap/ci-wf/.github/workflows/build-n-test.yml@main
+    with:
+      runs-on: ubuntu-latest
+      container-image: ghcr.io/infinity-swap/ic-dev-full:rust1.70-dfx0.14-rc-2022-09-30
+      git-fetch-depth: "0"
+      skip-test: false
+      audit-allow-warnings: true
+      cargo-clippy-extra-args: "-- -D warnings"
+      enable-target-cache: true
+      test-script: |
+        export RUST_BACKTRACE="full"
+        cargo test
+        ./scripts/build.sh
+        ./scripts/dfx_deploy.sh
+        ./scripts/dfx_test.sh
+      
+    secrets:
+      gh_login: ${{ secrets.GH_PKG_LOGIN }}
+      gh_token: ${{ secrets.GH_PKG_TOKEN }}
+
+  release:
+    if: ${{github.ref_type == 'tag'}}
+    needs: [build-test]
+    runs-on: ubuntu-latest
+    container:
+      image:  ghcr.io/infinity-swap/ic-dev-base:rust1.70-dfx0.14.1
+      credentials:
+        username: ${{ secrets.GH_PKG_LOGIN }}
+        password: ${{ secrets.GH_PKG_TOKEN }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: "Prepare release build"
+        run: |
+          cargo build -p register_evm_agent --release --target=x86_64-unknown-linux-gnu
+
+          mkdir -p .release
+          mv target/x86_64-unknown-linux-gnu/release/register-evm-agent .release/register-evm-agent-nix-${{ github.ref_name }}
+          
+          cd .release
+          gzip -f --best *
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-            runs-on: ubuntu-latest
-            container-image: ghcr.io/infinity-swap/ic-dev-full:rust1.70-dfx0.14-rc-2022-09-30
-            git-fetch-depth: "0"
-            skip-test: false
-            audit-allow-warnings: true
-            cargo-clippy-extra-args: "-- -D warnings"
-            enable-target-cache: true
-            test-script: |
-                export RUST_BACKTRACE="full"
-                cargo test
-                ./scripts/build.sh
-                ./scripts/dfx_deploy.sh
-                ./scripts/dfx_test.sh
-        secrets:
-            gh_token: ${{ secrets.GH_PKG_TOKEN }}
-            gh_login: ${{ secrets.GH_PKG_LOGIN }}
+          files: |
+            .release/*.gz

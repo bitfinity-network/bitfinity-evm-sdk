@@ -8,7 +8,7 @@ use did::{
 use ic_exports::icrc_types::icrc1::account::Subaccount;
 use serde::Deserialize;
 
-use crate::{CanisterClientError, CanisterClientResult, EvmResult};
+use crate::{CanisterClientResult, EvmResult};
 
 /// Generic client for interacting with a canister.
 /// This is used to abstract away the differences between the IC Agent and the
@@ -79,7 +79,7 @@ impl<C: CanisterClient> EvmcClient<C> {
     pub async fn eth_get_transaction_receipt(
         &self,
         hash: H256,
-    ) -> Result<Option<TransactionReceipt>, CanisterClientError> {
+    ) -> CanisterClientResult<EvmResult<Option<TransactionReceipt>>> {
         self.client
             .query("eth_get_transaction_receipt", (hash,))
             .await
@@ -171,7 +171,7 @@ impl<C: CanisterClient> EvmcClient<C> {
     /// The account information
     ///  - nonce
     ///  - balance
-    pub async fn account_basic(&self, address: H160) -> Result<BasicAccount, CanisterClientError> {
+    pub async fn account_basic(&self, address: H160) -> CanisterClientResult<BasicAccount> {
         self.client.query("account_basic", (address,)).await
     }
 
@@ -276,7 +276,7 @@ impl<C: CanisterClient> EvmcClient<C> {
         &self,
         address: H160,
         principal: Principal,
-    ) -> std::result::Result<bool, CanisterClientError> {
+    ) -> CanisterClientResult<bool> {
         self.client
             .query("is_address_registered", (address, principal))
             .await
@@ -332,7 +332,7 @@ impl<C: CanisterClient> EvmcClient<C> {
         &self,
         block_number: BlockNumber,
         index: U256,
-    ) -> CanisterClientResult<Option<Transaction>> {
+    ) -> CanisterClientResult<EvmResult<Option<Transaction>>> {
         self.client
             .query(
                 "eth_get_transaction_by_block_number_and_index",
@@ -374,7 +374,7 @@ impl<C: CanisterClient> EvmcClient<C> {
     ///
     /// # Returns
     /// The latest block number
-    pub async fn eth_block_number(&self) -> Result<usize, CanisterClientError> {
+    pub async fn eth_block_number(&self) -> CanisterClientResult<usize> {
         self.client.query("eth_block_number", ()).await
     }
 
