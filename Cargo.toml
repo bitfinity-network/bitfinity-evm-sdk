@@ -13,11 +13,11 @@ authors = ["Bitfinity Network"]
 categories = ["cryptography::cryptocurrencies"]
 description = "EVM canister SDK"
 edition = "2021"
-homepage = "https://github.com/infinity-swap/evmc-sdk"
+homepage = "https://github.com/bitfinity-network/evmc-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 name = "evmc-sdk"
-repository = "https://github.com/infinity-swap/evmc-sdk"
+repository = "https://github.com/bitfinity-network/evmc-sdk"
 version = "0.2.4"
 
 [workspace.dependencies]
@@ -32,13 +32,13 @@ derive_more = "0.99"
 env_logger = { version = "0.10.0", default-features = false }
 ethereum-types = "0.14"
 ethers = "2.0.6"
-ethers-core = { git = "https://github.com/infinity-swap/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
+ethers-core = { git = "https://github.com/bitfinity-network/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
 hash-db = "0.16"
 hex = "0.4"
 ic-agent = "0.24"
-ic-canister = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-canister", tag = "v0.3.x" }
-ic-exports = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-exports", tag = "v0.3.x" }
-ic-stable-structures = { git = "https://github.com/infinity-swap/canister-sdk", package = "ic-stable-structures", tag = "v0.3.x" }
+ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.3.x" }
+ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.3.x" }
+ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.3.x" }
 jsonrpc-core = "18.0"
 log = "0.4"
 mockall = "0.11"
