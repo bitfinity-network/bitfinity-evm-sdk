@@ -27,6 +27,9 @@ jobs:
             test-script: |
                 export RUST_BACKTRACE="full"
                 cargo test
+                ./scripts/build.sh
+                ./scripts/dfx_deploy.sh
+                ./scripts/dfx_test.sh
         secrets:
             gh_token: ${{ secrets.GH_PKG_TOKEN }}
             gh_login: ${{ secrets.GH_PKG_LOGIN }}
