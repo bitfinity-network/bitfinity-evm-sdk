@@ -15,10 +15,10 @@ on:
 jobs:
   build-test:
     name: "Build and Test"
-    uses: infinity-swap/ci-wf/.github/workflows/build-n-test.yml@main
+    uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
     with:
       runs-on: ubuntu-latest
-      container-image: ghcr.io/infinity-swap/ic-dev-full:rust1.70-dfx0.14-rc-2022-09-30
+      container-image: ghcr.io/bitfinity-network/ic-dev-full:rust1.70-dfx0.14-rc-2022-09-30
       git-fetch-depth: "0"
       skip-test: false
       audit-allow-warnings: true
@@ -40,7 +40,7 @@ jobs:
     needs: [build-test]
     runs-on: ubuntu-latest
     container:
-      image:  ghcr.io/infinity-swap/ic-dev-base:rust1.70-dfx0.14.1
+      image:  ghcr.io/bitfinity-network/ic-dev-base:rust1.70-dfx0.14.1
       credentials:
         username: ${{ secrets.GH_PKG_LOGIN }}
         password: ${{ secrets.GH_PKG_TOKEN }}
@@ -64,4 +64,3 @@ jobs:
         with:
           files: |
             .release/*.gz
-            
