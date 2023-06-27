@@ -23,7 +23,6 @@ ethereum-types = { workspace = true }
 ethers-core = { workspace = true }
 hex = { workspace = true }
 ic-stable-structures = { workspace = true }
-is20-token = { workspace = true }
 jsonrpc-core = { workspace = true }
 log = { workspace = true }
 num = { workspace = true }

@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 
 use candid::{CandidType, Deserialize};
-use is20_token::error::TxError;
 use jsonrpc_core::{Error, ErrorCode};
 use rlp::DecoderError;
 use serde::Serialize;
@@ -21,9 +20,6 @@ pub enum EvmError {
         actual: crate::U256,
         expected: crate::U256,
     },
-
-    #[error("token error: {0}")]
-    Token(#[from] TxError),
 
     #[error("evm transaction failed due to {0:?}")]
     NotProcessableTransactionError(HaltError),
@@ -109,8 +105,7 @@ impl From<EvmError> for jsonrpc_core::error::Error {
             EvmError::InsufficientBalance {
                 actual: _,
                 expected: _,
-            }
-            | EvmError::Token(_) => -32010, // TRANSACTION_ERROR
+            } => -32010, // TRANSACTION_ERROR
             EvmError::InvalidGasPrice(_) => -32016, // ACCOUNT_ERROR
             EvmError::NotAuthorized => -32002,      // NO_AUTHOR
             _ => -32015,                            // EXECUTION_ERROR
