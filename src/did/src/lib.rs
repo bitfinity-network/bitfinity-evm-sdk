@@ -6,6 +6,7 @@
 pub mod block;
 pub mod bytes;
 pub mod codec;
+pub mod constant;
 pub mod error;
 pub mod hash;
 pub mod integer;

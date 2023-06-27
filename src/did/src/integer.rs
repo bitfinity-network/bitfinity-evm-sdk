@@ -8,7 +8,9 @@ use ic_stable_structures::{BoundedStorable, Storable};
 use num::BigUint;
 use serde::Serialize;
 
-#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
+#[derive(
+    Debug, Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash,
+)]
 #[serde(transparent)]
 pub struct U256(pub ethereum_types::U256);
 
@@ -80,6 +82,14 @@ impl U256 {
 
     pub fn checked_sub(&self, rhs: &Self) -> Option<Self> {
         self.0.checked_sub(rhs.0).map(Self)
+    }
+
+    pub fn checked_div(&self, rhs: &Self) -> Option<Self> {
+        self.0.checked_div(rhs.0).map(Self)
+    }
+
+    pub fn checked_mul(&self, rhs: &Self) -> Option<Self> {
+        self.0.checked_mul(rhs.0).map(Self)
     }
 }
 
@@ -568,8 +578,9 @@ mod tests {
         let b = U256::from(10u64);
 
         let add = U256::from(111u64);
-        let mul = U256::from(1010u64);
         let sub = U256::from(91u64);
+        let div = U256::from(10u64);
+        let mul = U256::from(1010u64);
 
         assert_eq!(add, &a + &b);
         assert_eq!(mul, &a * &b);
@@ -582,9 +593,13 @@ mod tests {
         // checked operations
         let checked_add = a.checked_add(&b);
         let checked_sub = a.checked_sub(&b);
+        let checked_div = a.checked_div(&b);
+        let checked_mul = a.checked_mul(&b);
 
         assert_eq!(checked_add, Some(add.clone()));
         assert_eq!(checked_sub, Some(sub));
+        assert_eq!(checked_mul, Some(mul));
+        assert_eq!(checked_div, Some(div));
 
         let add_overflow = U256::max_value().checked_add(&a);
         let sub_overflow = U256::zero().checked_sub(&a);
