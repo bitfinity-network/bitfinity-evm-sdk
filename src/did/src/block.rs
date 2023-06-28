@@ -160,8 +160,7 @@ impl Encodable for Block<Transaction> {
         s.begin_list(self.transactions.len());
         for transaction in &self.transactions {
             let transaction = ethers_core::types::Transaction::from(transaction.clone());
-            let tx_rlp = transaction.rlp();
-            s.append(&tx_rlp.to_vec());
+            s.append_raw(&transaction.rlp(), 1);
         }
 
         // Uncles block headers. Currently not supported
@@ -234,7 +233,6 @@ impl Decodable for Block<Transaction> {
         let transactions = r.at(1)?;
         let transactions_count = transactions.item_count()?;
         block.transactions.reserve(transactions_count);
-
         for i in 0..transactions_count {
             let tx_rlp = transactions.at(i)?;
 
@@ -490,8 +488,6 @@ mod test {
 
     use candid::{Decode, Encode};
     use ethers_core::k256::ecdsa::SigningKey;
-    use ethers_core::types::transaction::eip2930::AccessList;
-    use pretty_assertions::assert_eq;
 
     use super::*;
     use crate::test_utils::read_all_files_to_json;

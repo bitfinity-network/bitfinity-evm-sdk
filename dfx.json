@@ -1,9 +1,18 @@
 {
       "canisters": {
-            "test_canister": {
-                  "build": "bash ./src/eth-signer/test_canister/scripts/build.sh",
-                  "candid": "./src/eth-signer/test_canister/test_canister.did",
-                  "wasm": "target/wasm32-unknown-unknown/release/ic_sign_test_canister_opt.wasm.gz",
+            "ic-sign-test-canister": {
+                  "candid": ".artifact/ic-sign-test-canister.did",
+                  "wasm": ".artifact/ic-sign-test-canister-opt.wasm.gz",
+                  "type": "custom"
+            },
+            "iceth-client-test-canister": {
+                  "candid": ".artifact/iceth-client-test-canister.did",
+                  "wasm": ".artifact/iceth-client-test-canister-opt.wasm.gz",
+                  "type": "custom"
+            },
+            "iceth": {
+                  "candid": ".artifact/iceth.did",
+                  "wasm": ".artifact/iceth.wasm",
                   "type": "custom"
             }
       },
