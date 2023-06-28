@@ -35,4 +35,3 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 rand = { workspace = true }
-pretty_assertions = { workspace = true }
