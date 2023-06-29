@@ -32,10 +32,10 @@ impl EvmCanisterImpl {
 
     fn get_nonce(&self) -> U256 {
         NONCE_CELL.with(|nonce| {
-            let value = nonce.borrow().get().clone();
+            let value = *nonce.borrow().get();
             nonce
                 .borrow_mut()
-                .set(value.clone() + U256::one())
+                .set(value + U256::one())
                 .expect("failed to update nonce");
             value
         })
@@ -60,7 +60,7 @@ impl EvmCanisterImpl {
             NONCE_CELL.with(|nonce| {
                 nonce
                     .borrow_mut()
-                    .set(expected.clone())
+                    .set(*expected)
                     .expect("failed to update nonce");
             });
         }

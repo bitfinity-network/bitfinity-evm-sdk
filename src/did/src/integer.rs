@@ -586,9 +586,9 @@ mod tests {
         assert_eq!(mul, &a * &b);
         assert_eq!(sub, &a - &b);
 
-        assert_eq!(add, a.clone() + b.clone());
-        assert_eq!(mul, a.clone() * b.clone());
-        assert_eq!(sub, a.clone() - b.clone());
+        assert_eq!(add, a + b);
+        assert_eq!(mul, a * b);
+        assert_eq!(sub, a - b);
 
         // checked operations
         let checked_add = a.checked_add(&b);
@@ -596,7 +596,7 @@ mod tests {
         let checked_div = a.checked_div(&b);
         let checked_mul = a.checked_mul(&b);
 
-        assert_eq!(checked_add, Some(add.clone()));
+        assert_eq!(checked_add, Some(add));
         assert_eq!(checked_sub, Some(sub));
         assert_eq!(checked_mul, Some(mul));
         assert_eq!(checked_div, Some(div));
