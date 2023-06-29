@@ -14,6 +14,7 @@ on:
 
 jobs:
   build-test:
+    if: ${{ false }}
     name: "Build and Test"
     uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
     with:
@@ -35,8 +36,155 @@ jobs:
       gh_login: ${{ secrets.GH_PKG_LOGIN }}
       gh_token: ${{ secrets.GH_PKG_TOKEN }}
 
+  release-builds:
+    name: Release - ${{ matrix.platform.release_for }}
+    strategy:
+      matrix:
+        platform:
+          - release_for: Linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-freebsd
+            bin: register-evm-agent
+            
+          - release_for: Windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: register-evm-agent.exe
+
+          - release_for: MacOS-x86_64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            bin: register-evm-agent
+
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          target: ${{ matrix.platform.target }}
+          command: build
+          args: "--release -p register_evm_agent"
+          strip: true
+
+      - name: Prepare artifact files
+        run: |
+          mkdir -p .artifact
+          mv target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} .artifact/${{ matrix.platform.bin }}
+      
+      - name: "Uploading artifact"
+        uses: actions/upload-artifact@v3
+        with:
+          if-no-files-found: error
+          retention-days: 1
+          name: ${{ matrix.platform.release_for }}
+          path: .artifact/*
+
+  publish-release:
+    needs: [release-builds]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Artifact Linux"
+        uses: actions/download-artifact@v3
+        with:
+          name: Linux-x86_64
+          path: ./linux
+          
+      - name: "Artifact MacOs"
+        uses: actions/download-artifact@v3
+        with:
+          name: MacOS-x86_64
+          path: ./macos
+      
+      - name: "Artifact Windows"
+        uses: actions/download-artifact@v3
+        with:
+          name: Windows-x86_64
+          path: ./win
+
+      - run: |
+          mkdir -p .release
+          cd .release
+
+          mv ../linux/register-evm-agent ./register-evm-agent-nix
+          mv ../macos/register-evm-agent ./register-evm-agent-darwin
+          mv ../win/register-evm-agent.exe .
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            .release/*
+
+
+
+  release-darwin:
+    if: ${{ false }}
+    # if: ${{github.ref_type == 'tag'}}
+    # needs: [build-test]
+    runs-on: macos-latest
+    
+    steps:
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v2
+        # Use it to avoid rate limiting (if any)
+        # with:
+        #   repo-token: ${{ secrets.GH_PKG_TOKEN }}
+
+      - name: Install minimal nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: x86_64-apple-darwin
+
+      - run: rustup target add aarch64-apple-darwin
+
+      - name: Checkout
+        uses: actions/checkout@master
+
+      # - run: rustup target list
+
+      - name: "Prepare release build"
+        run: |
+          cargo build -p register_evm_agent --release --target=x86_64-apple-darwin --target=aarch64-apple-darwin
+
+          mkdir -p .artifact
+          
+          mv target/x86_64-apple-darwin/release/register-evm-agent .artifact/register-evm-agent-darwin
+          mv target/aarch64-apple-darwin/release/register-evm-agent .artifact/register-evm-agent-m1
+
+      - name: "Uploading artifact"
+        uses: actions/upload-artifact@v3
+        with:
+          if-no-files-found: error
+          retention-days: 1
+          name: release-macos
+          path: .artifact/*
+
+
+
+      # - name: "Prepare release build"
+      #   run: |
+      #     cargo build -p register_evm_agent --release --target=x86_64-unknown-linux-gnu
+
+      #     mkdir -p .release
+      #     mv target/x86_64-unknown-linux-gnu/release/register-evm-agent .release/register-evm-agent-nix-${{ github.ref_name }}
+          
+      #     cd .release
+      #     gzip -f --best *
+
+      # - name: Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     files: |
+      #       .release/*.gz
+
   release:
-    if: ${{github.ref_type == 'tag'}}
+    if: ${{ false }}
+    # if: ${{github.ref_type == 'tag'}}
     needs: [build-test]
     runs-on: ubuntu-latest
     container:
