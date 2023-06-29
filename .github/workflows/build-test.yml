@@ -14,7 +14,7 @@ on:
 
 jobs:
   build-test:
-    if: ${{ false }}
+    if: ${{github.ref_type != 'tag'}}
     name: "Build and Test"
     uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
     with:
@@ -36,7 +36,8 @@ jobs:
       gh_login: ${{ secrets.GH_PKG_LOGIN }}
       gh_token: ${{ secrets.GH_PKG_TOKEN }}
 
-  release-builds:
+  release-binaries:
+    if: ${{github.ref_type == 'tag'}}
     name: Release - ${{ matrix.platform.release_for }}
     strategy:
       matrix:
@@ -66,8 +67,8 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           command: build
+          strip: false
           args: "--release -p register_evm_agent"
-          strip: true
 
       - name: Prepare artifact files
         run: |
@@ -83,7 +84,8 @@ jobs:
           path: .artifact/*
 
   publish-release:
-    needs: [release-builds]
+    if: ${{github.ref_type == 'tag'}}
+    needs: [release-binaries]
     runs-on: ubuntu-latest
     steps:
       - name: "Artifact Linux"
@@ -111,104 +113,10 @@ jobs:
           mv ../linux/register-evm-agent ./register-evm-agent-nix
           mv ../macos/register-evm-agent ./register-evm-agent-darwin
           mv ../win/register-evm-agent.exe .
+          ls -lah .
 
-      - name: Release
+      - name: Releasing
         uses: softprops/action-gh-release@v1
         with:
           files: |
             .release/*
-
-
-
-  release-darwin:
-    if: ${{ false }}
-    # if: ${{github.ref_type == 'tag'}}
-    # needs: [build-test]
-    runs-on: macos-latest
-    
-    steps:
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v2
-        # Use it to avoid rate limiting (if any)
-        # with:
-        #   repo-token: ${{ secrets.GH_PKG_TOKEN }}
-
-      - name: Install minimal nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: x86_64-apple-darwin
-
-      - run: rustup target add aarch64-apple-darwin
-
-      - name: Checkout
-        uses: actions/checkout@master
-
-      # - run: rustup target list
-
-      - name: "Prepare release build"
-        run: |
-          cargo build -p register_evm_agent --release --target=x86_64-apple-darwin --target=aarch64-apple-darwin
-
-          mkdir -p .artifact
-          
-          mv target/x86_64-apple-darwin/release/register-evm-agent .artifact/register-evm-agent-darwin
-          mv target/aarch64-apple-darwin/release/register-evm-agent .artifact/register-evm-agent-m1
-
-      - name: "Uploading artifact"
-        uses: actions/upload-artifact@v3
-        with:
-          if-no-files-found: error
-          retention-days: 1
-          name: release-macos
-          path: .artifact/*
-
-
-
-      # - name: "Prepare release build"
-      #   run: |
-      #     cargo build -p register_evm_agent --release --target=x86_64-unknown-linux-gnu
-
-      #     mkdir -p .release
-      #     mv target/x86_64-unknown-linux-gnu/release/register-evm-agent .release/register-evm-agent-nix-${{ github.ref_name }}
-          
-      #     cd .release
-      #     gzip -f --best *
-
-      # - name: Release
-      #   uses: softprops/action-gh-release@v1
-      #   with:
-      #     files: |
-      #       .release/*.gz
-
-  release:
-    if: ${{ false }}
-    # if: ${{github.ref_type == 'tag'}}
-    needs: [build-test]
-    runs-on: ubuntu-latest
-    container:
-      image:  ghcr.io/bitfinity-network/ic-dev-base:rust1.70-dfx0.14.1
-      credentials:
-        username: ${{ secrets.GH_PKG_LOGIN }}
-        password: ${{ secrets.GH_PKG_TOKEN }}
-    
-    steps:
-      - name: Checkout
-        uses: actions/checkout@master
-
-      - name: "Prepare release build"
-        run: |
-          cargo build -p register_evm_agent --release --target=x86_64-unknown-linux-gnu
-
-          mkdir -p .release
-          mv target/x86_64-unknown-linux-gnu/release/register-evm-agent .release/register-evm-agent-nix-${{ github.ref_name }}
-          
-          cd .release
-          gzip -f --best *
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            .release/*.gz
