@@ -1,7 +1,7 @@
 # Bitfinity EVM SDK
 
 [![license-mit](https://img.shields.io/badge/License-MIT-teal.svg)](https://opensource.org/licenses/MIT)
-[![build-ci](https://github.com/bitfinity-network/evmc-sdk/workflows/Build%20Test/badge.svg)](https://github.com/bitfinity-network/evmc-sdk/workflows/Build%20Test)
+[![Build Test](https://github.com/bitfinity-network/bitfinity-evm-sdk/actions/workflows/build-test.yml/badge.svg)](https://github.com/bitfinity-network/bitfinity-evm-sdk/actions/workflows/build-test.yml)
 
 ![github](https://github.com/bitfinity-network/bitfinity-evm-sdk/assets/25309184/4775bc4b-1033-4528-ab4b-64ed05b6dcbf)
 
