@@ -8,9 +8,7 @@ use ic_stable_structures::{BoundedStorable, Storable};
 use num::BigUint;
 use serde::Serialize;
 
-#[derive(
-    Debug, Default, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash,
-)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 #[serde(transparent)]
 pub struct U256(pub ethereum_types::U256);
 
@@ -582,13 +580,13 @@ mod tests {
         let div = U256::from(10u64);
         let mul = U256::from(1010u64);
 
-        assert_eq!(add, a + b);
-        assert_eq!(mul, a * b);
-        assert_eq!(sub, a - b);
+        assert_eq!(add, &a + &b);
+        assert_eq!(mul, &a * &b);
+        assert_eq!(sub, &a - &b);
 
-        assert_eq!(add, a + b);
-        assert_eq!(mul, a * b);
-        assert_eq!(sub, a - b);
+        assert_eq!(add, &a + &b);
+        assert_eq!(mul, &a * &b);
+        assert_eq!(sub, &a - &b);
 
         // checked operations
         let checked_add = a.checked_add(&b);
@@ -596,7 +594,7 @@ mod tests {
         let checked_div = a.checked_div(&b);
         let checked_mul = a.checked_mul(&b);
 
-        assert_eq!(checked_add, Some(add));
+        assert_eq!(checked_add, Some(add.clone()));
         assert_eq!(checked_sub, Some(sub));
         assert_eq!(checked_mul, Some(mul));
         assert_eq!(checked_div, Some(div));

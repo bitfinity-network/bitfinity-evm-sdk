@@ -271,27 +271,27 @@ pub fn calculate_block_size<'a>(
 
 /// Calculate base fee for next block. [EIP-1559](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md) spec
 pub fn calculate_next_block_base_fee(
-    parent_gas_used: U256,
-    parent_gas_limit: U256,
-    parent_base_fee: U256,
+    parent_gas_used: &U256,
+    parent_gas_limit: &U256,
+    parent_base_fee: &U256,
 ) -> U256 {
     let gas_target: U256 = parent_gas_limit
         .checked_div(&U256::from(EIP1559_ELASTICITY_MULTIPLIER))
         .unwrap_or_default();
 
-    if parent_gas_used == gas_target {
-        return parent_base_fee;
+    if parent_gas_used == &gas_target {
+        return parent_base_fee.clone();
     }
 
-    let gas_used_delta = parent_gas_used - gas_target;
-    let base_fee_per_gas_delta = (parent_base_fee * gas_used_delta)
+    let gas_used_delta = parent_gas_used - &gas_target;
+    let base_fee_per_gas_delta = (parent_base_fee * &gas_used_delta)
         .checked_div(&gas_target)
         .and_then(|x| x.checked_div(&U256::from(EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR)))
         .unwrap_or_default();
 
-    if parent_gas_used > gas_target {
+    if parent_gas_used > &gas_target {
         let base_fee_delta = std::cmp::max(U256::one(), base_fee_per_gas_delta);
-        parent_base_fee + base_fee_delta
+        parent_base_fee + &base_fee_delta
     } else {
         parent_base_fee
             .checked_sub(&base_fee_per_gas_delta)
