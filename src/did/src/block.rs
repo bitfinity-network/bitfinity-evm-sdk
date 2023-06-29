@@ -283,7 +283,7 @@ pub fn calculate_next_block_base_fee(
         return parent_base_fee.clone();
     }
 
-    let gas_used_delta = parent_gas_used - &gas_target;
+    let gas_used_delta = parent_gas_used.checked_sub(&gas_target).unwrap_or_default();
     let base_fee_per_gas_delta = (parent_base_fee * &gas_used_delta)
         .checked_div(&gas_target)
         .and_then(|x| x.checked_div(&U256::from(EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR)))
@@ -758,5 +758,58 @@ mod test {
         let decoded_value: BlockResult = serde_json::from_value(encoded_value).unwrap();
 
         assert_eq!(block_result, decoded_value);
+    }
+
+    #[test]
+    fn should_calc_block_base_fee_when_gas_used_eq_gas_target() {
+        assert_eq!(
+            calculate_next_block_base_fee(
+                &U256::new(2_u64.into()),
+                &U256::new(4_u64.into()), // gas target 2
+                &U256::new(1_u64.into())
+            ),
+            U256::one()
+        );
+    }
+
+    #[test]
+    fn should_calc_block_base_fee_when_gas_used_is_gt_gas_target() {
+        assert_eq!(
+            calculate_next_block_base_fee(
+                &U256::new(10_u64.into()),
+                &U256::new(4_u64.into()), // gas target 2
+                &U256::new(1_u64.into())
+            ),
+            U256::new(2_u64.into())
+        );
+    }
+
+    #[test]
+    fn should_calc_block_base_fee_eq_to_base_fee_when_gas_used_is_lt_gas_target_and_sub_overflows()
+    {
+        let base_fee = U256::new(100_u64.into());
+        assert_eq!(
+            calculate_next_block_base_fee(
+                &U256::new(4_u64.into()),
+                &U256::new(10_u64.into()), // gas target 5
+                &base_fee
+            ),
+            base_fee
+        );
+    }
+
+    #[test]
+    fn should_calc_block_base_fee_eq_to_sum_of_one_and_base_fee_when_gas_limit_is_zero() {
+        let gas_used = U256::new(5_u64.into());
+        let base_fee = U256::new(100_u64.into());
+        let expected = &U256::one() + &base_fee;
+        assert_eq!(
+            calculate_next_block_base_fee(
+                &gas_used,
+                &U256::zero(), // gas target 0
+                &base_fee
+            ),
+            expected
+        );
     }
 }
