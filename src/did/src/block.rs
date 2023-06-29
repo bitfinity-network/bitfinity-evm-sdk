@@ -488,6 +488,7 @@ mod test {
 
     use candid::{Decode, Encode};
     use ethers_core::k256::ecdsa::SigningKey;
+    use ethers_core::types::transaction::eip2930::AccessList;
 
     use super::*;
     use crate::test_utils::read_all_files_to_json;
