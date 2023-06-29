@@ -582,9 +582,9 @@ mod tests {
         let div = U256::from(10u64);
         let mul = U256::from(1010u64);
 
-        assert_eq!(add, &a + &b);
-        assert_eq!(mul, &a * &b);
-        assert_eq!(sub, &a - &b);
+        assert_eq!(add, a + b);
+        assert_eq!(mul, a * b);
+        assert_eq!(sub, a - b);
 
         assert_eq!(add, a + b);
         assert_eq!(mul, a * b);
