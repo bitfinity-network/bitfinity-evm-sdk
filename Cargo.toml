@@ -20,7 +20,7 @@ include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 name = "evmc-sdk"
 repository = "https://github.com/bitfinity-network/evmc-sdk"
-version = "0.2.5"
+version = "0.2.8"
 
 [workspace.dependencies]
 anyhow = "1.0"
