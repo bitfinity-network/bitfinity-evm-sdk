@@ -62,6 +62,7 @@ pub struct IcSigner;
 
 impl IcSigner {
     /// Signs the transaction using `ManagementCanister::sign_with_ecdsa()` call.
+    /// The `tx.from` expected to be set to the canister address.
     pub async fn sign_transaction(
         &self,
         tx: &TypedTransaction,
@@ -69,14 +70,36 @@ impl IcSigner {
         derivation_path: DerivationPath,
     ) -> Result<Signature, IcSignerError> {
         let hash = tx.sighash();
-        let hash_bytes = hash.as_fixed_bytes();
+        let digest = hash.as_fixed_bytes();
+        let tx_from = tx.from().ok_or(IcSignerError::FromAddressNotPresent)?;
+        let mut signature = Self
+            .sign_digest(tx_from, *digest, key_id, derivation_path)
+            .await?;
 
+        // For non-legacy transactions recovery id should be updated.
+        // Details: https://eips.ethereum.org/EIPS/eip-155.
+        signature.v += match &tx {
+            TypedTransaction::Legacy(_) => 27,
+            _ => tx.chain_id().unwrap_or_default().as_u64() * 2 + 35,
+        };
+
+        Ok(signature)
+    }
+
+    /// Signs the digest using `ManagementCanister::sign_with_ecdsa()` call.
+    pub async fn sign_digest(
+        &self,
+        canister_address: &H160,
+        digest: [u8; 32],
+        key_id: SigningKeyId,
+        derivation_path: DerivationPath,
+    ) -> Result<Signature, IcSignerError> {
         let request = SignWithECDSAArgs {
             key_id: EcdsaKeyId {
                 curve: EcdsaCurve::Secp256k1,
                 name: key_id.to_string(),
             },
-            message_hash: *hash_bytes,
+            message_hash: digest,
             derivation_path,
         };
         let signature_data = virtual_canister_call!(
@@ -94,19 +117,14 @@ impl IcSigner {
 
         // IC doesn't support recovery id signature parameter, so set it manually.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
-        let v = match &tx {
-            TypedTransaction::Legacy(_) => tx.chain_id().unwrap_or_default().as_u64() * 2 + 35u64,
-            _ => 0,
-        };
-        let mut signature = Signature { v, r, s };
+        let mut signature = Signature { r, s, v: 0 };
 
         // Recovery id value may be increased by one, depending on internal
         // signing parameter we don't know.
         // The only thing we can do: try to recover address and, if failed,
         // assume that recovery id should be increased.
-        let recovered = signature.recover(hash.0)?;
-        let tx_from = tx.from().ok_or(IcSignerError::FromAddressNotPresent)?;
-        if &recovered != tx_from {
+        let recovered = signature.recover(digest)?;
+        if &recovered != canister_address {
             signature.v += 1;
         };
 

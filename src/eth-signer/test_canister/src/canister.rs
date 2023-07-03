@@ -14,6 +14,7 @@ pub struct TestCanister {
 impl PreUpdate for TestCanister {}
 
 impl TestCanister {
+    /// Signs and recovers two different transactions and two different digests.
     #[update]
     pub async fn sign_and_check(&self) {
         let pubkey = IcSigner
@@ -21,6 +22,7 @@ impl TestCanister {
             .await
             .unwrap();
         let from = IcSigner.pubkey_to_address(&pubkey).unwrap();
+
         let tx: TypedTransaction = TransactionRequest::new()
             .from(from)
             .to(H160::zero())
@@ -37,6 +39,52 @@ impl TestCanister {
             .unwrap();
 
         let recovered_from = signature.recover(tx.sighash()).unwrap();
+        assert_eq!(recovered_from, from);
+
+        let tx: TypedTransaction = TransactionRequest::new()
+            .from(from)
+            .to(H160::zero())
+            .value(10)
+            .chain_id(355113)
+            .nonce(1)
+            .gas_price(10)
+            .gas(53000)
+            .into();
+
+        let signature = IcSigner
+            .sign_transaction(&tx, SigningKeyId::Dfx, DerivationPath::new(vec![]))
+            .await
+            .unwrap();
+
+        let recovered_from = signature.recover(tx.sighash()).unwrap();
+        assert_eq!(recovered_from, from);
+
+        let digest = [42u8; 32];
+        let signature = IcSigner
+            .sign_digest(
+                &from,
+                digest,
+                SigningKeyId::Dfx,
+                DerivationPath::new(vec![]),
+            )
+            .await
+            .unwrap();
+
+        let recovered_from = signature.recover(digest).unwrap();
+        assert_eq!(recovered_from, from);
+
+        let digest = [43u8; 32];
+        let signature = IcSigner
+            .sign_digest(
+                &from,
+                digest,
+                SigningKeyId::Dfx,
+                DerivationPath::new(vec![]),
+            )
+            .await
+            .unwrap();
+
+        let recovered_from = signature.recover(digest).unwrap();
         assert_eq!(recovered_from, from);
     }
 
