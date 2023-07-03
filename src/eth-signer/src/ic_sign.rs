@@ -72,7 +72,9 @@ impl IcSigner {
         let hash = tx.sighash();
         let digest = hash.as_fixed_bytes();
         let tx_from = tx.from().ok_or(IcSignerError::FromAddressNotPresent)?;
-        let mut signature = Self.sign_digest(tx_from, *digest, key_id, derivation_path).await?;
+        let mut signature = Self
+            .sign_digest(tx_from, *digest, key_id, derivation_path)
+            .await?;
 
         // For non-legacy transactions recovery id should be updated.
         // Details: https://eips.ethereum.org/EIPS/eip-155.

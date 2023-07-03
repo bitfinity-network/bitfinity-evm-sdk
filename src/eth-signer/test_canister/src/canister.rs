@@ -17,13 +17,12 @@ impl TestCanister {
     /// Signs and recovers two different transactions and two different digests.
     #[update]
     pub async fn sign_and_check(&self) {
-        
         let pubkey = IcSigner
             .public_key(SigningKeyId::Dfx, DerivationPath::new(vec![]))
             .await
             .unwrap();
         let from = IcSigner.pubkey_to_address(&pubkey).unwrap();
-        
+
         let tx: TypedTransaction = TransactionRequest::new()
             .from(from)
             .to(H160::zero())
@@ -62,17 +61,26 @@ impl TestCanister {
 
         let digest = [42u8; 32];
         let signature = IcSigner
-            .sign_digest(&from, digest, SigningKeyId::Dfx, DerivationPath::new(vec![]))
+            .sign_digest(
+                &from,
+                digest,
+                SigningKeyId::Dfx,
+                DerivationPath::new(vec![]),
+            )
             .await
             .unwrap();
-
 
         let recovered_from = signature.recover(digest).unwrap();
         assert_eq!(recovered_from, from);
 
         let digest = [43u8; 32];
         let signature = IcSigner
-            .sign_digest(&from, digest, SigningKeyId::Dfx, DerivationPath::new(vec![]))
+            .sign_digest(
+                &from,
+                digest,
+                SigningKeyId::Dfx,
+                DerivationPath::new(vec![]),
+            )
             .await
             .unwrap();
 
