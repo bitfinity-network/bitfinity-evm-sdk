@@ -14,8 +14,7 @@ on:
 
 jobs:
   build-test:
-    if: ${{ false }}
-    # if: ${{github.ref_type != 'tag'}}
+    if: ${{github.ref_type != 'tag'}}
     name: "Build and Test"
     uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
     with:
@@ -38,7 +37,7 @@ jobs:
       gh_token: ${{ secrets.GH_PKG_TOKEN }}
 
   release-binaries:
-    # if: ${{github.ref_type == 'tag'}}
+    if: ${{github.ref_type == 'tag'}}
     name: Release - ${{ matrix.platform.release_for }}
     strategy:
       matrix:
