@@ -1,5 +1,5 @@
 use candid::utils::ArgumentEncoder;
-use candid::CandidType;
+use candid::{CandidType, Principal};
 use did::block::BlockResult;
 use did::{BasicAccount, BlockNumber, Bytes, Transaction, TransactionReceipt, H160, H256, U256};
 use ic_exports::icrc_types::icrc1::account::Subaccount;
@@ -442,6 +442,40 @@ impl<C: CanisterClient> EvmcClient<C> {
     ) -> CanisterClientResult<EvmResult<usize>> {
         self.client
             .query("eth_get_block_transaction_count_by_number", (block_number,))
+            .await
+    }
+
+    /// Reserves address for a given principal
+    ///
+    /// # Arguments
+    /// * `principal` - The principal to reserve address for
+    /// * `address` - The address to reserve
+    pub async fn reserve_address(
+        &self,
+        principal: Principal,
+        address: H160,
+    ) -> CanisterClientResult<()> {
+        self.client
+            .update("reserve_address", (principal, address))
+            .await
+    }
+
+    /// Checks if address with given principal is reserved
+    ///
+    /// # Arguments
+    /// * `principal` - The principal to check
+    /// * `address` - The address to check
+    ///
+    /// # Returns
+    ///
+    /// True if address is reserved, false otherwise
+    pub async fn is_address_reserved(
+        &self,
+        principal: Principal,
+        address: H160,
+    ) -> CanisterClientResult<bool> {
+        self.client
+            .query("is_address_reserved", (principal, address))
             .await
     }
 }
