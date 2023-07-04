@@ -18,7 +18,7 @@ jobs:
     name: "Build and Test"
     uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
     with:
-      runs-on: ubuntu-latest
+      runs-on: 4x150g-runner
       container-image: ghcr.io/bitfinity-network/ic-dev-full:rust1.70-dfx0.14-rc-2022-09-30
       git-fetch-depth: "0"
       skip-test: false
