@@ -1,9 +1,10 @@
 use candid::{CandidType, Deserialize, Principal};
 use did::{BlockNumber, Bytes, TransactionReceipt, H160, H256, U256};
-use ethers_core::types::Transaction as EthTransaction;
+use ethers_core::types::{Transaction as EthTransaction, TransactionRequest};
 use ic_canister::virtual_canister_call;
-use ic_exports::ic_kit::RejectionCode;
+use ic_exports::ic_kit::{ic, RejectionCode};
 use jsonrpc_core::Output;
+use serde_json::json;
 use thiserror::Error;
 
 /// Iceth client error
@@ -89,9 +90,24 @@ impl Client {
         self.process_json_rpc_response(&result)
     }
 
+    /// Returns contract code of the given address.
+    pub async fn get_contract_code(
+        &self,
+        address: &H160,
+        block: BlockNumber,
+    ) -> Result<Bytes, Error> {
+        let data = format!(
+            r#"{{"jsonrpc":"2.0","id":1,"method":"eth_getCode","params":["{address:#x}", "{block}"]}}"#,
+        );
+
+        let result = self.json_rpc_call(&data, 32768).await?;
+        ic::print(format!("response len: {}", result.len()));
+        self.process_json_rpc_response(&result)
+    }
+
     /// Returns minimal gas price.
     pub async fn gas_price(&self) -> Result<U256, Error> {
-        let data = r#"{"jsonrpc":"2.0","id":1,"method":"eth_gasPrice","params":[]}"#;
+        let data = r#"{"jsonrpc":"2.0","id":2,"method":"eth_gasPrice","params":[]}"#;
         let result = self.json_rpc_call(data, 1024).await?;
         self.process_json_rpc_response(&result)
     }
@@ -103,7 +119,7 @@ impl Client {
         block: BlockNumber,
     ) -> Result<U256, Error> {
         let data = format!(
-            r#"{{"jsonrpc":"2.0","id":2,"method":"eth_getTransactionCount","params":["{address:#x}", "{block}"]}}"#,
+            r#"{{"jsonrpc":"2.0","id":3,"method":"eth_getTransactionCount","params":["{address:#x}", "{block}"]}}"#,
         );
         let result = self.json_rpc_call(&data, 1024).await?;
         self.process_json_rpc_response(&result)
@@ -112,7 +128,7 @@ impl Client {
     /// Sends a raw transaction to the external EVM.
     pub async fn send_raw_transaction(&self, transaction_bytes: Bytes) -> Result<H256, Error> {
         let data = format!(
-            r#"{{"jsonrpc":"2.0","id":"3","method":"eth_sendRawTransaction","params":["0x{transaction_bytes:x}"]}}"#,
+            r#"{{"jsonrpc":"2.0","id":4,"method":"eth_sendRawTransaction","params":["0x{transaction_bytes:x}"]}}"#,
         );
         let result = self.json_rpc_call(&data, 1024).await?;
         self.process_json_rpc_response(&result)
@@ -124,7 +140,7 @@ impl Client {
         tx_hash: H256,
     ) -> Result<Option<EthTransaction>, Error> {
         let data = format!(
-            r#"{{"jsonrpc":"2.0","id":"4","method":"eth_getTransactionByHash","params":["{tx_hash:#x}"]}}"#,
+            r#"{{"jsonrpc":"2.0","id":5,"method":"eth_getTransactionByHash","params":["{tx_hash:#x}"]}}"#,
         );
         let result = self.json_rpc_call(&data, 8192).await?;
         self.process_json_rpc_response(&result)
@@ -136,7 +152,34 @@ impl Client {
         tx_hash: &H256,
     ) -> Result<Option<TransactionReceipt>, Error> {
         let data = format!(
-            r#"{{"jsonrpc":"2.0","id":"5","method":"eth_getTransactionReceipt","params":["{tx_hash:#x}"]}}"#,
+            r#"{{"jsonrpc":"2.0","id":6,"method":"eth_getTransactionReceipt","params":["{tx_hash:#x}"]}}"#,
+        );
+        let result = self.json_rpc_call(&data, 8192).await?;
+        self.process_json_rpc_response(&result)
+    }
+
+    /// Executes the call without EVM state modification.
+    pub async fn eth_call(
+        &self,
+        from: Option<H160>,
+        to: Option<H160>,
+        value: Option<U256>,
+        gas_limit: u64,
+        gas_price: Option<U256>,
+        data: Option<Bytes>,
+    ) -> Result<String, Error> {
+        let request = TransactionRequest {
+            from: from.map(|v| v.0),
+            to: to.map(|v| v.0.into()),
+            gas: Some(gas_limit.into()),
+            gas_price: gas_price.map(|v| v.0),
+            value: value.map(|v| v.0),
+            data: data.map(|v| v.0.into()),
+            ..Default::default()
+        };
+        let data = format!(
+            r#"{{"jsonrpc":"2.0","id":7,"method":"eth_call","params":["{}, "latest"]}}"#,
+            json!(request)
         );
         let result = self.json_rpc_call(&data, 8192).await?;
         self.process_json_rpc_response(&result)
