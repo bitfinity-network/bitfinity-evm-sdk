@@ -7,11 +7,11 @@ use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::{Signature, SignatureError, H160};
 use ethers_core::utils;
 use ic_canister::virtual_canister_call;
+use ic_exports::ic_cdk::api::call::RejectionCode;
 use ic_exports::ic_ic00_types::{
     DerivationPath, ECDSAPublicKeyArgs, ECDSAPublicKeyResponse, EcdsaCurve, EcdsaKeyId,
     SignWithECDSAArgs,
 };
-use ic_exports::ic_kit::RejectionCode;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

@@ -2,7 +2,7 @@ use candid::{CandidType, Deserialize, Principal};
 use did::{BlockNumber, Bytes, TransactionReceipt, H160, H256, U256};
 use ethers_core::types::Transaction as EthTransaction;
 use ic_canister::virtual_canister_call;
-use ic_exports::ic_kit::RejectionCode;
+use ic_exports::ic_cdk::api::call::RejectionCode;
 use jsonrpc_core::Output;
 use thiserror::Error;
 
