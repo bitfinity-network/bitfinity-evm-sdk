@@ -1,7 +1,6 @@
 use candid::utils::ArgumentEncoder;
-use candid::{encode_args, CandidType, Principal};
-use did::codec;
-use ic_exports::ic_cdk::api::call;
+use candid::{CandidType, Principal};
+use ic_canister::virtual_canister_call;
 use serde::Deserialize;
 
 use crate::client::CanisterClient;
@@ -20,6 +19,16 @@ impl IcCanisterClient {
             canister_id: canister,
         }
     }
+
+    async fn call<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
+    where
+        T: ArgumentEncoder + Send,
+        R: for<'de> Deserialize<'de> + CandidType,
+    {
+        virtual_canister_call!(self.canister_id, method, args, R)
+            .await
+            .map_err(CanisterClientError::CanisterError)
+    }
 }
 
 #[async_trait::async_trait]
@@ -29,11 +38,7 @@ impl CanisterClient for IcCanisterClient {
         T: ArgumentEncoder + Send,
         R: for<'de> Deserialize<'de> + CandidType,
     {
-        let raw_args = encode_args(args)?;
-        call::call_raw(self.canister_id, method, raw_args, 0)
-            .await
-            .map_err(CanisterClientError::CanisterError)
-            .map(|r| codec::decode(&r))
+        self.call(method, args).await
     }
 
     async fn query<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
@@ -41,10 +46,6 @@ impl CanisterClient for IcCanisterClient {
         T: ArgumentEncoder + Send,
         R: for<'de> Deserialize<'de> + CandidType,
     {
-        let raw_args = encode_args(args)?;
-        call::call_raw(self.canister_id, method, raw_args, 0)
-            .await
-            .map_err(CanisterClientError::CanisterError)
-            .map(|r| codec::decode(&r))
+        self.call(method, args).await
     }
 }
