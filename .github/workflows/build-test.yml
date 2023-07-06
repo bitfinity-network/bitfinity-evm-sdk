@@ -14,6 +14,7 @@ on:
 
 jobs:
   build-test:
+    if: ${{github.ref_type != 'tag'}}
     name: "Build and Test"
     uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
     with:
@@ -35,32 +36,99 @@ jobs:
       gh_login: ${{ secrets.GH_PKG_LOGIN }}
       gh_token: ${{ secrets.GH_PKG_TOKEN }}
 
-  release:
+  release-binaries:
     if: ${{github.ref_type == 'tag'}}
-    needs: [build-test]
-    runs-on: ubuntu-latest
-    container:
-      image:  ghcr.io/bitfinity-network/ic-dev-base:rust1.70-dfx0.14.1
-      credentials:
-        username: ${{ secrets.GH_PKG_LOGIN }}
-        password: ${{ secrets.GH_PKG_TOKEN }}
-    
+    name: Release - ${{ matrix.platform.release_for }}
+    strategy:
+      matrix:
+        platform:
+          - release_for: Linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            bin: register-evm-agent
+            
+          - release_for: Windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: register-evm-agent.exe
+
+          - release_for: MacOS-x86_64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            bin: register-evm-agent
+          
+          - release_for: MacOS-M1
+            os: macos-latest
+            target: aarch64-apple-darwin
+            bin: register-evm-agent
+
+    runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
 
-      - name: "Prepare release build"
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          target: ${{ matrix.platform.target }}
+          command: build
+          strip: true
+          args: "--release -p register_evm_agent"
+
+      - name: Prepare artifact files
         run: |
-          cargo build -p register_evm_agent --release --target=x86_64-unknown-linux-gnu
+          mkdir -p .artifact
+          mv target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} .artifact/${{ matrix.platform.bin }}
+      
+      - name: "Uploading artifact"
+        uses: actions/upload-artifact@v3
+        with:
+          if-no-files-found: error
+          retention-days: 1
+          name: ${{ matrix.platform.release_for }}
+          path: .artifact/*
 
-          mkdir -p .release
-          mv target/x86_64-unknown-linux-gnu/release/register-evm-agent .release/register-evm-agent-nix-${{ github.ref_name }}
+  publish-release:
+    if: ${{github.ref_type == 'tag'}}
+    needs: [release-binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Artifact Linux"
+        uses: actions/download-artifact@v3
+        with:
+          name: Linux-x86_64
+          path: ./linux
           
-          cd .release
-          gzip -f --best *
+      - name: "Artifact MacOs"
+        uses: actions/download-artifact@v3
+        with:
+          name: MacOS-x86_64
+          path: ./macos
 
-      - name: Release
+      - name: "Artifact MacOs M1"
+        uses: actions/download-artifact@v3
+        with:
+          name: MacOS-M1
+          path: ./macos-m1
+      
+      - name: "Artifact Windows"
+        uses: actions/download-artifact@v3
+        with:
+          name: Windows-x86_64
+          path: ./win
+
+      - run: |
+          mkdir -p .release
+          cd .release
+
+          mv ../linux/register-evm-agent ./register-evm-agent-nix
+          mv ../macos/register-evm-agent ./register-evm-agent-darwin
+          mv ../macos-m1/register-evm-agent ./register-evm-agent-m1
+          mv ../win/register-evm-agent.exe .
+          ls -lah .
+
+      - name: Releasing
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            .release/*.gz
+            .release/*

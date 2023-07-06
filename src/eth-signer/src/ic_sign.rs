@@ -1,6 +1,6 @@
 use std::fmt;
 
-use candid::Principal;
+use candid::{CandidType, Principal};
 use ethers_core::k256::elliptic_curve::sec1::ToEncodedPoint;
 use ethers_core::k256::PublicKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
@@ -12,6 +12,9 @@ use ic_exports::ic_ic00_types::{
     DerivationPath, ECDSAPublicKeyArgs, ECDSAPublicKeyResponse, EcdsaCurve, EcdsaKeyId,
     SignWithECDSAArgs,
 };
+
+use ic_exports::ic_kit::RejectionCode;
+use ic_exports::serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -30,7 +33,7 @@ pub enum IcSignerError {
 }
 
 /// Signing key which will be used by management canister.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, CandidType)]
 pub enum SigningKeyId {
     /// A default key ID that is used in deploying to a local version of IC (via DFX).
     Dfx,
@@ -58,6 +61,7 @@ impl fmt::Display for SigningKeyId {
     }
 }
 
+#[derive(Default)]
 pub struct IcSigner;
 
 impl IcSigner {
