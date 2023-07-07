@@ -34,7 +34,7 @@ pub enum EvmError {
     NotAuthorized,
 
     #[error("reservation failed")]
-    ReservationFailed,
+    ReservationFailed(String),
 
     #[error("Stable Storage error: {0}")]
     StableStorageError(String),
