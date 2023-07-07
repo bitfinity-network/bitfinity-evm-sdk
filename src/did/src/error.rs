@@ -33,8 +33,8 @@ pub enum EvmError {
     #[error("the user has no permission to call this method")]
     NotAuthorized,
 
-    #[error("registration check failed")]
-    RegistrationCheckFailed,
+    #[error("reservation failed")]
+    ReservationFailed,
 
     #[error("Stable Storage error: {0}")]
     StableStorageError(String),
