@@ -12,8 +12,6 @@ use ic_exports::ic_ic00_types::{
     DerivationPath, ECDSAPublicKeyArgs, ECDSAPublicKeyResponse, EcdsaCurve, EcdsaKeyId,
     SignWithECDSAArgs,
 };
-
-use ic_exports::ic_kit::RejectionCode;
 use ic_exports::serde::{Deserialize, Serialize};
 use thiserror::Error;
 
