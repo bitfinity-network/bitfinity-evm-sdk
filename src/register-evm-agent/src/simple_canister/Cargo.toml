@@ -17,10 +17,9 @@ hex = { workspace = true }
 ic-canister = { workspace = true }
 ic-exports = { workspace = true }
 ic-stable-structures = { workspace = true }
-mockall = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-
+evmc-client = { path = "../../../evmc-client" }
 [[example]]
 name = "signature"
 

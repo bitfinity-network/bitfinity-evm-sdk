@@ -2,9 +2,11 @@
 extern crate log;
 
 pub mod agent;
+mod cli;
 mod constant;
 mod error;
-mod registration;
+mod reservation;
+mod transaction;
 
 pub use error::{Error, Result};
-pub use registration::RegistrationService;
+pub use reservation::ReservationService;

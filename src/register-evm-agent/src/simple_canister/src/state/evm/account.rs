@@ -3,7 +3,7 @@ use std::cell::RefCell;
 
 use candid::{CandidType, Deserialize, Principal};
 use did::codec::{decode, encode};
-use did::{Transaction, H160};
+use did::{H160};
 use ic_stable_structures::{StableCell, Storable};
 
 use super::{EvmCanister, EvmCanisterImpl, MINT_AMOUNT};
@@ -27,13 +27,12 @@ impl Account {
 
     /// Runs the procedure of registering this canister's account in evmc.
     #[allow(dead_code)]
-    pub async fn register_account(
+    pub async fn reserve_account(
         &mut self,
-        transaction: Transaction,
-        signing_key: Vec<u8>,
         self_canister_id: Principal,
+        address: H160,
     ) -> Result<()> {
-        // check if account is alrewady registered or in process
+        // check if account is already registered or in process
         if ACCOUNT_DATA_CELL.with(|account| {
             if account.borrow().get() == &AccountState::Unregistered {
                 account
@@ -50,11 +49,9 @@ impl Account {
 
         let mut evm_impl = EvmCanisterImpl::default();
 
-        let address = transaction.from.clone();
-
         // check if the address is regestry
         match evm_impl
-            .is_address_registered(address.clone(), self_canister_id)
+            .is_address_reserved(address.clone(), self_canister_id)
             .await
         {
             Err(err) => {
@@ -83,16 +80,7 @@ impl Account {
 
         // register ic agent
         if let Err(err) = evm_impl
-            .register_ic_agent(transaction, self_canister_id)
-            .await
-        {
-            self.reset();
-            return Err(err);
-        }
-
-        // verify the key
-        if let Err(err) = evm_impl
-            .verify_registration(signing_key, self_canister_id)
+            .reserve_address(self_canister_id, address.clone())
             .await
         {
             self.reset();

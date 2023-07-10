@@ -9,7 +9,8 @@ mod agent;
 mod cli;
 mod constant;
 mod error;
-mod registration;
+mod reservation;
+mod transaction;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -22,6 +23,7 @@ async fn main() -> Result<()> {
             generate_wallet()?;
             Ok(())
         }
-        Commands::Register(register_args) => register_args.exec().await,
+        Commands::Reserve(reserve_args) => reserve_args.exec().await,
+        Commands::SignTransaction(sign_transaction_args) => sign_transaction_args.exec().await,
     }
 }
