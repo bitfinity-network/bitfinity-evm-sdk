@@ -8,7 +8,6 @@ use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 
 use super::reservation::ReservationService;
-
 use crate::agent::init_agent;
 use crate::error::Error;
 use crate::transaction::SignTransactionArgs;

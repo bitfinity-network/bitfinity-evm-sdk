@@ -3,14 +3,11 @@ use std::cell::RefCell;
 use account::Account;
 use async_trait::async_trait;
 use candid::Principal;
-
 // use
 use did::{
     error::{EvmError, TransactionPoolError},
     BasicAccount, Transaction, TransactionReceipt, H160, H256, U256,
 };
-
-
 use ic_exports::ic_kit::{ic, RejectionCode};
 use ic_stable_structures::StableCell;
 
@@ -30,17 +27,6 @@ pub struct EvmCanisterImpl {}
 impl EvmCanisterImpl {
     fn get_evm_canister_id(&self) -> Principal {
         State::default().config.get_evm_canister_id()
-    }
-
-    fn get_nonce(&self) -> U256 {
-        NONCE_CELL.with(|nonce| {
-            let value = nonce.borrow().get().clone();
-            nonce
-                .borrow_mut()
-                .set(value.clone() + U256::one())
-                .expect("failed to update nonce");
-            value
-        })
     }
 
     fn process_call<T>(

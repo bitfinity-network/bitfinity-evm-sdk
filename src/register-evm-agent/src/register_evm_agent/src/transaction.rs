@@ -1,8 +1,6 @@
-use crate::agent::init_agent;
-use crate::cli::{get_wallet, network_url};
-use crate::cli::{DEFAULT_CHAIN_ID, NETWORK_LOCAL};
-use crate::constant::{DEFAULT_GAS_LIMIT, METHOD_ACCOUNT_BASIC, METHOD_MIN_GAS_PRICE};
-use crate::error::Result;
+use std::path::PathBuf;
+use std::str::FromStr;
+
 use candid::{Decode, Encode, Principal};
 use clap::Args;
 use did::transaction::TransactionBuilder;
@@ -11,8 +9,11 @@ use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::{H160, U256};
 use ic_agent::Agent;
-use std::path::PathBuf;
-use std::str::FromStr;
+
+use crate::agent::init_agent;
+use crate::cli::{get_wallet, network_url, DEFAULT_CHAIN_ID, NETWORK_LOCAL};
+use crate::constant::{DEFAULT_GAS_LIMIT, METHOD_ACCOUNT_BASIC};
+use crate::error::Result;
 
 #[derive(Args)]
 pub struct SignTransactionArgs {
@@ -63,7 +64,6 @@ impl SignTransactionArgs {
 
         let tx_bytes = ethers_core::types::Transaction::from(tx.clone()).rlp();
 
-        //    Pretty print the transaction
         println!("Transaction: {:#?}", tx);
         println!("Transaction Bytes: {:#?}", tx_bytes);
 
@@ -117,14 +117,6 @@ impl SignTransactionArgs {
             .await?;
 
         let res = Decode!(res.as_slice(), BasicAccount)?;
-
-        Ok(res)
-    }
-
-    async fn min_gas_price(&self, agent: &Agent) -> Result<did::U256> {
-        let res = agent.query(&self.evmc, METHOD_MIN_GAS_PRICE).call().await?;
-
-        let res = Decode!(res.as_slice(), did::U256)?;
 
         Ok(res)
     }

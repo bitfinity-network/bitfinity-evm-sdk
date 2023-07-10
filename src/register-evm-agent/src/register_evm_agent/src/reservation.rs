@@ -1,10 +1,8 @@
 use candid::{Decode, Encode, Principal};
 use did::error::EvmError;
-
 use did::H160;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
-
 use ic_agent::Agent;
 
 use crate::agent::user_principal;
