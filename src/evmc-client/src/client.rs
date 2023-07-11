@@ -454,7 +454,7 @@ impl<C: CanisterClient> EvmcClient<C> {
         &self,
         principal: Principal,
         address: H160,
-    ) -> CanisterClientResult<()> {
+    ) -> CanisterClientResult<EvmResult<()>> {
         self.client
             .update("reserve_address", (principal, address))
             .await
