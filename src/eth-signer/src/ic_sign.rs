@@ -31,7 +31,7 @@ pub enum IcSignerError {
 }
 
 /// Signing key which will be used by management canister.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, CandidType)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, CandidType, PartialEq, Eq)]
 pub enum SigningKeyId {
     /// A default key ID that is used in deploying to a local version of IC (via DFX).
     Dfx,
