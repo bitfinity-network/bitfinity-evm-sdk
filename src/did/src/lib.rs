@@ -12,6 +12,8 @@ pub mod hash;
 pub mod integer;
 pub mod keccak;
 pub mod registration_info;
+#[cfg(feature = "signer")]
+pub mod sign_strategy;
 pub mod transaction;
 
 #[cfg(test)]

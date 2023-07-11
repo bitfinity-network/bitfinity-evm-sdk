@@ -20,11 +20,12 @@ include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 name = "evmc-sdk"
 repository = "https://github.com/bitfinity-network/evmc-sdk"
-version = "0.2.8"
+version = "0.2.11"
 
 [workspace.dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
+bincode = "1.3"
 bytes = "1.3"
 candid = "0.8"
 # Using fixed chrono version. See: https://infinityswap.atlassian.net/browse/EPROD-45
