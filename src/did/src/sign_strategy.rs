@@ -68,16 +68,6 @@ pub enum TxSigner {
     ManagementCanister(ManagementCanisterSigner),
 }
 
-impl Default for TxSigner {
-    fn default() -> Self {
-        let signing_key = SigningKey::from_slice(&[1; 32]).expect("failed to init signing key");
-        let address = utils::secret_key_to_address(&signing_key);
-        Self::Local(LocalTxSigner {
-            wallet: Wallet::new_with_signer(Cow::Owned(signing_key), address, 0),
-        })
-    }
-}
-
 impl Storable for TxSigner {
     fn to_bytes(&self) -> Cow<[u8]> {
         bincode::serialize(self)
@@ -324,7 +314,7 @@ mod test {
             derivation_path,
         }) = signer
         {
-            assert!(matches!(key_id, SigningKeyId::Test));
+            assert_eq!(key_id, SigningKeyId::Test);
             assert_eq!(derivation_path, DerivationPath::new(vec![vec![1, 2, 3]]));
             assert_eq!(*cached_address.borrow(), None);
         } else {
