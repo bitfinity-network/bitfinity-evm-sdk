@@ -6,7 +6,6 @@ use eth_signer::WalletError;
 use evmc_client::CanisterClientError;
 use ic_agent::identity::PemError;
 use ic_agent::AgentError;
-use rlp::DecoderError;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -15,12 +14,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("IPC agent error: {0}")]
     Agent(AgentError),
-    #[error("wallet is already registered: {0}")]
-    AlreadyRegistered(Principal),
+    #[error("wallet is already reserved: {0}")]
+    AlreadyReserved(Principal),
     #[error("failed to get agent principal: {0}")]
     CouldNotGetPrincipal(String),
-    #[error("failed to get registration info: {0}")]
-    Decoder(DecoderError),
     #[error("EVM error: {0}")]
     Evm(EvmError),
     #[error("evmc client error: {0}")]
@@ -48,12 +45,6 @@ impl From<candid::Error> for Error {
 impl From<WalletError> for Error {
     fn from(err: WalletError) -> Self {
         Self::Wallet(err)
-    }
-}
-
-impl From<DecoderError> for Error {
-    fn from(err: DecoderError) -> Self {
-        Self::Decoder(err)
     }
 }
 

@@ -1,16 +1,16 @@
 # Simple Canister
 
-This example is used to set up a minimal canister that registers on the EVM testnet
+This example is used to set up a minimal canister that reserves on the EVM testnet
 
 ## Background
 
 For more information about `What is the Bitfinity EVM` and more, please see [docs](https://tech-docs-evmc.vercel.app/).
 
 As described in the [docs](https://tech-docs-evmc.vercel.app/ic-agent/overview):
-> To use certain EVM canister features, such as `call_message`, `create_contract`, and `withdraw_tokens`, users must register an EVM address for their IC principal. 
+> To use certain EVM canister features, such as `call_message`, `create_contract`, and `withdraw_tokens`, users must reserve an EVM address for their IC principal. 
 
 Currently EVM canister supports two ways to receive transactions. One is to use Ethereum tools (such as `Metamask`) to sign the transaction and send it to the EVM canister through JSONPRC. The other is to use the IC tool to call the canister endpoint of EVM canister, if so, EVM canister can only obtain the Principal from msg.caller, but cannot obtain the Ethereum address and signature.
-Therefore, in order to eliminate the incompatibility between EVM and IC principal, users must register an EVM address for their IC principal.
+Therefore, in order to eliminate the incompatibility between EVM and IC principal, users must reserve an EVM address for their IC principal.
 
 ## How IC agent works
 We will bind an Ethereum address to a principal step by step according to [this doc](https://tech-docs-evmc.vercel.app/ic-agent/overview)
@@ -24,7 +24,7 @@ yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae
 The [signature package](../signature/src/main.rs) will help us generate the required signature.
 
 Because the whole process requires us to send an Ethereum private key (signing key) to EVM canister, so there needs to be a [security statement](https://tech-docs-evmc.vercel.app/ic-agent/overview#verify-registration) about this:
-> After step 3 & 4, other IC canisters will not be able to use the registered address when creating transactions, making it safe to expose the signing key at this point.
+> After step 3 & 4, other IC canisters will not be able to use the reserved address when creating transactions, making it safe to expose the signing key at this point.
 
 Also, this signing key should be one-time, i.e. it cannot be used for other Ethereum compatible projects either.
 
@@ -49,9 +49,9 @@ value: $100000_{10} = 186a0_{16}$
 chainId: $355113_{10} = 56b29_{16}$
 and signature's r, s, v and tx's hash.
 
-Obviously, this address should not be registered, but let's double check: 
+Obviously, this address should not be reserved, but let's double check: 
 ```sh
-dfx canister --network ic call evmc is_address_registered '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
+dfx canister --network ic call evmc is_address_reserved '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
 (false)
 ```
 
@@ -66,11 +66,11 @@ dfx canister --network ic call evmc account_basic '("0x20bc9e20dfef8378034935677
 (record { balance = "0x186a00"; nonce = "0x0" })
 ```
 
-### call evmc register_ic_agent
+### call evmc reserve_ic_agent
 
 Use data from above:
 ```sh
-dfx canister --network ic call evmc register_ic_agent '(record {r="0xdbb3af3eda0d65ff1e71dcd720a14bde8f4daeda54b2910c7bb32f26ed53d02c";s="0x1cd0c88b0feb607772c9d59fe716fbb29d920238baeda4786e0191fc44e0c57a";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x20bc9e20dfef83780349356779b9b688552ccbb0";hash="0x41b56fadd83a943582c91c62411f9e302d36c177dd8ba18ff257f1750d678a93";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")'
+dfx canister --network ic call evmc reserve_ic_agent '(record {r="0xdbb3af3eda0d65ff1e71dcd720a14bde8f4daeda54b2910c7bb32f26ed53d02c";s="0x1cd0c88b0feb607772c9d59fe716fbb29d920238baeda4786e0191fc44e0c57a";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x20bc9e20dfef83780349356779b9b688552ccbb0";hash="0x41b56fadd83a943582c91c62411f9e302d36c177dd8ba18ff257f1750d678a93";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")'
 (variant { Ok })
 ```
 Success!
@@ -84,7 +84,7 @@ dfx canister --network ic call evmc verify_registration '(vec {81:nat8;72:nat8;6
 ```
 Success, let's check that:
 ```sh
-dfx canister --network ic call evmc is_address_registered '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
+dfx canister --network ic call evmc is_address_reserved '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
 (true)
 
 dfx canister --network ic call evmc account_basic '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
@@ -153,28 +153,28 @@ tx hash: 0x5737a2054a8e71432632e9955bbd395c2991061ea586b2d07cd32164ae4d870a
 tx: Legacy(TransactionRequest { from: Some(0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4), to: Some(Address(0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b)), gas: Some(21000), gas_price: Some(10), value: Some(100000), data: None, nonce: Some(0), chain_id: Some(355113) })
 ```
 
-### register a address for simple_canister
+### reserve a address for simple_canister
 
 This will bind this address `0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4` to the `simple_canister` id.
 ```sh
 dfx canister id simple_canister --network ic
 chu2x-jyaaa-aaaah-aaqra-cai
 
-dfx canister --network ic call evmc is_address_registered '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
+dfx canister --network ic call evmc is_address_reserved '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
 (false)
 
 dfx canister --network ic call simple_canister get_account --query
-(variant { Err = variant { Internal = "Account no registered yet" } })
+(variant { Err = variant { Internal = "Account is not reserved yet" } })
 
 dfx canister --network ic call evmc account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
 (record { balance = "0x0"; nonce = "0x0" })
 
 
-# call simple_canister, simple_canister will check is_address_registered, mint_evm_tokens, register_ic_agent, verify_registration
-dfx canister --network ic call simple_canister register_account '(record {r="0x59643861ba80b938a0d8d27e455f4372fadbc2dff7fa48705ecd8ebf4bca6ac7";s="0x200f8b4d6dfc1faa20a2cb589fc29342c84b73dd2972b46b4fcbcc6d69618696";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4";hash="0x5737a2054a8e71432632e9955bbd395c2991061ea586b2d07cd32164ae4d870a";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, vec {22:nat8;61:nat8;28:nat8;1:nat8;194:nat8;244:nat8;15:nat8;43:nat8;50:nat8;157:nat8;198:nat8;16:nat8;19:nat8;92:nat8;223:nat8;2:nat8;154:nat8;46:nat8;55:nat8;125:nat8;36:nat8;79:nat8;186:nat8;148:nat8;29:nat8;202:nat8;58:nat8;210:nat8;39:nat8;12:nat8;223:nat8;143:nat8})'
+# call simple_canister, simple_canister will check is_address_reserved, mint_evm_tokens, reserve_ic_agent, verify_registration
+dfx canister --network ic call simple_canister reserve_account '(record {r="0x59643861ba80b938a0d8d27e455f4372fadbc2dff7fa48705ecd8ebf4bca6ac7";s="0x200f8b4d6dfc1faa20a2cb589fc29342c84b73dd2972b46b4fcbcc6d69618696";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4";hash="0x5737a2054a8e71432632e9955bbd395c2991061ea586b2d07cd32164ae4d870a";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, vec {22:nat8;61:nat8;28:nat8;1:nat8;194:nat8;244:nat8;15:nat8;43:nat8;50:nat8;157:nat8;198:nat8;16:nat8;19:nat8;92:nat8;223:nat8;2:nat8;154:nat8;46:nat8;55:nat8;125:nat8;36:nat8;79:nat8;186:nat8;148:nat8;29:nat8;202:nat8;58:nat8;210:nat8;39:nat8;12:nat8;223:nat8;143:nat8})'
 (variant { Ok })
 
-dfx canister --network ic call evmc is_address_registered '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
+dfx canister --network ic call evmc is_address_reserved '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
 (true)
 
 dfx canister --network ic call simple_canister get_account --query

@@ -144,7 +144,7 @@ impl EvmCanister for EvmCanisterImpl {
     ) -> Result<bool, Error> {
         let res: Result<(bool,), _> = ic::call(
             self.get_evm_canister_id(),
-            "is_address_registered",
+            "is_address_reserved",
             (address, principal),
         )
         .await;

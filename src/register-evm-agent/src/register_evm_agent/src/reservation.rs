@@ -13,7 +13,7 @@ type EvmcAgentClient = EvmcClient<IcAgentClient>;
 pub struct ReservationService<'a> {
     client: EvmcAgentClient,
     amount_to_mint: Option<u64>,
-    register_canister_id: Principal,
+    reserve_canister_id: Principal,
     agent_principal: Principal,
     wallet: Wallet<'a, SigningKey>,
 }
@@ -23,7 +23,7 @@ impl<'a> ReservationService<'a> {
         agent: Agent,
         amount_to_mint: Option<u64>,
         evmc_canister_id: Principal,
-        register_canister_id: Principal,
+        reserve_canister_id: Principal,
         wallet: Wallet<'a, SigningKey>,
     ) -> Result<ReservationService<'a>> {
         let agent_principal = user_principal(&agent)?;
@@ -33,7 +33,7 @@ impl<'a> ReservationService<'a> {
         Ok(Self {
             client,
             amount_to_mint,
-            register_canister_id,
+            reserve_canister_id,
             agent_principal,
             wallet,
         })
@@ -46,24 +46,24 @@ impl<'a> ReservationService<'a> {
     }
 
     async fn reserve_ic_agent(&self) -> Result<()> {
-        info!("registering ic-agent {}", self.agent_principal);
+        info!("reserving ic-agent {}", self.agent_principal);
 
-        let is_registered = self.is_address_reserved().await?;
-        if is_registered {
-            info!("agent is already registered");
-            return Err(Error::AlreadyRegistered(self.agent_principal));
+        let is_reserved = self.is_address_reserved().await?;
+        if is_reserved {
+            info!("agent is already reserved");
+            return Err(Error::AlreadyReserved(self.agent_principal));
         }
 
         let address: did::H160 = self.wallet.address().into();
 
-        // mint tokens to be able to pay registration fee (only on testnets)
+        // mint tokens to be able to pay reservation fee (only on testnets)
         if let Some(amount_to_mint) = self.amount_to_mint {
             info!("minting native tokens for address");
             self.mint_native_tokens_to_address(amount_to_mint).await?;
         }
 
         self.client
-            .reserve_address(self.register_canister_id, address)
+            .reserve_address(self.reserve_canister_id, address)
             .await??;
 
         info!("result is OK");
@@ -78,13 +78,13 @@ impl<'a> ReservationService<'a> {
 
         let reserved = self
             .client
-            .is_address_reserved(self.register_canister_id, address.clone())
+            .is_address_reserved(self.reserve_canister_id, address.clone())
             .await?;
 
         if reserved {
-            info!("{address} is already registered");
+            info!("{address} is already reserved");
         } else {
-            info!("{address} is not registered yet");
+            info!("{address} is not reserved yet");
         }
 
         Ok(reserved)

@@ -18,11 +18,11 @@ const NETWORK_IC: &str = "ic";
 /// network name for local replica
 pub(crate) const NETWORK_LOCAL: &str = "local";
 
-/// CLI tool for generating wallet & registering minter principal to the evmc
+/// CLI tool for generating wallet & reserving minter principal to the evmc
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
-pub struct RegisterMinterCli {
+pub struct ReserveMinterCli {
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -32,7 +32,7 @@ pub enum Commands {
     /// Generate an ETH Wallet
     GenerateWallet,
 
-    /// Register a minter principal to the evmc
+    /// Reserve a minter principal to the evmc
     Reserve(ReserveArgs),
 
     /// Sign a transaction
@@ -57,9 +57,9 @@ pub struct ReserveArgs {
     #[arg(short, long, default_value_t = String::from(NETWORK_LOCAL))]
     pub network: String,
 
-    /// Principal of the canister to register
+    /// Principal of the canister to reserve
     #[arg(short = 'c', long = "canister-id")]
-    pub register_canister_id: Principal,
+    pub reserve_canister_id: Principal,
 
     /// wallet signing key
     #[arg(short = 'k', long = "key")]
@@ -79,7 +79,7 @@ impl ReserveArgs {
             agent,
             self.amount_to_mint,
             self.evmc,
-            self.register_canister_id,
+            self.reserve_canister_id,
             wallet,
         )
         .await
@@ -91,12 +91,12 @@ impl ReserveArgs {
                 println!(
                     "Reservation succeeded:\n  Wallet Address = {}\n  Principal = {}",
                     H160::from(address).to_hex_str(),
-                    self.register_canister_id
+                    self.reserve_canister_id
                 );
 
                 Ok(())
             }
-            Err(Error::AlreadyRegistered(principal)) => {
+            Err(Error::AlreadyReserved(principal)) => {
                 println!(
                     "Already reserved:\n\tWallet Address = {}\n\tPrincipal = {}",
                     H160::from(address).to_hex_str(),
