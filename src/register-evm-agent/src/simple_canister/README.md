@@ -1,17 +1,10 @@
 # Simple Canister
 
-This example is used to set up a minimal canister that reserves on the EVM testnet
+This example is used to set up a minimal canister to reserve an address on the EVM testnet
 
 ## Background
 
-For more information about `What is the Bitfinity EVM` and more, please see [docs](https://tech-docs-evmc.vercel.app/).
-
-As described in the [docs](https://tech-docs-evmc.vercel.app/ic-agent/overview):
-> To use certain EVM canister features, such as `call_message`, `create_contract`, and `withdraw_tokens`, users must reserve an EVM address for their IC principal. 
-
-Currently EVM canister supports two ways to receive transactions. One is to use Ethereum tools (such as `Metamask`) to sign the transaction and send it to the EVM canister through JSONPRC. The other is to use the IC tool to call the canister endpoint of EVM canister, if so, EVM canister can only obtain the Principal from msg.caller, but cannot obtain the Ethereum address and signature.
-Therefore, in order to eliminate the incompatibility between EVM and IC principal, users must reserve an EVM address for their IC principal.
-
+When an address is reserved, only the principal that reserved it will be allowedo to send raw transaction from that address.
 ## How IC agent works
 We will bind an Ethereum address to a principal step by step according to [this doc](https://tech-docs-evmc.vercel.app/ic-agent/overview)
 

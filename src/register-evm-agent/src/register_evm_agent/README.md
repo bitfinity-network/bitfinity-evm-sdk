@@ -35,9 +35,9 @@ Wallet:
   Address = 0x6d4662d3ab4769a4f10781325601db68874261d2
 ```
 
-### Reserve canister
+### Reserve an EVM address
 
-To reserve a canister the following command needs to be run
+To reserve an address the following command needs to be run
 
 ```sh
 register-evm-agent reserve -k <private_key> -n <network> -i <identity_path> --evmc <evmc_principal> --canister-id <reserve_canister_principal>
@@ -49,7 +49,7 @@ Where:
 - `network` is the network to run against: default is `local`, the value can be both `ic` or a custom URL.
 - `identity path` is the path to the identity you're going to use to reserve your canister
 - `evmc principal` is the principal for the EVMC canister
-- `reserve canister principal` is the principal of the canister you're going to reserve
+- `reserve canister principal` is the principal of the canister you're going to associate to the reserved address
 
 All the supported options can be seen with
 

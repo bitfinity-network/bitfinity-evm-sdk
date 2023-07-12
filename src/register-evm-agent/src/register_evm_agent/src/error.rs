@@ -14,7 +14,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("IPC agent error: {0}")]
     Agent(AgentError),
-    #[error("wallet is already reserved: {0}")]
+    #[error("address is already reserved: {0}")]
     AlreadyReserved(Principal),
     #[error("failed to get agent principal: {0}")]
     CouldNotGetPrincipal(String),

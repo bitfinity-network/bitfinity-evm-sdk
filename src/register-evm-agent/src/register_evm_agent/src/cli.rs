@@ -18,7 +18,7 @@ const NETWORK_IC: &str = "ic";
 /// network name for local replica
 pub(crate) const NETWORK_LOCAL: &str = "local";
 
-/// CLI tool for generating wallet & reserving minter principal to the evmc
+/// CLI tool for generating wallet & reserving EVM addresses to IC principals
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -32,7 +32,7 @@ pub enum Commands {
     /// Generate an ETH Wallet
     GenerateWallet,
 
-    /// Reserve a minter principal to the evmc
+    /// Reserve an EVM address to the IC principal
     Reserve(ReserveArgs),
 
     /// Sign a transaction
@@ -57,7 +57,7 @@ pub struct ReserveArgs {
     #[arg(short, long, default_value_t = String::from(NETWORK_LOCAL))]
     pub network: String,
 
-    /// Principal of the canister to reserve
+    /// Principal associated to the reserved address
     #[arg(short = 'c', long = "canister-id")]
     pub reserve_canister_id: Principal,
 

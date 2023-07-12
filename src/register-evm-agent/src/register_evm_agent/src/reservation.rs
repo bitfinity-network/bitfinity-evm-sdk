@@ -50,7 +50,7 @@ impl<'a> ReservationService<'a> {
 
         let is_reserved = self.is_address_reserved().await?;
         if is_reserved {
-            info!("agent is already reserved");
+            info!("address is already reserved");
             return Err(Error::AlreadyReserved(self.agent_principal));
         }
 
@@ -66,7 +66,7 @@ impl<'a> ReservationService<'a> {
             .reserve_address(self.reserve_canister_id, address)
             .await??;
 
-        info!("result is OK");
+        info!("Address reserved successfully");
 
         Ok(())
     }
@@ -93,13 +93,13 @@ impl<'a> ReservationService<'a> {
     async fn mint_native_tokens_to_address(&self, amount_to_mint: u64) -> Result<()> {
         let address = H160::from(self.wallet.address());
 
-        info!("minting EVM tokens to {address}");
+        info!("minting EVM native tokens to {address}");
 
         self.client
             .mint(address, did::U256::from(amount_to_mint))
             .await??;
 
-        info!("tokens minted");
+        info!("tokens minted successfully");
 
         Ok(())
     }
