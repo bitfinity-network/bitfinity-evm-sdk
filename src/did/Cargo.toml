@@ -33,5 +33,13 @@ sha2 = { workspace = true }
 sha3 = { workspace = true }
 thiserror = { workspace = true }
 
+# signer dependencies
+async-trait = { workspace = true, optional = true }
+bincode = { workspace = true, optional = true }
+ic-exports = { workspace = true, optional = true }
+
 [dev-dependencies]
 rand = { workspace = true }
+
+[features]
+signer = ["async-trait", "bincode", "ic-exports", "eth-signer/ic_sign"]

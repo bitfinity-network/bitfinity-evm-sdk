@@ -11,7 +11,8 @@ pub mod error;
 pub mod hash;
 pub mod integer;
 pub mod keccak;
-
+#[cfg(feature = "signer")]
+pub mod sign_strategy;
 pub mod transaction;
 
 #[cfg(test)]
