@@ -1,19 +1,20 @@
-use candid::{Decode, Encode, Principal};
-use did::error::EvmError;
+use candid::Principal;
 use did::H160;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
+use evmc_client::{EvmcClient, IcAgentClient};
 use ic_agent::Agent;
 
 use crate::agent::user_principal;
-use crate::constant::{METHOD_ADDRESS_RESERVED, METHOD_MINT_NATIVE_TOKENS, METHOD_RESERVE_ADDRESS};
 use crate::error::{Error, Result};
 
+type EvmcAgentClient = EvmcClient<IcAgentClient>;
+
 pub struct ReservationService<'a> {
-    agent: Agent,
+    client: EvmcAgentClient,
     amount_to_mint: Option<u64>,
-    evmc_canister_id: Principal,
     register_canister_id: Principal,
+    agent_principal: Principal,
     wallet: Wallet<'a, SigningKey>,
 }
 
@@ -25,11 +26,15 @@ impl<'a> ReservationService<'a> {
         register_canister_id: Principal,
         wallet: Wallet<'a, SigningKey>,
     ) -> Result<ReservationService<'a>> {
+        let agent_principal = user_principal(&agent)?;
+
+        let client = EvmcClient::new(IcAgentClient::with_agent(evmc_canister_id, agent));
+
         Ok(Self {
-            agent,
+            client,
             amount_to_mint,
-            evmc_canister_id,
             register_canister_id,
+            agent_principal,
             wallet,
         })
     }
@@ -41,15 +46,15 @@ impl<'a> ReservationService<'a> {
     }
 
     async fn reserve_ic_agent(&self) -> Result<()> {
-        let principal = user_principal(&self.agent)?;
-        info!("registering ic-agent {principal}");
+        info!("registering ic-agent {}", self.agent_principal);
+
         let is_registered = self.is_address_reserved().await?;
         if is_registered {
             info!("agent is already registered");
-            return Err(Error::AlreadyRegistered(principal));
+            return Err(Error::AlreadyRegistered(self.agent_principal));
         }
+
         let address: did::H160 = self.wallet.address().into();
-        let args = Encode!(&self.register_canister_id, &address)?;
 
         // mint tokens to be able to pay registration fee (only on testnets)
         if let Some(amount_to_mint) = self.amount_to_mint {
@@ -57,15 +62,10 @@ impl<'a> ReservationService<'a> {
             self.mint_native_tokens_to_address(amount_to_mint).await?;
         }
 
-        let res = self
-            .agent
-            .update(&self.evmc_canister_id, METHOD_RESERVE_ADDRESS)
-            .with_arg(args)
-            .call_and_wait()
-            .await?;
+        self.client
+            .reserve_address(self.register_canister_id, address)
+            .await??;
 
-        info!("{METHOD_RESERVE_ADDRESS} called, decoding result");
-        Decode!(res.as_slice(), std::result::Result<(), EvmError>)??;
         info!("result is OK");
 
         Ok(())
@@ -73,40 +73,31 @@ impl<'a> ReservationService<'a> {
 
     async fn is_address_reserved(&self) -> Result<bool> {
         let address: H160 = self.wallet.address().into();
+
         info!("checking if {address} is already reserved...");
-        let args = Encode!(&self.register_canister_id, &address)?;
-        let res = self
-            .agent
-            .query(&self.evmc_canister_id, METHOD_ADDRESS_RESERVED)
-            .with_arg(args)
-            .call()
+
+        let reserved = self
+            .client
+            .is_address_reserved(self.register_canister_id, address.clone())
             .await?;
-        let principal = user_principal(&self.agent)?;
-        match Decode!(res.as_slice(), bool) {
-            Ok(res) => {
-                info!("{address} is not registered yet");
-                Ok(res)
-            }
-            Err(_) => Err(Error::CouldNotCheckRegistrationStatus(
-                address.to_hex_str(),
-                principal,
-            )),
+
+        if reserved {
+            info!("{address} is already registered");
+        } else {
+            info!("{address} is not registered yet");
         }
+
+        Ok(reserved)
     }
 
     async fn mint_native_tokens_to_address(&self, amount_to_mint: u64) -> Result<()> {
         let address = H160::from(self.wallet.address());
+
         info!("minting EVM tokens to {address}");
-        let payload = Encode!(&address, &did::U256::from(amount_to_mint))?;
 
-        let res = self
-            .agent
-            .update(&self.evmc_canister_id, METHOD_MINT_NATIVE_TOKENS)
-            .with_arg(payload)
-            .call_and_wait()
-            .await?;
-
-        Decode!(res.as_slice(), std::result::Result<did::U256, EvmError>)??;
+        self.client
+            .mint(address, did::U256::from(amount_to_mint))
+            .await??;
 
         info!("tokens minted");
 
