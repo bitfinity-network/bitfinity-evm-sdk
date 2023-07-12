@@ -478,4 +478,17 @@ impl<C: CanisterClient> EvmcClient<C> {
             .query("is_address_reserved", (principal, address))
             .await
     }
+
+    /// Returns the chain ID used for signing replay-protected transactions.
+    /// See [eth_chainid] (https://eth.wiki/json-rpc/API#eth_chainid)
+    ///
+    /// # Arguments
+    /// None
+    ///
+    /// # Returns
+    ///
+    /// `chainId`, hexadecimal value as a string representing the integer of the current chain id.
+    pub async fn eth_chain_id(&self) -> CanisterClientResult<u64> {
+        self.client.query("eth_chain_id", ()).await
+    }
 }
