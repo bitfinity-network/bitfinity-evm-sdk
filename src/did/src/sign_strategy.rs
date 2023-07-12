@@ -135,8 +135,7 @@ impl TransactionSigner for LocalTxSigner {
 
     async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
         self.wallet
-            .sign_message(digest)
-            .await
+            .sign_hash(ethereum_types::H256(digest))
             .map_err(|e| EvmError::from(format!("failed to sign hash: {e}")))
             .map(Into::into)
     }
