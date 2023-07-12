@@ -1,5 +1,5 @@
 use candid::{CandidType, Deserialize};
-use did::{Transaction, H160, H256, U256};
+use did::{Transaction, H160, H256};
 use ic_canister::{generate_idl, init, query, update, Canister, Idl, PreUpdate};
 use ic_exports::ic_kit::ic;
 use ic_exports::Principal;
@@ -71,40 +71,20 @@ impl TempCanister {
     }
 
     #[update]
-    pub async fn register_account(
-        &mut self,
-        transaction: Transaction,
-        signing_key: Vec<u8>,
-    ) -> Result<()> {
-        self.check_owner(ic::caller())?;
-        let canister_id = ic::id();
+    pub async fn reserve_account(&mut self, principal: Principal, address: H160) -> Result<()> {
+        self.state.evm.reserve_address(principal, address).await
+    }
 
-        self.state
-            .evm
-            .register_account(transaction, signing_key, canister_id)
-            .await
+    #[query]
+    pub async fn is_address_reserved(&self, principal: Principal, address: H160) -> Result<bool> {
+        self.state.evm.is_address_reserved(address, principal).await
     }
 
     #[update]
-    pub async fn transact(&mut self, value: U256, to: H160, data: Vec<u8>) -> Result<H256> {
+    pub async fn send_raw_transaction(&mut self, tx: Transaction) -> Result<H256> {
         self.check_owner(ic::caller())?;
 
-        self.state.evm.transact(value, to, data, None).await
-    }
-
-    #[update]
-    pub async fn create_contract(
-        &mut self,
-        value: U256,
-        code: Vec<u8>,
-        gas_limit: u64,
-    ) -> Result<H256> {
-        self.check_owner(ic::caller())?;
-
-        self.state
-            .evm
-            .create_contract(value, code, Some(gas_limit))
-            .await
+        self.state.evm.send_raw_transaction(tx).await
     }
 
     fn check_owner(&self, principal: Principal) -> Result<()> {

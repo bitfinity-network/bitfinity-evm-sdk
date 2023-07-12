@@ -7,21 +7,22 @@ use did::H160;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 
-use super::registration::RegistrationService;
+use super::reservation::ReservationService;
 use crate::agent::init_agent;
 use crate::error::Error;
+use crate::transaction::SignTransactionArgs;
 
-const DEFAULT_CHAIN_ID: u64 = 355113;
+pub(crate) const DEFAULT_CHAIN_ID: u64 = 355113;
 /// network name for production
 const NETWORK_IC: &str = "ic";
 /// network name for local replica
-const NETWORK_LOCAL: &str = "local";
+pub(crate) const NETWORK_LOCAL: &str = "local";
 
-/// CLI tool for generating wallet & registering minter principal to the evmc
+/// CLI tool for generating wallet & reserving EVM addresses to IC principals
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
-pub struct RegisterMinterCli {
+pub struct ReserveMinterCli {
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -31,19 +32,18 @@ pub enum Commands {
     /// Generate an ETH Wallet
     GenerateWallet,
 
-    /// Register a minter principal to the evmc
-    Register(RegisterArgs),
+    /// Reserve an EVM address to the IC principal
+    Reserve(ReserveArgs),
+
+    /// Sign a transaction
+    SignTransaction(SignTransactionArgs),
 }
 
 #[derive(Args)]
-pub struct RegisterArgs {
+pub struct ReserveArgs {
     /// amount of native tokens to mint on testnets for this wallet
     #[arg(short = 'a', long = "amount-to-mint")]
     pub amount_to_mint: Option<u64>,
-
-    /// chain id
-    #[arg(short = 'C', long = "chain-id", default_value_t = DEFAULT_CHAIN_ID)]
-    pub chain_id: u64,
 
     /// Path to your identity pem file
     #[arg(short = 'i', long = "identity")]
@@ -57,16 +57,16 @@ pub struct RegisterArgs {
     #[arg(short, long, default_value_t = String::from(NETWORK_LOCAL))]
     pub network: String,
 
-    /// Principal of the canister to register
+    /// Principal associated to the reserved address
     #[arg(short = 'c', long = "canister-id")]
-    pub register_canister_id: Principal,
+    pub reserve_canister_id: Principal,
 
     /// wallet signing key
     #[arg(short = 'k', long = "key")]
     pub signing_key: String,
 }
 
-impl RegisterArgs {
+impl ReserveArgs {
     pub async fn exec(&self) -> Result<()> {
         let wallet = get_wallet(self.signing_key.as_str())?;
         let address = wallet.address();
@@ -75,31 +75,30 @@ impl RegisterArgs {
         let network = network_url(&self.network);
         let agent = init_agent(&self.identity, network).await?;
 
-        match RegistrationService::new(
+        match ReservationService::new(
             agent,
             self.amount_to_mint,
-            self.chain_id,
             self.evmc,
-            self.register_canister_id,
+            self.reserve_canister_id,
             wallet,
         )
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?
-        .register()
+        .reserve()
         .await
         {
             Ok(()) => {
                 println!(
-                    "Registration succeeded:\n  Wallet Address = {}\n  Principal = {}",
+                    "Reservation succeeded:\n  Wallet Address = {}\n  Principal = {}",
                     H160::from(address).to_hex_str(),
-                    self.register_canister_id
+                    self.reserve_canister_id
                 );
 
                 Ok(())
             }
-            Err(Error::AlreadyRegistered(principal)) => {
+            Err(Error::AlreadyReserved(principal)) => {
                 println!(
-                    "Already registered:\n\tWallet Address = {}\n\tPrincipal = {}",
+                    "Already reserved:\n\tWallet Address = {}\n\tPrincipal = {}",
                     H160::from(address).to_hex_str(),
                     principal
                 );
@@ -111,7 +110,7 @@ impl RegisterArgs {
 }
 
 /// Parse an existing wallet
-fn get_wallet<'a>(signing_key: &str) -> Result<Wallet<'a, SigningKey>> {
+pub fn get_wallet<'a>(signing_key: &str) -> Result<Wallet<'a, SigningKey>> {
     let key_bytes = hex::decode(signing_key)?;
     let wallet = Wallet::from_bytes(&key_bytes)?;
     Ok(wallet)
@@ -136,7 +135,7 @@ pub fn generate_wallet<'a>() -> Result<Wallet<'a, SigningKey>> {
 }
 
 /// make network url from network name
-fn network_url(network: &str) -> &str {
+pub(crate) fn network_url(network: &str) -> &str {
     match network {
         NETWORK_LOCAL => "http://localhost:8000",
         NETWORK_IC => "https://ic0.app",

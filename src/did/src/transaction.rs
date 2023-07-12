@@ -715,33 +715,6 @@ impl From<Bloom> for ethereum_types::Bloom {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, CandidType)]
-pub struct TransactionParams {
-    pub from: H160,
-    pub value: U256,
-    pub gas_limit: u64,
-    pub gas_price: Option<U256>,
-    pub nonce: U256,
-}
-
-impl TransactionParams {
-    pub fn new(
-        from: H160,
-        value: U256,
-        gas_limit: u64,
-        gas_price: Option<U256>,
-        nonce: U256,
-    ) -> Self {
-        Self {
-            from,
-            value,
-            gas_limit,
-            gas_price,
-            nonce,
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::str::FromStr;

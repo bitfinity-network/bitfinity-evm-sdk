@@ -1,10 +1,7 @@
 use candid::utils::ArgumentEncoder;
 use candid::{CandidType, Principal};
 use did::block::BlockResult;
-use did::{
-    BasicAccount, BlockNumber, Bytes, Transaction, TransactionParams, TransactionReceipt, H160,
-    H256, U256,
-};
+use did::{BasicAccount, BlockNumber, Bytes, Transaction, TransactionReceipt, H160, H256, U256};
 use ic_exports::icrc_types::icrc1::account::Subaccount;
 use serde::Deserialize;
 
@@ -102,66 +99,6 @@ impl<C: CanisterClient> EvmcClient<C> {
             .await
     }
 
-    /// Calls a message on the EVM canister
-    /// # Arguments
-    /// * `tx_params` - The transaction parameters
-    /// * `to` - The address of an account or of the contract to call
-    /// * `data` - The data to send
-    ///
-    /// # Returns
-    /// The hash of the transaction
-    pub async fn call_message(
-        &self,
-        tx_params: TransactionParams,
-        to: H160,
-        data: String,
-    ) -> CanisterClientResult<EvmResult<H256>> {
-        self.client
-            .update("call_message", (tx_params, to, data))
-            .await
-    }
-
-    /// Creates a new contract on the EVM canister
-    ///
-    ///  # Arguments
-    /// * `tx_params` - The transaction parameters
-    /// * `data` - The data to send
-    ///
-    /// # Returns
-    ///
-    /// The hash of the transaction
-    pub async fn create_contract(
-        &self,
-        tx_params: TransactionParams,
-        data: String,
-    ) -> CanisterClientResult<EvmResult<H256>> {
-        self.client
-            .update("create_contract", (tx_params, data))
-            .await
-    }
-
-    /// Registers an IC agent on the EVM canister
-    ///
-    /// # Arguments
-    /// * `transaction` - The transaction to send
-    /// * `principal` - The principal to register
-    ///
-    /// # Returns
-    /// Ok if the registration was successful
-    ///
-    /// # Fails
-    /// * If the ic agent is already registered
-    /// * If the agent does not have enough balance
-    pub async fn register_ic_agent(
-        &self,
-        transaction: Transaction,
-        principal: Principal,
-    ) -> CanisterClientResult<EvmResult<()>> {
-        self.client
-            .update("register_ic_agent", (transaction, principal))
-            .await
-    }
-
     /// Get the Account information of an address
     ///
     /// # Arguments
@@ -185,7 +122,7 @@ impl<C: CanisterClient> EvmcClient<C> {
     /// # Returns
     ///
     /// The code of the contract
-    pub async fn get_contract_code(
+    pub async fn eth_get_code(
         &self,
         address: H160,
         block_number: BlockNumber,
@@ -247,38 +184,6 @@ impl<C: CanisterClient> EvmcClient<C> {
     ) -> CanisterClientResult<EvmResult<H256>> {
         self.client
             .query("eth_get_storage_at", (address, index, block_number))
-            .await
-    }
-
-    /// Verify if the signature is valid and the caller is registered
-    ///
-    /// # Arguments
-    /// * `signing_key` - The signing key of the caller
-    ///
-    /// # Returns
-    /// Ok if the signature is valid and the caller is registered
-    ///
-    /// # Fails
-    /// * If the signature is invalid
-    /// * If the caller is not registered
-    pub async fn verify_registration(
-        &self,
-        signing_key: &[u8],
-        principal: Principal,
-    ) -> CanisterClientResult<EvmResult<()>> {
-        self.client
-            .update("verify_registration", (signing_key, principal))
-            .await
-    }
-
-    /// Check if an address is registered
-    pub async fn is_address_registered(
-        &self,
-        address: H160,
-        principal: Principal,
-    ) -> CanisterClientResult<bool> {
-        self.client
-            .query("is_address_registered", (address, principal))
             .await
     }
 
@@ -467,6 +372,110 @@ impl<C: CanisterClient> EvmcClient<C> {
     ) -> CanisterClientResult<EvmResult<String>> {
         self.client
             .query("eth_call", (from, to, value, gas_limit, gas_price, data))
+            .await
+    }
+
+    /// Estimate the gas for a call
+    /// See [eth_estimateGas](https://eth.wiki/json-rpc/API#eth_estimategas)
+    ///
+    /// # Arguments
+    ///
+    /// * `from` - The address of the caller
+    /// * `to` - The address of the contract to call
+    /// * `gas_limit` - The gas limit for the call
+    /// * `value` - The value to send to the contract
+    /// * `input` - The data to send to the contract
+    ///
+    /// # Returns
+    ///
+    /// The estimated gas for the call
+    pub async fn eth_estimate_gas(
+        &self,
+        from: H160,
+        to: Option<H160>,
+        gas_limit: u64,
+        value: U256,
+        input: Bytes,
+    ) -> CanisterClientResult<EvmResult<U256>> {
+        self.client
+            .query(
+                "eth_estimate_gas",
+                (from, to, gas_limit, value, gas_limit, input),
+            )
+            .await
+    }
+
+    /// Get the transaction count at a given block hash
+    /// See [eth_getBlockTransactionCountByHash](https://eth.wiki/json-rpc/
+    /// API#eth_getblocktransactioncountbyhash)
+    ///
+    /// # Arguments
+    ///
+    /// * `hash` - The block hash
+    ///
+    /// # Returns
+    ///
+    /// The transaction count of the address at the given block number
+    pub async fn eth_get_block_transaction_count_by_hash(
+        &self,
+        hash: H256,
+    ) -> CanisterClientResult<usize> {
+        self.client
+            .query("eth_get_block_transaction_count_by_hash", (hash,))
+            .await
+    }
+
+    /// Get the transaction count at a given block number
+    /// See [eth_getBlockTransactionCountByNumber](https://eth.wiki/json-rpc/
+    /// API#eth_getblocktransactioncountbynumber)
+    ///
+    /// # Arguments
+    ///
+    /// * `block_number` - The block number or tag
+    ///
+    /// # Returns
+    ///
+    /// The transaction count of the address at the given block number
+    pub async fn eth_get_block_transaction_count_by_block_number(
+        &self,
+        block_number: BlockNumber,
+    ) -> CanisterClientResult<EvmResult<usize>> {
+        self.client
+            .query("eth_get_block_transaction_count_by_number", (block_number,))
+            .await
+    }
+
+    /// Reserves address for a given principal
+    ///
+    /// # Arguments
+    /// * `principal` - The principal to reserve address for
+    /// * `address` - The address to reserve
+    pub async fn reserve_address(
+        &self,
+        principal: Principal,
+        address: H160,
+    ) -> CanisterClientResult<EvmResult<()>> {
+        self.client
+            .update("reserve_address", (principal, address))
+            .await
+    }
+
+    /// Checks if address with given principal is reserved
+    ///
+    /// # Arguments
+    /// * `principal` - The principal to check
+    /// * `address` - The address to check
+    ///
+    /// # Returns
+    ///
+    /// True if address is reserved, false otherwise
+    pub async fn is_address_reserved(
+        &self,
+        principal: Principal,
+        address: H160,
+    ) -> CanisterClientResult<bool> {
+        self.client
+            .query("is_address_reserved", (principal, address))
             .await
     }
 

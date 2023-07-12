@@ -26,6 +26,7 @@ clap = { workspace = true }
 env_logger = { workspace = true }
 eth-signer = { path = "../../../eth-signer" }
 ethers-core = { workspace = true }
+evmc-client = { path = "../../../evmc-client", features = ["ic-agent-client"] }
 did = { path = "../../../did" }
 hex = { workspace = true }
 ic-agent = { workspace = true }
