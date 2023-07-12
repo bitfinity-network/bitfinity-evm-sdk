@@ -144,7 +144,7 @@ impl Client {
 
     /// Returns chain id.
     pub async fn eth_get_chain_id(&self) -> Result<u64, Error> {
-        let data = format!(r#"{{"jsonrpc":"2.0","id":"6","method":"eth_chainId"}}"#,);
+        let data = r#"{{"jsonrpc":"2.0","id":"6","method":"eth_chainId"}}"#.to_string();
         let result = self.json_rpc_call(&data, 8192).await?;
         self.process_json_rpc_response(&result)
     }
