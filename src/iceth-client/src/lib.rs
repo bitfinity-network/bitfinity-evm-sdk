@@ -185,6 +185,13 @@ impl Client {
         self.process_json_rpc_response(&result)
     }
 
+    /// Returns chain id.
+    pub async fn eth_get_chain_id(&self) -> Result<u64, Error> {
+        let data = r#"{{"jsonrpc":"2.0","id":"6","method":"eth_chainId"}}"#.to_string();
+        let result = self.json_rpc_call(&data, 8192).await?;
+        self.process_json_rpc_response(&result)
+    }
+
     async fn json_rpc_call(&self, data: &str, max_response_bytes: u64) -> Result<Vec<u8>, Error> {
         Ok(virtual_canister_call!(
             self.iceth_principal,

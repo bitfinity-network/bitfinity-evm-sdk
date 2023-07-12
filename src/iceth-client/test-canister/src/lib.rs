@@ -60,6 +60,8 @@ impl CounterCanister {
             (chain_id, client)
         };
 
+        assert_eq!(chain_id, client.eth_get_chain_id().await.unwrap());
+
         let (key, address) = Self::alice_wallet();
 
         let balance = client
