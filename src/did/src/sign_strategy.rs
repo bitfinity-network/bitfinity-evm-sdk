@@ -24,6 +24,9 @@ pub trait TransactionSigner {
 
     /// Signe the created transaction
     async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature>;
+
+    /// Sign the given digest
+    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature>;
 }
 
 /// Signing strategy for signing EVM transactions
@@ -95,6 +98,13 @@ impl TransactionSigner for TxSigner {
             Self::ManagementCanister(signer) => signer.sign_transaction(transaction).await,
         }
     }
+
+    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+        match self {
+            Self::Local(signer) => signer.sign_digest(digest).await,
+            Self::ManagementCanister(signer) => signer.sign_digest(digest).await,
+        }
+    }
 }
 
 /// Local private key implementation
@@ -118,6 +128,14 @@ impl TransactionSigner for LocalTxSigner {
     async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature> {
         self.wallet
             .sign_transaction(transaction)
+            .await
+            .map_err(|e| EvmError::from(format!("failed to sign hash: {e}")))
+            .map(Into::into)
+    }
+
+    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+        self.wallet
+            .sign_message(digest)
             .await
             .map_err(|e| EvmError::from(format!("failed to sign hash: {e}")))
             .map(Into::into)
@@ -197,7 +215,7 @@ impl TransactionSigner for ManagementCanisterSigner {
         }
 
         let address = IcSigner {}
-            .public_key(self.key_id, DerivationPath::new(vec![]))
+            .public_key(self.key_id, self.derivation_path.clone())
             .await
             .map_err(|e| EvmError::from(format!("failed to get address: {e}")))?;
         let address = H160::from_slice(&address);
@@ -208,7 +226,21 @@ impl TransactionSigner for ManagementCanisterSigner {
 
     async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature> {
         IcSigner {}
-            .sign_transaction(transaction, self.key_id, DerivationPath::new(vec![]))
+            .sign_transaction(transaction, self.key_id, self.derivation_path.clone())
+            .await
+            .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
+            .map(Into::into)
+    }
+
+    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+        let address = self.get_address().await?;
+        IcSigner {}
+            .sign_digest(
+                &address.into(),
+                digest,
+                self.key_id,
+                self.derivation_path.clone(),
+            )
             .await
             .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
             .map(Into::into)
