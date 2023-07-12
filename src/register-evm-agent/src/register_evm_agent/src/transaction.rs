@@ -1,19 +1,20 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use candid::{Decode, Encode, Principal};
+use candid::Principal;
 use clap::Args;
 use did::transaction::TransactionBuilder;
-use did::BasicAccount;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::{H160, U256};
-use ic_agent::Agent;
+use evmc_client::{EvmcClient, IcAgentClient};
 
 use crate::agent::init_agent;
 use crate::cli::{get_wallet, network_url, DEFAULT_CHAIN_ID, NETWORK_LOCAL};
-use crate::constant::{DEFAULT_GAS_LIMIT, METHOD_ACCOUNT_BASIC};
+use crate::constant::DEFAULT_GAS_LIMIT;
 use crate::error::Result;
+
+type EvmcAgentClient = EvmcClient<IcAgentClient>;
 
 #[derive(Args)]
 pub struct SignTransactionArgs {
@@ -58,9 +59,10 @@ impl SignTransactionArgs {
         info!("initializing agent...");
         let network = network_url(&self.network);
         let agent = init_agent(&self.identity, network).await?;
+        let client = EvmcClient::new(IcAgentClient::with_agent(self.evmc, agent));
         let wallet = get_wallet(self.signing_key.as_str())?;
 
-        let tx = self.transaction_builder(wallet, &agent).await?;
+        let tx = self.transaction_builder(wallet, &client).await?;
 
         let tx_bytes = ethers_core::types::Transaction::from(tx.clone()).rlp();
 
@@ -72,13 +74,13 @@ impl SignTransactionArgs {
     async fn transaction_builder(
         &self,
         wallet: Wallet<'_, SigningKey>,
-        agent: &Agent,
+        client: &EvmcAgentClient,
     ) -> Result<did::Transaction> {
         let address = wallet.address();
 
         let nonce = match self.nonce {
             Some(n) => did::U256::from(n),
-            None => self.basic_account(agent, &address.into()).await?.nonce,
+            None => client.account_basic(address.into()).await?.nonce,
         };
 
         let tx = TransactionBuilder {
@@ -106,18 +108,5 @@ impl SignTransactionArgs {
         .calculate_hash_and_build()?;
 
         Ok(tx)
-    }
-    async fn basic_account(&self, agent: &Agent, address: &did::H160) -> Result<BasicAccount> {
-        let args = Encode!(&address)?;
-
-        let res = agent
-            .query(&self.evmc, METHOD_ACCOUNT_BASIC)
-            .with_arg(args)
-            .call()
-            .await?;
-
-        let res = Decode!(res.as_slice(), BasicAccount)?;
-
-        Ok(res)
     }
 }

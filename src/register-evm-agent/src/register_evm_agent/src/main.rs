@@ -1,6 +1,6 @@
 use anyhow::{Ok, Result};
 use clap::Parser;
-use cli::{generate_wallet, Commands, RegisterMinterCli};
+use cli::{generate_wallet, Commands, ReserveMinterCli};
 
 #[macro_use]
 extern crate log;
@@ -16,7 +16,7 @@ mod transaction;
 async fn main() -> Result<()> {
     env_logger::init();
 
-    let cli = RegisterMinterCli::parse();
+    let cli = ReserveMinterCli::parse();
 
     match cli.command {
         Commands::GenerateWallet => {

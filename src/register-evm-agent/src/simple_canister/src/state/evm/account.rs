@@ -14,42 +14,42 @@ use crate::state::ACCOUNT_MEMORY_ID;
 pub struct Account {}
 
 impl Account {
-    /// Returns this canister's account in evmc if registered
+    /// Returns this canister's account in evmc if reserved
     pub fn get_account(&self) -> Result<H160> {
         ACCOUNT_DATA_CELL.with(|account_data| {
-            if let AccountState::Registered(address) = account_data.borrow().get() {
+            if let AccountState::Reserved(address) = account_data.borrow().get() {
                 Ok(address.clone())
             } else {
-                Err(Error::Internal("Account no registered yet".to_string()))
+                Err(Error::Internal("Account is not reserved yet".to_string()))
             }
         })
     }
 
-    /// Runs the procedure of registering this canister's account in evmc.
+    /// Runs the procedure of reserving this canister's account in evmc.
     #[allow(dead_code)]
     pub async fn reserve_account(
         &mut self,
         self_canister_id: Principal,
         address: H160,
     ) -> Result<()> {
-        // check if account is already registered or in process
+        // check if account is already reserved or in process
         if ACCOUNT_DATA_CELL.with(|account| {
-            if account.borrow().get() == &AccountState::Unregistered {
+            if account.borrow().get() == &AccountState::Unreserved {
                 account
                     .borrow_mut()
-                    .set(AccountState::RegistrationInProgress)
+                    .set(AccountState::ReservationInProgress)
                     .expect("failed to update account state");
                 false
             } else {
                 true
             }
         }) {
-            return Err(Error::Internal("Account already registered".to_string()));
+            return Err(Error::Internal("Account is already reserved".to_string()));
         }
 
         let mut evm_impl = EvmCanisterImpl::default();
 
-        // check if the address is regestry
+        // check if the address is reserved
         match evm_impl
             .is_address_reserved(address.clone(), self_canister_id)
             .await
@@ -58,11 +58,11 @@ impl Account {
                 self.reset();
                 return Err(err);
             }
-            Ok(is_registered) => {
-                if is_registered {
+            Ok(is_reserved) => {
+                if is_reserved {
                     self.reset();
                     return Err(Error::Internal(format!(
-                        "{} is already registered",
+                        "{} is already reserved",
                         address.clone()
                     )));
                 }
@@ -78,7 +78,7 @@ impl Account {
             return Err(err);
         }
 
-        // register ic agent
+        // reserve ic agent
         if let Err(err) = evm_impl
             .reserve_address(self_canister_id, address.clone())
             .await
@@ -90,19 +90,19 @@ impl Account {
         ACCOUNT_DATA_CELL.with(|account| {
             account
                 .borrow_mut()
-                .set(AccountState::Registered(address))
+                .set(AccountState::Reserved(address))
                 .expect("failed to update account state")
         });
 
         Ok(())
     }
 
-    /// Set the account state as unregistered
+    /// Set the account state as unreserved
     pub fn reset(&mut self) {
         ACCOUNT_DATA_CELL.with(|account| {
             account
                 .borrow_mut()
-                .set(AccountState::Unregistered)
+                .set(AccountState::Unreserved)
                 .expect("failed to update account state")
         })
     }
@@ -111,9 +111,9 @@ impl Account {
 #[derive(Debug, Default, CandidType, Deserialize, PartialEq, Eq)]
 enum AccountState {
     #[default]
-    Unregistered,
-    RegistrationInProgress,
-    Registered(H160),
+    Unreserved,
+    ReservationInProgress,
+    Reserved(H160),
 }
 
 impl Storable for AccountState {
