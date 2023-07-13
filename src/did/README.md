@@ -1,1 +1,1 @@
-# EVM C DID
+# EVM Canister DID
