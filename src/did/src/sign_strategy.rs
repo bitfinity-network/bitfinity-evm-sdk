@@ -196,11 +196,19 @@ impl TransactionSigner for ManagementCanisterSigner {
             return Ok(address.clone());
         }
 
-        let address = IcSigner {}
-            .public_key(self.key_id, DerivationPath::new(vec![]))
+        let public_key = IcSigner {}
+            .public_key(self.key_id, self.derivation_path.clone())
             .await
             .map_err(|e| EvmError::from(format!("failed to get address: {e}")))?;
-        let address = H160::from_slice(&address);
+        let address: H160 = IcSigner
+            .pubkey_to_address(&public_key)
+            .map_err(|e| {
+                EvmError::from(format!(
+                    "failed to convert public key to ethereum address: {e}"
+                ))
+            })?
+            .into();
+
         *self.cached_address.borrow_mut() = Some(address.clone());
 
         Ok(address)
@@ -208,7 +216,7 @@ impl TransactionSigner for ManagementCanisterSigner {
 
     async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature> {
         IcSigner {}
-            .sign_transaction(transaction, self.key_id, DerivationPath::new(vec![]))
+            .sign_transaction(transaction, self.key_id, self.derivation_path.clone())
             .await
             .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
             .map(Into::into)
