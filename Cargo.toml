@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "src/did",
-    "src/evmc-client",
+    "src/evm-canister-client",
     "src/eth-signer",
     "src/eth-signer/test_canister",
     "src/iceth-client",
@@ -15,11 +15,11 @@ authors = ["Bitfinity Network"]
 categories = ["cryptography::cryptocurrencies"]
 description = "EVM canister SDK"
 edition = "2021"
-homepage = "https://github.com/bitfinity-network/evmc-sdk"
+homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
-name = "evmc-sdk"
-repository = "https://github.com/bitfinity-network/evmc-sdk"
+name = "bitfinity-evm-sdk"
+repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 version = "0.2.12"
 
 [workspace.dependencies]

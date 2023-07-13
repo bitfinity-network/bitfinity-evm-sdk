@@ -5,6 +5,7 @@ This example is used to set up a minimal canister to reserve an address on the E
 ## Background
 
 When an address is reserved, only the principal that reserved it will be allowedo to send raw transaction from that address.
+
 ## How IC agent works
 We will bind an Ethereum address to a principal step by step according to [this doc](https://tech-docs-evmc.vercel.app/ic-agent/overview)
 
@@ -44,7 +45,7 @@ and signature's r, s, v and tx's hash.
 
 Obviously, this address should not be reserved, but let's double check: 
 ```sh
-dfx canister --network ic call evmc is_address_reserved '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
+dfx canister --network ic call evm is_address_reserved '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
 (false)
 ```
 
@@ -52,35 +53,35 @@ dfx canister --network ic call evmc is_address_reserved '("0x20bc9e20dfef8378034
 
 Recharge 1_600_000(0x186a00) evm naive token to the from address so that it can pay the gas fee in the future:
 ```sh
-dfx canister --network ic call evmc mint_evm_tokens '("0x20bc9e20dfef83780349356779b9b688552ccbb0", "0x186a00")'
+dfx canister --network ic call evm mint_evm_tokens '("0x20bc9e20dfef83780349356779b9b688552ccbb0", "0x186a00")'
 (variant { Ok = "0x186a00" })
 
-dfx canister --network ic call evmc account_basic '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
+dfx canister --network ic call evm account_basic '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
 (record { balance = "0x186a00"; nonce = "0x0" })
 ```
 
-### call evmc reserve_ic_agent
+### call evm reserve_ic_agent
 
 Use data from above:
 ```sh
-dfx canister --network ic call evmc reserve_ic_agent '(record {r="0xdbb3af3eda0d65ff1e71dcd720a14bde8f4daeda54b2910c7bb32f26ed53d02c";s="0x1cd0c88b0feb607772c9d59fe716fbb29d920238baeda4786e0191fc44e0c57a";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x20bc9e20dfef83780349356779b9b688552ccbb0";hash="0x41b56fadd83a943582c91c62411f9e302d36c177dd8ba18ff257f1750d678a93";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")'
+dfx canister --network ic call evm reserve_ic_agent '(record {r="0xdbb3af3eda0d65ff1e71dcd720a14bde8f4daeda54b2910c7bb32f26ed53d02c";s="0x1cd0c88b0feb607772c9d59fe716fbb29d920238baeda4786e0191fc44e0c57a";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x20bc9e20dfef83780349356779b9b688552ccbb0";hash="0x41b56fadd83a943582c91c62411f9e302d36c177dd8ba18ff257f1750d678a93";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")'
 (variant { Ok })
 ```
 Success!
 
-### call evmc verify_registration
+### call evm verify_registration
 
 Use data from above:
 ```sh
-dfx canister --network ic call evmc verify_registration '(vec {81:nat8;72:nat8;69:nat8;68:nat8;94:nat8;35:nat8;255:nat8;67:nat8;238:nat8;77:nat8;189:nat8;96:nat8;235:nat8;181:nat8;172:nat8;162:nat8;60:nat8;166:nat8;12:nat8;240:nat8;207:nat8;30:nat8;28:nat8;188:nat8;136:nat8;11:nat8;249:nat8;108:nat8;197:nat8;123:nat8;241:nat8;190:nat8}, principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")'
+dfx canister --network ic call evm verify_registration '(vec {81:nat8;72:nat8;69:nat8;68:nat8;94:nat8;35:nat8;255:nat8;67:nat8;238:nat8;77:nat8;189:nat8;96:nat8;235:nat8;181:nat8;172:nat8;162:nat8;60:nat8;166:nat8;12:nat8;240:nat8;207:nat8;30:nat8;28:nat8;188:nat8;136:nat8;11:nat8;249:nat8;108:nat8;197:nat8;123:nat8;241:nat8;190:nat8}, principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")'
 (variant { Ok })
 ```
 Success, let's check that:
 ```sh
-dfx canister --network ic call evmc is_address_reserved '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
+dfx canister --network ic call evm is_address_reserved '("0x20bc9e20dfef83780349356779b9b688552ccbb0", principal "yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-tae")' --query
 (true)
 
-dfx canister --network ic call evmc account_basic '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
+dfx canister --network ic call evm account_basic '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
 (record { balance = "0x13af10"; nonce = "0x1" })
 ```
 
@@ -90,7 +91,7 @@ Now, my principal `yhy6j-huy54-mkzda-m26hc-yklb3-dzz4l-i2ykq-kr7tx-dhxyf-v2c2g-t
 
 Let's send 255(0xff) token to `0x000000000000000000000000000000000000dEaD`:
 ```sh
-dfx canister --network ic call evmc call_message '(record {value="0xff";from="0x20bc9e20dfef83780349356779b9b688552ccbb0";nonce="0x1";gas_limit=21000:nat64;gas_price=null;}, "0x000000000000000000000000000000000000dEaD", "")'
+dfx canister --network ic call evm call_message '(record {value="0xff";from="0x20bc9e20dfef83780349356779b9b688552ccbb0";nonce="0x1";gas_limit=21000:nat64;gas_price=null;}, "0x000000000000000000000000000000000000dEaD", "")'
 (
   variant {
     Ok = "0x0cc36a9e3aee62f2b36d8380baa3c95ecb6bc068ad1e6fc3fb58ad3a3dda58d4"
@@ -101,7 +102,7 @@ Success, we can see result in [explorer](https://explorer.bitfinity.network/tx/0
 
 and the account state of `0x20bc9e20dfef83780349356779b9b688552ccbb0` changed.
 ```sh
-dfx canister --network ic call evmc account_basic '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
+dfx canister --network ic call evm account_basic '("0x20bc9e20dfef83780349356779b9b688552ccbb0")' --query
 (record { balance = "0x1079c1"; nonce = "0x2" })
 ```
 
@@ -124,7 +125,7 @@ You need to create a canister on ic first, and change the `simple_canister`'s id
 ```sh
 dfx build simple_canister --network ic
 
-dfx canister install simple_canister --argument "record { owner=principal \"$(dfx identity get-principal)\";evmc=principal \"4fe7g-7iaaa-aaaak-aegcq-cai\"}" --network ic -m=reinstall
+dfx canister install simple_canister --argument "record { owner=principal \"$(dfx identity get-principal)\";evm=principal \"4fe7g-7iaaa-aaaak-aegcq-cai\"}" --network ic -m=reinstall
 ...
 Reinstalling code for canister simple_canister, with canister ID chu2x-jyaaa-aaaah-aaqra-cai
 
@@ -153,13 +154,13 @@ This will bind this address `0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4` to the 
 dfx canister id simple_canister --network ic
 chu2x-jyaaa-aaaah-aaqra-cai
 
-dfx canister --network ic call evmc is_address_reserved '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
+dfx canister --network ic call evm is_address_reserved '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
 (false)
 
 dfx canister --network ic call simple_canister get_account --query
 (variant { Err = variant { Internal = "Account is not reserved yet" } })
 
-dfx canister --network ic call evmc account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
+dfx canister --network ic call evm account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
 (record { balance = "0x0"; nonce = "0x0" })
 
 
@@ -167,13 +168,13 @@ dfx canister --network ic call evmc account_basic '("0x0e571b5fcd9f92e957c24c635
 dfx canister --network ic call simple_canister reserve_account '(record {r="0x59643861ba80b938a0d8d27e455f4372fadbc2dff7fa48705ecd8ebf4bca6ac7";s="0x200f8b4d6dfc1faa20a2cb589fc29342c84b73dd2972b46b4fcbcc6d69618696";v="0xad676";to=opt "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b";gas="0x5208";maxFeePerGas=null;gasPrice=opt "0xa";value="0x186a0";blockNumber=null;from="0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4";hash="0x5737a2054a8e71432632e9955bbd395c2991061ea586b2d07cd32164ae4d870a";blockHash=null;"type"=null;accessList=null;transactionIndex=null;nonce="0x0";maxPriorityFeePerGas=null;input="";chainId=opt "0x56b29"}, vec {22:nat8;61:nat8;28:nat8;1:nat8;194:nat8;244:nat8;15:nat8;43:nat8;50:nat8;157:nat8;198:nat8;16:nat8;19:nat8;92:nat8;223:nat8;2:nat8;154:nat8;46:nat8;55:nat8;125:nat8;36:nat8;79:nat8;186:nat8;148:nat8;29:nat8;202:nat8;58:nat8;210:nat8;39:nat8;12:nat8;223:nat8;143:nat8})'
 (variant { Ok })
 
-dfx canister --network ic call evmc is_address_reserved '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
+dfx canister --network ic call evm is_address_reserved '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4", principal "chu2x-jyaaa-aaaah-aaqra-cai")' --query
 (true)
 
 dfx canister --network ic call simple_canister get_account --query
 (variant { Ok = "0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4" })
 
-dfx canister --network ic call evmc account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
+dfx canister --network ic call evm account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
 (record { balance = "0x93db90"; nonce = "0x1" })
 
 dfx canister --network ic call simple_canister transact '("0xff", "0x000000000000000000000000000000000000ffff", vec{})'
@@ -188,6 +189,6 @@ Success, we can see result in [explorer](https://explorer.bitfinity.network/tx/0
 
 and the account state of `0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4` changed.
 ```sh
-dfx canister --network ic call evmc account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
+dfx canister --network ic call evm account_basic '("0x0e571b5fcd9f92e957c24c6357dab14b2d2344e4")' --query
 (record { balance = "0x90a641"; nonce = "0x2" })
 ```

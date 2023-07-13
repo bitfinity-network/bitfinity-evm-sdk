@@ -10,9 +10,9 @@ echo "Spinning up dfx and deploy canisters"
 
 # Test minter registration
 identity="$HOME/.config/dfx/identity/alice/identity.pem"
-evmc=$(dfx canister id evmc)
+evm=$(dfx canister id evm)
 minter_canister=$(dfx canister id minter_canister)
-./.artifact/register_minter register $identity  $evmc $minter_canister
+./.artifact/register_minter register $identity  $evm $minter_canister
 status_code=$?
 if [ $status_code -eq 0 ]; then
     echo "Minter registration test: passed"

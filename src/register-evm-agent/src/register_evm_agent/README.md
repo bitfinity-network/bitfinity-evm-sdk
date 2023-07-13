@@ -1,6 +1,6 @@
 # Register EVM Agent
 
-A Cli tool for generating an ETH Wallet & reserving a canister to the EVMC
+A Cli tool for generating an ETH Wallet & reserving a canister to the EVM canister
 
 ## Build
 
@@ -40,7 +40,7 @@ Wallet:
 To reserve an address the following command needs to be run
 
 ```sh
-register-evm-agent reserve -k <private_key> -n <network> -i <identity_path> --evmc <evmc_principal> --canister-id <reserve_canister_principal>
+register-evm-agent reserve -k <private_key> -n <network> -i <identity_path> --evm <evm_canister_principal> --canister-id <reserve_canister_principal>
 ```
 
 Where:
@@ -48,7 +48,7 @@ Where:
 - `private key` is the Private key for the generated wallet
 - `network` is the network to run against: default is `local`, the value can be both `ic` or a custom URL.
 - `identity path` is the path to the identity you're going to use to reserve your canister
-- `evmc principal` is the principal for the EVMC canister
+- `evm canister principal` is the principal for the EVM canister
 - `reserve canister principal` is the principal of the canister you're going to associate to the reserved address
 
 All the supported options can be seen with

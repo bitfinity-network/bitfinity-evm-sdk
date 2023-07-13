@@ -45,9 +45,9 @@ pub trait CanisterClient {
         R: for<'de> Deserialize<'de> + CandidType;
 }
 
-/// An EVMC client.
+/// An EVM canister client.
 #[derive(Debug)]
-pub struct EvmcClient<C>
+pub struct EvmCanisterClient<C>
 where
     C: CanisterClient,
 {
@@ -55,8 +55,8 @@ where
     client: C,
 }
 
-impl<C: CanisterClient> EvmcClient<C> {
-    /// Create a new EVMC client.
+impl<C: CanisterClient> EvmCanisterClient<C> {
+    /// Create a new EVM canister client.
     ///
     /// # Arguments
     /// * `client` - The canister client.
@@ -268,7 +268,11 @@ impl<C: CanisterClient> EvmcClient<C> {
 
     /// Mint Native to an address
     /// Note: This works on the testnet only
-    pub async fn mint(&self, address: H160, amount: U256) -> CanisterClientResult<EvmResult<U256>> {
+    pub async fn mint_native_tokens(
+        &self,
+        address: H160,
+        amount: U256,
+    ) -> CanisterClientResult<EvmResult<U256>> {
         self.client
             .update("mint_native_tokens", (address, amount))
             .await

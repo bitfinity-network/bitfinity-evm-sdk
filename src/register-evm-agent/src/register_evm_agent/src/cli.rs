@@ -49,9 +49,9 @@ pub struct ReserveArgs {
     #[arg(short = 'i', long = "identity")]
     pub identity: PathBuf,
 
-    /// Evmc canister principal
-    #[arg(short = 'e', long = "evmc")]
-    pub evmc: Principal,
+    /// Evm canister principal
+    #[arg(short = 'e', long = "evm")]
+    pub evm: Principal,
 
     /// IC Network (ic, local or custom url)
     #[arg(short, long, default_value_t = String::from(NETWORK_LOCAL))]
@@ -78,7 +78,7 @@ impl ReserveArgs {
         match ReservationService::new(
             agent,
             self.amount_to_mint,
-            self.evmc,
+            self.evm,
             self.reserve_canister_id,
             wallet,
         )

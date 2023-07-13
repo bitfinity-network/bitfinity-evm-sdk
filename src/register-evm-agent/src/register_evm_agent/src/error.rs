@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use candid::Principal;
 use did::error::EvmError;
 use eth_signer::WalletError;
-use evmc_client::CanisterClientError;
+use evm_canister_client::CanisterClientError;
 use ic_agent::identity::PemError;
 use ic_agent::AgentError;
 use thiserror::Error;
@@ -20,8 +20,8 @@ pub enum Error {
     CouldNotGetPrincipal(String),
     #[error("EVM error: {0}")]
     Evm(EvmError),
-    #[error("evmc client error: {0}")]
-    EvmcClientError(CanisterClientError),
+    #[error("canister client error: {0}")]
+    CanisterClientError(CanisterClientError),
     #[error("parse error: {0}")]
     Parse(candid::Error),
     #[error("failed to read PEM file {0}: {1}")]
@@ -56,6 +56,6 @@ impl From<EvmError> for Error {
 
 impl From<CanisterClientError> for Error {
     fn from(err: CanisterClientError) -> Self {
-        Self::EvmcClientError(err)
+        Self::CanisterClientError(err)
     }
 }

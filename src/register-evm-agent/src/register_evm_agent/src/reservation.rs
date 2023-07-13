@@ -2,16 +2,16 @@ use candid::Principal;
 use did::H160;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
-use evmc_client::{EvmcClient, IcAgentClient};
+use evm_canister_client::{EvmCanisterClient, IcAgentClient};
 use ic_agent::Agent;
 
 use crate::agent::user_principal;
 use crate::error::{Error, Result};
 
-type EvmcAgentClient = EvmcClient<IcAgentClient>;
+type EvmCanisterAgentClient = EvmCanisterClient<IcAgentClient>;
 
 pub struct ReservationService<'a> {
-    client: EvmcAgentClient,
+    client: EvmCanisterAgentClient,
     amount_to_mint: Option<u64>,
     reserve_canister_id: Principal,
     agent_principal: Principal,
@@ -22,13 +22,13 @@ impl<'a> ReservationService<'a> {
     pub async fn new(
         agent: Agent,
         amount_to_mint: Option<u64>,
-        evmc_canister_id: Principal,
+        evm_canister_id: Principal,
         reserve_canister_id: Principal,
         wallet: Wallet<'a, SigningKey>,
     ) -> Result<ReservationService<'a>> {
         let agent_principal = user_principal(&agent)?;
 
-        let client = EvmcClient::new(IcAgentClient::with_agent(evmc_canister_id, agent));
+        let client = EvmCanisterClient::new(IcAgentClient::with_agent(evm_canister_id, agent));
 
         Ok(Self {
             client,
@@ -96,7 +96,7 @@ impl<'a> ReservationService<'a> {
         info!("minting EVM native tokens to {address}");
 
         self.client
-            .mint(address, did::U256::from(amount_to_mint))
+            .mint_native_tokens(address, did::U256::from(amount_to_mint))
             .await??;
 
         info!("tokens minted successfully");
