@@ -17,7 +17,7 @@ export-api = []
 
 [dependencies]
 iceth-client = { path = "../", features = ["bitfinity"] }
-did = { path = "../../did" }
+did = { path = "../../did", features = ["signer"] }
 
 ic-canister = { workspace = true }
 ic-exports = { workspace = true }

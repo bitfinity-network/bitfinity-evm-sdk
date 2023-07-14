@@ -3,7 +3,8 @@ use std::cell::RefCell;
 
 use async_trait::async_trait;
 use candid::CandidType;
-use eth_signer::ic_sign::{IcSigner, SigningKeyId};
+use eth_signer::ic_sign::IcSigner;
+pub use eth_signer::ic_sign::SigningKeyId;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;

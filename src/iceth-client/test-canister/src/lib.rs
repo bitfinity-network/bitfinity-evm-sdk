@@ -2,11 +2,14 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use candid::{CandidType, Deserialize, Principal};
+use did::sign_strategy::{ManagementCanisterSigner, SigningKeyId, TransactionSigner};
 use did::transaction::{SigningMethod, TransactionBuilder};
 use did::{BlockNumber, Transaction, TransactionReceipt, H160};
 use ethers_core::k256::ecdsa::SigningKey;
+use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::utils;
 use ic_canister::{generate_idl, init, update, Canister, Idl, PreUpdate};
+use ic_exports::ic_ic00_types::DerivationPath;
 use ic_storage::stable::Versioned;
 use ic_storage::IcStorage;
 
@@ -52,7 +55,9 @@ impl CounterCanister {
     }
 
     #[update]
-    pub async fn test_send_raw_transaction(&mut self) -> (Transaction, TransactionReceipt) {
+    pub async fn test_send_raw_transaction_signed_with_signing_key(
+        &mut self,
+    ) -> (Transaction, TransactionReceipt) {
         let (chain_id, client) = {
             let state = self.state.borrow();
             let chain_id = state.chain_id;
@@ -94,6 +99,83 @@ impl CounterCanister {
         .calculate_hash_and_build()
         .unwrap();
         let tx = ethers_core::types::Transaction::from(tx);
+        let rlp = tx.rlp();
+        let tx_hash = client.send_raw_transaction(rlp.into()).await.unwrap();
+
+        let receipt = client
+            .get_transaction_receipt(&tx_hash)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let tx = client
+            .get_transaction_by_hash(tx_hash)
+            .await
+            .unwrap()
+            .unwrap()
+            .into();
+
+        (tx, receipt)
+    }
+
+    #[update]
+    pub async fn test_send_raw_transaction_signed_with_management_canister(
+        &mut self,
+    ) -> (Transaction, TransactionReceipt) {
+        let (chain_id, client) = {
+            let state = self.state.borrow();
+            let chain_id = state.chain_id;
+            let client = iceth_client::Client::new(state.iceth, state.url.clone());
+            (chain_id, client)
+        };
+
+        assert_eq!(chain_id, client.eth_get_chain_id().await.unwrap());
+
+        let (_, address) = Self::alice_wallet();
+
+        let balance = client
+            .get_balance(&address, BlockNumber::Latest)
+            .await
+            .unwrap();
+        if balance < 10_000_000u64.into() {
+            client
+                .mint_evm_token(&address, 10_000_000_000_u64.into())
+                .await
+                .unwrap();
+        };
+
+        let gas_price = client.gas_price().await.unwrap();
+        let nonce = client
+            .get_transaction_count(&address, BlockNumber::Latest)
+            .await
+            .unwrap();
+
+        let mut tx = ethers_core::types::Transaction {
+            from: address.into(),
+            to: Some(H160::zero().into()),
+            nonce: nonce.into(),
+            value: 1000u64.into(),
+            gas: 10_000_000u64.into(),
+            gas_price: Some(gas_price.into()),
+            input: ethers_core::types::Bytes::default(),
+            chain_id: Some(chain_id.into()),
+            ..Default::default()
+        };
+        let typed_tx: TypedTransaction = (&tx).into();
+
+        let signer = ManagementCanisterSigner::new(
+            SigningKeyId::Dfx,
+            DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()]),
+        );
+
+        let signature = signer.sign_transaction(&typed_tx).await.unwrap();
+
+        tx.r = signature.r.into();
+        tx.s = signature.s.into();
+        tx.v = signature.v.into();
+
+        tx.hash = tx.hash();
+
         let rlp = tx.rlp();
         let tx_hash = client.send_raw_transaction(rlp.into()).await.unwrap();
 
