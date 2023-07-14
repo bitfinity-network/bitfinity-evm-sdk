@@ -7,14 +7,14 @@ use did::transaction::TransactionBuilder;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::{H160, U256};
-use evmc_client::{EvmcClient, IcAgentClient};
+use evm_canister_client::{EvmCanisterClient, IcAgentClient};
 
 use crate::agent::init_agent;
 use crate::cli::{get_wallet, network_url, DEFAULT_CHAIN_ID, NETWORK_LOCAL};
 use crate::constant::DEFAULT_GAS_LIMIT;
 use crate::error::Result;
 
-type EvmcAgentClient = EvmcClient<IcAgentClient>;
+type EvmCanisterAgentClient = EvmCanisterClient<IcAgentClient>;
 
 #[derive(Args)]
 pub struct SignTransactionArgs {
@@ -30,9 +30,9 @@ pub struct SignTransactionArgs {
     #[arg(short = 'k', long = "key")]
     pub signing_key: String,
 
-    /// Evmc canister principal
-    #[arg(short = 'e', long = "evmc")]
-    pub evmc: Principal,
+    /// Evm canister principal
+    #[arg(short = 'e', long = "evm")]
+    pub evm: Principal,
 
     /// Address of the recipient
     #[arg(short = 't', long = "transaction")]
@@ -59,7 +59,7 @@ impl SignTransactionArgs {
         info!("initializing agent...");
         let network = network_url(&self.network);
         let agent = init_agent(&self.identity, network).await?;
-        let client = EvmcClient::new(IcAgentClient::with_agent(self.evmc, agent));
+        let client = EvmCanisterClient::new(IcAgentClient::with_agent(self.evm, agent));
         let wallet = get_wallet(self.signing_key.as_str())?;
 
         let tx = self.transaction_builder(wallet, &client).await?;
@@ -74,7 +74,7 @@ impl SignTransactionArgs {
     async fn transaction_builder(
         &self,
         wallet: Wallet<'_, SigningKey>,
-        client: &EvmcAgentClient,
+        client: &EvmCanisterAgentClient,
     ) -> Result<did::Transaction> {
         let address = wallet.address();
 

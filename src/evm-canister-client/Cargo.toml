@@ -1,5 +1,5 @@
 [package]
-name = "evmc-client"
+name = "evm-canister-client"
 categories = ["cryptography::cryptocurrencies"]
 description = "Client for interacting with the Evm Canister"
 include = ["src/**/*", "../../LICENSE", "../../README.md"]

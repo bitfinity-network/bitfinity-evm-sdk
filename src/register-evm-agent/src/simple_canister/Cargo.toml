@@ -19,7 +19,7 @@ ic-exports = { workspace = true }
 ic-stable-structures = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-evmc-client = { path = "../../../evmc-client" }
+evm-canister-client = { path = "../../../evm-canister-client" }
 [[example]]
 name = "signature"
 

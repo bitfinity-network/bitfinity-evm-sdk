@@ -29,5 +29,5 @@ impl State {
 #[derive(Debug, Clone, Copy)]
 pub struct Settings {
     pub owner: Principal,
-    pub evmc: Principal,
+    pub evm: Principal,
 }

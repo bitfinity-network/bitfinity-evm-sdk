@@ -25,7 +25,7 @@ impl TempCanister {
     pub fn init(&mut self, init_data: InitData) {
         let settings = Settings {
             owner: init_data.owner,
-            evmc: init_data.evmc,
+            evm: init_data.evm,
         };
 
         self.state.reset(settings);
@@ -59,9 +59,9 @@ impl TempCanister {
     /// This method should be called only by current owner,
     /// else `Error::NotAuthorized` will be returned.
     #[update]
-    pub fn set_evm_canister_id(&mut self, evmc_id: Principal) -> Result<()> {
+    pub fn set_evm_canister_id(&mut self, evm_id: Principal) -> Result<()> {
         self.check_owner(ic::caller())?;
-        self.state.config.set_evmc(evmc_id);
+        self.state.config.set_evm(evm_id);
         Ok(())
     }
 
@@ -108,5 +108,5 @@ pub struct InitData {
     /// Principal of canister's owner.
     pub owner: Principal,
     /// Principal of evm canister id.
-    pub evmc: Principal,
+    pub evm: Principal,
 }

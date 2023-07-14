@@ -12,7 +12,7 @@ struct RegistrationInfo {
 
 #[tokio::main]
 async fn main() {
-    let registration_info = get_minter_address().await.expect("call evmc error");
+    let registration_info = get_minter_address().await.expect("call evm error");
 
     let wallet = LocalWallet::new(&mut rand::thread_rng());
     println!("private key: {:?}", wallet.signer().to_bytes().to_vec());
@@ -22,7 +22,7 @@ async fn main() {
         .from(wallet.address())
         .to(registration_info.minter_address.as_str()) // MINTER_ADDRESS
         .value(registration_info.registration_fee) // REGISTRATION_FEE
-        .chain_id(355113) // evmc testnet chain id
+        .chain_id(355113) // evm testnet chain id
         .gas(21000) // gas limit
         .gas_price(10) // use min gas price
         .nonce(0) // the new address's nonce is 0

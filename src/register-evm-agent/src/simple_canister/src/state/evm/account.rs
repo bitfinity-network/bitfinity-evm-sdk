@@ -14,7 +14,7 @@ use crate::state::ACCOUNT_MEMORY_ID;
 pub struct Account {}
 
 impl Account {
-    /// Returns this canister's account in evmc if reserved
+    /// Returns this canister's account in evm if reserved
     pub fn get_account(&self) -> Result<H160> {
         ACCOUNT_DATA_CELL.with(|account_data| {
             if let AccountState::Reserved(address) = account_data.borrow().get() {
@@ -25,7 +25,7 @@ impl Account {
         })
     }
 
-    /// Runs the procedure of reserving this canister's account in evmc.
+    /// Runs the procedure of reserving this canister's account in evm.
     #[allow(dead_code)]
     pub async fn reserve_account(
         &mut self,
