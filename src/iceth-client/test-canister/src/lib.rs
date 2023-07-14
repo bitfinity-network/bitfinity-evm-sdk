@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use candid::{CandidType, Deserialize, Principal};
 use did::transaction::{SigningMethod, TransactionBuilder};
-use did::{BlockNumber, Transaction, TransactionReceipt, H160, H256};
+use did::{BlockNumber, Transaction, TransactionReceipt, H160};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::utils;
 use ic_canister::{generate_idl, init, update, Canister, Idl, PreUpdate};
