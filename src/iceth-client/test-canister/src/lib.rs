@@ -104,12 +104,7 @@ impl CounterCanister {
             .unwrap();
 
         let tx = client
-            .get_transaction_by_hash(
-                H256::from_hex_str(
-                    "0x7388f7419e5f437b4c15b6bb61965e0f102cda568bd5e14ec7df72be2bc23393",
-                )
-                .unwrap(),
-            )
+            .get_transaction_by_hash(tx_hash)
             .await
             .unwrap()
             .unwrap()

@@ -188,9 +188,18 @@ impl Client {
 
     /// Returns chain id.
     pub async fn eth_get_chain_id(&self) -> Result<u64, Error> {
-        let data = r#"{{"jsonrpc":"2.0","id":"6","method":"eth_chainId"}}"#.to_string();
-        let result = self.json_rpc_call(&data, 8192).await?;
-        self.process_json_rpc_response(&result)
+        let data = r#"{"jsonrpc":"2.0","id":8,"method":"eth_chainId","params":[]}"#;
+        let result = self.json_rpc_call(&data, 1024).await?;
+        let chain_id_str: String = self.process_json_rpc_response(&result)?;
+        let trimmed_chain_id_str = if chain_id_str.len() < 2 {
+            &chain_id_str
+        } else if &chain_id_str[..2].to_ascii_lowercase() == "0x" {
+            &chain_id_str[2..]
+        } else {
+            &chain_id_str
+        };
+        u64::from_str_radix(trimmed_chain_id_str, 16)
+            .map_err(|e| Error::SerializationError(format!("bad encoding of chain id: {e}")))
     }
 
     async fn json_rpc_call(&self, data: &str, max_response_bytes: u64) -> Result<Vec<u8>, Error> {

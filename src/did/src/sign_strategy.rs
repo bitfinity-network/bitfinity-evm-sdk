@@ -35,10 +35,7 @@ pub enum SigningStrategy {
     /// Local signing key
     Local { private_key: [u8; 32] },
     /// Use management canister and ECDSA signing endpoints
-    ManagementCanister {
-        key_id: SigningKeyId,
-        derivation_path: DerivationPath,
-    },
+    ManagementCanister { key_id: SigningKeyId },
 }
 
 impl SigningStrategy {
@@ -53,13 +50,13 @@ impl SigningStrategy {
                 let wallet = Wallet::new_with_signer(Cow::Owned(signer), address, chain_id);
                 Ok(TxSigner::Local(LocalTxSigner::new(wallet)))
             }
-            SigningStrategy::ManagementCanister {
-                key_id,
-                derivation_path,
-            } => Ok(TxSigner::ManagementCanister(ManagementCanisterSigner::new(
-                key_id,
-                derivation_path,
-            ))),
+            SigningStrategy::ManagementCanister { key_id } => {
+                let derivation_path = DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()]);
+                Ok(TxSigner::ManagementCanister(ManagementCanisterSigner::new(
+                    key_id,
+                    derivation_path,
+                )))
+            }
         }
     }
 }
@@ -336,9 +333,9 @@ mod test {
     fn test_create_management_signer() {
         let signing_strategy = SigningStrategy::ManagementCanister {
             key_id: SigningKeyId::Test,
-            derivation_path: DerivationPath::new(vec![vec![1, 2, 3]]),
         };
-        let signer = signing_strategy.make_signer(42).unwrap();
+        let chain_id = 42;
+        let signer = signing_strategy.make_signer(chain_id).unwrap();
         if let TxSigner::ManagementCanister(ManagementCanisterSigner {
             key_id,
             cached_address,
@@ -346,7 +343,10 @@ mod test {
         }) = signer
         {
             assert_eq!(key_id, SigningKeyId::Test);
-            assert_eq!(derivation_path, DerivationPath::new(vec![vec![1, 2, 3]]));
+            assert_eq!(
+                derivation_path,
+                DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()])
+            );
             assert_eq!(*cached_address.borrow(), None);
         } else {
             panic!("invalid signer")
