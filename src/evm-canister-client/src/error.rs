@@ -1,5 +1,5 @@
 use did::error::EvmError;
-use ic_exports::ic_kit::RejectionCode;
+use ic_exports::ic_cdk::api::call::RejectionCode;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

@@ -22,7 +22,7 @@ pub trait TransactionSigner {
     /// Returns the `sender` address for the given identity
     async fn get_address(&self) -> Result<H160>;
 
-    /// Signe the created transaction
+    /// Sign the created transaction
     async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature>;
 
     /// Sign the given digest
@@ -30,7 +30,7 @@ pub trait TransactionSigner {
 }
 
 /// Signing strategy for signing EVM transactions
-#[derive(CandidType, Clone, Debug, Deserialize)]
+#[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq)]
 pub enum SigningStrategy {
     /// Local signing key
     Local { private_key: [u8; 32] },

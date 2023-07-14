@@ -2,7 +2,7 @@
 	"simple_canister": {
 		"ic": "chu2x-jyaaa-aaaah-aaqra-cai"
 	},
-	"evmc": {
+	"evm": {
 		"ic": "4fe7g-7iaaa-aaaak-aegcq-cai"
 	}
 }

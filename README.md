@@ -9,8 +9,8 @@
 
 - [did](./src/did): Data types for [evm-canister](https://github.com/bitfinity-network/evm-canister)
 - [eth-signer](./src/eth-signer/): A library which provides a trait for signing transactions and messages.
-- [register-evm-agent](./src/register-evm-agent/src/register_evm_agent/): A Cli tool for generating an ETH Wallet & registering a canister to the Bitfinity EVM
-- [evmc-client](./src/evmc-client/): A library for interacting with the Bitfinity EVM
+- [register-evm-agent](./src/register-evm-agent/src/register_evm_agent/): A Cli tool for generating an ETH Wallet & reserving a canister to the Bitfinity EVM
+- [evm-canister-client](./src/evm-canister-client/): A library for interacting with the Bitfinity EVM
 
 ## License
 

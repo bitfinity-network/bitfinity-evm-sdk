@@ -11,7 +11,6 @@ pub mod error;
 pub mod hash;
 pub mod integer;
 pub mod keccak;
-pub mod registration_info;
 #[cfg(feature = "signer")]
 pub mod sign_strategy;
 pub mod transaction;
@@ -24,7 +23,7 @@ use candid::{CandidType, Deserialize};
 pub use error::{ExitFatal, HaltError};
 pub use hash::{H160, H256, H64};
 pub use integer::{U256, U64};
-pub use transaction::{BlockNumber, Transaction, TransactionParams, TransactionReceipt};
+pub use transaction::{BlockNumber, Transaction, TransactionReceipt};
 
 pub use crate::bytes::Bytes;
 

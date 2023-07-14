@@ -1,6 +1,6 @@
 # Register EVM Agent
 
-A Cli tool for generating an ETH Wallet & registering a canister to the EVMC
+A Cli tool for generating an ETH Wallet & reserving a canister to the EVM canister
 
 ## Build
 
@@ -35,38 +35,38 @@ Wallet:
   Address = 0x6d4662d3ab4769a4f10781325601db68874261d2
 ```
 
-### Register canister
+### Reserve an EVM address
 
-In order to register a canister the following command needs to be run
+To reserve an address the following command needs to be run
 
 ```sh
-register-evm-agent register -k <private_key> -n <network> -i <identity_path> --evmc <evmc_principal> --canister-id <register_canister_principal>
+register-evm-agent reserve -k <private_key> -n <network> -i <identity_path> --evm <evm_canister_principal> --canister-id <reserve_canister_principal>
 ```
 
 Where:
 
 - `private key` is the Private key for the generated wallet
-- `network` is the network to run against: default is `local`, the value can be both `ic` or a custom url.
-- `identity path` is the path to the identity you're going to use to register your canister
-- `evmc principal` is the principal for the EVMC canister
-- `register canister principal` is the principal of the canister you're going to register
+- `network` is the network to run against: default is `local`, the value can be both `ic` or a custom URL.
+- `identity path` is the path to the identity you're going to use to reserve your canister
+- `evm canister principal` is the principal for the EVM canister
+- `reserve canister principal` is the principal of the canister you're going to associate to the reserved address
 
 All the supported options can be seen with
 
 ```sh
-register-evm-agent register --help
+register-evm-agent reserve --help
 ```
 
 #### Additional options
 
-- **Amount to mint**: if you're using a testnet and you need to mint native tokens to you wallet first, you can pass the amount of tokens you need to mint to your wallet before registering the canister
+- **Amount to mint**: if you're using a testnet and you need to mint native tokens to your wallet first, you can pass the amount of tokens you need to mint to your wallet before reserving the canister
 
     ```sh
-    register-evm-agent register -k ... -a 1000000000 ...
+    register-evm-agent reserve -k ... -a 1000000000 ...
     ```
 
 - **Specify the chain id**: you can specify the cain id providing the id as an argument
 
     ```sh
-    register-evm-agent register -k ... -C <custom-chain-id>
+    register-evm-agent reserve -k ... -C <custom-chain-id>
     ```

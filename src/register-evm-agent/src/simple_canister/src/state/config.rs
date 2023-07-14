@@ -16,7 +16,7 @@ impl Config {
     pub fn reset(&mut self, settings: Settings) {
         let new_data = ConfigData {
             owner: settings.owner,
-            evmc: settings.evmc,
+            evm: settings.evm,
         };
         CONFIG_CELL.with(|cell| {
             cell.borrow_mut()
@@ -32,22 +32,22 @@ impl Config {
 
     /// Returns principal of evm canister id.
     pub fn get_evm_canister_id(&self) -> Principal {
-        CONFIG_CELL.with(|cell| cell.borrow().get().evmc)
+        CONFIG_CELL.with(|cell| cell.borrow().get().evm)
     }
 
     /// Sets a new principal for canister owner.
     pub fn set_owner(&mut self, owner: Principal) {
-        let evmc = self.get_evm_canister_id();
+        let evm = self.get_evm_canister_id();
         CONFIG_CELL
-            .with(|cell| cell.borrow_mut().set(ConfigData { owner, evmc }))
+            .with(|cell| cell.borrow_mut().set(ConfigData { owner, evm }))
             .expect("failed to update config stable memory data")
     }
 
     /// Sets a new principal for evm canister id.
-    pub fn set_evmc(&mut self, evmc: Principal) {
+    pub fn set_evm(&mut self, evm: Principal) {
         let owner: Principal = self.get_owner();
         CONFIG_CELL
-            .with(|cell| cell.borrow_mut().set(ConfigData { owner, evmc }))
+            .with(|cell| cell.borrow_mut().set(ConfigData { owner, evm }))
             .expect("failed to update config stable memory data")
     }
 }
@@ -55,14 +55,14 @@ impl Config {
 #[derive(Debug, Clone, Copy, Deserialize, CandidType, PartialEq, Eq)]
 pub struct ConfigData {
     pub owner: Principal,
-    pub evmc: Principal,
+    pub evm: Principal,
 }
 
 impl Default for ConfigData {
     fn default() -> Self {
         Self {
             owner: Principal::anonymous(),
-            evmc: Principal::anonymous(),
+            evm: Principal::anonymous(),
         }
     }
 }

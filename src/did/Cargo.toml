@@ -1,6 +1,6 @@
 [package]
 categories = ["cryptography::cryptocurrencies"]
-description = "API types definition for EVMC"
+description = "API types definition for EVM canister"
 include = ["src/**/*", "../../LICENSE", "../../README.md"]
 name = "did"
 
