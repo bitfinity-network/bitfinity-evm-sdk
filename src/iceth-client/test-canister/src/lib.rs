@@ -170,7 +170,7 @@ impl CounterCanister {
 
         let signature = signer.sign_transaction(&typed_tx).await.unwrap();
         let signature = ethers_core::types::Signature::from(signature);
-        let rlp = typed_tx.rlp_signed(&signature);
+        let rlp = typed_tx.rlp_signed((&signature).into());
 
         let recovered = signature.recover(typed_tx.sighash()).unwrap();
         assert_eq!(recovered, address.0);
