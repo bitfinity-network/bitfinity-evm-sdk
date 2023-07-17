@@ -118,7 +118,7 @@ impl CounterCanister {
         (tx, receipt)
     }
 
-    #[update]
+    // #[update]
     pub async fn test_send_raw_transaction_signed_with_management_canister(
         &mut self,
     ) -> (Transaction, TransactionReceipt) {
@@ -131,7 +131,11 @@ impl CounterCanister {
 
         assert_eq!(chain_id, client.eth_get_chain_id().await.unwrap());
 
-        let (_, address) = Self::alice_wallet();
+        let signer = ManagementCanisterSigner::new(
+            SigningKeyId::Dfx,
+            DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()]),
+        );
+        let address = signer.get_address().await.unwrap();
 
         let balance = client
             .get_balance(&address, BlockNumber::Latest)
@@ -150,6 +154,8 @@ impl CounterCanister {
             .await
             .unwrap();
 
+
+
         let mut tx = ethers_core::types::Transaction {
             from: address.into(),
             to: Some(H160::zero().into()),
@@ -161,14 +167,14 @@ impl CounterCanister {
             chain_id: Some(chain_id.into()),
             ..Default::default()
         };
+
         let typed_tx: TypedTransaction = (&tx).into();
 
-        let signer = ManagementCanisterSigner::new(
-            SigningKeyId::Dfx,
-            DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()]),
-        );
-
         let signature = signer.sign_transaction(&typed_tx).await.unwrap();
+
+        // let s = ethers_core::types::Signature::from(signature);
+        // let recovered = s.recover(typed_tx.sighash()).unwrap();
+        // assert_eq!(recovered, tx.from);
 
         tx.r = signature.r.into();
         tx.s = signature.s.into();
