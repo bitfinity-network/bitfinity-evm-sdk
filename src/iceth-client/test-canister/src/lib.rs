@@ -6,6 +6,7 @@ use did::sign_strategy::{ManagementCanisterSigner, SigningKeyId, TransactionSign
 use did::transaction::{SigningMethod, TransactionBuilder};
 use did::{BlockNumber, Transaction, TransactionReceipt, H160};
 use ethers_core::k256::ecdsa::SigningKey;
+use ethers_core::types::TransactionRequest;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::utils;
 use ic_canister::{generate_idl, init, update, Canister, Idl, PreUpdate};
@@ -154,29 +155,26 @@ impl CounterCanister {
             .await
             .unwrap();
 
-        let tx = TransactionBuilder {
-            from: &address,
-            to: Some(H160::zero()),
-            nonce,
-            value: 1000u64.into(),
-            gas: 10_000_000u64.into(),
-            gas_price: Some(gas_price),
-            input: vec![],
-            signature: SigningMethod::None,
-            chain_id,
-        }
-        .calculate_hash_and_build()
-        .unwrap();
-        let tx = ethers_core::types::Transaction::from(tx);
-        let typed_tx: TypedTransaction = (&tx).into();
+        let transaction = TransactionRequest {
+            from: Some(address.0),
+            to: Some(H160::zero().0.into()),
+            nonce: Some(nonce.0),
+            value: Some(1000u64.into()),
+            gas: Some(1_000_000u64.into()),
+            gas_price: Some(gas_price.into()),
+            chain_id: Some(chain_id.into()),
+            ..Default::default()
+        };
 
-        let signature: ethers_core::types::Signature =
-            signer.sign_transaction(&typed_tx).await.unwrap().into();
+        let typed_tx: TypedTransaction = transaction.into();
+
+        let signature = signer.sign_transaction(&typed_tx).await.unwrap();
+        let signature = ethers_core::types::Signature::from(signature);
+        let rlp = typed_tx.rlp_signed(&signature.into());
 
         let recovered = signature.recover(typed_tx.sighash()).unwrap();
-        assert_eq!(recovered, tx.from);
+        assert_eq!(recovered, address.0);
 
-        let rlp = typed_tx.rlp_signed(&signature);
         let tx_hash = client.send_raw_transaction(rlp.into()).await.unwrap();
 
         let receipt = client
