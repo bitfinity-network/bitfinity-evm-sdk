@@ -40,6 +40,7 @@ ic-exports = { workspace = true, optional = true }
 
 [dev-dependencies]
 rand = { workspace = true }
+tokio = { workspace = true }
 
 [features]
 signer = ["async-trait", "bincode", "ic-exports", "eth-signer/ic_sign"]

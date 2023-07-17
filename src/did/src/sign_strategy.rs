@@ -358,4 +358,18 @@ mod test {
             panic!("invalid signer")
         }
     }
+
+    #[tokio::test]
+    async fn test_sign_recover() {
+        let signing_strategy = SigningStrategy::Local {
+            private_key: [2; 32],
+        };
+        let signer = signing_strategy.make_signer(42).unwrap();
+        let digest = [42u8; 32];
+        let signature = signer.sign_digest(digest).await.unwrap();
+        let recovered = ethers_core::types::Signature::from(signature)
+            .recover(digest)
+            .unwrap();
+        assert_eq!(recovered, signer.get_address().await.unwrap().0);
+    }
 }
