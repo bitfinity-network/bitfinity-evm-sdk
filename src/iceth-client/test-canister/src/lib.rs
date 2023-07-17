@@ -6,8 +6,8 @@ use did::sign_strategy::{ManagementCanisterSigner, SigningKeyId, TransactionSign
 use did::transaction::{SigningMethod, TransactionBuilder};
 use did::{BlockNumber, Transaction, TransactionReceipt, H160};
 use ethers_core::k256::ecdsa::SigningKey;
-use ethers_core::types::TransactionRequest;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
+use ethers_core::types::TransactionRequest;
 use ethers_core::utils;
 use ic_canister::{generate_idl, init, update, Canister, Idl, PreUpdate};
 use ic_exports::ic_ic00_types::DerivationPath;
@@ -170,7 +170,7 @@ impl CounterCanister {
 
         let signature = signer.sign_transaction(&typed_tx).await.unwrap();
         let signature = ethers_core::types::Signature::from(signature);
-        let rlp = typed_tx.rlp_signed(&signature.into());
+        let rlp = typed_tx.rlp_signed(&signature);
 
         let recovered = signature.recover(typed_tx.sighash()).unwrap();
         assert_eq!(recovered, address.0);
