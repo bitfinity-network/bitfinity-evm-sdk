@@ -118,7 +118,7 @@ impl CounterCanister {
         (tx, receipt)
     }
 
-    // #[update]
+    #[update]
     pub async fn test_send_raw_transaction_signed_with_management_canister(
         &mut self,
     ) -> (Transaction, TransactionReceipt) {
@@ -154,35 +154,29 @@ impl CounterCanister {
             .await
             .unwrap();
 
-
-
-        let mut tx = ethers_core::types::Transaction {
-            from: address.into(),
-            to: Some(H160::zero().into()),
-            nonce: nonce.into(),
+        let tx = TransactionBuilder {
+            from: &address,
+            to: Some(H160::zero()),
+            nonce,
             value: 1000u64.into(),
             gas: 10_000_000u64.into(),
-            gas_price: Some(gas_price.into()),
-            input: ethers_core::types::Bytes::default(),
-            chain_id: Some(chain_id.into()),
-            ..Default::default()
-        };
-
+            gas_price: Some(gas_price),
+            input: vec![],
+            signature: SigningMethod::None,
+            chain_id,
+        }
+        .calculate_hash_and_build()
+        .unwrap();
+        let tx = ethers_core::types::Transaction::from(tx);
         let typed_tx: TypedTransaction = (&tx).into();
 
-        let signature = signer.sign_transaction(&typed_tx).await.unwrap();
+        let signature: ethers_core::types::Signature =
+            signer.sign_transaction(&typed_tx).await.unwrap().into();
 
-        // let s = ethers_core::types::Signature::from(signature);
-        // let recovered = s.recover(typed_tx.sighash()).unwrap();
-        // assert_eq!(recovered, tx.from);
+        let recovered = signature.recover(typed_tx.sighash()).unwrap();
+        assert_eq!(recovered, tx.from);
 
-        tx.r = signature.r.into();
-        tx.s = signature.s.into();
-        tx.v = signature.v.into();
-
-        tx.hash = tx.hash();
-
-        let rlp = tx.rlp();
+        let rlp = typed_tx.rlp_signed(&signature);
         let tx_hash = client.send_raw_transaction(rlp.into()).await.unwrap();
 
         let receipt = client

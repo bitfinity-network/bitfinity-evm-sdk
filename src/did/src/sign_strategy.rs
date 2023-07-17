@@ -211,11 +211,16 @@ impl TransactionSigner for ManagementCanisterSigner {
             return Ok(address.clone());
         }
 
-        let address = IcSigner {}
+        let pubkey = IcSigner {}
             .public_key(self.key_id, self.derivation_path.clone())
             .await
             .map_err(|e| EvmError::from(format!("failed to get address: {e}")))?;
-        let address = H160::from_slice(&address);
+        let address: H160 = IcSigner
+            .pubkey_to_address(&pubkey)
+            .map_err(|e| {
+                EvmError::Internal(format!("failed to convert public key to address: {e}"))
+            })?
+            .into();
         *self.cached_address.borrow_mut() = Some(address.clone());
 
         Ok(address)
