@@ -6,8 +6,8 @@ use did::sign_strategy::{ManagementCanisterSigner, SigningKeyId, TransactionSign
 use did::transaction::{SigningMethod, TransactionBuilder};
 use did::{BlockNumber, Transaction, TransactionReceipt, H160};
 use ethers_core::k256::ecdsa::SigningKey;
-use ethers_core::types::TransactionRequest;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
+use ethers_core::types::TransactionRequest;
 use ethers_core::utils;
 use ic_canister::{generate_idl, init, update, Canister, Idl, PreUpdate};
 use ic_exports::ic_ic00_types::DerivationPath;
