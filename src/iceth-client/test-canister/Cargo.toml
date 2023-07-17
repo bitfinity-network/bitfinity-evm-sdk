@@ -18,7 +18,6 @@ export-api = []
 [dependencies]
 iceth-client = { path = "../", features = ["bitfinity"] }
 did = { path = "../../did", features = ["signer"] }
-eth-signer = { path = "../../eth-signer", features = ["ic_sign"] }
 
 ic-canister = { workspace = true }
 ic-exports = { workspace = true }
@@ -29,7 +28,6 @@ serde_json = { workspace = true }
 ethers-core = { workspace = true }
 jsonrpc-core = { workspace = true }
 thiserror = { workspace = true }
-rlp = { workspace = true }
 
 
 [dev-dependencies]
