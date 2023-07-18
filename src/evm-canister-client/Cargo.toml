@@ -15,15 +15,11 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
 default = []
-ic-agent-client = ["dep:ic-agent"]
+ic-agent-client = ["ic-canister-client/ic-agent-client"]
 
 [dependencies]
+async-trait = { workspace = true }
 candid = { workspace = true }
 did = { path = "../did" }
-ic-canister = { workspace = true }
+ic-canister-client = { workspace = true }
 ic-exports = { workspace = true }
-serde_json = { workspace = true }
-serde = { workspace = true }
-thiserror = { workspace = true }
-async-trait = { workspace = true }
-ic-agent = { workspace = true, optional = true }

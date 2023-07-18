@@ -1,49 +1,11 @@
-use candid::utils::ArgumentEncoder;
-use candid::{CandidType, Principal};
+use candid::Principal;
 use did::block::BlockResult;
 use did::{BasicAccount, BlockNumber, Bytes, Transaction, TransactionReceipt, H160, H256, U256};
+use ic_canister_client::{CanisterClient, CanisterClientResult};
 use ic_exports::icrc_types::icrc1::account::Subaccount;
-use serde::Deserialize;
 
-use crate::{CanisterClientResult, EvmResult};
+use crate::EvmResult;
 
-/// Generic client for interacting with a canister.
-/// This is used to abstract away the differences between the IC Agent and the
-/// IC Canister.
-/// The IC Agent is used for interaction through the dfx tool, while the IC
-/// Canister is used for interacting with the EVM canister in wasm environments.
-#[async_trait::async_trait]
-pub trait CanisterClient {
-    /// Call an update method on the canister.
-    ///
-    /// # Arguments
-    ///
-    /// * `method` - The method name.
-    /// * `args` - The arguments to the method.
-    ///
-    /// # Returns
-    ///
-    /// The result of the method call.
-    async fn update<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
-    where
-        T: ArgumentEncoder + Send,
-        R: for<'de> Deserialize<'de> + CandidType;
-
-    /// Call a query method on the canister.
-    ///
-    /// # Arguments
-    ///
-    /// * `method` - The method name.
-    /// * `args` - The arguments to the method.
-    ///
-    /// # Returns
-    ///
-    /// The result of the method call.
-    async fn query<T, R>(&self, method: &str, args: T) -> CanisterClientResult<R>
-    where
-        T: ArgumentEncoder + Send,
-        R: for<'de> Deserialize<'de> + CandidType;
-}
 
 /// An EVM canister client.
 #[derive(Debug)]
