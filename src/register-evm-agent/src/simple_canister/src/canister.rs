@@ -71,8 +71,8 @@ impl TempCanister {
     }
 
     #[update]
-    pub async fn reserve_account(&mut self, principal: Principal, address: H160) -> Result<()> {
-        self.state.evm.reserve_address(principal, address).await
+    pub async fn reserve_account(&mut self, principal: Principal, tx_hash: H256) -> Result<()> {
+        self.state.evm.reserve_address(principal, tx_hash).await
     }
 
     #[query]

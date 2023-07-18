@@ -3,7 +3,7 @@ use std::cell::RefCell;
 
 use candid::{CandidType, Deserialize, Principal};
 use did::codec::{decode, encode};
-use did::H160;
+use did::{H160, H256};
 use ic_stable_structures::{StableCell, Storable};
 
 use super::{EvmCanister, EvmCanisterImpl, MINT_AMOUNT};
@@ -31,6 +31,7 @@ impl Account {
         &mut self,
         self_canister_id: Principal,
         address: H160,
+        tx_hash: H256,
     ) -> Result<()> {
         // check if account is already reserved or in process
         if ACCOUNT_DATA_CELL.with(|account| {
@@ -80,7 +81,7 @@ impl Account {
 
         // reserve ic agent
         if let Err(err) = evm_impl
-            .reserve_address(self_canister_id, address.clone())
+            .reserve_address(self_canister_id, tx_hash.clone())
             .await
         {
             self.reset();
