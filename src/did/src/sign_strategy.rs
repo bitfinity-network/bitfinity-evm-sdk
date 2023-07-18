@@ -3,7 +3,8 @@ use std::cell::RefCell;
 
 use async_trait::async_trait;
 use candid::CandidType;
-use eth_signer::ic_sign::{IcSigner, SigningKeyId};
+use eth_signer::ic_sign::IcSigner;
+pub use eth_signer::ic_sign::SigningKeyId;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
@@ -24,6 +25,9 @@ pub trait TransactionSigner {
 
     /// Sign the created transaction
     async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature>;
+
+    /// Sign the given digest
+    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature>;
 }
 
 /// Signing strategy for signing EVM transactions
@@ -32,10 +36,7 @@ pub enum SigningStrategy {
     /// Local signing key
     Local { private_key: [u8; 32] },
     /// Use management canister and ECDSA signing endpoints
-    ManagementCanister {
-        key_id: SigningKeyId,
-        derivation_path: DerivationPath,
-    },
+    ManagementCanister { key_id: SigningKeyId },
 }
 
 impl SigningStrategy {
@@ -50,13 +51,13 @@ impl SigningStrategy {
                 let wallet = Wallet::new_with_signer(Cow::Owned(signer), address, chain_id);
                 Ok(TxSigner::Local(LocalTxSigner::new(wallet)))
             }
-            SigningStrategy::ManagementCanister {
-                key_id,
-                derivation_path,
-            } => Ok(TxSigner::ManagementCanister(ManagementCanisterSigner::new(
-                key_id,
-                derivation_path,
-            ))),
+            SigningStrategy::ManagementCanister { key_id } => {
+                let derivation_path = DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()]);
+                Ok(TxSigner::ManagementCanister(ManagementCanisterSigner::new(
+                    key_id,
+                    derivation_path,
+                )))
+            }
         }
     }
 }
@@ -95,6 +96,13 @@ impl TransactionSigner for TxSigner {
             Self::ManagementCanister(signer) => signer.sign_transaction(transaction).await,
         }
     }
+
+    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+        match self {
+            Self::Local(signer) => signer.sign_digest(digest).await,
+            Self::ManagementCanister(signer) => signer.sign_digest(digest).await,
+        }
+    }
 }
 
 /// Local private key implementation
@@ -119,6 +127,13 @@ impl TransactionSigner for LocalTxSigner {
         self.wallet
             .sign_transaction(transaction)
             .await
+            .map_err(|e| EvmError::from(format!("failed to sign hash: {e}")))
+            .map(Into::into)
+    }
+
+    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+        self.wallet
+            .sign_hash(ethereum_types::H256(digest))
             .map_err(|e| EvmError::from(format!("failed to sign hash: {e}")))
             .map(Into::into)
     }
@@ -196,11 +211,16 @@ impl TransactionSigner for ManagementCanisterSigner {
             return Ok(address.clone());
         }
 
-        let address = IcSigner {}
-            .public_key(self.key_id, DerivationPath::new(vec![]))
+        let pubkey = IcSigner {}
+            .public_key(self.key_id, self.derivation_path.clone())
             .await
             .map_err(|e| EvmError::from(format!("failed to get address: {e}")))?;
-        let address = H160::from_slice(&address);
+        let address: H160 = IcSigner
+            .pubkey_to_address(&pubkey)
+            .map_err(|e| {
+                EvmError::Internal(format!("failed to convert public key to address: {e}"))
+            })?
+            .into();
         *self.cached_address.borrow_mut() = Some(address.clone());
 
         Ok(address)
@@ -208,7 +228,21 @@ impl TransactionSigner for ManagementCanisterSigner {
 
     async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature> {
         IcSigner {}
-            .sign_transaction(transaction, self.key_id, DerivationPath::new(vec![]))
+            .sign_transaction(transaction, self.key_id, self.derivation_path.clone())
+            .await
+            .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
+            .map(Into::into)
+    }
+
+    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+        let address = self.get_address().await?;
+        IcSigner {}
+            .sign_digest(
+                &address.into(),
+                digest,
+                self.key_id,
+                self.derivation_path.clone(),
+            )
             .await
             .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
             .map(Into::into)
@@ -305,9 +339,9 @@ mod test {
     fn test_create_management_signer() {
         let signing_strategy = SigningStrategy::ManagementCanister {
             key_id: SigningKeyId::Test,
-            derivation_path: DerivationPath::new(vec![vec![1, 2, 3]]),
         };
-        let signer = signing_strategy.make_signer(42).unwrap();
+        let chain_id = 42;
+        let signer = signing_strategy.make_signer(chain_id).unwrap();
         if let TxSigner::ManagementCanister(ManagementCanisterSigner {
             key_id,
             cached_address,
@@ -315,10 +349,27 @@ mod test {
         }) = signer
         {
             assert_eq!(key_id, SigningKeyId::Test);
-            assert_eq!(derivation_path, DerivationPath::new(vec![vec![1, 2, 3]]));
+            assert_eq!(
+                derivation_path,
+                DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()])
+            );
             assert_eq!(*cached_address.borrow(), None);
         } else {
             panic!("invalid signer")
         }
+    }
+
+    #[tokio::test]
+    async fn test_sign_recover() {
+        let signing_strategy = SigningStrategy::Local {
+            private_key: [2; 32],
+        };
+        let signer = signing_strategy.make_signer(42).unwrap();
+        let digest = [42u8; 32];
+        let signature = signer.sign_digest(digest).await.unwrap();
+        let recovered = ethers_core::types::Signature::from(signature)
+            .recover(digest)
+            .unwrap();
+        assert_eq!(recovered, signer.get_address().await.unwrap().0);
     }
 }
