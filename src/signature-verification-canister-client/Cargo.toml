@@ -1,7 +1,7 @@
 [package]
-name = "evm-canister-client"
+name = "signature-verification-canister-client"
 categories = ["cryptography::cryptocurrencies"]
-description = "Client for interacting with the Evm Canister"
+description = "Client for interacting with the signature Verification Canister"
 include = ["src/**/*", "../../LICENSE", "../../README.md"]
 
 authors.workspace = true
@@ -18,7 +18,5 @@ default = []
 ic-agent-client = ["ic-canister-client/ic-agent-client"]
 
 [dependencies]
-candid = { workspace = true }
 did = { path = "../did" }
 ic-canister-client = { workspace = true }
-ic-exports = { workspace = true }
