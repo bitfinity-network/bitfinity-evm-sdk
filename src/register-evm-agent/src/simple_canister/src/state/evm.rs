@@ -76,7 +76,7 @@ pub trait EvmCanister: Send {
 
     async fn mint_evm_tokens(&mut self, to: H160, amount: U256) -> Result<U256, Error>;
 
-    async fn reserve_address(&mut self, principal: Principal, address: H160) -> Result<(), Error>;
+    async fn reserve_address(&mut self, principal: Principal, tx_hash: H256) -> Result<(), Error>;
 
     async fn is_address_reserved(&self, address: H160, principal: Principal)
         -> Result<bool, Error>;
@@ -126,11 +126,11 @@ impl EvmCanister for EvmCanisterImpl {
         self.process_call_result(res.map(|val| val.0))
     }
 
-    async fn reserve_address(&mut self, principal: Principal, address: H160) -> Result<(), Error> {
+    async fn reserve_address(&mut self, principal: Principal, tx_hash: H256) -> Result<(), Error> {
         let res: Result<(EvmResult<()>,), _> = ic::call(
             self.get_evm_canister_id(),
             "reserve_address",
-            (principal, address),
+            (principal, tx_hash),
         )
         .await;
 

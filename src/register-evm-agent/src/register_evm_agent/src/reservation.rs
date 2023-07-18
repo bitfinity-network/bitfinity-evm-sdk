@@ -1,11 +1,13 @@
 use candid::Principal;
-use did::H160;
+use did::transaction::{SigningMethod, TransactionBuilder};
+use did::{H160, U256};
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use evm_canister_client::{EvmCanisterClient, IcAgentClient};
 use ic_agent::Agent;
 
 use crate::agent::user_principal;
+use crate::cli::DEFAULT_CHAIN_ID;
 use crate::error::{Error, Result};
 
 type EvmCanisterAgentClient = EvmCanisterClient<IcAgentClient>;
@@ -46,7 +48,7 @@ impl<'a> ReservationService<'a> {
     }
 
     async fn reserve_ic_agent(&self) -> Result<()> {
-        info!("reserving ic-agent {}", self.agent_principal);
+        info!("reserving ic-agent {}", self.reserve_canister_id);
 
         let is_reserved = self.is_address_reserved().await?;
         if is_reserved {
@@ -62,8 +64,26 @@ impl<'a> ReservationService<'a> {
             self.mint_native_tokens_to_address(amount_to_mint).await?;
         }
 
+        let nonce = self.client.account_basic(address.clone()).await?.nonce;
+
+        let tx = TransactionBuilder {
+            from: &address.clone(),
+            to: Some(address),
+            nonce,
+            value: U256::zero(),
+            gas: 23_000_u64.into(),
+            gas_price: None,
+            input: self.reserve_canister_id.as_slice().to_vec(),
+            signature: SigningMethod::SigningKey(self.wallet.signer()),
+            chain_id: DEFAULT_CHAIN_ID,
+        }
+        .calculate_hash_and_build()?;
+
+        info!("sending transaction to reserve address...");
+        let tx_hash = self.client.send_raw_transaction(tx).await??;
+
         self.client
-            .reserve_address(self.reserve_canister_id, address)
+            .reserve_address(self.reserve_canister_id, tx_hash)
             .await??;
 
         info!("Address reserved successfully");

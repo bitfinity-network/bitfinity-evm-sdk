@@ -451,16 +451,24 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Reserves address for a given principal
     ///
+    /// This is two step process:
+    /// 1. Send a transaction using the `send_raw_transaction` method,
+    /// attaching the principal that should be reserved as input
+    ///
+    /// 2. Call this method with the principal and the transaction hash from
+    /// the previous step
+    ///
     /// # Arguments
     /// * `principal` - The principal to reserve address for
-    /// * `address` - The address to reserve
+    /// * `tx_hash` - The transaction hash of the transaction that reserved the
+    /// address
     pub async fn reserve_address(
         &self,
         principal: Principal,
-        address: H160,
+        tx_hash: H256,
     ) -> CanisterClientResult<EvmResult<()>> {
         self.client
-            .update("reserve_address", (principal, address))
+            .update("reserve_address", (principal, tx_hash))
             .await
     }
 
