@@ -6,7 +6,6 @@ use ic_exports::icrc_types::icrc1::account::Subaccount;
 
 use crate::EvmResult;
 
-
 /// An EVM canister client.
 #[derive(Debug)]
 pub struct EvmCanisterClient<C>

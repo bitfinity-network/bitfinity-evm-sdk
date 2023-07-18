@@ -29,9 +29,6 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         &self,
         transaction: Transaction,
     ) -> CanisterClientResult<SignatureVerificationResult<H160>> {
-        self.client
-            .query("verify_signature", (transaction,))
-            .await
+        self.client.query("verify_signature", (transaction,)).await
     }
-
 }
