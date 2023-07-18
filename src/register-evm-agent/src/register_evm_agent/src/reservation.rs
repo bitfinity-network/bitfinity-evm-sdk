@@ -152,6 +152,8 @@ impl<'a> ReservationService<'a> {
             if let Some(receipt) = tx_receipt {
                 if receipt.status == Some(1_u64.into()) {
                     return Ok(());
+                } else {
+                    return Err(Error::TransactionFailed);
                 }
             }
         }

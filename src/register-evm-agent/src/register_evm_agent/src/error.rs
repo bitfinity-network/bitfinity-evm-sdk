@@ -32,6 +32,8 @@ pub enum Error {
 
     #[error("transaction not finalized {0}")]
     TransactionNotFinalized(H256),
+    #[error("transaction failed")]
+    TransactionFailed,
 }
 
 impl From<AgentError> for Error {
