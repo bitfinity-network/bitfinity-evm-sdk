@@ -1,6 +1,6 @@
 use candid::Principal;
 use did::transaction::{SigningMethod, TransactionBuilder};
-use did::{H160, U256};
+use did::{H160, H256, U256};
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use evm_canister_client::{EvmCanisterClient, IcAgentClient};
@@ -47,6 +47,14 @@ impl<'a> ReservationService<'a> {
         Ok(())
     }
 
+    /// Reserve the address on the ic-agent canister
+    ///
+    /// Two steps:
+    /// 1. Send a transaction to the ic-agent canister to reserve the address
+    /// with the ic-agent attached to the transaction as an input
+    /// 2. Call the reserve_address method on the ic-agent canister with the
+    /// transaction hash in the step 1
+    ///
     async fn reserve_ic_agent(&self) -> Result<()> {
         info!("reserving ic-agent {}", self.reserve_canister_id);
 
@@ -82,6 +90,8 @@ impl<'a> ReservationService<'a> {
         info!("sending transaction to reserve address...");
         let tx_hash = self.client.send_raw_transaction(tx).await??;
 
+        self.wait_for_transaction(tx_hash.clone()).await?;
+
         self.client
             .reserve_address(self.reserve_canister_id, tx_hash)
             .await??;
@@ -91,6 +101,7 @@ impl<'a> ReservationService<'a> {
         Ok(())
     }
 
+    /// Check if the address is already reserved
     async fn is_address_reserved(&self) -> Result<bool> {
         let address: H160 = self.wallet.address().into();
 
@@ -110,6 +121,7 @@ impl<'a> ReservationService<'a> {
         Ok(reserved)
     }
 
+    /// Mint native tokens to the address
     async fn mint_native_tokens_to_address(&self, amount_to_mint: u64) -> Result<()> {
         let address = H160::from(self.wallet.address());
 
@@ -122,5 +134,26 @@ impl<'a> ReservationService<'a> {
         info!("tokens minted successfully");
 
         Ok(())
+    }
+
+    /// Wait for the transaction to be finalized
+    async fn wait_for_transaction(&self, tx_hash: H256) -> Result<()> {
+        const MAX_RETRIES: u32 = 10;
+
+        for _ in 0..MAX_RETRIES {
+            info!("waiting for transaction to be finalized...");
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
+            let tx_receipt = self
+                .client
+                .eth_get_transaction_receipt(tx_hash.clone())
+                .await??;
+
+            if tx_receipt.is_some() {
+                return Ok(());
+            }
+        }
+
+        Err(Error::TransactionNotFinalized(tx_hash))
     }
 }

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use candid::Principal;
 use did::error::EvmError;
+use did::H256;
 use eth_signer::WalletError;
 use evm_canister_client::CanisterClientError;
 use ic_agent::identity::PemError;
@@ -28,6 +29,9 @@ pub enum Error {
     Pem(PathBuf, PemError),
     #[error("wallet error: {0}")]
     Wallet(WalletError),
+
+    #[error("transaction not finalized {0}")]
+    TransactionNotFinalized(H256),
 }
 
 impl From<AgentError> for Error {
