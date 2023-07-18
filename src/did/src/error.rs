@@ -6,7 +6,7 @@ use rlp::DecoderError;
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::{BlockNumber, U256};
+use crate::{BlockNumber, U256, H160};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 
@@ -199,4 +199,12 @@ impl From<HaltError> for EvmError {
     fn from(exit_err: HaltError) -> Self {
         Self::NotProcessableTransactionError(exit_err)
     }
+}
+
+#[derive(Error, Debug, CandidType, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SignatureVerificationError {
+    #[error("signature is not correct: expected: {expected}, recovered: {recovered}")]
+    RecoveryError { expected: H160, recovered: H160 },
+    #[error("failed to verify signature: {0}")]
+    InternalError(String),
 }

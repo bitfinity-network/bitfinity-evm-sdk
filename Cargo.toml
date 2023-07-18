@@ -8,6 +8,7 @@ members = [
     "src/iceth-client/test-canister",
     "src/register-evm-agent/src/simple_canister",
     "src/register-evm-agent/src/register_evm_agent",
+    "src/signature-verification-canister-client",
 ]
 
 [workspace.package]
