@@ -149,8 +149,10 @@ impl<'a> ReservationService<'a> {
                 .eth_get_transaction_receipt(tx_hash.clone())
                 .await??;
 
-            if tx_receipt.is_some() {
-                return Ok(());
+            if let Some(receipt) = tx_receipt {
+                if receipt.status == Some(1_u64.into()) {
+                    return Ok(());
+                }
             }
         }
 
