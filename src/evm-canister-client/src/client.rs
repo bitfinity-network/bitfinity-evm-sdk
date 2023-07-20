@@ -257,18 +257,18 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
-        /// Returns the number of transactions in a block matching the given block number.
-        pub async fn eth_get_block_transaction_count_by_block_number(
-            &self,
-            block_number: BlockNumber,
-        ) -> CanisterClientResult<EvmResult<usize>> {
-            self.client
+    /// Returns the number of transactions in a block matching the given block number.
+    pub async fn eth_get_block_transaction_count_by_block_number(
+        &self,
+        block_number: BlockNumber,
+    ) -> CanisterClientResult<EvmResult<usize>> {
+        self.client
             .query(
                 "eth_get_block_transaction_count_by_block_number",
-                (block_number, ),
+                (block_number,),
             )
             .await
-        }
+    }
 
     /// Get the transaction count of an address at a given block number
     /// See [eth_getTransactionCount](https://eth.wiki/json-rpc/API#eth_gettransactioncount)
@@ -462,14 +462,14 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Returns the list of eth accounts owned by the client.
-    pub async fn eth_accounts(&self) ->  CanisterClientResult<Vec<H160>> {
+    pub async fn eth_accounts(&self) -> CanisterClientResult<Vec<H160>> {
         self.client.query("eth_accounts", ()).await
     }
 
-        /// Returns Keccak-256 (not the standardized SHA3-256) of the given data.
-        pub async fn web3_sha3(&self, data: String) -> CanisterClientResult<EvmResult<String>> {
-            self.client.query("web3_sha3", (data, )).await
-        }
+    /// Returns Keccak-256 (not the standardized SHA3-256) of the given data.
+    pub async fn web3_sha3(&self, data: String) -> CanisterClientResult<EvmResult<String>> {
+        self.client.query("web3_sha3", (data,)).await
+    }
 
     /// Returns the current client version.
     pub async fn web3_client_version(&self) -> CanisterClientResult<String> {
@@ -481,36 +481,33 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("net_peer_count", ()).await
     }
 
-        /// Returns an object with data about the sync status or false.
-        pub async fn eth_syncing(&self) -> CanisterClientResult<bool> {
-            self.client.query("eth_syncing", ()).await
-        }
-    
-        /// Returns true if client is actively mining new blocks.
-        pub async fn eth_mining(&self) -> CanisterClientResult<bool> {
-            self.client.query("eth_mining", ()).await
-        }
-    
-        /// Returns the number of hashes per second that the node is mining with.
-        pub async fn eth_hashrate(&self) -> CanisterClientResult<u64> {
-            self.client.query("eth_hashrate", ()).await
-        }
-    
-        /// Returns the current network id.
-        pub async fn net_version(&self) -> CanisterClientResult<u64> {
-            self.client.query("net_version", ()).await 
-               }
-        
-        /// Returns the current Ethereum protocol version.
-        pub async fn eth_protocol_version(&self) -> CanisterClientResult<u64> {
-            self.client.query("eth_protocol_version", ()).await 
-               }
+    /// Returns an object with data about the sync status or false.
+    pub async fn eth_syncing(&self) -> CanisterClientResult<bool> {
+        self.client.query("eth_syncing", ()).await
+    }
 
-        /// Returns true if client is actively listening for network connections.
-        pub async fn net_listening(&self) -> CanisterClientResult<bool> {
-            self.client.query("net_listening", ()).await
-                }
+    /// Returns true if client is actively mining new blocks.
+    pub async fn eth_mining(&self) -> CanisterClientResult<bool> {
+        self.client.query("eth_mining", ()).await
+    }
 
-                
+    /// Returns the number of hashes per second that the node is mining with.
+    pub async fn eth_hashrate(&self) -> CanisterClientResult<u64> {
+        self.client.query("eth_hashrate", ()).await
+    }
 
+    /// Returns the current network id.
+    pub async fn net_version(&self) -> CanisterClientResult<u64> {
+        self.client.query("net_version", ()).await
+    }
+
+    /// Returns the current Ethereum protocol version.
+    pub async fn eth_protocol_version(&self) -> CanisterClientResult<u64> {
+        self.client.query("eth_protocol_version", ()).await
+    }
+
+    /// Returns true if client is actively listening for network connections.
+    pub async fn net_listening(&self) -> CanisterClientResult<bool> {
+        self.client.query("net_listening", ()).await
+    }
 }
