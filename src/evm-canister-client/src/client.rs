@@ -2,7 +2,6 @@ use candid::Principal;
 use did::block::BlockResult;
 use did::{BasicAccount, BlockNumber, Bytes, Transaction, TransactionReceipt, H160, H256, U256};
 use ic_canister_client::{CanisterClient, CanisterClientResult};
-use ic_exports::icrc_types::icrc1::account::Subaccount;
 
 use crate::EvmResult;
 
@@ -90,39 +89,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ) -> CanisterClientResult<EvmResult<String>> {
         self.client
             .query("eth_get_code", (address, block_number))
-            .await
-    }
-
-    /// Deposit native tokens to the EVM canister
-    ///
-    /// # Arguments
-    /// * `to` - The address of the recipient
-    /// * `amount` - The amount to deposit
-    ///
-    /// # Returns
-    /// The amount of tokens deposited
-    pub async fn deposit(&self, to: H160, amount: U256) -> CanisterClientResult<EvmResult<U256>> {
-        self.client.update("deposit_tokens", (to, amount)).await
-    }
-
-    /// Withdraw native tokens from the EVM canister
-    ///
-    /// # Arguments
-    /// * `from` - The address of the sender
-    /// * `to` - The address of the recipient
-    /// * `amount` - The amount to withdraw
-    ///
-    /// # Returns
-    ///
-    /// The amount withdrawn
-    pub async fn withdraw(
-        &self,
-        from: H160,
-        to: Option<Subaccount>,
-        amount: U256,
-    ) -> CanisterClientResult<EvmResult<U256>> {
-        self.client
-            .update("withdraw_tokens", (from, to, amount))
             .await
     }
 
