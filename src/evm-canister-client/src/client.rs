@@ -2,7 +2,6 @@ use candid::Principal;
 use did::block::BlockResult;
 use did::{BasicAccount, BlockNumber, Bytes, Transaction, TransactionReceipt, H160, H256, U256};
 use ic_canister_client::{CanisterClient, CanisterClientResult};
-use ic_exports::icrc_types::icrc1::account::Subaccount;
 
 use crate::EvmResult;
 
@@ -90,39 +89,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ) -> CanisterClientResult<EvmResult<String>> {
         self.client
             .query("eth_get_code", (address, block_number))
-            .await
-    }
-
-    /// Deposit native tokens to the EVM canister
-    ///
-    /// # Arguments
-    /// * `to` - The address of the recipient
-    /// * `amount` - The amount to deposit
-    ///
-    /// # Returns
-    /// The amount of tokens deposited
-    pub async fn deposit(&self, to: H160, amount: U256) -> CanisterClientResult<EvmResult<U256>> {
-        self.client.update("deposit_tokens", (to, amount)).await
-    }
-
-    /// Withdraw native tokens from the EVM canister
-    ///
-    /// # Arguments
-    /// * `from` - The address of the sender
-    /// * `to` - The address of the recipient
-    /// * `amount` - The amount to withdraw
-    ///
-    /// # Returns
-    ///
-    /// The amount withdrawn
-    pub async fn withdraw(
-        &self,
-        from: H160,
-        to: Option<Subaccount>,
-        amount: U256,
-    ) -> CanisterClientResult<EvmResult<U256>> {
-        self.client
-            .update("withdraw_tokens", (from, to, amount))
             .await
     }
 
@@ -291,6 +257,19 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Returns the number of transactions in a block matching the given block number.
+    pub async fn eth_get_block_transaction_count_by_block_number(
+        &self,
+        block_number: BlockNumber,
+    ) -> CanisterClientResult<EvmResult<usize>> {
+        self.client
+            .query(
+                "eth_get_block_transaction_count_by_block_number",
+                (block_number,),
+            )
+            .await
+    }
+
     /// Get the transaction count of an address at a given block number
     /// See [eth_getTransactionCount](https://eth.wiki/json-rpc/API#eth_gettransactioncount)
     ///
@@ -400,8 +379,8 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ///
     /// # Returns
     ///
-    /// The transaction count of the address at the given block number
-    pub async fn eth_get_block_transaction_count_by_block_number(
+    /// The transaction count at a given block number
+    pub async fn eth_get_block_transaction_count_by_number(
         &self,
         block_number: BlockNumber,
     ) -> CanisterClientResult<EvmResult<usize>> {
@@ -463,5 +442,72 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// `chainId`, hexadecimal value as a string representing the integer of the current chain id.
     pub async fn eth_chain_id(&self) -> CanisterClientResult<u64> {
         self.client.query("eth_chain_id", ()).await
+    }
+
+    /// Returns the block gas limit. This is the maximum amount of gas that can
+    /// be used in a block.
+    pub async fn get_block_gas_limit(&self) -> CanisterClientResult<u64> {
+        self.client.query("get_block_gas_limit", ()).await
+    }
+
+    /// Returns the history size. This is the number of blocks for which any
+    /// EVM state-related information can be acquired.
+    pub async fn get_history_size(&self) -> CanisterClientResult<u64> {
+        self.client.query("get_history_size", ()).await
+    }
+
+    /// Returns the min gas price
+    pub async fn get_min_gas_price(&self) -> CanisterClientResult<U256> {
+        self.client.query("get_min_gas_price", ()).await
+    }
+
+    /// Returns the list of eth accounts owned by the client.
+    pub async fn eth_accounts(&self) -> CanisterClientResult<Vec<H160>> {
+        self.client.query("eth_accounts", ()).await
+    }
+
+    /// Returns Keccak-256 (not the standardized SHA3-256) of the given data.
+    pub async fn web3_sha3(&self, data: String) -> CanisterClientResult<EvmResult<String>> {
+        self.client.query("web3_sha3", (data,)).await
+    }
+
+    /// Returns the current client version.
+    pub async fn web3_client_version(&self) -> CanisterClientResult<String> {
+        self.client.query("web3_client_version", ()).await
+    }
+
+    /// Returns number of peers currently connected to the client.
+    pub async fn net_peer_count(&self) -> CanisterClientResult<u64> {
+        self.client.query("net_peer_count", ()).await
+    }
+
+    /// Returns an object with data about the sync status or false.
+    pub async fn eth_syncing(&self) -> CanisterClientResult<bool> {
+        self.client.query("eth_syncing", ()).await
+    }
+
+    /// Returns true if client is actively mining new blocks.
+    pub async fn eth_mining(&self) -> CanisterClientResult<bool> {
+        self.client.query("eth_mining", ()).await
+    }
+
+    /// Returns the number of hashes per second that the node is mining with.
+    pub async fn eth_hashrate(&self) -> CanisterClientResult<u64> {
+        self.client.query("eth_hashrate", ()).await
+    }
+
+    /// Returns the current network id.
+    pub async fn net_version(&self) -> CanisterClientResult<u64> {
+        self.client.query("net_version", ()).await
+    }
+
+    /// Returns the current Ethereum protocol version.
+    pub async fn eth_protocol_version(&self) -> CanisterClientResult<u64> {
+        self.client.query("eth_protocol_version", ()).await
+    }
+
+    /// Returns true if client is actively listening for network connections.
+    pub async fn net_listening(&self) -> CanisterClientResult<bool> {
+        self.client.query("net_listening", ()).await
     }
 }
