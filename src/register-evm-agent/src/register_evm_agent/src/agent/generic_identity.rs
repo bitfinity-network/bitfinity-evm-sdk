@@ -30,7 +30,10 @@ impl Identity for GenericIdentity {
         }
     }
 
-    fn sign(&self, blob: &[u8]) -> std::result::Result<evm_canister_client::ic_agent::Signature, String> {
+    fn sign(
+        &self,
+        blob: &[u8],
+    ) -> std::result::Result<evm_canister_client::ic_agent::Signature, String> {
         match self {
             Self::BasicIdentity(identity) => identity.sign(blob),
             Self::Secp256k1Identity(identity) => identity.sign(blob),
