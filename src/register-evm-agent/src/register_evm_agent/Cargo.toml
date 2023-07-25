@@ -29,7 +29,6 @@ ethers-core = { workspace = true }
 evm-canister-client = { path = "../../../evm-canister-client", features = ["ic-agent-client"] }
 did = { path = "../../../did" }
 hex = { workspace = true }
-ic-agent = { workspace = true }
 ic-exports = { workspace = true }
 log = { workspace = true }
 openssl = { workspace = true, features = ["vendored"] } 

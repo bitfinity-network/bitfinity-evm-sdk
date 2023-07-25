@@ -4,9 +4,9 @@ use candid::Principal;
 use did::error::EvmError;
 use did::H256;
 use eth_signer::WalletError;
+use evm_canister_client::ic_agent::identity::PemError;
+use evm_canister_client::ic_agent::AgentError;
 use evm_canister_client::CanisterClientError;
-use ic_agent::identity::PemError;
-use ic_agent::AgentError;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;

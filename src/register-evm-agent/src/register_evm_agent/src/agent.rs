@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use candid::Principal;
-use ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
-use ic_agent::Agent;
+use evm_canister_client::ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
+use evm_canister_client::ic_agent::Agent;
 
 mod generic_identity;
 use generic_identity::GenericIdentity;

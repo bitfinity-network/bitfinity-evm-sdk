@@ -1,8 +1,8 @@
 use candid::{CandidType, Decode, Deserialize, Encode, Principal};
 use ethers::prelude::*;
-use ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
-use ic_agent::identity::AnonymousIdentity;
-use ic_agent::{Agent, AgentError};
+use evm_canister_client::ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
+use evm_canister_client::ic_agent::identity::AnonymousIdentity;
+use evm_canister_client::ic_agent::{Agent, AgentError};
 
 #[derive(Debug, Clone, CandidType, Deserialize)]
 struct RegistrationInfo {

@@ -3,8 +3,8 @@ use did::transaction::{SigningMethod, TransactionBuilder};
 use did::{H160, H256, U256};
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
+use evm_canister_client::ic_agent::Agent;
 use evm_canister_client::{EvmCanisterClient, IcAgentClient};
-use ic_agent::Agent;
 
 use crate::agent::user_principal;
 use crate::cli::DEFAULT_CHAIN_ID;
