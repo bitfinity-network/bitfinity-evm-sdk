@@ -283,7 +283,13 @@ pub fn calculate_next_block_base_fee(
         return parent_base_fee.clone();
     }
 
-    let gas_used_delta = parent_gas_used.checked_sub(&gas_target).unwrap_or_default();
+    let gas_used_delta = if parent_gas_used > &gas_target {
+        parent_gas_used.checked_sub(&gas_target)
+    } else {
+        gas_target.checked_sub(parent_gas_used)
+    }
+    .unwrap_or_default();
+
     let base_fee_per_gas_delta = (parent_base_fee * &gas_used_delta)
         .checked_div(&gas_target)
         .and_then(|x| x.checked_div(&U256::from(EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR)))
@@ -794,7 +800,7 @@ mod test {
                 &U256::new(10_u64.into()), // gas target 5
                 &base_fee
             ),
-            base_fee
+            U256::from(98u64)
         );
     }
 
@@ -807,6 +813,21 @@ mod test {
             calculate_next_block_base_fee(
                 &gas_used,
                 &U256::zero(), // gas target 0
+                &base_fee
+            ),
+            expected
+        );
+    }
+
+    #[test]
+    fn should_calc_base_fee_for_zero_used_gas() {
+        let gas_used = U256::new(0_u64.into());
+        let base_fee = U256::new(100_u64.into());
+        let expected = U256::from(88u64);
+        assert_eq!(
+            calculate_next_block_base_fee(
+                &gas_used,
+                &U256::from(100u64), // gas target 0
                 &base_fee
             ),
             expected
