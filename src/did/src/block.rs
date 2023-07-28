@@ -800,7 +800,7 @@ mod test {
                 &U256::new(10_u64.into()), // gas target 5
                 &base_fee
             ),
-            U256::from(98u64)
+            U256::from(98u64) // = 100 - 0.125 * ((5-4) / 5) * 100
         );
     }
 
@@ -823,7 +823,7 @@ mod test {
     fn should_calc_base_fee_for_zero_used_gas() {
         let gas_used = U256::new(0_u64.into());
         let base_fee = U256::new(100_u64.into());
-        let expected = U256::from(88u64);
+        let expected = U256::from(88u64); // 100 - 0.125 * 100
         assert_eq!(
             calculate_next_block_base_fee(
                 &gas_used,
