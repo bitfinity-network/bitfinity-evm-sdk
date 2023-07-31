@@ -15,6 +15,7 @@ type EvmCanisterAgentClient = EvmCanisterClient<IcAgentClient>;
 pub struct ReservationService<'a> {
     client: EvmCanisterAgentClient,
     amount_to_mint: Option<u64>,
+    gas_price: U256,
     reserve_canister_id: Principal,
     agent_principal: Principal,
     wallet: Wallet<'a, SigningKey>,
@@ -24,6 +25,7 @@ impl<'a> ReservationService<'a> {
     pub async fn new(
         agent: Agent,
         amount_to_mint: Option<u64>,
+        gas_price: U256,
         evm_canister_id: Principal,
         reserve_canister_id: Principal,
         wallet: Wallet<'a, SigningKey>,
@@ -35,6 +37,7 @@ impl<'a> ReservationService<'a> {
         Ok(Self {
             client,
             amount_to_mint,
+            gas_price,
             reserve_canister_id,
             agent_principal,
             wallet,
@@ -80,7 +83,7 @@ impl<'a> ReservationService<'a> {
             nonce,
             value: U256::zero(),
             gas: 23_000_u64.into(),
-            gas_price: None,
+            gas_price: Some(self.gas_price.clone()),
             input: self.reserve_canister_id.as_slice().to_vec(),
             signature: SigningMethod::SigningKey(self.wallet.signer()),
             chain_id: DEFAULT_CHAIN_ID,
