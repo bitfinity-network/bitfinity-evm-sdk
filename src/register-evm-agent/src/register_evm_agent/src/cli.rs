@@ -45,6 +45,10 @@ pub struct ReserveArgs {
     #[arg(short = 'a', long = "amount-to-mint")]
     pub amount_to_mint: Option<u64>,
 
+    /// Gas price for sending the reserve transaction
+    #[arg(short = 'g', long = "gas-price")]
+    pub gas_price: u128,
+
     /// Path to your identity pem file
     #[arg(short = 'i', long = "identity")]
     pub identity: PathBuf,
@@ -78,6 +82,7 @@ impl ReserveArgs {
         match ReservationService::new(
             agent,
             self.amount_to_mint,
+            self.gas_price.into(),
             self.evm,
             self.reserve_canister_id,
             wallet,

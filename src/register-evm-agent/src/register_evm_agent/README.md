@@ -40,12 +40,13 @@ Wallet:
 To reserve an address the following command needs to be run
 
 ```sh
-register-evm-agent reserve -k <private_key> -n <network> -i <identity_path> --evm <evm_canister_principal> --canister-id <reserve_canister_principal>
+register-evm-agent reserve -k <private_key> -g <gas price> -n <network> -i <identity_path> --evm <evm_canister_principal> --canister-id <reserve_canister_principal>
 ```
 
 Where:
 
 - `private key` is the Private key for the generated wallet
+- `gas_price` is the gas price for the transaction that will be used as a proof.
 - `network` is the network to run against: default is `local`, the value can be both `ic` or a custom URL.
 - `identity path` is the path to the identity you're going to use to reserve your canister
 - `evm canister principal` is the principal for the EVM canister
