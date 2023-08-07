@@ -1,7 +1,6 @@
 use candid::{CandidType, Principal};
 use ethers_core::abi::ethabi::Bytes;
-use ethers_core::abi::Error;
-use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
+use ethers_core::abi::{Error, Function, Param, ParamType, StateMutability, Token};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
@@ -36,13 +35,13 @@ pub static NOTIFICATION: Lazy<Function> = Lazy::new(|| Function {
 
 /// Structured input for notification transaction.
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType, PartialEq, Eq)]
-pub struct NotificaionTx {
+pub struct NotificaionInput {
     pub about_tx: H256,
     pub receiver_canister: Principal,
     pub user_data: Vec<u8>,
 }
 
-impl NotificaionTx {
+impl NotificaionInput {
     /// Minimal input length for notification transaction.
     /// - [0..4] - function signature hash,
     /// - [4..36] - transaction about which we should notify,
@@ -96,20 +95,19 @@ impl NotificaionTx {
 mod tests {
     use candid::Principal;
 
+    use super::NotificaionInput;
     use crate::H256;
-
-    use super::NotificaionTx;
 
     #[test]
     fn notification_transaction_roundtrip() {
-        let data = NotificaionTx {
+        let data = NotificaionInput {
             about_tx: H256::from([1; 32]),
             receiver_canister: Principal::management_canister(),
             user_data: vec![1, 2, 3, 4, 5],
         };
 
         let encoded = data.clone().encode().unwrap();
-        let decoded = NotificaionTx::decode(&encoded).unwrap();
+        let decoded = NotificaionInput::decode(&encoded).unwrap();
 
         assert_eq!(decoded, data)
     }
