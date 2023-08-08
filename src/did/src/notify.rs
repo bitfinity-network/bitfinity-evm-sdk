@@ -36,7 +36,7 @@ pub static NOTIFICATION: Lazy<Function> = Lazy::new(|| Function {
 /// Structured input for notification transaction.
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType, PartialEq, Eq)]
 pub struct NotificaionInput {
-    pub about_tx: H256,
+    pub about_tx: Option<H256>,
     pub receiver_canister: Principal,
     pub user_data: Vec<u8>,
 }
@@ -54,8 +54,9 @@ impl NotificaionInput {
         principal_vec.extend_from_slice(self.receiver_canister.as_slice());
         principal_vec.resize(32, 0);
 
+        let about_tx_data = self.about_tx.unwrap_or_default().0 .0.to_vec();
         NOTIFICATION.encode_input(&[
-            Token::FixedBytes(self.about_tx.0 .0.to_vec()),
+            Token::FixedBytes(about_tx_data),
             Token::FixedBytes(principal_vec),
             Token::Bytes(self.user_data),
         ])
@@ -81,7 +82,10 @@ impl NotificaionInput {
 
         let principal_len = principal_data[0] as usize;
         let receiver_canister = Principal::from_slice(&principal_data[1..(principal_len + 1)]);
-        let about_tx = H256::from_slice(&tx_hash);
+        let about_tx = match tx_hash.iter().all(|v| *v == 0) {
+            true => None,
+            false => Some(H256::from_slice(&tx_hash)),
+        };
 
         Some(Self {
             about_tx,
@@ -101,7 +105,7 @@ mod tests {
     #[test]
     fn notification_transaction_roundtrip() {
         let data = NotificaionInput {
-            about_tx: H256::from([1; 32]),
+            about_tx: Some(H256::from([1; 32])),
             receiver_canister: Principal::management_canister(),
             user_data: vec![1, 2, 3, 4, 5],
         };
