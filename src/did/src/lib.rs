@@ -24,7 +24,7 @@ use candid::{CandidType, Deserialize};
 pub use error::{ExitFatal, HaltError};
 pub use hash::{H160, H256, H64};
 pub use integer::{U256, U64};
-pub use notify::NotificaionInput;
+pub use notify::NotificationInput;
 pub use transaction::{BlockNumber, Transaction, TransactionReceipt};
 
 pub use crate::bytes::Bytes;
