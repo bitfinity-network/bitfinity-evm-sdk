@@ -35,13 +35,13 @@ pub static NOTIFICATION: Lazy<Function> = Lazy::new(|| Function {
 
 /// Structured input for notification transaction.
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType, PartialEq, Eq)]
-pub struct NotificaionInput {
+pub struct NotificationInput {
     pub about_tx: Option<H256>,
     pub receiver_canister: Principal,
     pub user_data: Vec<u8>,
 }
 
-impl NotificaionInput {
+impl NotificationInput {
     /// Minimal input length for notification transaction.
     /// - [0..4] - function signature hash,
     /// - [4..36] - transaction about which we should notify,
@@ -99,19 +99,19 @@ impl NotificaionInput {
 mod tests {
     use candid::Principal;
 
-    use super::NotificaionInput;
+    use super::NotificationInput;
     use crate::H256;
 
     #[test]
     fn notification_transaction_roundtrip() {
-        let data = NotificaionInput {
+        let data = NotificationInput {
             about_tx: Some(H256::from([1; 32])),
             receiver_canister: Principal::management_canister(),
             user_data: vec![1, 2, 3, 4, 5],
         };
 
         let encoded = data.clone().encode().unwrap();
-        let decoded = NotificaionInput::decode(&encoded).unwrap();
+        let decoded = NotificationInput::decode(&encoded).unwrap();
 
         assert_eq!(decoded, data)
     }
