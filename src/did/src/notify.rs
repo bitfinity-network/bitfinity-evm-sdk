@@ -81,7 +81,12 @@ impl NotificationInput {
         let user_data = input.get(2)?.clone().into_bytes()?;
 
         let principal_len = principal_data[0] as usize;
-        let receiver_canister = Principal::from_slice(&principal_data[1..(principal_len + 1)]);
+        if principal_data.len() < principal_len + 1 {
+            return None;
+        }
+
+        let receiver_canister =
+            Principal::try_from_slice(&principal_data[1..(principal_len + 1)]).ok()?;
         let about_tx = match tx_hash.iter().all(|v| *v == 0) {
             true => None,
             false => Some(H256::from_slice(&tx_hash)),
@@ -99,7 +104,7 @@ impl NotificationInput {
 mod tests {
     use candid::Principal;
 
-    use super::NotificationInput;
+    use super::*;
     use crate::H256;
 
     #[test]
@@ -114,5 +119,21 @@ mod tests {
         let decoded = NotificationInput::decode(&encoded).unwrap();
 
         assert_eq!(decoded, data)
+    }
+
+    #[test]
+    fn invalid_principal() {
+        // data length is too big
+        let principal_data = vec![42; 32];
+        let encoded = NOTIFICATION
+            .encode_input(&[
+                Token::FixedBytes(H256::from([1; 32]).0 .0.into()),
+                Token::FixedBytes(principal_data),
+                Token::Bytes(vec![]),
+            ])
+            .unwrap();
+        let decoded = NotificationInput::decode(&encoded);
+
+        assert_eq!(decoded, None);
     }
 }
