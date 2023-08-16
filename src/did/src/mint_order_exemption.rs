@@ -115,7 +115,7 @@ impl MintOrderExemptionUserData {
             return None;
         }
         let weeks = tx_input[..4].try_into().ok().map(u32::from_le_bytes)?;
-        let user = Principal::from_slice(&tx_input[4..]);
+        let user = Principal::try_from_slice(&tx_input[4..]).ok()?;
 
         Some(Self { user, weeks })
     }
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn invalid_principal() {
         // data length is too big
-        let principal_data = vec![42; 32];
+        let principal_data = vec![64; 32];
         let encoded = MINT_ORDER_EXEMPTION
             .encode_input(&[
                 Token::FixedBytes(H256::from([1; 32]).0 .0.into()),
