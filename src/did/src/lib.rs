@@ -25,7 +25,7 @@ use candid::{CandidType, Deserialize};
 pub use error::{ExitFatal, HaltError};
 pub use hash::{H160, H256, H64};
 pub use integer::{U256, U64};
-pub use mint_order_exemption::{MintOrderExemptionInput, MintOrderExemptionUserData};
+pub use mint_order_exemption::MintOrderExemptionUserData;
 pub use notify::NotificationInput;
 pub use transaction::{BlockNumber, Transaction, TransactionReceipt};
 
