@@ -1,15 +1,19 @@
 # time crate
-
 # Potential segfault in the time crate
-
 # Available in several transitive IC dependencies
 
 RUSTSEC-2020-0071
 
 # chrono crate=
-
 # Potential segfault in `localtime_r` invocations
-
 # Available in several transitive IC dependencies
 
 RUSTSEC-2020-0159
+
+# Crate:     webpki
+# Version:   0.22.0
+# Title:     webpki: CPU denial of service in certificate path building
+# Date:      2023-08-22
+# URL:       https://rustsec.org/advisories/RUSTSEC-2023-0052
+
+RUSTSEC-2023-0052
