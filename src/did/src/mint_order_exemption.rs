@@ -11,7 +11,7 @@ pub struct MintOrderExemptionUserData {
 }
 
 impl MintOrderExemptionUserData {
-    pub const MIN_INPUT_LEN: usize = 5;
+    pub const MIN_INPUT_LEN: usize = 4;
 
     /// Decode mint order exemption transaction data from raw trancaction input.
     pub fn decode(tx_input: &[u8]) -> Option<Self> {
@@ -46,7 +46,34 @@ mod tests {
 
     #[test]
     fn mint_order_exemption_encoding() {
-        let user_principal = Principal::anonymous();
+        let user_principal = Principal::from_text("emz6j-kiaaa-aaaak-ae35a-cai").unwrap();
+
+        let user_data = MintOrderExemptionUserData {
+            user: user_principal,
+            weeks: 4,
+        }
+        .encode()
+        .unwrap();
+
+        let data = NotificationInput {
+            about_tx: Some(H256::from([1; 32])),
+            receiver_canister: Principal::management_canister(),
+            user_data,
+        };
+
+        let encoded = data.clone().encode().unwrap();
+        let decoded = NotificationInput::decode(&encoded).unwrap();
+
+        let user_data = MintOrderExemptionUserData::decode(&decoded.user_data).unwrap();
+        assert_eq!(user_data.user, user_principal);
+        assert_eq!(user_data.weeks, 4);
+
+        assert_eq!(decoded, data)
+    }
+
+    #[test]
+    fn mint_order_exemption_encoding_empty_canister() {
+        let user_principal = Principal::management_canister();
 
         let user_data = MintOrderExemptionUserData {
             user: user_principal,
