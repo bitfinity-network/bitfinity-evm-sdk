@@ -4,7 +4,7 @@ use std::ops::{Add, AddAssign, Mul, Sub};
 use std::rc::Rc;
 use std::str::FromStr;
 
-use candid::types::{TypeInner, Type};
+use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize, Nat};
 use ic_stable_structures::{BoundedStorable, Storable};
 use num::BigUint;

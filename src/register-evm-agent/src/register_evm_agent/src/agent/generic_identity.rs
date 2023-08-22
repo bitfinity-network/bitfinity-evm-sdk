@@ -102,5 +102,4 @@ mod test {
 
         assert!(signature.signature.is_some());
     }
-
 }

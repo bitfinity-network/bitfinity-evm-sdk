@@ -7,8 +7,11 @@ use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::{Signature, SignatureError, H160};
 use ethers_core::utils;
 use ic_canister::virtual_canister_call;
-use ic_exports::ic_cdk::api::management_canister::ecdsa::{EcdsaKeyId, EcdsaCurve, EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument, SignWithEcdsaResponse};
 use ic_exports::ic_cdk::api::call::RejectionCode;
+use ic_exports::ic_cdk::api::management_canister::ecdsa::{
+    EcdsaCurve, EcdsaKeyId, EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
+    SignWithEcdsaResponse,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -175,16 +178,18 @@ impl IcSigner {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use candid::Principal;
     use ethers_core::k256::ecdsa::SigningKey;
     use ethers_core::types::transaction::eip2718::TypedTransaction;
     use ethers_core::types::{TransactionRequest, H160, H256};
     use ic_canister::register_virtual_responder;
-    use ic_exports::ic_cdk::api::management_canister::ecdsa::{SignWithEcdsaArgument, SignWithEcdsaResponse, EcdsaPublicKeyArgument, EcdsaPublicKeyResponse};
+    use ic_exports::ic_cdk::api::management_canister::ecdsa::{
+        EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
+        SignWithEcdsaResponse,
+    };
     use ic_exports::ic_kit::MockContext;
 
-    use super::IcSigner;
+    use super::{IcSigner, *};
     use crate::ic_sign::SigningKeyId;
     use crate::Wallet;
 

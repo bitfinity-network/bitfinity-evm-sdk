@@ -1,5 +1,5 @@
 use candid::Principal;
-use eth_signer::ic_sign::{IcSigner, SigningKeyId, DerivationPath};
+use eth_signer::ic_sign::{DerivationPath, IcSigner, SigningKeyId};
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::{TransactionRequest, H160};
 use ic_canister::{generate_idl, update, Canister, Idl, PreUpdate};
@@ -60,12 +60,7 @@ impl TestCanister {
 
         let digest = [42u8; 32];
         let signature = IcSigner
-            .sign_digest(
-                &from,
-                digest,
-                SigningKeyId::Dfx,
-                DerivationPath::default(),
-            )
+            .sign_digest(&from, digest, SigningKeyId::Dfx, DerivationPath::default())
             .await
             .unwrap();
 
@@ -74,12 +69,7 @@ impl TestCanister {
 
         let digest = [43u8; 32];
         let signature = IcSigner
-            .sign_digest(
-                &from,
-                digest,
-                SigningKeyId::Dfx,
-                DerivationPath::default(),
-            )
+            .sign_digest(&from, digest, SigningKeyId::Dfx, DerivationPath::default())
             .await
             .unwrap();
 

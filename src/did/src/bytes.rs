@@ -1,6 +1,8 @@
-use std::{fmt, rc::Rc};
+use std::fmt;
+use std::rc::Rc;
 
-use candid::{CandidType, types::*};
+use candid::types::*;
+use candid::CandidType;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]

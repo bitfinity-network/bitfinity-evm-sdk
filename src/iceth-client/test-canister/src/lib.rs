@@ -131,10 +131,8 @@ impl CounterCanister {
 
         assert_eq!(chain_id, client.eth_get_chain_id().await.unwrap());
 
-        let signer = ManagementCanisterSigner::new(
-            SigningKeyId::Dfx,
-            vec![chain_id.to_be_bytes().to_vec()],
-        );
+        let signer =
+            ManagementCanisterSigner::new(SigningKeyId::Dfx, vec![chain_id.to_be_bytes().to_vec()]);
         let address = signer.get_address().await.unwrap();
 
         let balance = client

@@ -1,8 +1,9 @@
-use std::{borrow::Cow, rc::Rc};
+use std::borrow::Cow;
 use std::fmt;
+use std::rc::Rc;
 
-use candid::types::TypeInner;
-use candid::{CandidType, Deserialize, types::Type};
+use candid::types::{Type, TypeInner};
+use candid::{CandidType, Deserialize};
 use derive_more::Display;
 use ethers_core::types::NameOrAddress;
 use ic_stable_structures::{BoundedStorable, Storable};

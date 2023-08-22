@@ -3,8 +3,8 @@ use std::cell::RefCell;
 
 use async_trait::async_trait;
 use candid::CandidType;
-use eth_signer::ic_sign::{IcSigner, DerivationPath};
 pub use eth_signer::ic_sign::SigningKeyId;
+use eth_signer::ic_sign::{DerivationPath, IcSigner};
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
@@ -327,10 +327,7 @@ mod test {
         }) = signer
         {
             assert_eq!(key_id, SigningKeyId::Test);
-            assert_eq!(
-                derivation_path,
-                vec![chain_id.to_be_bytes().to_vec()]
-            );
+            assert_eq!(derivation_path, vec![chain_id.to_be_bytes().to_vec()]);
             assert_eq!(*cached_address.borrow(), None);
         } else {
             panic!("invalid signer")

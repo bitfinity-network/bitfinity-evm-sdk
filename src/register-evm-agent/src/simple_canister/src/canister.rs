@@ -1,8 +1,8 @@
 use candid::{CandidType, Deserialize};
 use did::{Transaction, H160, H256};
 use ic_canister::{generate_idl, init, query, update, Canister, Idl, PreUpdate};
-use ic_exports::ic_kit::ic;
 use ic_exports::candid::Principal;
+use ic_exports::ic_kit::ic;
 
 use crate::error::{Error, Result};
 use crate::state::evm::EvmCanister;
