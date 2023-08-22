@@ -52,7 +52,7 @@ async fn get_minter_address() -> Result<RegistrationInfo, AgentError> {
 
     let res = agent
         .query(&evm_canister_id, "registration_ic_agent_info")
-        .with_arg(&Encode!(&()).expect("error encode none argument"))
+        .with_arg(Encode!(&()).expect("error encode none argument"))
         .call()
         .await?;
 

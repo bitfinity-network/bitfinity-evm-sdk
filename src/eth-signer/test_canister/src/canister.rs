@@ -1,9 +1,8 @@
 use candid::Principal;
-use eth_signer::ic_sign::{IcSigner, SigningKeyId};
+use eth_signer::ic_sign::{IcSigner, SigningKeyId, DerivationPath};
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::{TransactionRequest, H160};
 use ic_canister::{generate_idl, update, Canister, Idl, PreUpdate};
-use ic_exports::ic_ic00_types::DerivationPath;
 
 #[derive(Canister)]
 pub struct TestCanister {
@@ -18,7 +17,7 @@ impl TestCanister {
     #[update]
     pub async fn sign_and_check(&self) {
         let pubkey = IcSigner
-            .public_key(SigningKeyId::Dfx, DerivationPath::new(vec![]))
+            .public_key(SigningKeyId::Dfx, DerivationPath::default())
             .await
             .unwrap();
         let from = IcSigner.pubkey_to_address(&pubkey).unwrap();
@@ -34,7 +33,7 @@ impl TestCanister {
             .into();
 
         let signature = IcSigner
-            .sign_transaction(&tx, SigningKeyId::Dfx, DerivationPath::new(vec![]))
+            .sign_transaction(&tx, SigningKeyId::Dfx, DerivationPath::default())
             .await
             .unwrap();
 
@@ -52,7 +51,7 @@ impl TestCanister {
             .into();
 
         let signature = IcSigner
-            .sign_transaction(&tx, SigningKeyId::Dfx, DerivationPath::new(vec![]))
+            .sign_transaction(&tx, SigningKeyId::Dfx, DerivationPath::default())
             .await
             .unwrap();
 
@@ -65,7 +64,7 @@ impl TestCanister {
                 &from,
                 digest,
                 SigningKeyId::Dfx,
-                DerivationPath::new(vec![]),
+                DerivationPath::default(),
             )
             .await
             .unwrap();
@@ -79,7 +78,7 @@ impl TestCanister {
                 &from,
                 digest,
                 SigningKeyId::Dfx,
-                DerivationPath::new(vec![]),
+                DerivationPath::default(),
             )
             .await
             .unwrap();
