@@ -1,4 +1,6 @@
 use candid::{CandidType, Principal};
+use ethers_core::abi::ethabi::Bytes;
+use ethers_core::abi::Error;
 use serde::{Deserialize, Serialize};
 
 /// Structured input for notification transaction.
@@ -21,6 +23,15 @@ impl MintOrderExemptionUserData {
 
         Some(Self { user, weeks })
     }
+
+    /// Encode input for notification transaction.
+    pub fn encode(self) -> Result<Bytes, Error> {
+        let mut user_data: Vec<u8> = Vec::with_capacity(Self::MIN_INPUT_LEN);
+        user_data.extend_from_slice(&self.weeks.to_le_bytes());
+        user_data.extend_from_slice(self.user.as_slice());
+
+        Ok(user_data)
+    }
 }
 
 #[cfg(test)]
@@ -37,9 +48,12 @@ mod tests {
     fn mint_order_exemption_encoding() {
         let user_principal = Principal::anonymous();
 
-        let mut user_data: Vec<u8> = Vec::with_capacity(NotificationInput::MIN_INPUT_LEN);
-        user_data.extend_from_slice(&4_u32.to_le_bytes());
-        user_data.extend_from_slice(user_principal.as_slice());
+        let user_data = MintOrderExemptionUserData {
+            user: user_principal,
+            weeks: 4,
+        }
+        .encode()
+        .unwrap();
 
         let data = NotificationInput {
             about_tx: Some(H256::from([1; 32])),
