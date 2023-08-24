@@ -11,7 +11,6 @@ export-api = []
 [dependencies]
 async-trait = { workspace = true }
 candid = { workspace = true }
-chrono = { workspace = true }
 did = { path = "../../../did" }
 hex = { workspace = true }
 ic-canister = { workspace = true }
@@ -25,6 +24,5 @@ name = "signature"
 
 [dev-dependencies]
 candid = { workspace = true }
-ethers = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }

@@ -29,13 +29,10 @@ async-trait = "0.1"
 bincode = "1.3"
 bytes = "1.3"
 candid = "0.9"
-# Using fixed chrono version. See: https://infinityswap.atlassian.net/browse/EPROD-45
-chrono = "=0.4.19"
 clap = { version = "4", features = ["derive"] }
 derive_more = "0.99"
 env_logger = { version = "0.10.0", default-features = false }
 ethereum-types = "0.14"
-ethers = "2.0.6"
 ethers-core = { git = "https://github.com/bitfinity-network/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
 hash-db = "0.16"
 hex = "0.4"
