@@ -1,5 +1,6 @@
 use candid::{CandidType, Decode, Deserialize, Encode, Principal};
-use ethers::prelude::*;
+use eth_signer::{LocalWallet, Signer};
+use ethers_core::types::TransactionRequest;
 use evm_canister_client::ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
 use evm_canister_client::ic_agent::identity::AnonymousIdentity;
 use evm_canister_client::ic_agent::{Agent, AgentError};

@@ -19,10 +19,13 @@ ic-stable-structures = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 evm-canister-client = { path = "../../../evm-canister-client" }
-[[example]]
-name = "signature"
 
 [dev-dependencies]
 candid = { workspace = true }
+ethers-core = { workspace = true }
+eth-signer = { path = "../../../eth-signer" }
 rand = { workspace = true }
 tokio = { workspace = true }
+
+[[example]]
+name = "signature"
