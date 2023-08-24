@@ -9,9 +9,3 @@ RUSTSEC-2020-0071
 # Available in several transitive IC dependencies
 
 RUSTSEC-2020-0159
-
-# webpki crate
-# CPU denial of service in certificate path building
-# Available in several transitive IC dependencies
-
-RUSTSEC-2023-0052
