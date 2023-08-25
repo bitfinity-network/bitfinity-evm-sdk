@@ -10,7 +10,6 @@ use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::TransactionRequest;
 use ethers_core::utils;
 use ic_canister::{generate_idl, init, update, Canister, Idl, PreUpdate};
-use ic_exports::ic_ic00_types::DerivationPath;
 use ic_storage::stable::Versioned;
 use ic_storage::IcStorage;
 
@@ -132,10 +131,8 @@ impl CounterCanister {
 
         assert_eq!(chain_id, client.eth_get_chain_id().await.unwrap());
 
-        let signer = ManagementCanisterSigner::new(
-            SigningKeyId::Dfx,
-            DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()]),
-        );
+        let signer =
+            ManagementCanisterSigner::new(SigningKeyId::Dfx, vec![chain_id.to_be_bytes().to_vec()]);
         let address = signer.get_address().await.unwrap();
 
         let balance = client

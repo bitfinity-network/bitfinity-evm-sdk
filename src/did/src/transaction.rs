@@ -1,5 +1,7 @@
 use std::borrow::Cow;
+use std::rc::Rc;
 
+use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::Display;
 use eth_signer::Wallet;
@@ -58,7 +60,7 @@ impl<'de> Deserialize<'de> for BlockNumber {
 
 impl CandidType for BlockNumber {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Text
+        Type(Rc::new(TypeInner::Text))
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
@@ -692,7 +694,7 @@ impl std::fmt::LowerHex for Bloom {
 
 impl CandidType for Bloom {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Text
+        Type(Rc::new(TypeInner::Text))
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>

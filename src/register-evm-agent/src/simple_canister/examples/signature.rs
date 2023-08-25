@@ -1,5 +1,6 @@
 use candid::{CandidType, Decode, Deserialize, Encode, Principal};
-use ethers::prelude::*;
+use eth_signer::{LocalWallet, Signer};
+use ethers_core::types::TransactionRequest;
 use evm_canister_client::ic_agent::agent::http_transport::ReqwestHttpReplicaV2Transport;
 use evm_canister_client::ic_agent::identity::AnonymousIdentity;
 use evm_canister_client::ic_agent::{Agent, AgentError};
@@ -52,7 +53,7 @@ async fn get_minter_address() -> Result<RegistrationInfo, AgentError> {
 
     let res = agent
         .query(&evm_canister_id, "registration_ic_agent_info")
-        .with_arg(&Encode!(&()).expect("error encode none argument"))
+        .with_arg(Encode!(&()).expect("error encode none argument"))
         .call()
         .await?;
 

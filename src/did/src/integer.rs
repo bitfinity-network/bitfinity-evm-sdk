@@ -1,8 +1,10 @@
 use std::borrow::Cow;
 use std::fmt;
 use std::ops::{Add, AddAssign, Mul, Sub};
+use std::rc::Rc;
 use std::str::FromStr;
 
+use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize, Nat};
 use ic_stable_structures::{BoundedStorable, Storable};
 use num::BigUint;
@@ -381,7 +383,7 @@ impl BoundedStorable for U256 {
 
 impl CandidType for U64 {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Text
+        Type(Rc::new(TypeInner::Text))
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
@@ -394,7 +396,7 @@ impl CandidType for U64 {
 
 impl CandidType for U256 {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Text
+        Type(Rc::new(TypeInner::Text))
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>

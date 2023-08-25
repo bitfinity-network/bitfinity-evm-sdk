@@ -31,7 +31,6 @@ did = { path = "../../../did" }
 hex = { workspace = true }
 ic-exports = { workspace = true }
 log = { workspace = true }
-openssl = { workspace = true, features = ["vendored"] } 
 rand = { workspace = true }
 rlp = { workspace = true }
 serde = { workspace = true }

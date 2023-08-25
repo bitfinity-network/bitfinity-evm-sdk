@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use candid::Principal;
+use evm_canister_client::ic_agent::agent::EnvelopeContent;
 use evm_canister_client::ic_agent::identity::{BasicIdentity, Secp256k1Identity};
 use evm_canister_client::ic_agent::Identity;
 
@@ -32,7 +33,7 @@ impl Identity for GenericIdentity {
 
     fn sign(
         &self,
-        blob: &[u8],
+        blob: &EnvelopeContent,
     ) -> std::result::Result<evm_canister_client::ic_agent::Signature, String> {
         match self {
             Self::BasicIdentity(identity) => identity.sign(blob),
@@ -88,9 +89,16 @@ mod test {
     fn identity_should_sign() {
         let path = Path::new("./tests/identity/identity.pem");
         let identity = GenericIdentity::try_from(path).unwrap();
-        let blob = &[0xca, 0xfe, 0xba, 0xbe];
 
-        let signature = identity.sign(blob).unwrap();
+        let envelop = EnvelopeContent::Query {
+            ingress_expiry: 123,
+            sender: Principal::anonymous(),
+            canister_id: Principal::anonymous(),
+            method_name: "some".to_owned(),
+            arg: vec![],
+        };
+
+        let signature = identity.sign(&envelop).unwrap();
 
         assert!(signature.signature.is_some());
     }

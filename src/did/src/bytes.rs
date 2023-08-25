@@ -1,5 +1,7 @@
 use std::fmt;
+use std::rc::Rc;
 
+use candid::types::*;
 use candid::CandidType;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -76,7 +78,7 @@ impl fmt::LowerHex for Bytes {
 
 impl CandidType for Bytes {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Text
+        Type(Rc::new(TypeInner::Text))
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>

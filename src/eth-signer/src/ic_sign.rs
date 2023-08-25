@@ -8,12 +8,14 @@ use ethers_core::types::{Signature, SignatureError, H160};
 use ethers_core::utils;
 use ic_canister::virtual_canister_call;
 use ic_exports::ic_cdk::api::call::RejectionCode;
-use ic_exports::ic_ic00_types::{
-    DerivationPath, ECDSAPublicKeyArgs, ECDSAPublicKeyResponse, EcdsaCurve, EcdsaKeyId,
-    SignWithECDSAArgs,
+use ic_exports::ic_cdk::api::management_canister::ecdsa::{
+    EcdsaCurve, EcdsaKeyId, EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
+    SignWithEcdsaResponse,
 };
-use ic_exports::serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+pub type DerivationPath = Vec<Vec<u8>>;
 
 #[derive(Debug, Error)]
 pub enum IcSignerError {
@@ -96,19 +98,19 @@ impl IcSigner {
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
     ) -> Result<Signature, IcSignerError> {
-        let request = SignWithECDSAArgs {
+        let request = SignWithEcdsaArgument {
             key_id: EcdsaKeyId {
                 curve: EcdsaCurve::Secp256k1,
                 name: key_id.to_string(),
             },
-            message_hash: digest,
+            message_hash: digest.to_vec(),
             derivation_path,
         };
         let signature_data = virtual_canister_call!(
             Principal::management_canister(),
             "sign_with_ecdsa",
             (request,),
-            ic_exports::ic_ic00_types::SignWithECDSAReply
+            SignWithEcdsaResponse
         )
         .await
         .map_err(|(code, msg)| IcSignerError::SigningFailed(code, msg))?
@@ -139,7 +141,7 @@ impl IcSigner {
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
     ) -> Result<Vec<u8>, IcSignerError> {
-        let request = ECDSAPublicKeyArgs {
+        let request = EcdsaPublicKeyArgument {
             canister_id: None,
             derivation_path,
             key_id: EcdsaKeyId {
@@ -151,7 +153,7 @@ impl IcSigner {
             Principal::management_canister(),
             "ecdsa_public_key",
             (request,),
-            ECDSAPublicKeyResponse
+            EcdsaPublicKeyResponse
         )
         .await
         .map_err(|(code, msg)| IcSignerError::SigningFailed(code, msg))
@@ -181,13 +183,13 @@ mod tests {
     use ethers_core::types::transaction::eip2718::TypedTransaction;
     use ethers_core::types::{TransactionRequest, H160, H256};
     use ic_canister::register_virtual_responder;
-    use ic_exports::ic_ic00_types::{
-        DerivationPath, ECDSAPublicKeyArgs, ECDSAPublicKeyResponse, SignWithECDSAArgs,
-        SignWithECDSAReply,
+    use ic_exports::ic_cdk::api::management_canister::ecdsa::{
+        EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
+        SignWithEcdsaResponse,
     };
     use ic_exports::ic_kit::MockContext;
 
-    use super::IcSigner;
+    use super::{IcSigner, *};
     use crate::ic_sign::SigningKeyId;
     use crate::Wallet;
 
@@ -201,11 +203,11 @@ mod tests {
         register_virtual_responder(
             Principal::management_canister(),
             "sign_with_ecdsa",
-            move |args: (SignWithECDSAArgs,)| {
+            move |args: (SignWithEcdsaArgument,)| {
                 let hash = args.0.message_hash;
                 let h256 = H256::from_slice(&hash);
                 let signature = wallet_to_sign.sign_hash(h256).unwrap();
-                SignWithECDSAReply {
+                SignWithEcdsaResponse {
                     signature: signature.to_vec(),
                 }
             },
@@ -214,7 +216,7 @@ mod tests {
         register_virtual_responder(
             Principal::management_canister(),
             "ecdsa_public_key",
-            move |_: (ECDSAPublicKeyArgs,)| ECDSAPublicKeyResponse {
+            move |_: (EcdsaPublicKeyArgument,)| EcdsaPublicKeyResponse {
                 public_key: pubkey.as_bytes().to_vec(),
                 chain_code: vec![],
             },
@@ -238,7 +240,7 @@ mod tests {
             .into();
 
         let signature = IcSigner
-            .sign_transaction(&tx, SigningKeyId::Dfx, DerivationPath::new(vec![]))
+            .sign_transaction(&tx, SigningKeyId::Dfx, DerivationPath::default())
             .await
             .unwrap();
 

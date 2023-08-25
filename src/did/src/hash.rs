@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::fmt;
+use std::rc::Rc;
 
+use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::Display;
 use ethers_core::types::NameOrAddress;
@@ -127,7 +129,7 @@ impl BoundedStorable for H256 {
 
 impl CandidType for H64 {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Text
+        Type(Rc::new(TypeInner::Text))
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
@@ -140,7 +142,7 @@ impl CandidType for H64 {
 
 impl CandidType for H160 {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Text
+        Type(Rc::new(TypeInner::Text))
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
@@ -153,7 +155,7 @@ impl CandidType for H160 {
 
 impl CandidType for H256 {
     fn _ty() -> candid::types::Type {
-        candid::types::Type::Text
+        Type(Rc::new(TypeInner::Text))
     }
 
     fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>

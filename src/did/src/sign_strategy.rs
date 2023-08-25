@@ -3,15 +3,14 @@ use std::cell::RefCell;
 
 use async_trait::async_trait;
 use candid::CandidType;
-use eth_signer::ic_sign::IcSigner;
 pub use eth_signer::ic_sign::SigningKeyId;
+use eth_signer::ic_sign::{DerivationPath, IcSigner};
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::utils;
-use ic_exports::ic_ic00_types::DerivationPath;
 use ic_stable_structures::Storable;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 use crate::error::{EvmError, Result};
 use crate::transaction::Signature;
@@ -52,7 +51,7 @@ impl SigningStrategy {
                 Ok(TxSigner::Local(LocalTxSigner::new(wallet)))
             }
             SigningStrategy::ManagementCanister { key_id } => {
-                let derivation_path = DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()]);
+                let derivation_path = vec![chain_id.to_be_bytes().to_vec()];
                 Ok(TxSigner::ManagementCanister(ManagementCanisterSigner::new(
                     key_id,
                     derivation_path,
@@ -189,8 +188,6 @@ impl<'de> Deserialize<'de> for LocalTxSigner {
 pub struct ManagementCanisterSigner {
     key_id: SigningKeyId,
     cached_address: RefCell<Option<H160>>,
-    #[serde(serialize_with = "serialize_derivation_path")]
-    #[serde(deserialize_with = "deserialize_derivation_path")]
     derivation_path: DerivationPath,
 }
 
@@ -249,25 +246,6 @@ impl TransactionSigner for ManagementCanisterSigner {
     }
 }
 
-fn serialize_derivation_path<S>(
-    value: &DerivationPath,
-    serializer: S,
-) -> std::result::Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    value.get().serialize(serializer)
-}
-
-fn deserialize_derivation_path<'de, D>(
-    deserializer: D,
-) -> std::result::Result<DerivationPath, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Vec::<Vec<u8>>::deserialize(deserializer).map(DerivationPath::new)
-}
-
 #[cfg(test)]
 mod test {
     use rand::thread_rng;
@@ -302,7 +280,7 @@ mod test {
         let management_canister_signer = ManagementCanisterSigner {
             key_id: SigningKeyId::Dfx,
             cached_address: RefCell::new(Some(H160::from_slice(&[3; 20]))),
-            derivation_path: DerivationPath::new(vec![vec![1, 2], vec![3]]),
+            derivation_path: vec![vec![1, 2], vec![3]],
         };
         let signer: TxSigner = storable_roundtrip(&TxSigner::ManagementCanister(
             management_canister_signer.clone(),
@@ -349,10 +327,7 @@ mod test {
         }) = signer
         {
             assert_eq!(key_id, SigningKeyId::Test);
-            assert_eq!(
-                derivation_path,
-                DerivationPath::new(vec![chain_id.to_be_bytes().to_vec()])
-            );
+            assert_eq!(derivation_path, vec![chain_id.to_be_bytes().to_vec()]);
             assert_eq!(*cached_address.borrow(), None);
         } else {
             panic!("invalid signer")
