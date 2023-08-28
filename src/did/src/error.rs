@@ -10,7 +10,7 @@ use crate::{BlockNumber, H160, U256};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 
-#[derive(Debug, Error, Deserialize, CandidType, Eq, PartialEq, Serialize)]
+#[derive(Debug, Error, Deserialize, CandidType, Eq, PartialEq, Serialize, Clone)]
 pub enum EvmError {
     #[error("internal error: {0}")]
     Internal(String),
@@ -59,7 +59,7 @@ pub enum EvmError {
 }
 
 /// Variant of `TransactionPool` error
-#[derive(Debug, Deserialize, Error, CandidType, PartialEq, Eq, Serialize)]
+#[derive(Debug, Deserialize, Error, CandidType, PartialEq, Eq, Serialize, Clone)]
 pub enum TransactionPoolError {
     #[error("transaction already exists in the pool")]
     TransactionAlreadyExists,
