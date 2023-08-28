@@ -11,6 +11,7 @@ members = [
     "src/register-evm-agent/src/simple_canister",
     "src/signature-verification-canister-client",
 ]
+resolver = "2"
 
 [workspace.package]
 authors = ["Bitfinity Network"]

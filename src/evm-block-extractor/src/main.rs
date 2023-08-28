@@ -81,7 +81,6 @@ async fn collect_blocks(
     end_block: u64,
 ) -> anyhow::Result<()> {
     for block_numbers in &(start_block..end_block)
-        .into_iter()
         .chunks(BLOCKS_PER_REQUEST)
     {
         let block_numbers: Vec<BlockNumber> = block_numbers.map(|number| number.into()).collect();
