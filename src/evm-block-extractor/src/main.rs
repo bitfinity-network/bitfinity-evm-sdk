@@ -11,7 +11,7 @@ use itertools::Itertools;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
 
-const BLOCKS_PER_REQUEST: usize = 5; // Max batch size is 5 in EVM
+const BLOCKS_PER_REQUEST: usize = rpc_client::MAX_BATCH_REQUESTS; // Max batch size is 5 in EVM
 
 /// Simple CLI program for Benchmarking BitFinity Network
 #[derive(Parser, Debug)]
@@ -91,6 +91,16 @@ async fn collect_blocks(
         if blocks.is_empty() {
             log::info!("there are no more blocks available on the EVM");
             break;
+        }
+        // get tx receipts
+        for block in blocks.iter() {
+            log::info!(
+                "getting receipts for block {}",
+                block.number.unwrap().as_u64()
+            );
+            let receipts = rpc_client::get_receipts_by_number(rpc_url, block).await?;
+            log::info!("writing {} receipts", receipts.len());
+            blocks_writer.write_receipts(block.number.unwrap().as_u64(), &receipts)?;
         }
         log::info!("writing {} blocks", blocks.len());
         write_blocks(&mut blocks_writer, &blocks)?;
