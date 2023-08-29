@@ -9,7 +9,7 @@ use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::utils;
-use ic_stable_structures::Storable;
+use ic_stable_structures::{Storable, SlicedStorable, ChunkSize};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{EvmError, Result};
@@ -78,6 +78,10 @@ impl Storable for TxSigner {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         bincode::deserialize(&bytes).expect("failed to deserialize TxSigner")
     }
+}
+
+impl SlicedStorable for TxSigner {
+    const CHUNK_SIZE: ChunkSize = 64;
 }
 
 #[async_trait(?Send)]
