@@ -29,12 +29,12 @@ struct Args {
     output_file: PathBuf,
 
     /// block to start with
-    #[arg(long, short('s'), default_value = "0x0")]
-    start_block: String,
+    #[arg(long, short('s'), default_value = "0")]
+    start_block: u64,
 
     /// block to start with (if not provided, all blocks will be loaded)
     #[arg(long, short('e'))]
-    end_block: Option<String>,
+    end_block: Option<u64>,
 }
 
 #[tokio::main]
@@ -43,13 +43,8 @@ async fn main() -> anyhow::Result<()> {
     init_logger()?;
     let args = Args::parse();
 
-    let start_block = u64::from_str_radix(&args.start_block.replace("0x", ""), 16)?;
-    let end_block = args
-        .end_block
-        .map(|end_block| {
-            u64::from_str_radix(&end_block.replace("0x", ""), 16).expect("invalid last block")
-        })
-        .unwrap_or(u64::MAX);
+    let start_block = args.start_block;
+    let end_block = args.end_block.unwrap_or(u64::MAX);
 
     log::info!("{PACKAGE}");
     log::info!("----------------------");
