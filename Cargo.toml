@@ -23,7 +23,7 @@ include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 name = "bitfinity-evm-sdk"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.3.0"
+version = "0.3.1"
 
 [workspace.dependencies]
 anyhow = "1.0"
