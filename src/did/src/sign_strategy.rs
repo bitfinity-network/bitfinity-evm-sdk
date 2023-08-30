@@ -9,7 +9,7 @@ use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::utils;
-use ic_stable_structures::{Storable, SlicedStorable, ChunkSize};
+use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{EvmError, Result};
