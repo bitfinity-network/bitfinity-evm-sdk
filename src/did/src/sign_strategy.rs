@@ -30,7 +30,7 @@ pub trait TransactionSigner {
 }
 
 /// Signing strategy for signing EVM transactions
-#[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq)]
+#[derive(CandidType, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SigningStrategy {
     /// Local signing key
     Local { private_key: [u8; 32] },
@@ -58,6 +58,18 @@ impl SigningStrategy {
                 )))
             }
         }
+    }
+}
+
+impl Storable for SigningStrategy {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        bincode::serialize(self)
+            .expect("failed to serialize signing strategy")
+            .into()
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        bincode::deserialize(&bytes).expect("failed to deserialize signing strategy")
     }
 }
 
@@ -256,8 +268,20 @@ mod test {
 
     use super::*;
 
-    fn storable_roundtrip<T: Storable>(value: &impl Storable) -> T {
+    fn storable_roundtrip<T: Storable>(value: &T) -> T {
         T::from_bytes(value.to_bytes())
+    }
+
+    #[test]
+    fn test_signing_strategy_roundtrip() {
+        let signing_strategy = SigningStrategy::Local {
+            private_key: [42; 32],
+        };
+        assert_eq!(storable_roundtrip(&signing_strategy), signing_strategy);
+        let signing_strategy = SigningStrategy::ManagementCanister {
+            key_id: SigningKeyId::Dfx,
+        };
+        assert_eq!(storable_roundtrip(&signing_strategy), signing_strategy);
     }
 
     #[test]
