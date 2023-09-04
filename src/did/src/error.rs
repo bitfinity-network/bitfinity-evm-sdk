@@ -182,7 +182,9 @@ pub enum HaltError {
     StateChangeDuringStaticCall,
 }
 
-#[derive(Debug, Clone, Deserialize, CandidType, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(
+    Debug, Clone, Deserialize, CandidType, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize,
+)]
 pub enum ExitFatal {
     /// The operation is not supported.
     NotSupported,

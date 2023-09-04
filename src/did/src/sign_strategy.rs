@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{EvmError, Result};
 use crate::transaction::Signature;
-use crate::{H160, codec};
+use crate::{codec, H160};
 
 /// A trait that abstracts out the transaction signing component
 #[async_trait(?Send)]
