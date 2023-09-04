@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use candid::{CandidType, Deserialize, Principal};
 use did::codec::{decode, encode};
 use did::{H160, H256};
-use ic_stable_structures::{StableCell, Storable};
+use ic_stable_structures::{CellStructure, StableCell, Storable};
 
 use super::{EvmCanister, EvmCanisterImpl, MINT_AMOUNT};
 use crate::error::{Error, Result};

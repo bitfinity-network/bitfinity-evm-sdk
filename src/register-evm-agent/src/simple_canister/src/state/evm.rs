@@ -9,7 +9,7 @@ use did::{
     BasicAccount, Transaction, TransactionReceipt, H160, H256, U256,
 };
 use ic_exports::ic_kit::{ic, RejectionCode};
-use ic_stable_structures::StableCell;
+use ic_stable_structures::{CellStructure, StableCell};
 
 use crate::error::Error;
 use crate::state::{State, NONCE_MEMORY_ID};
