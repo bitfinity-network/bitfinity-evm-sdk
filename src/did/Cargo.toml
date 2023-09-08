@@ -14,6 +14,7 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bincode = { workspace = true }
 bytes = { workspace = true }
 candid = { workspace = true }
 eth-signer = { path = "../eth-signer" }
@@ -36,7 +37,6 @@ once_cell = { workspace = true }
 
 # signer dependencies
 async-trait = { workspace = true, optional = true }
-bincode = { workspace = true, optional = true }
 ic-exports = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -44,4 +44,4 @@ rand = { workspace = true }
 tokio = { workspace = true }
 
 [features]
-signer = ["async-trait", "bincode", "ic-exports", "eth-signer/ic_sign"]
+signer = ["async-trait", "ic-exports", "eth-signer/ic_sign"]

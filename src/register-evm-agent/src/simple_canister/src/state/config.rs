@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 
 use candid::{CandidType, Decode, Deserialize, Encode, Principal};
-use ic_stable_structures::{StableCell, Storable};
+use ic_stable_structures::{CellStructure, StableCell, Storable};
 
 use super::Settings;
 use crate::state::CONFIG_MEMORY_ID;

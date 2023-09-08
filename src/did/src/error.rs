@@ -10,7 +10,7 @@ use crate::{BlockNumber, H160, U256};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 
-#[derive(Debug, Error, Deserialize, CandidType, Eq, PartialEq)]
+#[derive(Debug, Error, Deserialize, CandidType, Eq, PartialEq, Serialize, Clone)]
 pub enum EvmError {
     #[error("internal error: {0}")]
     Internal(String),
@@ -59,7 +59,7 @@ pub enum EvmError {
 }
 
 /// Variant of `TransactionPool` error
-#[derive(Debug, Deserialize, Error, CandidType, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Error, CandidType, PartialEq, Eq, Serialize, Clone)]
 pub enum TransactionPoolError {
     #[error("transaction already exists in the pool")]
     TransactionAlreadyExists,
@@ -182,7 +182,9 @@ pub enum HaltError {
     StateChangeDuringStaticCall,
 }
 
-#[derive(Debug, Clone, Deserialize, CandidType, Eq, PartialEq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Deserialize, CandidType, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize,
+)]
 pub enum ExitFatal {
     /// The operation is not supported.
     NotSupported,
@@ -201,7 +203,7 @@ impl From<HaltError> for EvmError {
     }
 }
 
-#[derive(Error, Debug, CandidType, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Error, Debug, CandidType, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub enum SignatureVerificationError {
     #[error("signature is not correct: expected: {expected}, recovered: {recovered}")]
     RecoveryError { expected: H160, recovered: H160 },

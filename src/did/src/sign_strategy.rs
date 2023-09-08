@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{EvmError, Result};
 use crate::transaction::Signature;
-use crate::H160;
+use crate::{codec, H160};
 
 /// A trait that abstracts out the transaction signing component
 #[async_trait(?Send)]
@@ -82,13 +82,11 @@ pub enum TxSigner {
 
 impl Storable for TxSigner {
     fn to_bytes(&self) -> Cow<[u8]> {
-        bincode::serialize(self)
-            .expect("failed to serialize TxSigner")
-            .into()
+        codec::bincode_encode(self).into()
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        bincode::deserialize(&bytes).expect("failed to deserialize TxSigner")
+        codec::bincode_decode(&bytes)
     }
 }
 
