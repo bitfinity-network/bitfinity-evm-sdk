@@ -70,7 +70,7 @@ macro_rules! decode_fixed_storables {
     };
 
     ($data:expr, $offset:expr, $type:ty, $($types:ty),+) => {
-        (<$type as ic_stable_structures::Storable>::from_bytes((&$data[$offset as usize..$offset + <$type as ic_stable_structures::BoundedStorable>::MAX_SIZE as usize]).into()), decode_fixed_storables!($data, $offset + <$type as ic_stable_structures::BoundedStorable>::MAX_SIZE, $($types)*))
+        (<$type as ic_stable_structures::Storable>::from_bytes((&$data[$offset as usize..$offset as usize + <$type as ic_stable_structures::BoundedStorable>::MAX_SIZE as usize]).into()), decode_fixed_storables!($data, $offset + <$type as ic_stable_structures::BoundedStorable>::MAX_SIZE, $($types),*))
     };
 }
 
@@ -116,5 +116,16 @@ mod tests {
 
         assert_eq!(value_1, decoded_1);
         assert_eq!(value_2, decoded_2);
+    }
+
+    #[test]
+    fn check_three_types_roundtrip() {
+        let (value_1, value_2, value_3) = (StorableType([0; 2]), StorableType([1; 3]), StorableType([2; 4]));
+        let data = encode_fixed_storables!(value_1, value_2, value_3);
+        let (decoded_1, (decoded_2, decoded_3)) = decode_fixed_storables!(data, StorableType<2>, StorableType<3>, StorableType<4>);
+
+        assert_eq!(value_1, decoded_1);
+        assert_eq!(value_2, decoded_2);
+        assert_eq!(value_3, decoded_3);
     }
 }
