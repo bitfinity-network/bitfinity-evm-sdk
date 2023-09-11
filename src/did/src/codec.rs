@@ -19,15 +19,18 @@ pub fn bincode_decode<'a, T: serde::Deserialize<'a>>(bytes: &'a [u8]) -> T {
 pub mod macro_utils {
     use ic_stable_structures::BoundedStorable;
 
+    /// Returns if `T` is a of fixed size
     pub const fn is_fixed_size<T: BoundedStorable>(_: &T) -> bool {
         T::IS_FIXED_SIZE
     }
 
+    /// Returns if `T`'s max size
     pub const fn get_max_size<T: BoundedStorable>(_: &T) -> u32 {
         T::MAX_SIZE
     }
 }
 
+/// Encodes several BoundedStorable items into a Vec<u8>
 #[macro_export]
 macro_rules! encode_fixed_storables {
     ($($values:expr),+) => {
@@ -49,6 +52,7 @@ macro_rules! encode_fixed_storables {
     };
 }
 
+/// Decodes several `BoundedStorable` items from a `&[u8]` slice.
 #[macro_export]
 macro_rules! decode_fixed_storables {
     ($data:expr, $($types:ty),+) => {
@@ -57,16 +61,16 @@ macro_rules! decode_fixed_storables {
             const ALL_FIXED_SIZE: bool = true $( && <$types as ic_stable_structures::BoundedStorable>::IS_FIXED_SIZE)*;
             assert!(ALL_FIXED_SIZE);
 
-            (decode_fixed_storables!($data, 0, $($types,)*))
+            (decode_fixed_storables!($data, 0, $($types),*))
         }
     };
 
-    ($data:expr, $offset:expr, $type:ty,) => {
-        <$type>::from_bytes((&$data[$offset as usize..$offset + <$type as ic_stable_structures::BoundedStorable>::MAX_SIZE as usize]).into())
+    ($data:expr, $offset:expr, $type:ty) => {
+        <$type>::from_bytes((&$data[$offset as usize..$offset as usize + <$type as ic_stable_structures::BoundedStorable>::MAX_SIZE as usize]).into())
     };
 
     ($data:expr, $offset:expr, $type:ty, $($types:ty),+) => {
-        $type::from_bytes($data[$offset..$offset + ty::MAX_SIZE]), decode_fixed_storables!($data, $offset + $type::MAX_SIZE, $($types)*)
+        (<$type as ic_stable_structures::Storable>::from_bytes((&$data[$offset as usize..$offset + <$type as ic_stable_structures::BoundedStorable>::MAX_SIZE as usize]).into()), decode_fixed_storables!($data, $offset + <$type as ic_stable_structures::BoundedStorable>::MAX_SIZE, $($types)*))
     };
 }
 
@@ -77,9 +81,9 @@ mod tests {
     use ic_stable_structures::{BoundedStorable, Storable};
 
     #[derive(PartialEq, Eq, Debug)]
-    struct Type1([u8; 2]);
+    struct StorableType<const SIZE: usize>([u8; SIZE]);
 
-    impl Storable for Type1 {
+    impl<const SIZE: usize> Storable for StorableType<SIZE> {
         fn to_bytes(&self) -> Cow<[u8]> {
             Cow::Borrowed(&self.0)
         }
@@ -89,18 +93,28 @@ mod tests {
         }
     }
 
-    impl BoundedStorable for Type1 {
-        const MAX_SIZE: u32 = 2;
+    impl<const SIZE: usize> BoundedStorable for StorableType<SIZE> {
+        const MAX_SIZE: u32 = SIZE as _;
 
         const IS_FIXED_SIZE: bool = true;
     }
 
     #[test]
     fn check_single_type_roundtrip() {
-        let value = Type1([0; 2]);
+        let value = StorableType([0; 2]);
         let data = encode_fixed_storables!(value);
-        let decoded = decode_fixed_storables!(data, Type1);
+        let decoded = decode_fixed_storables!(data, StorableType<2>);
 
         assert_eq!(value, decoded);
+    }
+
+    #[test]
+    fn check_two_types_roundtrip() {
+        let (value_1, value_2) = (StorableType([0; 2]), StorableType([1; 3]));
+        let data = encode_fixed_storables!(value_1, value_2);
+        let (decoded_1, decoded_2) = decode_fixed_storables!(data, StorableType<2>, StorableType<3>);
+
+        assert_eq!(value_1, decoded_1);
+        assert_eq!(value_2, decoded_2);
     }
 }
