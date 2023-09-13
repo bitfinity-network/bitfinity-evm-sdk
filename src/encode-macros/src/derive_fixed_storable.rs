@@ -3,7 +3,6 @@ use quote::ToTokens;
 use syn::{parse, Data, DataStruct, DeriveInput, Field, Fields, Generics, Ident, Index, Type};
 
 pub fn derive_fixed_storable(tokens: TokenStream) -> TokenStream {
-    // convert the input tokens into an ast, specially from a derive
     let ast: DeriveInput = parse(tokens).unwrap();
 
     match ast.data {
@@ -34,6 +33,7 @@ fn derive_fixed_storable_struct(
         )*
     };
 
+    // use universal names that wotk both for named fields and in a tuple
     let local_names: Vec<_> = field_names
         .iter()
         .map(|id| quote::format_ident!("decoded_{}", id.to_string()))
