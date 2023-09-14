@@ -58,7 +58,7 @@ pub enum EvmError {
     AnonymousPrincipal,
 
     #[error("The request is not valid: {0}")]
-    BadRequest(&str),
+    BadRequest(String),
 }
 
 /// Variant of `TransactionPool` error
