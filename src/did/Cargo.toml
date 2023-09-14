@@ -19,6 +19,7 @@ bytes = { workspace = true }
 candid = { workspace = true }
 eth-signer = { path = "../eth-signer" }
 derive_more = { workspace = true }
+encode-macros = { path = "../encode-macros" }
 ethereum-types = { workspace = true }
 # infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
 ethers-core = { workspace = true }
