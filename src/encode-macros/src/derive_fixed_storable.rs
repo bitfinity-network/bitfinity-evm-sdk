@@ -21,11 +21,10 @@ fn derive_fixed_storable_struct(
 ) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let max_size_tokens = generate_max_size(struct_data);
-    let is_fixed_tokens = generate_is_fixed(struct_data);
+    let (field_types, field_names): (Vec<_>, Vec<_>) = get_fields_info(struct_data).into_iter().unzip();
 
-    let field_names = get_field_names(struct_data);
-    let field_types = get_field_types(struct_data);
+    let max_size_tokens = generate_max_size(field_types.iter().cloned());
+    let is_fixed_tokens = generate_is_fixed(field_types.iter().cloned());
 
     let serialize_field_tokens = quote::quote! {
         #(
@@ -64,10 +63,6 @@ fn derive_fixed_storable_struct(
             fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
                 let mut offset: usize = 0;
 
-                fn get_size<T: BoundedStorable>(_: &T) -> u32 {
-                    T::MAX_SIZE
-                }
-
                 #(
                     let size = <#field_types as BoundedStorable>::MAX_SIZE as usize;
                     let #local_names: #field_types = Storable::from_bytes((&bytes.as_ref()[offset..(offset + size)]).into());
@@ -91,38 +86,33 @@ fn derive_fixed_storable_struct(
     ).into()
 }
 
-fn get_fields(struct_data: &DataStruct) -> Vec<&'_ Field> {
+/// For each structure field returns (field type, field name)
+fn get_fields_info(struct_data: &DataStruct) -> Vec<(&Type, proc_macro2::TokenStream )> {
+    fn get_field_info((index, field ): (usize, &Field)) -> (&Type, proc_macro2::TokenStream) {
+        (&field.ty, field_name_tokens(field, index))
+    }
+
     match &struct_data.fields {
-        Fields::Named(fields) => fields.named.iter().collect(),
-        Fields::Unnamed(fields) => fields.unnamed.iter().collect(),
+        Fields::Named(fields) => fields.named.iter().enumerate().map(get_field_info).collect(),
+        Fields::Unnamed(fields) => fields.unnamed.iter().enumerate().map(get_field_info).collect(),
         Fields::Unit => Vec::new(),
     }
 }
 
-fn get_field_types(struct_data: &DataStruct) -> Vec<&'_ Type> {
-    get_fields(struct_data).iter().map(|f| &f.ty).collect()
+fn field_name_tokens(field: &Field, index: usize) -> proc_macro2::TokenStream {
+    match &field.ident {
+        Some(name) => quote::quote!(#name),
+        None => {
+            let index = Index::from(index);
+            quote::quote!(#index)
+        }
+    }
 }
 
-fn get_field_names(struct_data: &DataStruct) -> Vec<impl ToTokens + ToString> {
-    get_fields(struct_data)
-        .iter()
-        .enumerate()
-        .map(|(index, field)| match &field.ident {
-            Some(name) => quote::quote!(#name),
-            None => {
-                let index = Index::from(index);
-                quote::quote!(#index)
-            }
-        })
-        .collect()
+fn generate_max_size<'a>(field_types: impl Iterator<Item = &'a Type>) -> impl ToTokens {
+    quote::quote! { #(<#field_types as BoundedStorable>::MAX_SIZE)+* }
 }
 
-fn generate_max_size(struct_data: &DataStruct) -> impl ToTokens {
-    let struct_types = get_field_types(struct_data);
-    quote::quote! { #(<#struct_types as BoundedStorable>::MAX_SIZE)+* }
-}
-
-fn generate_is_fixed(struct_data: &DataStruct) -> impl ToTokens {
-    let struct_types = get_field_types(struct_data);
-    quote::quote! { #(<#struct_types as BoundedStorable>::IS_FIXED_SIZE) &&* }
+fn generate_is_fixed<'a>(field_types: impl Iterator<Item = &'a Type>) -> impl ToTokens {
+    quote::quote! { #(<#field_types as BoundedStorable>::IS_FIXED_SIZE) &&* }
 }
