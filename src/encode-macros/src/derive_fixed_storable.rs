@@ -21,7 +21,8 @@ fn derive_fixed_storable_struct(
 ) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let (field_types, field_names): (Vec<_>, Vec<_>) = get_fields_info(struct_data).into_iter().unzip();
+    let (field_types, field_names): (Vec<_>, Vec<_>) =
+        get_fields_info(struct_data).into_iter().unzip();
 
     let max_size_tokens = generate_max_size(field_types.iter().cloned());
     let is_fixed_tokens = generate_is_fixed(field_types.iter().cloned());
@@ -87,14 +88,24 @@ fn derive_fixed_storable_struct(
 }
 
 /// For each structure field returns (field type, field name)
-fn get_fields_info(struct_data: &DataStruct) -> Vec<(&Type, proc_macro2::TokenStream )> {
-    fn get_field_info((index, field ): (usize, &Field)) -> (&Type, proc_macro2::TokenStream) {
+fn get_fields_info(struct_data: &DataStruct) -> Vec<(&Type, proc_macro2::TokenStream)> {
+    fn get_field_info((index, field): (usize, &Field)) -> (&Type, proc_macro2::TokenStream) {
         (&field.ty, field_name_tokens(field, index))
     }
 
     match &struct_data.fields {
-        Fields::Named(fields) => fields.named.iter().enumerate().map(get_field_info).collect(),
-        Fields::Unnamed(fields) => fields.unnamed.iter().enumerate().map(get_field_info).collect(),
+        Fields::Named(fields) => fields
+            .named
+            .iter()
+            .enumerate()
+            .map(get_field_info)
+            .collect(),
+        Fields::Unnamed(fields) => fields
+            .unnamed
+            .iter()
+            .enumerate()
+            .map(get_field_info)
+            .collect(),
         Fields::Unit => Vec::new(),
     }
 }
