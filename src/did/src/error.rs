@@ -56,6 +56,9 @@ pub enum EvmError {
 
     #[error("anonymous caller is not allowed")]
     AnonymousPrincipal,
+
+    #[error("The request is not valid: {0}")]
+    BadRequest(String),
 }
 
 /// Variant of `TransactionPool` error
