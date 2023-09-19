@@ -211,6 +211,7 @@ pub struct Transaction {
 }
 
 /// Method to create a transaction signature
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SigningMethod<'a> {
     // Do not sign transaction.
     // Could be used only for the cases when transactions isn't applied
@@ -222,6 +223,7 @@ pub enum SigningMethod<'a> {
     SigningKey(&'a SigningKey),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TransactionBuilder<'a, 'b> {
     pub from: &'a H160,
     pub to: Option<H160>,
