@@ -18,6 +18,7 @@ use sha3::Keccak256;
 use super::hash::{H160, H256};
 use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
+use crate::constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930};
 use crate::error::EvmError;
 use crate::{codec, Bytes};
 
@@ -208,6 +209,50 @@ pub struct Transaction {
 
     #[serde(rename = "chainId", default, skip_serializing_if = "Option::is_none")]
     pub chain_id: Option<U256>,
+}
+
+impl Transaction {
+    /// Returns the effective miner gas tip for the given base fee.
+    /// This is used in the calculation of the fee history.
+    ///
+    /// see:
+    /// https://github.com/ethereum/go-ethereum/blob/
+    /// 5b9cbe30f8ca2487c8991e50e9c939d5e6ec3cc2/core/types/transaction.go#L347
+    pub fn effective_gas_tip(&self, base_fee: Option<U256>) -> Option<U256> {
+        if let Some(base_fee) = base_fee {
+            let max_fee_per_gas = self
+                .max_fee_per_gas
+                .clone()
+                .unwrap_or(self.gas_price.clone().unwrap_or_default());
+
+            if max_fee_per_gas < base_fee {
+                None
+            } else {
+                let effective_max_fee = max_fee_per_gas - base_fee;
+                Some(std::cmp::min(
+                    effective_max_fee,
+                    self.max_priority_fee_per_gas
+                        .clone()
+                        .unwrap_or(self.gas_price.clone().unwrap_or_default()),
+                ))
+            }
+        } else {
+            Some(
+                self.max_priority_fee_per_gas
+                    .clone()
+                    .unwrap_or(self.gas_price.clone().unwrap_or_default()),
+            )
+        }
+    }
+
+    /// Gas cost of the transaction
+    pub fn gas_cost(&self) -> U256 {
+        match self.transaction_type.map(u64::from) {
+            Some(TRANSACTION_TYPE_EIP1559) => self.max_fee_per_gas.clone().unwrap_or_default(),
+            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price.clone().unwrap_or_default(),
+            _ => panic!("invalid transaction type"),
+        }
+    }
 }
 
 /// Method to create a transaction signature
