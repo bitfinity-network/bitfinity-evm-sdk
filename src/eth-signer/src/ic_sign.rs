@@ -119,6 +119,10 @@ impl IcSigner {
         let r = ethers_core::types::U256::from_big_endian(&signature_data[0..32]);
         let s = ethers_core::types::U256::from_big_endian(&signature_data[32..64]);
 
+        // Signature mallability check is not required, because DFinity uses `k256` crate
+        // as `ecdsa_secp256k1` implementation, and it takes care about signature mallability.
+        // Link: https://github.com/dfinity/ic/blob/master/rs/crypto/ecdsa_secp256k1/src/lib.rs
+
         // IC doesn't support recovery id signature parameter, so set it manually.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         let mut signature = Signature { r, s, v: 0 };
