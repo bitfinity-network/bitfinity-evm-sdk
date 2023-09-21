@@ -1,8 +1,9 @@
+use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
 use crate::U256;
 
-#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize, CandidType)]
 #[serde(rename_all = "camelCase")]
 pub struct FeeHistory {
     /// An array of block base fees per gas.
