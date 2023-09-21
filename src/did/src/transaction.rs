@@ -220,28 +220,17 @@ impl Transaction {
     /// 5b9cbe30f8ca2487c8991e50e9c939d5e6ec3cc2/core/types/transaction.go#L347
     pub fn effective_gas_tip(&self, base_fee: Option<U256>) -> Option<U256> {
         if let Some(base_fee) = base_fee {
-            let max_fee_per_gas = self
-                .max_fee_per_gas
-                .clone()
-                .unwrap_or(self.gas_price.clone().unwrap_or_default());
+            let max_fee_per_gas = self.gas_cost();
 
             if max_fee_per_gas < base_fee {
                 None
             } else {
                 let effective_max_fee = max_fee_per_gas - base_fee;
-                Some(std::cmp::min(
-                    effective_max_fee,
-                    self.max_priority_fee_per_gas
-                        .clone()
-                        .unwrap_or(self.gas_price.clone().unwrap_or_default()),
-                ))
+
+                Some(effective_max_fee.min(self.max_priority_fee_or_gas_price()))
             }
         } else {
-            Some(
-                self.max_priority_fee_per_gas
-                    .clone()
-                    .unwrap_or(self.gas_price.clone().unwrap_or_default()),
-            )
+            Some(self.max_priority_fee_or_gas_price())
         }
     }
 
@@ -249,6 +238,17 @@ impl Transaction {
     pub fn gas_cost(&self) -> U256 {
         match self.transaction_type.map(u64::from) {
             Some(TRANSACTION_TYPE_EIP1559) => self.max_fee_per_gas.clone().unwrap_or_default(),
+            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price.clone().unwrap_or_default(),
+            _ => panic!("invalid transaction type"),
+        }
+    }
+
+    /// Returns the priority fee or gas price of the transaction
+    pub fn max_priority_fee_or_gas_price(&self) -> U256 {
+        match self.transaction_type.map(u64::from) {
+            Some(TRANSACTION_TYPE_EIP1559) => {
+                self.max_priority_fee_per_gas.clone().unwrap_or_default()
+            }
             Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price.clone().unwrap_or_default(),
             _ => panic!("invalid transaction type"),
         }
