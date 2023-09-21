@@ -35,5 +35,6 @@ thiserror = { workspace = true }
 once_cell = { workspace = true }
 
 [dev-dependencies]
+eth-signer = { path = "../eth-signer" }
 rand = { workspace = true }
 tokio = { workspace = true }

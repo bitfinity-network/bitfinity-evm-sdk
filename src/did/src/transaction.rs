@@ -866,7 +866,7 @@ mod test {
         }
     }
 
-       #[test]
+    #[test]
     fn test_from_success_call_exe_result_to_transaction_receipt() {
         let exe_result = StorableExecutionResult {
             exe_result: ExeResult::Success {
@@ -990,5 +990,4 @@ mod test {
         let roundtrip_signature = Signature::from(ethers_signature);
         assert_eq!(signature, roundtrip_signature);
     }
-
 }
