@@ -1,7 +1,7 @@
 use candid::Principal;
-use did::transaction::{SigningMethod, TransactionBuilder};
 use did::{H160, H256, U256};
 use eth_signer::{Signer, Wallet};
+use eth_signer::transaction::{SigningMethod, TransactionBuilder};
 use ethers_core::k256::ecdsa::SigningKey;
 use evm_canister_client::ic_agent::Agent;
 use evm_canister_client::{EvmCanisterClient, IcAgentClient};

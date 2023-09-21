@@ -12,12 +12,16 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-ic_sign = ["ic-canister", "ic-exports", "candid"]
+ic_sign = ["ic-canister"]
 
 [dependencies]
 async-trait = { workspace = true }
+candid = { workspace = true }
+ethereum-types = { workspace = true }
 ethers-core = { workspace = true }
+did = { path = "../did" }
 hex = { workspace = true }
+ic-stable-structures = { workspace = true }
 serde = { workspace = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true }
@@ -25,7 +29,6 @@ thiserror = { workspace = true }
 # Dependencies for ic-siginig
 ic-exports = { workspace = true, optional = true }
 ic-canister = { workspace = true, optional = true }
-candid = { workspace = true, optional = true }
 
 [dev-dependencies]
 rand = { workspace = true }

@@ -518,11 +518,10 @@ mod test {
     use std::str::FromStr;
 
     use candid::{Decode, Encode};
-    use ethers_core::k256::ecdsa::SigningKey;
 
     use super::*;
     use crate::test_utils::read_all_files_to_json;
-    use crate::transaction::{SigningMethod, StorableExecutionResult, TransactionBuilder};
+    use crate::transaction::StorableExecutionResult;
 
     #[test]
     fn test_storable_block() {
@@ -572,19 +571,31 @@ mod test {
     }
 
     fn create_transaction(gas_price: Option<U256>, chain_id: u64) -> Transaction {
-        TransactionBuilder {
-            gas_price,
-            signature: SigningMethod::SigningKey(&SigningKey::from_slice(&[4u8; 32]).unwrap()),
-            from: &H160::from_slice(&[0u8; 20]),
+        ethers_core::types::Transaction {
+            from: ethereum_types::H160::from_slice(&[0u8; 20]),
             to: None,
-            nonce: U256::zero(),
-            value: U256::zero(),
-            input: vec![],
+            nonce: ethereum_types::U256::zero(),
+            value: ethereum_types::U256::zero(),
             gas: 20u64.into(),
-            chain_id,
-        }
-        .calculate_hash_and_build()
-        .unwrap()
+            gas_price: gas_price.map(Into::into),
+            input: vec![].into(),
+            chain_id: Some(chain_id.into()),
+            ..Default::default()
+        }.into()
+
+        // TransactionBuilder {
+        //     gas_price,
+        //     signature: SigningMethod::SigningKey(&SigningKey::from_slice(&[4u8; 32]).unwrap()),
+        //     from: &H160::from_slice(&[0u8; 20]),
+        //     to: None,
+        //     nonce: U256::zero(),
+        //     value: U256::zero(),
+        //     input: vec![],
+        //     gas: 20u64.into(),
+        //     chain_id,
+        // }
+        // .calculate_hash_and_build()
+        // .unwrap()
     }
 
     #[test]
