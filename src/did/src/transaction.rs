@@ -581,6 +581,7 @@ impl From<StorableExecutionResult> for TransactionReceipt {
             status: Some(exe_data.status),
             output: exe_data.output,
             contract_address: exe_data.contract_address,
+            cumulative_gas_used: tx_receipt.cumulative_gas_used,
             ..Default::default()
         }
     }
@@ -638,6 +639,7 @@ pub struct StorableExecutionResult {
     pub from: H160,
     pub to: Option<H160>,
     pub transaction_type: Option<U64>,
+    pub cumulative_gas_used: U256,
 }
 
 impl Storable for StorableExecutionResult {
@@ -1113,6 +1115,7 @@ mod test {
             from: H160::from(ethereum_types::H160::random()),
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
+            cumulative_gas_used: rand::random::<u64>().into(),
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -1121,6 +1124,7 @@ mod test {
         assert_eq!(receipt.from, exe_result.from);
         assert_eq!(receipt.contract_address, None);
         assert_eq!(receipt.block_hash, exe_result.block_hash);
+        assert_eq!(receipt.cumulative_gas_used, exe_result.cumulative_gas_used);
     }
 
     #[test]
@@ -1140,6 +1144,7 @@ mod test {
             from: H160::from(ethereum_types::H160::random()),
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
+            cumulative_gas_used: rand::random::<u64>().into(),
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -1149,6 +1154,7 @@ mod test {
         assert_eq!(receipt.contract_address, Some(contract_address));
         assert_eq!(receipt.block_hash, exe_result.block_hash);
         assert_eq!(receipt.output, Some(vec![1, 2]));
+        assert_eq!(receipt.cumulative_gas_used, exe_result.cumulative_gas_used);
     }
 
     #[test]
@@ -1166,6 +1172,7 @@ mod test {
             from: H160::from(ethereum_types::H160::random()),
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
+            cumulative_gas_used: rand::random::<u64>().into(),
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -1175,10 +1182,11 @@ mod test {
         assert_eq!(receipt.contract_address, None);
         assert_eq!(receipt.block_hash, exe_result.block_hash);
         assert_eq!(receipt.output, Some(vec![1, 2, 3]));
+        assert_eq!(receipt.cumulative_gas_used, exe_result.cumulative_gas_used);
     }
 
     #[test]
-    fn test_from_helt_exe_result_to_transaction_receipt() {
+    fn test_from_halt_exe_result_to_transaction_receipt() {
         let exe_result = StorableExecutionResult {
             exe_result: ExeResult::Halt {
                 gas_used: rand::random::<u64>().into(),
@@ -1191,6 +1199,7 @@ mod test {
             from: H160::from(ethereum_types::H160::random()),
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
+            cumulative_gas_used: rand::random::<u64>().into(),
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -1200,6 +1209,7 @@ mod test {
         assert_eq!(receipt.contract_address, None);
         assert_eq!(receipt.block_hash, exe_result.block_hash);
         assert_eq!(receipt.output, None);
+        assert_eq!(receipt.cumulative_gas_used, exe_result.cumulative_gas_used);
     }
 
     #[test]
