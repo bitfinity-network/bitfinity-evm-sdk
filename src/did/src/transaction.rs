@@ -1409,7 +1409,7 @@ mod test {
         );
 
         assert_eq!(
-            tx.effective_gas_tip(Some(base_per_gas.clone())).unwrap(),
+            tx.effective_gas_tip(Some(base_per_gas)).unwrap(),
             20_000u64.into()
         );
 
