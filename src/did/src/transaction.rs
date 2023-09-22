@@ -721,6 +721,33 @@ impl From<Bloom> for ethereum_types::Bloom {
     }
 }
 
+/// Upper limit for signature S field.
+/// See comment to `fn check_signature_not_malleable()` for more details.
+pub const SIGNATURE_S_UPPER_LIMIT_HEX_STR: &str =
+    "0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0";
+
+/// This comment copied from OpenZeppelin `ECDSA::tryRecover()` function.
+///
+/// EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
+/// unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines
+/// the valid range for s in (301): 0 < s < secp256k1n ÷ 2 + 1, and for v in (302): v ∈ {27, 28}. Most
+/// signatures from current libraries generate a unique signature with an s-value in the lower half order.
+///
+/// If your library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
+/// with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or
+/// vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept
+/// these malleable signatures as well.
+pub fn check_signature_not_malleable(s: &U256) -> Result<(), EvmError> {
+    let upper_limit = U256::from_hex_str(SIGNATURE_S_UPPER_LIMIT_HEX_STR)?;
+    if s > &upper_limit {
+        return Err(EvmError::TransactionSignature(format!(
+            "S value in transaction signature should not exceed {upper_limit}"
+        )));
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod test {
     use std::str::FromStr;
@@ -1203,5 +1230,14 @@ mod test {
 
         let recovered_from = tx.recover_from().unwrap();
         assert_eq!(from, recovered_from);
+    }
+
+    #[test]
+    fn test_signature_malleability_check() {
+        let s = U256::from_hex_str(SIGNATURE_S_UPPER_LIMIT_HEX_STR).unwrap();
+        check_signature_not_malleable(&s).unwrap();
+
+        // If signature S field exceeds the limit, it should return an error.
+        check_signature_not_malleable(&(s + U256::one())).unwrap_err();
     }
 }
