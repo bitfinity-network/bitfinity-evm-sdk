@@ -112,6 +112,35 @@ impl From<EthersSignature> for Signature {
     }
 }
 
+impl Signature {
+    /// Upper limit for signature S field.
+    /// See comment to `Signature::check_malleability()` for more details.
+    pub const S_UPPER_LIMIT_HEX_STR: &str =
+        "0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0";
+
+    /// This comment copied from OpenZeppelin `ECDSA::tryRecover()` function.
+    ///
+    /// EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
+    /// unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines
+    /// the valid range for s in (301): 0 < s < secp256k1n ÷ 2 + 1, and for v in (302): v ∈ {27, 28}. Most
+    /// signatures from current libraries generate a unique signature with an s-value in the lower half order.
+    ///
+    /// If your library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
+    /// with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or
+    /// vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept
+    /// these malleable signatures as well.
+    pub fn check_malleability(s: &U256) -> Result<(), EvmError> {
+        let upper_limit = U256::from_hex_str(Self::S_UPPER_LIMIT_HEX_STR)?;
+        if s > &upper_limit {
+            return Err(EvmError::TransactionSignature(format!(
+                "S value in transaction signature should not exceed {upper_limit}"
+            )));
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 pub struct Transaction {
     /// The transaction's hash
@@ -990,4 +1019,40 @@ mod test {
         let roundtrip_signature = Signature::from(ethers_signature);
         assert_eq!(signature, roundtrip_signature);
     }
+
+    #[test]
+    fn test_build_transaction_should_have_recoverable_from() {
+        let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
+        let from = utils::secret_key_to_address(&key);
+        let chain_id = 31540;
+        let transaction_builder = TransactionBuilder {
+            from: &from.into(),
+            to: None,
+            nonce: U256::zero(),
+            value: U256::zero(),
+            gas: 10_000u64.into(),
+            gas_price: Some(20_000u64.into()),
+            input: Vec::new(),
+            signature: SigningMethod::SigningKey(&key),
+            chain_id,
+        };
+
+        let tx: ethers_core::types::Transaction = transaction_builder
+            .calculate_hash_and_build()
+            .unwrap()
+            .into();
+
+        let recovered_from = tx.recover_from().unwrap();
+        assert_eq!(from, recovered_from);
+    }
+
+    #[test]
+    fn test_signature_malleability_check() {
+        let s = U256::from_hex_str(Signature::S_UPPER_LIMIT_HEX_STR).unwrap();
+        Signature::check_malleability(&s).unwrap();
+
+        // If signature S field exceeds the limit, it should return an error.
+        Signature::check_malleability(&(s + U256::one())).unwrap_err();
+    }
+
 }
