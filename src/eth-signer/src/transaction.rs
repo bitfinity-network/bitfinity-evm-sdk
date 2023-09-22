@@ -1,13 +1,12 @@
 use std::borrow::Cow;
 
+use did::error::EvmError;
+use did::hash::H160;
+use did::integer::U256;
+use did::Transaction;
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::Signature as EthersSignature;
-
-use did::hash::H160;
-use did::integer::U256;
-use did::error::EvmError;
-use did::Transaction;
 
 use crate::Wallet;
 
@@ -89,8 +88,9 @@ mod test {
 
     use did::U64;
     use ethers_core::utils;
-    use crate::LocalWallet;
+
     use super::*;
+    use crate::LocalWallet;
 
     #[test]
     fn test_build_transaction_with_empty_signature() {
@@ -201,7 +201,6 @@ mod test {
         assert_eq!(tx.chain_id, Some(chain_id.into()));
     }
 
-  
     #[test]
     fn test_build_transaction_should_have_recoverable_from() {
         let key = SigningKey::from_slice(&[3u8; 32]).unwrap();

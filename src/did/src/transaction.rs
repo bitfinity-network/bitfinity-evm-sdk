@@ -15,6 +15,7 @@ use sha3::Keccak256;
 use super::hash::{H160, H256};
 use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
+use crate::error::EvmError;
 use crate::{codec, Bytes};
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq)]
@@ -1021,32 +1022,6 @@ mod test {
     }
 
     #[test]
-    fn test_build_transaction_should_have_recoverable_from() {
-        let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
-        let from = utils::secret_key_to_address(&key);
-        let chain_id = 31540;
-        let transaction_builder = TransactionBuilder {
-            from: &from.into(),
-            to: None,
-            nonce: U256::zero(),
-            value: U256::zero(),
-            gas: 10_000u64.into(),
-            gas_price: Some(20_000u64.into()),
-            input: Vec::new(),
-            signature: SigningMethod::SigningKey(&key),
-            chain_id,
-        };
-
-        let tx: ethers_core::types::Transaction = transaction_builder
-            .calculate_hash_and_build()
-            .unwrap()
-            .into();
-
-        let recovered_from = tx.recover_from().unwrap();
-        assert_eq!(from, recovered_from);
-    }
-
-    #[test]
     fn test_signature_malleability_check() {
         let s = U256::from_hex_str(Signature::S_UPPER_LIMIT_HEX_STR).unwrap();
         Signature::check_malleability(&s).unwrap();
@@ -1054,5 +1029,4 @@ mod test {
         // If signature S field exceeds the limit, it should return an error.
         Signature::check_malleability(&(s + U256::one())).unwrap_err();
     }
-
 }

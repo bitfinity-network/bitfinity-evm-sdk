@@ -2,19 +2,18 @@ use std::borrow::Cow;
 
 use async_trait::async_trait;
 use candid::CandidType;
-use crate::{Signer, Wallet};
-use ethers_core::k256::ecdsa::SigningKey;
-use ethers_core::types::transaction::eip2718::TypedTransaction;
-use ethers_core::utils;
-use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
-use serde::{Deserialize, Serialize};
-
 use did::error::{EvmError, Result};
 use did::transaction::Signature;
 use did::{codec, H160};
-
+use ethers_core::k256::ecdsa::SigningKey;
+use ethers_core::types::transaction::eip2718::TypedTransaction;
+use ethers_core::utils;
 #[cfg(feature = "ic_sign")]
-pub use ic_sign::{ManagementCanisterSigner, SigningKeyId, IcSigner};
+pub use ic_sign::{IcSigner, ManagementCanisterSigner, SigningKeyId};
+use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
+use serde::{Deserialize, Serialize};
+
+use crate::{Signer, Wallet};
 
 /// A trait that abstracts out the transaction signing component
 #[async_trait(?Send)]
@@ -36,7 +35,9 @@ pub enum SigningStrategy {
     Local { private_key: [u8; 32] },
     /// Use management canister and ECDSA signing endpoints
     #[cfg(feature = "ic_sign")]
-    ManagementCanister { key_id: crate::ic_sign::SigningKeyId },
+    ManagementCanister {
+        key_id: crate::ic_sign::SigningKeyId,
+    },
 }
 
 impl SigningStrategy {
@@ -205,72 +206,71 @@ impl<'de> Deserialize<'de> for LocalTxSigner {
 mod ic_sign {
     use std::cell::RefCell;
 
-    pub use crate::ic_sign::{SigningKeyId, DerivationPath, IcSigner};
-
     use super::*;
+    pub use crate::ic_sign::{DerivationPath, IcSigner, SigningKeyId};
 
-/// An implementation of a signer that uses Management canister
-#[derive(CandidType, Serialize, Deserialize, Clone)]
-pub struct ManagementCanisterSigner {
-    pub(super) key_id: SigningKeyId,
-    pub(super) cached_address: RefCell<Option<H160>>,
-    pub(super) derivation_path: DerivationPath,
-}
+    /// An implementation of a signer that uses Management canister
+    #[derive(CandidType, Serialize, Deserialize, Clone)]
+    pub struct ManagementCanisterSigner {
+        pub(super) key_id: SigningKeyId,
+        pub(super) cached_address: RefCell<Option<H160>>,
+        pub(super) derivation_path: DerivationPath,
+    }
 
-impl ManagementCanisterSigner {
-    pub fn new(key_id: SigningKeyId, derivation_path: DerivationPath) -> Self {
-        Self {
-            key_id,
-            cached_address: RefCell::new(None),
-            derivation_path,
+    impl ManagementCanisterSigner {
+        pub fn new(key_id: SigningKeyId, derivation_path: DerivationPath) -> Self {
+            Self {
+                key_id,
+                cached_address: RefCell::new(None),
+                derivation_path,
+            }
         }
     }
-}
 
-#[async_trait(?Send)]
-impl TransactionSigner for ManagementCanisterSigner {
-    async fn get_address(&self) -> Result<H160> {
-        if let Some(address) = &*self.cached_address.borrow() {
-            return Ok(address.clone());
+    #[async_trait(?Send)]
+    impl TransactionSigner for ManagementCanisterSigner {
+        async fn get_address(&self) -> Result<H160> {
+            if let Some(address) = &*self.cached_address.borrow() {
+                return Ok(address.clone());
+            }
+
+            let pubkey = IcSigner {}
+                .public_key(self.key_id, self.derivation_path.clone())
+                .await
+                .map_err(|e| EvmError::from(format!("failed to get address: {e}")))?;
+            let address: H160 = IcSigner
+                .pubkey_to_address(&pubkey)
+                .map_err(|e| {
+                    EvmError::Internal(format!("failed to convert public key to address: {e}"))
+                })?
+                .into();
+            *self.cached_address.borrow_mut() = Some(address.clone());
+
+            Ok(address)
         }
 
-        let pubkey = IcSigner {}
-            .public_key(self.key_id, self.derivation_path.clone())
-            .await
-            .map_err(|e| EvmError::from(format!("failed to get address: {e}")))?;
-        let address: H160 = IcSigner
-            .pubkey_to_address(&pubkey)
-            .map_err(|e| {
-                EvmError::Internal(format!("failed to convert public key to address: {e}"))
-            })?
-            .into();
-        *self.cached_address.borrow_mut() = Some(address.clone());
+        async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature> {
+            IcSigner {}
+                .sign_transaction(transaction, self.key_id, self.derivation_path.clone())
+                .await
+                .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
+                .map(Into::into)
+        }
 
-        Ok(address)
+        async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+            let address = self.get_address().await?;
+            IcSigner {}
+                .sign_digest(
+                    &address.into(),
+                    digest,
+                    self.key_id,
+                    self.derivation_path.clone(),
+                )
+                .await
+                .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
+                .map(Into::into)
+        }
     }
-
-    async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature> {
-        IcSigner {}
-            .sign_transaction(transaction, self.key_id, self.derivation_path.clone())
-            .await
-            .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
-            .map(Into::into)
-    }
-
-    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
-        let address = self.get_address().await?;
-        IcSigner {}
-            .sign_digest(
-                &address.into(),
-                digest,
-                self.key_id,
-                self.derivation_path.clone(),
-            )
-            .await
-            .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
-            .map(Into::into)
-    }
-}
 }
 
 #[cfg(test)]
