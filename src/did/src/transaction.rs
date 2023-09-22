@@ -117,6 +117,35 @@ impl From<EthersSignature> for Signature {
     }
 }
 
+impl Signature {
+    /// Upper limit for signature S field.
+    /// See comment to `Signature::check_malleability()` for more details.
+    pub const S_UPPER_LIMIT_HEX_STR: &str =
+        "0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0";
+
+    /// This comment copied from OpenZeppelin `ECDSA::tryRecover()` function.
+    ///
+    /// EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
+    /// unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines
+    /// the valid range for s in (301): 0 < s < secp256k1n ÷ 2 + 1, and for v in (302): v ∈ {27, 28}. Most
+    /// signatures from current libraries generate a unique signature with an s-value in the lower half order.
+    ///
+    /// If your library generates malleable signatures, such as s-values in the upper range, calculate a new s-value
+    /// with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or
+    /// vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept
+    /// these malleable signatures as well.
+    pub fn check_malleability(s: &U256) -> Result<(), EvmError> {
+        let upper_limit = U256::from_hex_str(Self::S_UPPER_LIMIT_HEX_STR)?;
+        if s > &upper_limit {
+            return Err(EvmError::TransactionSignature(format!(
+                "S value in transaction signature should not exceed {upper_limit}"
+            )));
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 pub struct Transaction {
     /// The transaction's hash
@@ -1250,7 +1279,16 @@ mod test {
         assert_eq!(from, recovered_from);
     }
 
-    fn build_transaction(
+    #[test]
+    fn test_signature_malleability_check() {
+        let s = U256::from_hex_str(Signature::S_UPPER_LIMIT_HEX_STR).unwrap();
+        Signature::check_malleability(&s).unwrap();
+
+        // If signature S field exceeds the limit, it should return an error.
+        Signature::check_malleability(&(s + U256::one())).unwrap_err();
+    }
+
+        fn build_transaction(
         tx_type: Option<u64>,
         gas_price: Option<U256>,
         max_priority_fee_per_gas: Option<U256>,
