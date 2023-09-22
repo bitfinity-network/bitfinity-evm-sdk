@@ -18,6 +18,7 @@ use sha3::Keccak256;
 use super::hash::{H160, H256};
 use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
+use crate::constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930};
 use crate::error::EvmError;
 use crate::{codec, Bytes};
 
@@ -237,6 +238,50 @@ pub struct Transaction {
 
     #[serde(rename = "chainId", default, skip_serializing_if = "Option::is_none")]
     pub chain_id: Option<U256>,
+}
+
+impl Transaction {
+    /// Returns the effective miner gas tip for the given base fee.
+    /// This is used in the calculation of the fee history.
+    ///
+    /// see:
+    /// https://github.com/ethereum/go-ethereum/blob/
+    /// 5b9cbe30f8ca2487c8991e50e9c939d5e6ec3cc2/core/types/transaction.go#L347
+    pub fn effective_gas_tip(&self, base_fee: Option<U256>) -> Option<U256> {
+        if let Some(base_fee) = base_fee {
+            let max_fee_per_gas = self.gas_cost();
+
+            if max_fee_per_gas < base_fee {
+                None
+            } else {
+                let effective_max_fee = max_fee_per_gas - base_fee;
+
+                Some(effective_max_fee.min(self.max_priority_fee_or_gas_price()))
+            }
+        } else {
+            Some(self.max_priority_fee_or_gas_price())
+        }
+    }
+
+    /// Gas cost of the transaction
+    pub fn gas_cost(&self) -> U256 {
+        match self.transaction_type.map(u64::from) {
+            Some(TRANSACTION_TYPE_EIP1559) => self.max_fee_per_gas.clone().unwrap_or_default(),
+            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price.clone().unwrap_or_default(),
+            _ => panic!("invalid transaction type"),
+        }
+    }
+
+    /// Returns the priority fee or gas price of the transaction
+    pub fn max_priority_fee_or_gas_price(&self) -> U256 {
+        match self.transaction_type.map(u64::from) {
+            Some(TRANSACTION_TYPE_EIP1559) => {
+                self.max_priority_fee_per_gas.clone().unwrap_or_default()
+            }
+            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price.clone().unwrap_or_default(),
+            _ => panic!("invalid transaction type"),
+        }
+    }
 }
 
 /// Method to create a transaction signature
@@ -1241,5 +1286,138 @@ mod test {
 
         // If signature S field exceeds the limit, it should return an error.
         Signature::check_malleability(&(s + U256::one())).unwrap_err();
+    }
+
+    fn build_transaction(
+        tx_type: Option<u64>,
+        gas_price: Option<U256>,
+        max_priority_fee_per_gas: Option<U256>,
+        max_fee_per_gas: Option<U256>,
+    ) -> Transaction {
+        let mut tx = TransactionBuilder {
+            from: &H160::from_slice(&[2u8; 20]),
+            to: None,
+            nonce: U256::zero(),
+            value: U256::zero(),
+            gas: 10_000u64.into(),
+            gas_price: None,
+            input: Vec::new(),
+            signature: SigningMethod::None,
+            chain_id: 31540,
+        }
+        .calculate_hash_and_build()
+        .unwrap();
+
+        match tx_type {
+            Some(tx_type) if tx_type == 1 => {
+                tx.transaction_type = Some(U64::from(1u64));
+                tx.gas_price = gas_price;
+            }
+            Some(tx_type) if tx_type == 2 => {
+                tx.transaction_type = Some(U64::from(2u64));
+                tx.max_priority_fee_per_gas = max_priority_fee_per_gas;
+                tx.max_fee_per_gas = max_fee_per_gas;
+            }
+            Some(_) => panic!("Invalid transaction type"),
+            None => tx.gas_price = gas_price,
+        }
+
+        tx
+    }
+
+    #[test]
+    fn test_gas_cost_for_different_transaction_types() {
+        let txns = vec![
+            (
+                build_transaction(Some(1), Some(20_000u64.into()), None, None),
+                20_000u64.into(),
+            ),
+            (
+                build_transaction(
+                    Some(2),
+                    None,
+                    Some(20_000u64.into()),
+                    Some(30_000u64.into()),
+                ),
+                30_000u64.into(),
+            ),
+            (
+                build_transaction(None, Some(20_000u64.into()), None, None),
+                20_000u64.into(),
+            ),
+            (
+                build_transaction(None, Some(20_000u64.into()), None, None),
+                20_000u64.into(),
+            ),
+        ];
+
+        for (tx, expected_gas_cost) in txns {
+            assert_eq!(tx.gas_cost(), expected_gas_cost);
+        }
+    }
+
+    #[test]
+    fn test_max_priority_fee_or_gas_price_for_different_transaction_types() {
+        let txns = vec![
+            (
+                build_transaction(Some(1), Some(20_000u64.into()), None, None),
+                20_000u64.into(),
+            ),
+            (
+                build_transaction(
+                    Some(2),
+                    None,
+                    Some(20_000u64.into()),
+                    Some(30_000u64.into()),
+                ),
+                20_000u64.into(),
+            ),
+            (
+                build_transaction(None, Some(20_000u64.into()), None, None),
+                20_000u64.into(),
+            ),
+            (
+                build_transaction(None, Some(20_000u64.into()), None, None),
+                20_000u64.into(),
+            ),
+        ];
+
+        for (tx, expected_max_priority_fee_or_gas_price) in txns {
+            assert_eq!(
+                tx.max_priority_fee_or_gas_price(),
+                expected_max_priority_fee_or_gas_price
+            );
+        }
+    }
+
+    #[test]
+    fn test_effective_gas_tip_for_different_transaction_types() {
+        let base_per_gas: U256 = 20_000u64.into();
+
+        let tx = build_transaction(Some(1), Some(30_000u64.into()), None, None);
+
+        assert_eq!(
+            tx.effective_gas_tip(Some(base_per_gas.clone())).unwrap(),
+            10_000u64.into()
+        );
+
+        let tx = build_transaction(
+            Some(2),
+            None,
+            Some(30_000u64.into()),
+            Some(40_000u64.into()),
+        );
+
+        assert_eq!(
+            tx.effective_gas_tip(Some(base_per_gas)).unwrap(),
+            20_000u64.into()
+        );
+
+        let tx = build_transaction(None, Some(30_000u64.into()), None, None);
+
+        assert_eq!(
+            tx.effective_gas_tip(None).unwrap(),
+            tx.max_priority_fee_or_gas_price()
+        )
     }
 }
