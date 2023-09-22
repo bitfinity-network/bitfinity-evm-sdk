@@ -1288,7 +1288,7 @@ mod test {
         Signature::check_malleability(&(s + U256::one())).unwrap_err();
     }
 
-        fn build_transaction(
+    fn build_transaction(
         tx_type: Option<u64>,
         gas_price: Option<U256>,
         max_priority_fee_per_gas: Option<U256>,
