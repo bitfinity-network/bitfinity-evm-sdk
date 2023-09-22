@@ -12,7 +12,7 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-ic_sign = ["ic-canister"]
+ic_sign = ["ic-canister", "ic-exports"]
 
 [dependencies]
 async-trait = { workspace = true }
