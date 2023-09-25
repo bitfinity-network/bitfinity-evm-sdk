@@ -13,7 +13,7 @@ bitfinity = []
 
 [dependencies]
 did = { path = "../did" }
-minter-api = { path = "../minter-api" }
+minter-did = { path = "../minter-did" }
 
 ic-canister = { workspace = true }
 ic-exports = { workspace = true }

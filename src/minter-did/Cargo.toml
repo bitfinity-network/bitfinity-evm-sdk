@@ -2,7 +2,7 @@
 categories = ["cryptography::cryptocurrencies"]
 description = "API types definition for minter canister"
 include = ["src/**/*", "../../LICENSE", "../../README.md"]
-name = "minter-api"
+name = "minter-did"
 
 authors.workspace = true
 homepage.workspace = true

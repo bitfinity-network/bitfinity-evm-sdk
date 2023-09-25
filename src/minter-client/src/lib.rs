@@ -1,11 +1,11 @@
 use candid::{Nat, Principal};
 use did::H160;
 use ic_canister_client::{CanisterClient, CanisterClientResult};
-use minter_api::error::Result as McResult;
-use minter_api::id256::Id256;
-use minter_api::init::OperationPricing;
-use minter_api::order::SignedMintOrder;
-use minter_api::reason::Icrc2Burn;
+use minter_did::error::Result as McResult;
+use minter_did::id256::Id256;
+use minter_did::init::OperationPricing;
+use minter_did::order::SignedMintOrder;
+use minter_did::reason::Icrc2Burn;
 
 pub struct MinterCanisterClient<C> {
     client: C,
