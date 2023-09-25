@@ -7,6 +7,8 @@ members = [
     "src/evm-block-extractor",
     "src/evm-canister-client",
     "src/iceth-client",
+    "src/minter-api",
+    "src/minter-client",
     "src/iceth-client/test-canister",
     "src/register-evm-agent/src/register_evm_agent",
     "src/register-evm-agent/src/simple_canister",
