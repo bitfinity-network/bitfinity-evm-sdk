@@ -15,12 +15,14 @@ pub mod mint_order_exemption;
 pub mod notify;
 pub mod transaction;
 
+pub mod fees;
 #[cfg(test)]
 mod test_utils;
 
 pub use block::Block;
 use candid::{CandidType, Deserialize};
 pub use error::{ExitFatal, HaltError};
+pub use fees::FeeHistory;
 pub use hash::{H160, H256, H64};
 pub use integer::{U256, U64};
 pub use mint_order_exemption::MintOrderExemptionUserData;
