@@ -145,6 +145,18 @@ impl TryFrom<Id256> for Principal {
     }
 }
 
+impl TryFrom<Id256> for H160 {
+    type Error = Error;
+
+    fn try_from(id: Id256) -> std::result::Result<Self, Self::Error> {
+        if id.0[0] != Id256::EVM_ADDRESS_MARK {
+            return Err(Error::Internal("wrong address mark in Id256".into()));
+        }
+
+        Ok(H160::from_slice(&id.0[1..][..20]))
+    }
+}
+
 impl Storable for Id256 {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
         (&self.0[..]).into()
