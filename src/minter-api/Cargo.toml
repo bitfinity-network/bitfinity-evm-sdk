@@ -21,6 +21,7 @@ serde = { workspace = true }
 candid = { workspace = true }
 thiserror = { workspace = true }
 ic-exports = { workspace = true, features = ["icrc"]}
+ic-log = { workspace = true }
 
 [dev-dependencies]
 rand = { workspace = true }

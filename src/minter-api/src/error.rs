@@ -8,6 +8,7 @@ use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Minter canister operation error.
 #[derive(Debug, Error, Deserialize, CandidType, PartialEq, Eq, Clone)]
 pub enum Error {
     #[error("internal error: {0}")]
