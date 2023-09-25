@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use candid::{CandidType, Principal};
 use did::sign_strategy::SigningStrategy;
-use did::{H160, U256, codec};
+use did::{codec, H160, U256};
 use ic_log::LogSettings;
 use ic_stable_structures::Storable;
 use serde::Deserialize;
@@ -43,7 +43,6 @@ pub struct InitData {
     #[serde(default)]
     pub log_settings: Option<LogSettings>,
 }
-
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone, CandidType, Deserialize, serde::Serialize)]
 pub struct OperationPricing {
