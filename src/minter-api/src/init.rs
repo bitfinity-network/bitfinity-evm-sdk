@@ -1,9 +1,11 @@
+use std::borrow::Cow;
 use std::time::Duration;
 
 use candid::{CandidType, Principal};
 use did::sign_strategy::SigningStrategy;
-use did::{H160, U256};
+use did::{H160, U256, codec};
 use ic_log::LogSettings;
+use ic_stable_structures::Storable;
 use serde::Deserialize;
 
 /// Minter canister initialization data.
@@ -40,4 +42,38 @@ pub struct InitData {
     /// Log settings
     #[serde(default)]
     pub log_settings: Option<LogSettings>,
+}
+
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone, CandidType, Deserialize, serde::Serialize)]
+pub struct OperationPricing {
+    pub evmc_notification: u32,
+    pub evm_registration: u32,
+    pub icrc_mint_approval: u32,
+    pub icrc_transfer: u32,
+    pub erc20_mint: u32,
+    pub endpoint_query: u32,
+}
+
+impl Default for OperationPricing {
+    fn default() -> Self {
+        Self {
+            evmc_notification: 8,
+            evm_registration: 1,
+            icrc_mint_approval: 1,
+            icrc_transfer: 1,
+            erc20_mint: 1,
+            endpoint_query: 1,
+        }
+    }
+}
+
+impl Storable for OperationPricing {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
+        codec::encode(self).into()
+    }
+
+    fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
+        codec::decode(&bytes)
+    }
 }
