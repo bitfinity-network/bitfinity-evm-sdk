@@ -3,6 +3,7 @@ use did::H160;
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 use minter_api::error::Result as McResult;
 use minter_api::id256::Id256;
+use minter_api::init::OperationPricing;
 use minter_api::order::SignedMintOrder;
 use minter_api::reason::Icrc2Burn;
 
@@ -94,9 +95,19 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
 
     /// Returns operations pricing.
     /// This method is available for canister owner only.
-    // pub async fn set_operation_pricing(&mut self, pricing: OperationPricing) -> Result<()> {
-    //     self.client.update("set_operation_pricing", (pricing,)).await
-    // }
+    pub async fn set_operation_pricing(
+        &mut self,
+        pricing: OperationPricing,
+    ) -> CanisterClientResult<McResult<()>> {
+        self.client
+            .update("set_operation_pricing", (pricing,))
+            .await
+    }
+
+    /// Returns operation pricing.
+    pub async fn get_operation_pricing(&self) -> CanisterClientResult<OperationPricing> {
+        self.client.query("get_operation_pricing", ()).await
+    }
 
     /// Creates ERC-20 mint order for ICRC-2 tokens burning.
     pub async fn create_erc_20_mint_order(
