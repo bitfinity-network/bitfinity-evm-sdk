@@ -22,6 +22,7 @@ candid = { workspace = true }
 thiserror = { workspace = true }
 ic-exports = { workspace = true, features = ["icrc"]}
 ic-log = { workspace = true }
+ic-stable-structures = { workspace = true }
 
 [dev-dependencies]
 rand = { workspace = true }
