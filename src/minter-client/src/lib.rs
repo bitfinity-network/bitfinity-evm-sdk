@@ -1,257 +1,157 @@
-use candid::{CandidType, Deserialize, Principal};
-use did::{BlockNumber, Bytes, TransactionReceipt, H160, H256, U256};
-use ethers_core::types::{Transaction as EthTransaction, TransactionRequest};
-use ic_canister::virtual_canister_call;
-use ic_exports::ic_cdk::api::call::RejectionCode;
-use ic_exports::ic_kit::ic;
-use jsonrpc_core::Output;
-use serde_json::json;
-use thiserror::Error;
+use candid::{Nat, Principal};
+use did::H160;
+use ic_canister_client::{CanisterClient, CanisterClientResult};
+use minter_api::error::Result as McResult;
+use minter_api::id256::Id256;
+use minter_api::order::SignedMintOrder;
+use minter_api::reason::Icrc2Burn;
 
-/// Iceth client error
-#[derive(Debug, Clone, Error, Deserialize, CandidType, Eq, PartialEq)]
-pub enum Error {
-    #[error("inter-canister call failed with code {0:?}: {1}")]
-    CallFailed(RejectionCode, String),
-
-    #[error(transparent)]
-    IcethError(#[from] IcethError),
-
-    #[error("serialization error: {0}")]
-    SerializationError(String),
-
-    #[error("JSON-RPC call failed: {0:?}")]
-    JsonRpcFailure(String),
+pub struct MinterCanisterClient<C> {
+    client: C,
 }
 
-impl From<(RejectionCode, String)> for Error {
-    fn from(error: (RejectionCode, String)) -> Self {
-        Self::CallFailed(error.0, error.1)
-    }
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(error: serde_json::Error) -> Self {
-        Self::SerializationError(error.to_string())
-    }
-}
-
-impl From<jsonrpc_core::Failure> for Error {
-    fn from(failure: jsonrpc_core::Failure) -> Self {
-        Self::JsonRpcFailure(failure.error.to_string())
-    }
-}
-
-/// Iceth canister error.
-#[derive(Debug, Clone, Error, Deserialize, CandidType, Eq, PartialEq)]
-pub enum IcethError {
-    #[error("no permission")]
-    NoPermission,
-
-    #[error("too few cycles: {0}")]
-    TooFewCycles(String),
-
-    #[error("service url parse error")]
-    ServiceUrlParseError,
-
-    #[error("service url host missing")]
-    ServiceUrlHostMissing,
-
-    #[error("service url host not allowed")]
-    ServiceUrlHostNotAllowed,
-
-    #[error("provider not found")]
-    ProviderNotFound,
-
-    #[error("http request error {code}: {message}")]
-    HttpRequestError { code: u32, message: String },
-}
-
-/// Client for iceht canister. Wraps JSON-RPC API to Rust functions.
-pub struct Client {
-    pub iceth_principal: Principal,
-    pub node_url: String,
-}
-
-impl Client {
-    /// Creates a new client instance.
-    pub fn new(iceth_principal: Principal, url: String) -> Self {
-        Self {
-            iceth_principal,
-            node_url: url,
-        }
+impl<C: CanisterClient> MinterCanisterClient<C> {
+    pub fn new(client: C) -> Self {
+        Self { client }
     }
 
-    /// Returns balance of the given address.
-    pub async fn get_balance(&self, address: &H160, block: BlockNumber) -> Result<U256, Error> {
-        let data = format!(
-            r#"{{"jsonrpc":"2.0","id":0,"method":"eth_getBalance","params":["{address:#x}", "{block}"]}}"#,
-        );
-        let result = self.json_rpc_call(&data, 1024).await?;
-        self.process_json_rpc_response(&result)
+    /// Updates the runtime configuration of the logger with a new filter in the same form as the `RUST_LOG`
+    /// environment variable.
+    ///
+    /// Example of valid filters:
+    /// - info
+    /// - debug,crate1::mod1=error,crate1::mod2,crate2=debug
+    ///
+    /// This method is only for canister owner.
+    pub async fn set_logger_filter(&self, filter: String) -> CanisterClientResult<McResult<()>> {
+        self.client.update("set_logger_filter", (filter,)).await
     }
 
-    /// Returns contract code of the given address.
-    pub async fn get_contract_code(
+    /// Gets the logs
+    ///
+    /// # Arguments
+    /// - `count` is the number of logs to return
+    ///
+    /// This method is only for canister owner.
+    pub async fn ic_logs(&self, count: usize) -> CanisterClientResult<McResult<Vec<String>>> {
+        self.client.update("ic_logs", (count,)).await
+    }
+
+    /// Returns principal of canister owner.
+    pub async fn get_owner(&self) -> CanisterClientResult<Principal> {
+        self.client.query("get_owner", ()).await
+    }
+
+    /// Sets a new principal for canister owner.
+    ///
+    /// This method should be called only by current owner,
+    /// else `Error::NotAuthorised` will be returned.
+    pub async fn set_owner(&mut self, owner: Principal) -> CanisterClientResult<McResult<()>> {
+        self.client.update("set_owner", (owner,)).await
+    }
+
+    /// Returns principal of EVM canister with which the minter canister works.
+    pub async fn get_evm_principal(&self) -> CanisterClientResult<Principal> {
+        self.client.query("get_evm_principal", ()).await
+    }
+
+    /// Sets principal of EVM canister with which the minter canister works.
+    ///
+    /// This method should be called only by current owner,
+    /// else `Error::NotAuthorised` will be returned.
+    pub async fn set_evm_principal(
+        &mut self,
+        evm: Principal,
+    ) -> CanisterClientResult<McResult<()>> {
+        self.client.update("set_evm_principal", (evm,)).await
+    }
+
+    /// Returns the address of the BFT bridge contract in EVM canister.
+    pub async fn get_bft_bridge_contract(&self) -> CanisterClientResult<McResult<Option<H160>>> {
+        self.client.update("get_bft_bridge_contract", ()).await
+    }
+
+    /// Registers BftBridge contract for EVM canister.
+    /// This method is available for canister owner only.
+    pub async fn register_evmc_bft_bridge(
         &self,
+        bft_bridge_address: H160,
+    ) -> CanisterClientResult<McResult<()>> {
+        self.client
+            .update("register_evmc_bft_bridge", (bft_bridge_address,))
+            .await
+    }
+
+    /// Returns operation points number of the user.
+    pub async fn get_user_operation_points(
+        &self,
+        user: Option<Principal>,
+    ) -> CanisterClientResult<u32> {
+        self.client
+            .query("get_user_operation_points", (user,))
+            .await
+    }
+
+    /// Returns operations pricing.
+    /// This method is available for canister owner only.
+    // pub async fn set_operation_pricing(&mut self, pricing: OperationPricing) -> Result<()> {
+    //     self.client.update("set_operation_pricing", (pricing,)).await
+    // }
+
+    /// Creates ERC-20 mint order for ICRC-2 tokens burning.
+    pub async fn create_erc_20_mint_order(
+        &self,
+        reason: Icrc2Burn,
+    ) -> CanisterClientResult<McResult<SignedMintOrder>> {
+        self.client
+            .update("create_erc_20_mint_order", (reason,))
+            .await
+    }
+
+    /// Returns `(nonce, mint_order)` pairs for the given sender id.
+    pub async fn list_mint_orders(
+        &self,
+        sender: Id256,
+        src_token: Id256,
+    ) -> CanisterClientResult<McResult<Vec<(u32, SignedMintOrder)>>> {
+        self.client
+            .query("list_mint_orders", (sender, src_token))
+            .await
+    }
+
+    /// Approves ICRC-2 token transfer from minter canister to recepient.
+    /// Returns approved amount.
+    ///
+    /// # Arguments
+    /// - `user` is an address of wallet which has been used for Wrapped token burning.
+    /// - `operation_id` is an ID retuned by `BFTBridge::burn()` operation.
+    pub async fn approve_icrc2_mint(
+        &self,
+        user: &H160,
+        operation_id: u32,
+    ) -> CanisterClientResult<McResult<Nat>> {
+        self.client
+            .update("approve_icrc2_mint", (user, operation_id))
+            .await
+    }
+
+    /// Transfers ICRC-2 tokens from minter canister to recepient.
+    ///
+    /// Before it can be used, ICRC-2 token must be approved by `approve_icrc2_mint`.
+    /// After the approval, user should finalize Wrapped token burning, using `BFTBridge::finish_burn()`.
+    pub async fn transfer_icrc2(
+        &self,
+        operation_id: u32,
         address: &H160,
-        block: BlockNumber,
-    ) -> Result<Bytes, Error> {
-        let data = format!(
-            r#"{{"jsonrpc":"2.0","id":1,"method":"eth_getCode","params":["{address:#x}", "{block}"]}}"#,
-        );
-
-        let result = self.json_rpc_call(&data, 32768).await?;
-        ic::print(format!("response len: {}", result.len()));
-        self.process_json_rpc_response(&result)
-    }
-
-    /// Returns minimal gas price.
-    pub async fn gas_price(&self) -> Result<U256, Error> {
-        let data = r#"{"jsonrpc":"2.0","id":2,"method":"eth_gasPrice","params":[]}"#;
-        let result = self.json_rpc_call(data, 1024).await?;
-        self.process_json_rpc_response(&result)
-    }
-
-    /// Returns transactions count for the given address.
-    pub async fn get_transaction_count(
-        &self,
-        address: &H160,
-        block: BlockNumber,
-    ) -> Result<U256, Error> {
-        let data = format!(
-            r#"{{"jsonrpc":"2.0","id":3,"method":"eth_getTransactionCount","params":["{address:#x}", "{block}"]}}"#,
-        );
-        let result = self.json_rpc_call(&data, 1024).await?;
-        self.process_json_rpc_response(&result)
-    }
-
-    /// Sends a raw transaction to the external EVM.
-    pub async fn send_raw_transaction(&self, transaction_bytes: Bytes) -> Result<H256, Error> {
-        let data = format!(
-            r#"{{"jsonrpc":"2.0","id":4,"method":"eth_sendRawTransaction","params":["0x{transaction_bytes:x}"]}}"#,
-        );
-        let result = self.json_rpc_call(&data, 1024).await?;
-        self.process_json_rpc_response(&result)
-    }
-
-    /// Returns transaction by hash.
-    pub async fn get_transaction_by_hash(
-        &self,
-        tx_hash: H256,
-    ) -> Result<Option<EthTransaction>, Error> {
-        let data = format!(
-            r#"{{"jsonrpc":"2.0","id":5,"method":"eth_getTransactionByHash","params":["{tx_hash:#x}"]}}"#,
-        );
-        let result = self.json_rpc_call(&data, 8192).await?;
-        self.process_json_rpc_response(&result)
-    }
-
-    /// Returns transaction receipt.
-    pub async fn get_transaction_receipt(
-        &self,
-        tx_hash: &H256,
-    ) -> Result<Option<TransactionReceipt>, Error> {
-        let data = format!(
-            r#"{{"jsonrpc":"2.0","id":6,"method":"eth_getTransactionReceipt","params":["{tx_hash:#x}"]}}"#,
-        );
-        let result = self.json_rpc_call(&data, 8192).await?;
-        self.process_json_rpc_response(&result)
-    }
-
-    /// Executes the call without EVM state modification.
-    pub async fn eth_call(
-        &self,
-        from: Option<H160>,
-        to: Option<H160>,
-        value: Option<U256>,
-        gas_limit: u64,
-        gas_price: Option<U256>,
-        data: Option<Bytes>,
-    ) -> Result<String, Error> {
-        let request = TransactionRequest {
-            from: from.map(|v| v.0),
-            to: to.map(|v| v.0.into()),
-            gas: Some(gas_limit.into()),
-            gas_price: gas_price.map(|v| v.0),
-            value: value.map(|v| v.0),
-            data: data.map(|v| v.0.into()),
-            ..Default::default()
-        };
-        let data = format!(
-            r#"{{"jsonrpc":"2.0","id":7,"method":"eth_call","params":["{}, "latest"]}}"#,
-            json!(request)
-        );
-        let result = self.json_rpc_call(&data, 8192).await?;
-        self.process_json_rpc_response(&result)
-    }
-
-    /// Returns chain id.
-    pub async fn eth_get_chain_id(&self) -> Result<u64, Error> {
-        let data = r#"{"jsonrpc":"2.0","id":8,"method":"eth_chainId","params":[]}"#;
-        let result = self.json_rpc_call(data, 1024).await?;
-        let chain_id_str: String = self.process_json_rpc_response(&result)?;
-        let trimmed_chain_id_str = if chain_id_str.len() < 2 {
-            &chain_id_str
-        } else if &chain_id_str[..2].to_ascii_lowercase() == "0x" {
-            &chain_id_str[2..]
-        } else {
-            &chain_id_str
-        };
-        u64::from_str_radix(trimmed_chain_id_str, 16)
-            .map_err(|e| Error::SerializationError(format!("bad encoding of chain id: {e}")))
-    }
-
-    async fn json_rpc_call(&self, data: &str, max_response_bytes: u64) -> Result<Vec<u8>, Error> {
-        Ok(virtual_canister_call!(
-            self.iceth_principal,
-            "json_rpc_request",
-            (data, &self.node_url, max_response_bytes),
-            Result<Vec<u8>, IcethError>,
-            self.json_rpc_cycles_cost(data, max_response_bytes)
-        )
-        .await??)
-    }
-
-    fn process_json_rpc_response<T>(&self, data: &[u8]) -> Result<T, Error>
-    where
-        T: for<'a> Deserialize<'a>,
-    {
-        let output = serde_json::from_slice::<Output>(data)?;
-
-        let result = match output {
-            Output::Success(success) => success.result,
-            Output::Failure(failure) => return Err(failure.into()),
-        };
-
-        Ok(serde_json::from_value::<T>(result)?)
-    }
-
-    pub fn json_rpc_cycles_cost(&self, payload: &str, max_response_bytes: u64) -> u64 {
-        let ingress_bytes = (payload.len() + self.node_url.len()) as u64 + INGRESS_OVERHEAD_BYTES;
-        INGRESS_MESSAGE_RECEIVED_COST
-            + INGRESS_MESSAGE_BYTE_RECEIVED_COST * ingress_bytes
-            + HTTP_OUTCALL_REQUEST_COST
-            + HTTP_OUTCALL_BYTE_RECEIEVED_COST * (ingress_bytes + max_response_bytes)
+        icrc2_token: Principal,
+        recipient: Principal,
+        amount: Nat,
+    ) -> CanisterClientResult<McResult<Nat>> {
+        self.client
+            .update(
+                "transfer_icrc2",
+                (operation_id, address, icrc2_token, recipient, amount),
+            )
+            .await
     }
 }
-
-/// Methods available only for bitfinity EVM implementation.
-#[cfg(feature = "bitfinity")]
-impl Client {
-    /// Mints BETH tokens for the given address. Available only in testnet.
-    pub async fn mint_evm_token(&self, address: &H160, amount: U256) -> Result<U256, Error> {
-        let data = format!(
-            r#"{{"jsonrpc":"2.0","id":"3","method":"ic_mintEVMToken","params":["{address:#x}", "{amount:#x}"]}}"#,
-        );
-        let result = self.json_rpc_call(&data, 1024).await?;
-        self.process_json_rpc_response(&result)
-    }
-}
-
-// Cost constants copied from ICETH source: https://github.com/jplevyak/iceth/blob/7432a4b03f8d706dbeaf59f78640e8f058a6cacb/src/main.rs#L23
-const INGRESS_OVERHEAD_BYTES: u64 = 100;
-const INGRESS_MESSAGE_RECEIVED_COST: u64 = 1_200_000;
-const INGRESS_MESSAGE_BYTE_RECEIVED_COST: u64 = 2_000;
-const HTTP_OUTCALL_REQUEST_COST: u64 = 400_000_000;
-const HTTP_OUTCALL_BYTE_RECEIEVED_COST: u64 = 100_000;
