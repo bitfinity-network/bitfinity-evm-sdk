@@ -21,3 +21,4 @@ pub struct Icrc2Burn {
     /// This ID will be a key for stored MintOrder related with this ICRC-2 burn.
     pub operation_id: u32,
 }
+
