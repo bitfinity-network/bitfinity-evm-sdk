@@ -17,11 +17,9 @@ repository.workspace = true
 bincode = { workspace = true }
 bytes = { workspace = true }
 candid = { workspace = true }
-eth-signer = { path = "../eth-signer" }
 derive_more = { workspace = true }
 encode-macros = { path = "../encode-macros" }
 ethereum-types = { workspace = true }
-# infinityswap.atlassian.net/browse/EPROD-153 - We are currently depending on a commit, will be removed when new version is released
 ethers-core = { workspace = true }
 hex = { workspace = true }
 ic-stable-structures = { workspace = true }
@@ -36,13 +34,7 @@ sha3 = { workspace = true }
 thiserror = { workspace = true }
 once_cell = { workspace = true }
 
-# signer dependencies
-async-trait = { workspace = true, optional = true }
-ic-exports = { workspace = true, optional = true }
-
 [dev-dependencies]
+eth-signer = { path = "../eth-signer" }
 rand = { workspace = true }
 tokio = { workspace = true }
-
-[features]
-signer = ["async-trait", "ic-exports", "eth-signer/ic_sign"]

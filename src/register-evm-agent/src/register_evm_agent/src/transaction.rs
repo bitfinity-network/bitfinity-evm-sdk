@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use candid::Principal;
 use clap::Args;
-use did::transaction::TransactionBuilder;
+use eth_signer::transaction::TransactionBuilder;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::{H160, U256};
@@ -102,7 +102,7 @@ impl SignTransactionArgs {
                 .clone()
                 .map(|v| hex::decode(v).expect("data invalid"))
                 .unwrap_or_default(),
-            signature: did::transaction::SigningMethod::SigningKey(wallet.signer()),
+            signature: eth_signer::transaction::SigningMethod::SigningKey(wallet.signer()),
             chain_id: DEFAULT_CHAIN_ID,
         }
         .calculate_hash_and_build()?;
