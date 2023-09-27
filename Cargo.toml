@@ -39,11 +39,11 @@ ethereum-types = "0.14"
 ethers-core = { git = "https://github.com/bitfinity-network/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
 hash-db = "0.16"
 hex = "0.4"
-ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", branch = "poc_native_structures" }
-ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", branch = "poc_native_structures" }
-ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", branch = "poc_native_structures" }
-ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", branch = "poc_native_structures" }
-ic-storage = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-storage", branch = "poc_native_structures" }
+ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.5.x" }
+ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.5.x" }
+ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.5.x" }
+ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.5.x" }
+ic-storage = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-storage", tag = "v0.5.x" }
 itertools = "0.11"
 jsonrpc-core = "18.0"
 log = "0.4"
