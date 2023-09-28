@@ -2,9 +2,9 @@ use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 use candid::CandidType;
-use did::sign_strategy::TransactionSigner;
 use did::transaction::Signature;
 use did::{H160, U256};
+use eth_signer::sign_strategy::TransactionSigner;
 use ethers_core::utils::keccak256;
 use ic_stable_structures::{BoundedStorable, Storable};
 use serde::de::Visitor;
