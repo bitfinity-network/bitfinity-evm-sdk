@@ -9,6 +9,8 @@ mod wallet;
 
 #[cfg(feature = "ic_sign")]
 pub mod ic_sign;
+pub mod sign_strategy;
+pub mod transaction;
 
 /// A wallet instantiated with a locally stored private key
 pub type LocalWallet<'a> = Wallet<'a, ethers_core::k256::ecdsa::SigningKey>;

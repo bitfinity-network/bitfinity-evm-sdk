@@ -4,9 +4,6 @@ use std::rc::Rc;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::Display;
-use eth_signer::Wallet;
-use ethers_core::k256::ecdsa::SigningKey;
-use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::transaction::eip2930;
 use ethers_core::types::Signature as EthersSignature;
 use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
@@ -281,79 +278,6 @@ impl Transaction {
             Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price.clone().unwrap_or_default(),
             _ => panic!("invalid transaction type"),
         }
-    }
-}
-
-/// Method to create a transaction signature
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SigningMethod<'a> {
-    // Do not sign transaction.
-    // Could be used only for the cases when transactions isn't applied
-    None,
-    // Precalculated signature
-    // Could be used only for the cases when the transaction is executed ReadOnly
-    Signature(EthersSignature),
-    /// Use signing key to generate signature in `calculate_hash_and_build` method
-    SigningKey(&'a SigningKey),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TransactionBuilder<'a, 'b> {
-    pub from: &'a H160,
-    pub to: Option<H160>,
-    pub nonce: U256,
-    pub value: U256,
-    pub gas: U256,
-    pub gas_price: Option<U256>,
-    pub input: Vec<u8>,
-    pub signature: SigningMethod<'b>,
-    pub chain_id: u64,
-}
-
-impl<'a, 'b> TransactionBuilder<'a, 'b> {
-    /// Creates a new transaction with the expected hash
-    pub fn calculate_hash_and_build(self) -> Result<Transaction, EvmError> {
-        // NOTE: we intentionally do not set chain id here since chain ID shouldn't be present in
-        // legacy transaction RLP encoding
-        let mut transaction = ethers_core::types::Transaction {
-            from: self.from.0,
-            to: self.to.map(Into::into),
-            nonce: self.nonce.0,
-            value: self.value.0,
-            gas: self.gas.0,
-            gas_price: self.gas_price.map(Into::into),
-            input: self.input.into(),
-            ..Default::default()
-        };
-
-        match self.signature {
-            SigningMethod::None => {}
-            SigningMethod::Signature(signature) => {
-                transaction.r = signature.r;
-                transaction.s = signature.s;
-                transaction.v = signature.v.into();
-            }
-            SigningMethod::SigningKey(key) => {
-                let wallet =
-                    Wallet::new_with_signer(Cow::Borrowed(key), transaction.from, self.chain_id);
-
-                // NOTE: we can avoid cloning input here by re-implementing code that calculates
-                // transaction signature hash
-                let typed_tx: TypedTransaction = (&transaction).into();
-                let signature = wallet
-                    .sign_transaction_sync(&typed_tx)
-                    .map_err(|e| EvmError::TransactionSignature(e.to_string()))?;
-
-                transaction.r = signature.r;
-                transaction.s = signature.s;
-                transaction.v = signature.v.into();
-            }
-        }
-
-        transaction.hash = transaction.hash();
-        transaction.chain_id = Some(self.chain_id.into());
-
-        Ok(transaction.into())
     }
 }
 
@@ -800,8 +724,6 @@ mod test {
     use std::str::FromStr;
 
     use candid::{Decode, Encode};
-    use eth_signer::LocalWallet;
-    use ethers_core::utils;
     use ic_stable_structures::Storable;
     use rand::Rng;
     use rlp::Encodable;
@@ -1020,115 +942,6 @@ mod test {
     }
 
     #[test]
-    fn test_build_transaction_with_empty_signature() {
-        let transaction_builder = TransactionBuilder {
-            from: &H160::from_slice(&[2u8; 20]),
-            to: None,
-            nonce: U256::zero(),
-            value: U256::zero(),
-            gas: 10_000u64.into(),
-            gas_price: Some(20_000u64.into()),
-            input: Vec::new(),
-            signature: SigningMethod::None,
-            chain_id: 31540,
-        };
-        let tx = transaction_builder.calculate_hash_and_build().unwrap();
-
-        assert_eq!(tx.v, U64::zero());
-        assert_eq!(tx.r, U256::zero());
-        assert_eq!(tx.s, U256::zero());
-        assert_eq!(tx.chain_id, Some(31540u64.into()));
-    }
-
-    #[test]
-    fn test_build_transaction_with_fixed_signature() {
-        let transaction_builder = TransactionBuilder {
-            from: &H160::from_slice(&[2u8; 20]),
-            to: None,
-            nonce: U256::zero(),
-            value: U256::zero(),
-            gas: 10_000u64.into(),
-            gas_price: Some(20_000u64.into()),
-            input: Vec::new(),
-            signature: SigningMethod::Signature(EthersSignature {
-                r: 1u64.into(),
-                s: 2u64.into(),
-                v: 3u64,
-            }),
-            chain_id: 31541,
-        };
-        let tx = transaction_builder.calculate_hash_and_build().unwrap();
-
-        assert_eq!(tx.v, U64::from(3u64));
-        assert_eq!(tx.r, U256::from(1u64));
-        assert_eq!(tx.s, U256::from(2u64));
-        assert_eq!(tx.chain_id, Some(31541u64.into()));
-    }
-
-    #[test]
-    fn test_build_transaction_with_signing_key() {
-        let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
-        let from = utils::secret_key_to_address(&key);
-        let chain_id = 31540;
-        let transaction_builder = TransactionBuilder {
-            from: &from.into(),
-            to: None,
-            nonce: U256::zero(),
-            value: U256::zero(),
-            gas: 10_000u64.into(),
-            gas_price: Some(20_000u64.into()),
-            input: Vec::new(),
-            signature: SigningMethod::SigningKey(&key),
-            chain_id,
-        };
-
-        let tx: ethers_core::types::Transaction = transaction_builder
-            .calculate_hash_and_build()
-            .unwrap()
-            .into();
-        let typed_tx: TypedTransaction = (&tx).into();
-        let wallet = LocalWallet::new_with_signer(Cow::Borrowed(&key), from, chain_id);
-        let signature = wallet.sign_transaction_sync(&typed_tx).unwrap();
-
-        assert_eq!(tx.v, signature.v.into());
-        assert_eq!(tx.r, signature.r);
-        assert_eq!(tx.s, signature.s);
-        assert_eq!(tx.chain_id, Some(chain_id.into()));
-    }
-
-    #[test]
-    fn test_build_transaction_with_signing_key_should_include_chain_id() {
-        let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
-        let from = utils::secret_key_to_address(&key);
-        let chain_id = 31540;
-        let transaction_builder = TransactionBuilder {
-            from: &from.into(),
-            to: None,
-            nonce: U256::zero(),
-            value: U256::zero(),
-            gas: 10_000u64.into(),
-            gas_price: Some(20_000u64.into()),
-            input: Vec::new(),
-            signature: SigningMethod::SigningKey(&key),
-            chain_id,
-        };
-
-        let tx: ethers_core::types::Transaction = transaction_builder
-            .calculate_hash_and_build()
-            .unwrap()
-            .into();
-        let mut typed_tx: TypedTransaction = (&tx).into();
-        typed_tx.set_chain_id(chain_id + 1);
-        let wallet = LocalWallet::new_with_signer(Cow::Borrowed(&key), from, chain_id);
-        let signature_with_different_chain_id = wallet.sign_transaction_sync(&typed_tx).unwrap();
-
-        assert_ne!(tx.v, signature_with_different_chain_id.v.into());
-        assert_ne!(tx.r, signature_with_different_chain_id.r);
-        assert_ne!(tx.s, signature_with_different_chain_id.s);
-        assert_eq!(tx.chain_id, Some(chain_id.into()));
-    }
-
-    #[test]
     fn test_from_success_call_exe_result_to_transaction_receipt() {
         let exe_result = StorableExecutionResult {
             exe_result: ExeResult::Success {
@@ -1254,170 +1067,11 @@ mod test {
     }
 
     #[test]
-    fn test_build_transaction_should_have_recoverable_from() {
-        let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
-        let from = utils::secret_key_to_address(&key);
-        let chain_id = 31540;
-        let transaction_builder = TransactionBuilder {
-            from: &from.into(),
-            to: None,
-            nonce: U256::zero(),
-            value: U256::zero(),
-            gas: 10_000u64.into(),
-            gas_price: Some(20_000u64.into()),
-            input: Vec::new(),
-            signature: SigningMethod::SigningKey(&key),
-            chain_id,
-        };
-
-        let tx: ethers_core::types::Transaction = transaction_builder
-            .calculate_hash_and_build()
-            .unwrap()
-            .into();
-
-        let recovered_from = tx.recover_from().unwrap();
-        assert_eq!(from, recovered_from);
-    }
-
-    #[test]
     fn test_signature_malleability_check() {
         let s = U256::from_hex_str(Signature::S_UPPER_LIMIT_HEX_STR).unwrap();
         Signature::check_malleability(&s).unwrap();
 
         // If signature S field exceeds the limit, it should return an error.
         Signature::check_malleability(&(s + U256::one())).unwrap_err();
-    }
-
-    fn build_transaction(
-        tx_type: Option<u64>,
-        gas_price: Option<U256>,
-        max_priority_fee_per_gas: Option<U256>,
-        max_fee_per_gas: Option<U256>,
-    ) -> Transaction {
-        let mut tx = TransactionBuilder {
-            from: &H160::from_slice(&[2u8; 20]),
-            to: None,
-            nonce: U256::zero(),
-            value: U256::zero(),
-            gas: 10_000u64.into(),
-            gas_price: None,
-            input: Vec::new(),
-            signature: SigningMethod::None,
-            chain_id: 31540,
-        }
-        .calculate_hash_and_build()
-        .unwrap();
-
-        match tx_type {
-            Some(tx_type) if tx_type == 1 => {
-                tx.transaction_type = Some(U64::from(1u64));
-                tx.gas_price = gas_price;
-            }
-            Some(tx_type) if tx_type == 2 => {
-                tx.transaction_type = Some(U64::from(2u64));
-                tx.max_priority_fee_per_gas = max_priority_fee_per_gas;
-                tx.max_fee_per_gas = max_fee_per_gas;
-            }
-            Some(_) => panic!("Invalid transaction type"),
-            None => tx.gas_price = gas_price,
-        }
-
-        tx
-    }
-
-    #[test]
-    fn test_gas_cost_for_different_transaction_types() {
-        let txns = vec![
-            (
-                build_transaction(Some(1), Some(20_000u64.into()), None, None),
-                20_000u64.into(),
-            ),
-            (
-                build_transaction(
-                    Some(2),
-                    None,
-                    Some(20_000u64.into()),
-                    Some(30_000u64.into()),
-                ),
-                30_000u64.into(),
-            ),
-            (
-                build_transaction(None, Some(20_000u64.into()), None, None),
-                20_000u64.into(),
-            ),
-            (
-                build_transaction(None, Some(20_000u64.into()), None, None),
-                20_000u64.into(),
-            ),
-        ];
-
-        for (tx, expected_gas_cost) in txns {
-            assert_eq!(tx.gas_cost(), expected_gas_cost);
-        }
-    }
-
-    #[test]
-    fn test_max_priority_fee_or_gas_price_for_different_transaction_types() {
-        let txns = vec![
-            (
-                build_transaction(Some(1), Some(20_000u64.into()), None, None),
-                20_000u64.into(),
-            ),
-            (
-                build_transaction(
-                    Some(2),
-                    None,
-                    Some(20_000u64.into()),
-                    Some(30_000u64.into()),
-                ),
-                20_000u64.into(),
-            ),
-            (
-                build_transaction(None, Some(20_000u64.into()), None, None),
-                20_000u64.into(),
-            ),
-            (
-                build_transaction(None, Some(20_000u64.into()), None, None),
-                20_000u64.into(),
-            ),
-        ];
-
-        for (tx, expected_max_priority_fee_or_gas_price) in txns {
-            assert_eq!(
-                tx.max_priority_fee_or_gas_price(),
-                expected_max_priority_fee_or_gas_price
-            );
-        }
-    }
-
-    #[test]
-    fn test_effective_gas_tip_for_different_transaction_types() {
-        let base_per_gas: U256 = 20_000u64.into();
-
-        let tx = build_transaction(Some(1), Some(30_000u64.into()), None, None);
-
-        assert_eq!(
-            tx.effective_gas_tip(Some(base_per_gas.clone())).unwrap(),
-            10_000u64.into()
-        );
-
-        let tx = build_transaction(
-            Some(2),
-            None,
-            Some(30_000u64.into()),
-            Some(40_000u64.into()),
-        );
-
-        assert_eq!(
-            tx.effective_gas_tip(Some(base_per_gas)).unwrap(),
-            20_000u64.into()
-        );
-
-        let tx = build_transaction(None, Some(30_000u64.into()), None, None);
-
-        assert_eq!(
-            tx.effective_gas_tip(None).unwrap(),
-            tx.max_priority_fee_or_gas_price()
-        )
     }
 }

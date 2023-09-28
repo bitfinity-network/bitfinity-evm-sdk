@@ -13,8 +13,6 @@ pub mod integer;
 pub mod keccak;
 pub mod mint_order_exemption;
 pub mod notify;
-#[cfg(feature = "signer")]
-pub mod sign_strategy;
 pub mod transaction;
 
 pub mod fees;

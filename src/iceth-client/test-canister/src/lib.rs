@@ -2,9 +2,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use candid::{CandidType, Deserialize, Principal};
-use did::sign_strategy::{ManagementCanisterSigner, SigningKeyId, TransactionSigner};
-use did::transaction::{SigningMethod, TransactionBuilder};
 use did::{BlockNumber, Transaction, TransactionReceipt, H160};
+use eth_signer::sign_strategy::{ManagementCanisterSigner, SigningKeyId, TransactionSigner};
+use eth_signer::transaction::{SigningMethod, TransactionBuilder};
 use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::TransactionRequest;
