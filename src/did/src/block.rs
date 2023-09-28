@@ -603,6 +603,9 @@ mod test {
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
         };
 
         let serialized = exe_result.to_bytes();
@@ -626,6 +629,9 @@ mod test {
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
         };
 
         let res0 = Encode!(&exe_result).unwrap();
@@ -650,6 +656,9 @@ mod test {
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
         };
 
         let encoded_value = serde_json::json!(&exe_result);

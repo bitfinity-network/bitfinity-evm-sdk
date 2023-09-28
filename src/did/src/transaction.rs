@@ -15,7 +15,6 @@ use sha3::Keccak256;
 use super::hash::{H160, H256};
 use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
-use crate::constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930};
 use crate::error::EvmError;
 use crate::{codec, Bytes};
 
@@ -235,50 +234,6 @@ pub struct Transaction {
 
     #[serde(rename = "chainId", default, skip_serializing_if = "Option::is_none")]
     pub chain_id: Option<U256>,
-}
-
-impl Transaction {
-    /// Returns the effective miner gas tip for the given base fee.
-    /// This is used in the calculation of the fee history.
-    ///
-    /// see:
-    /// https://github.com/ethereum/go-ethereum/blob/
-    /// 5b9cbe30f8ca2487c8991e50e9c939d5e6ec3cc2/core/types/transaction.go#L347
-    pub fn effective_gas_tip(&self, base_fee: Option<U256>) -> Option<U256> {
-        if let Some(base_fee) = base_fee {
-            let max_fee_per_gas = self.gas_cost();
-
-            if max_fee_per_gas < base_fee {
-                None
-            } else {
-                let effective_max_fee = max_fee_per_gas - base_fee;
-
-                Some(effective_max_fee.min(self.max_priority_fee_or_gas_price()))
-            }
-        } else {
-            Some(self.max_priority_fee_or_gas_price())
-        }
-    }
-
-    /// Gas cost of the transaction
-    pub fn gas_cost(&self) -> U256 {
-        match self.transaction_type.map(u64::from) {
-            Some(TRANSACTION_TYPE_EIP1559) => self.max_fee_per_gas.clone().unwrap_or_default(),
-            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price.clone().unwrap_or_default(),
-            _ => panic!("invalid transaction type"),
-        }
-    }
-
-    /// Returns the priority fee or gas price of the transaction
-    pub fn max_priority_fee_or_gas_price(&self) -> U256 {
-        match self.transaction_type.map(u64::from) {
-            Some(TRANSACTION_TYPE_EIP1559) => {
-                self.max_priority_fee_per_gas.clone().unwrap_or_default()
-            }
-            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price.clone().unwrap_or_default(),
-            _ => panic!("invalid transaction type"),
-        }
-    }
 }
 
 impl From<ethers_core::types::Transaction> for Transaction {
@@ -593,6 +548,9 @@ pub struct StorableExecutionResult {
     pub to: Option<H160>,
     pub transaction_type: Option<U64>,
     pub cumulative_gas_used: U256,
+    pub max_fee_per_gas: Option<U256>,
+    pub gas_price: Option<U256>,
+    pub max_priority_fee_per_gas: Option<U256>,
 }
 
 impl Storable for StorableExecutionResult {
@@ -958,6 +916,9 @@ mod test {
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -987,6 +948,9 @@ mod test {
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -1015,6 +979,9 @@ mod test {
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -1042,6 +1009,9 @@ mod test {
             to: Some(H160::from(ethereum_types::H160::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
