@@ -57,8 +57,8 @@ pub trait FeeCalculation {
     /// Gas cost of the transaction
     fn gas_cost(&self) -> U256 {
         match self.transaction_type().map(u64::from) {
-            Some(TRANSACTION_TYPE_EIP1559) => self.max_fee_per_gas().clone().unwrap_or_default(),
-            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price().clone().unwrap_or_default(),
+            Some(TRANSACTION_TYPE_EIP1559) => self.max_fee_per_gas().unwrap_or_default(),
+            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price().unwrap_or_default(),
             _ => panic!("invalid transaction type"),
         }
     }
@@ -67,9 +67,9 @@ pub trait FeeCalculation {
     fn max_priority_fee_or_gas_price(&self) -> U256 {
         match self.transaction_type().map(u64::from) {
             Some(TRANSACTION_TYPE_EIP1559) => {
-                self.max_priority_fee_per_gas().clone().unwrap_or_default()
+                self.max_priority_fee_per_gas().unwrap_or_default()
             }
-            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price().clone().unwrap_or_default(),
+            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price().unwrap_or_default(),
             _ => panic!("invalid transaction type"),
         }
     }
