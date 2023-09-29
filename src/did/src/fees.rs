@@ -66,9 +66,7 @@ pub trait FeeCalculation {
     /// Returns the priority fee or gas price of the transaction
     fn max_priority_fee_or_gas_price(&self) -> U256 {
         match self.transaction_type().map(u64::from) {
-            Some(TRANSACTION_TYPE_EIP1559) => {
-                self.max_priority_fee_per_gas().unwrap_or_default()
-            }
+            Some(TRANSACTION_TYPE_EIP1559) => self.max_priority_fee_per_gas().unwrap_or_default(),
             Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price().unwrap_or_default(),
             _ => panic!("invalid transaction type"),
         }
