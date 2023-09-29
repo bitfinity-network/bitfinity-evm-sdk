@@ -192,7 +192,6 @@ pub enum HaltError {
     CreateInitcodeSizeLimit,
     InvalidChainId,
     StateChangeDuringStaticCall,
-    AccessListNotSupported,
 }
 
 #[derive(
