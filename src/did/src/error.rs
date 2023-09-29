@@ -179,6 +179,7 @@ pub enum HaltError {
     PrevrandaoNotSet,
     Continue,
     Revert(Option<String>),
+    PriorityFeeGreaterThanMaxFee,
     CallGasCostMoreThanGasLimit,
     NonceTooHigh {
         tx: u64,
