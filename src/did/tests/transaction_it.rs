@@ -1,3 +1,4 @@
+use did::fees::FeeCalculation;
 use did::{Transaction, H160, U256, U64};
 use eth_signer::transaction::{SigningMethod, TransactionBuilder};
 
