@@ -999,7 +999,7 @@ mod test {
         let exe_result = StorableExecutionResult {
             exe_result: ExeResult::Halt {
                 gas_used: rand::random::<u64>().into(),
-                error: crate::HaltError::GasMaxFeeGreaterThanPriorityFee,
+                error: crate::HaltError::AccessListNotSupported,
             },
             transaction_hash: H256::from(ethereum_types::H256::random()),
             transaction_index: rand::random::<u64>().into(),

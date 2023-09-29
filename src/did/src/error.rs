@@ -165,11 +165,13 @@ pub enum HaltError {
     InvalidOpcode,
     NotActivated,
     FatalExternalError,
-    GasMaxFeeGreaterThanPriorityFee,
     GasPriceLessThanBasefee,
     CallerGasLimitMoreThanBlock,
     RejectCallerWithCode,
-    LackOfFundForGasLimit,
+    LackOfFundForMaxFee {
+        fee: u64,
+        balance: U256,
+    },
     OverflowPayment,
     PrecompileError,
     NonceOverflow,
@@ -178,11 +180,18 @@ pub enum HaltError {
     Continue,
     Revert(Option<String>),
     CallGasCostMoreThanGasLimit,
-    NonceTooHigh,
-    NonceTooLow,
+    NonceTooHigh {
+        tx: u64,
+        state: u64,
+    },
+    NonceTooLow {
+        tx: u64,
+        state: u64,
+    },
     CreateInitcodeSizeLimit,
     InvalidChainId,
     StateChangeDuringStaticCall,
+    AccessListNotSupported,
 }
 
 #[derive(
