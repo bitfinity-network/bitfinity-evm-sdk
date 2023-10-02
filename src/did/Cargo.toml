@@ -24,7 +24,6 @@ ethers-core = { workspace = true }
 hex = { workspace = true }
 ic-stable-structures = { workspace = true }
 jsonrpc-core = { workspace = true }
-log = { workspace = true }
 num = { workspace = true }
 rlp = { workspace = true }
 serde = { workspace = true }

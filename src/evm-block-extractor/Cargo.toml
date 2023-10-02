@@ -14,9 +14,6 @@ anyhow = { workspace = true }
 clap = { workspace = true }
 env_logger = { workspace = true }
 ethers-core = { workspace = true }
-evm-canister-client = { path = "../evm-canister-client", features = [
-  "ic-agent-client",
-] }
 itertools = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true, features = [

@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use candid::{CandidType, Deserialize, Principal};
+use candid::{CandidType, Principal};
 use did::{BlockNumber, Transaction, TransactionReceipt, H160};
 use eth_signer::sign_strategy::{ManagementCanisterSigner, SigningKeyId, TransactionSigner};
 use eth_signer::transaction::{SigningMethod, TransactionBuilder};
@@ -12,6 +12,7 @@ use ethers_core::utils;
 use ic_canister::{generate_idl, init, update, Canister, Idl, PreUpdate};
 use ic_storage::stable::Versioned;
 use ic_storage::IcStorage;
+use serde::Deserialize;
 
 #[derive(CandidType, Deserialize, IcStorage)]
 pub struct State {
