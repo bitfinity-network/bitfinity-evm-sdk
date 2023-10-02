@@ -375,6 +375,9 @@ impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T> {
             nonce: Some(block.nonce.into()),
             base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
             other: ethers_core::types::OtherFields::default(),
+            // We can leave it empty because we don't need it for our fork
+            withdrawals_root: None,
+            withdrawals: None,
         }
     }
 }
