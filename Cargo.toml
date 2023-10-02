@@ -38,7 +38,7 @@ clap = { version = "4", features = ["derive"] }
 derive_more = "0.99"
 env_logger = { version = "0.10.0", default-features = false }
 ethereum-types = "0.14"
-ethers-core = { git = "https://github.com/bitfinity-network/ethers-rs", default-features = false, package = "ethers-core", branch = "evmc_fork" }
+ethers-core = "2.0"
 hash-db = "0.16"
 hex = "0.4"
 ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", branch = "EPROD-535_memory_mapped_files" }
