@@ -17,9 +17,6 @@ pub struct InitData {
     /// Principal of EVM canister, in which minter canister will withdraw/deposit tokens.
     pub evm_principal: Principal,
 
-    /// Principal of ICETH canister, which is used for JSON-RPC outcalls.
-    pub iceth_principal: Principal,
-
     /// EVMC chain id
     pub evm_chain_id: u32,
 
