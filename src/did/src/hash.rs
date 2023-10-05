@@ -599,4 +599,34 @@ mod tests {
 
         assert_eq!(value, decoded_value);
     }
+
+    #[test]
+    fn test_alloy_address_roundtrip() {
+        let value: H160 = ethereum_types::H160::random().into();
+
+        let alloy_address = alloy_primitives::Address::from(value.clone());
+        let decoded_value = H160::from(alloy_address);
+
+        assert_eq!(value, decoded_value);
+    }
+
+    #[test]
+    fn test_alloy_h256_roundtrip() {
+        let value: H256 = ethereum_types::H256::random().into();
+
+        let alloy_h256 = alloy_primitives::B256::from(value.clone());
+        let decoded_value = H256::from(alloy_h256);
+
+        assert_eq!(value, decoded_value);
+    }
+
+    #[test]
+    fn test_alloy_h64_roundtrip() {
+        let value: H64 = ethereum_types::H64::random().into();
+
+        let alloy_h64 = alloy_primitives::B64::from(value.clone());
+        let decoded_value = H64::from(alloy_h64);
+
+        assert_eq!(value, decoded_value);
+    }
 }

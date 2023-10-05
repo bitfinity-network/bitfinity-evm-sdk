@@ -166,4 +166,18 @@ mod tests {
 
         assert_eq!(value, decoded_value);
     }
+
+    #[test]
+    fn test_alloy_bytes_roundtrip() {
+        let value = Bytes(bytes::Bytes::from(vec![
+            rand::random::<u8>(),
+            rand::random::<u8>(),
+            rand::random::<u8>(),
+        ]));
+
+        let alloy_bytes = alloy_primitives::Bytes::from(value.clone());
+        let decoded_value = Bytes::from(alloy_bytes);
+
+        assert_eq!(value, decoded_value);
+    }
 }

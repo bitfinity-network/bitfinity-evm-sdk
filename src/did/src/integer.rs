@@ -719,4 +719,24 @@ mod tests {
 
         assert_eq!(value, decoded_value);
     }
+
+    #[test]
+    fn test_alloy_u256_roundtrip() {
+        let value: U256 = ethereum_types::U256::from(rand::random::<u128>()).into();
+
+        let alloy_u256: alloy_primitives::U256 = value.clone().into();
+        let decoded_value: U256 = alloy_u256.into();
+
+        assert_eq!(value, decoded_value);
+    }
+
+    #[test]
+    fn test_alloy_u64_roundtrip() {
+        let value: U64 = ethereum_types::U64::from(rand::random::<u64>()).into();
+
+        let alloy_u64: alloy_primitives::U64 = value.into();
+        let decoded_value: U64 = alloy_u64.into();
+
+        assert_eq!(value, decoded_value);
+    }
 }

@@ -11,11 +11,9 @@ use did::{
 use ic_exports::ic_kit::{ic, RejectionCode};
 use ic_stable_structures::{get_memory_by_id, CellStructure, StableCell};
 
+use crate::error::Error;
+use crate::memory::{MemoryType, MEMORY_MANAGER};
 use crate::state::{State, NONCE_MEMORY_ID};
-use crate::{
-    error::Error,
-    memory::{MemoryType, MEMORY_MANAGER},
-};
 
 mod account;
 
