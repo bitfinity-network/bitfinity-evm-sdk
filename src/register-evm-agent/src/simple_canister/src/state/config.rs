@@ -2,10 +2,13 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 
 use candid::{CandidType, Decode, Deserialize, Encode, Principal};
-use ic_stable_structures::{CellStructure, StableCell, Storable};
+use ic_stable_structures::{get_memory_by_id, CellStructure, StableCell, Storable};
 
 use super::Settings;
-use crate::state::CONFIG_MEMORY_ID;
+use crate::{
+    memory::{MemoryType, MEMORY_MANAGER},
+    state::CONFIG_MEMORY_ID,
+};
 
 /// Minter canister configuration.
 #[derive(Default)]
@@ -78,8 +81,8 @@ impl Storable for ConfigData {
 }
 
 thread_local! {
-    static CONFIG_CELL: RefCell<StableCell<ConfigData>> = {
-        RefCell::new(StableCell::new(CONFIG_MEMORY_ID, ConfigData::default())
+    static CONFIG_CELL: RefCell<StableCell<ConfigData, MemoryType>> = {
+        RefCell::new(StableCell::new(get_memory_by_id(&MEMORY_MANAGER, CONFIG_MEMORY_ID), ConfigData::default())
             .expect("stable memory config initialization failed"))
     };
 }

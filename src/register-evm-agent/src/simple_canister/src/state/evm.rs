@@ -9,10 +9,13 @@ use did::{
     BasicAccount, Transaction, TransactionReceipt, H160, H256, U256,
 };
 use ic_exports::ic_kit::{ic, RejectionCode};
-use ic_stable_structures::{CellStructure, StableCell};
+use ic_stable_structures::{get_memory_by_id, CellStructure, StableCell};
 
-use crate::error::Error;
 use crate::state::{State, NONCE_MEMORY_ID};
+use crate::{
+    error::Error,
+    memory::{MemoryType, MEMORY_MANAGER},
+};
 
 mod account;
 
@@ -165,8 +168,8 @@ impl EvmCanister for EvmCanisterImpl {
 }
 
 thread_local! {
-    static NONCE_CELL: RefCell<StableCell<U256>> = {
-        RefCell::new(StableCell::new(NONCE_MEMORY_ID, U256::one())
+    static NONCE_CELL: RefCell<StableCell<U256, MemoryType>> = {
+        RefCell::new(StableCell::new(get_memory_by_id(&MEMORY_MANAGER, NONCE_MEMORY_ID), U256::one())
             .expect("stable memory nonce initialization failed"))
     };
 }
