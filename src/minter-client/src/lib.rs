@@ -124,7 +124,7 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
         &self,
         sender: Id256,
         src_token: Id256,
-    ) -> CanisterClientResult<McResult<Vec<(u32, SignedMintOrder)>>> {
+    ) -> CanisterClientResult<Vec<(u32, SignedMintOrder)>> {
         self.client
             .query("list_mint_orders", (sender, src_token))
             .await
