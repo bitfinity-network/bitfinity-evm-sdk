@@ -407,6 +407,37 @@ impl CandidType for U256 {
     }
 }
 
+// TODO::https://infinityswap.atlassian.net/browse/EPROD-552
+// We should move to alloy-primitives crates
+
+impl From<alloy_primitives::U256> for U256 {
+    fn from(value: alloy_primitives::U256) -> Self {
+        U256::from_little_endian(value.as_le_slice())
+    }
+}
+
+impl From<U256> for alloy_primitives::U256 {
+    fn from(value: U256) -> Self {
+        let mut bytes = [0u8; U256::BYTE_SIZE];
+        value.0.to_little_endian(&mut bytes);
+        alloy_primitives::U256::from_le_bytes(bytes)
+    }
+}
+
+impl From<alloy_primitives::U64> for U64 {
+    fn from(value: alloy_primitives::U64) -> Self {
+        U64::from_little_endian(value.as_le_slice())
+    }
+}
+
+impl From<U64> for alloy_primitives::U64 {
+    fn from(value: U64) -> Self {
+        let mut bytes = [0u8; U64::BYTE_SIZE];
+        value.0.to_little_endian(&mut bytes);
+        alloy_primitives::U64::from_le_bytes(bytes)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

@@ -284,6 +284,45 @@ impl fmt::LowerHex for H256 {
     }
 }
 
+// TODO::https://infinityswap.atlassian.net/browse/EPROD-552
+// We should move to alloy-primitives crates
+
+impl From<alloy_primitives::Address> for H160 {
+    fn from(value: alloy_primitives::Address) -> Self {
+        H160::from_slice(value.as_slice())
+    }
+}
+
+impl From<H160> for alloy_primitives::Address {
+    fn from(value: H160) -> Self {
+        alloy_primitives::Address::from_slice(value.0.as_bytes())
+    }
+}
+
+impl From<alloy_primitives::B64> for H64 {
+    fn from(value: alloy_primitives::B64) -> Self {
+        H64::from_slice(value.as_slice())
+    }
+}
+
+impl From<H64> for alloy_primitives::B64 {
+    fn from(value: H64) -> Self {
+        alloy_primitives::B64::from_slice(value.0.as_bytes())
+    }
+}
+
+impl From<alloy_primitives::B256> for H256 {
+    fn from(value: alloy_primitives::B256) -> Self {
+        H256::from_slice(value.as_slice())
+    }
+}
+
+impl From<H256> for alloy_primitives::B256 {
+    fn from(value: H256) -> Self {
+        alloy_primitives::B256::from_slice(value.0.as_bytes())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use candid::{Decode, Encode};
