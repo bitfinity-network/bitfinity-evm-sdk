@@ -108,6 +108,18 @@ impl<'de> Deserialize<'de> for Bytes {
     }
 }
 
+impl From<alloy_primitives::Bytes> for Bytes {
+    fn from(value: alloy_primitives::Bytes) -> Self {
+        Bytes(value.0)
+    }
+}
+
+impl From<Bytes> for alloy_primitives::Bytes {
+    fn from(value: Bytes) -> Self {
+        alloy_primitives::Bytes(value.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
