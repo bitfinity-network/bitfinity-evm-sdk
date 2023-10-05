@@ -4,10 +4,11 @@ use std::cell::RefCell;
 use candid::{CandidType, Deserialize, Principal};
 use did::codec::{decode, encode};
 use did::{H160, H256};
-use ic_stable_structures::{CellStructure, StableCell, Storable};
+use ic_stable_structures::{get_memory_by_id, CellStructure, StableCell, Storable};
 
 use super::{EvmCanister, EvmCanisterImpl, MINT_AMOUNT};
 use crate::error::{Error, Result};
+use crate::memory::{MemoryType, MEMORY_MANAGER};
 use crate::state::ACCOUNT_MEMORY_ID;
 
 #[derive(Default, Clone)]
@@ -128,8 +129,8 @@ impl Storable for AccountState {
 }
 
 thread_local! {
-    static ACCOUNT_DATA_CELL: RefCell<StableCell<AccountState>> = {
-        RefCell::new(StableCell::new(ACCOUNT_MEMORY_ID, AccountState::default())
+    static ACCOUNT_DATA_CELL: RefCell<StableCell<AccountState, MemoryType>> = {
+        RefCell::new(StableCell::new(get_memory_by_id(&MEMORY_MANAGER, ACCOUNT_MEMORY_ID), AccountState::default())
             .expect("stable memory account initialization failed"))
     };
 }
