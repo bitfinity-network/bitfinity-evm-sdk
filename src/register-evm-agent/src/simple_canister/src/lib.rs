@@ -1,5 +1,6 @@
 mod canister;
 pub mod error;
+pub mod memory;
 mod state;
 
 pub use crate::canister::TempCanister;
