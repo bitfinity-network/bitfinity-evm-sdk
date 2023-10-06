@@ -284,6 +284,45 @@ impl fmt::LowerHex for H256 {
     }
 }
 
+// TODO::https://infinityswap.atlassian.net/browse/EPROD-552
+// We should move to alloy-primitives crates
+
+impl From<alloy_primitives::Address> for H160 {
+    fn from(value: alloy_primitives::Address) -> Self {
+        H160::from_slice(value.as_slice())
+    }
+}
+
+impl From<H160> for alloy_primitives::Address {
+    fn from(value: H160) -> Self {
+        alloy_primitives::Address::from_slice(value.0.as_bytes())
+    }
+}
+
+impl From<alloy_primitives::B64> for H64 {
+    fn from(value: alloy_primitives::B64) -> Self {
+        H64::from_slice(value.as_slice())
+    }
+}
+
+impl From<H64> for alloy_primitives::B64 {
+    fn from(value: H64) -> Self {
+        alloy_primitives::B64::from_slice(value.0.as_bytes())
+    }
+}
+
+impl From<alloy_primitives::B256> for H256 {
+    fn from(value: alloy_primitives::B256) -> Self {
+        H256::from_slice(value.as_slice())
+    }
+}
+
+impl From<H256> for alloy_primitives::B256 {
+    fn from(value: H256) -> Self {
+        alloy_primitives::B256::from_slice(value.0.as_bytes())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use candid::{Decode, Encode};
@@ -557,6 +596,36 @@ mod tests {
             serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: H256 = serde_json::from_value(encoded_primitive).unwrap();
+
+        assert_eq!(value, decoded_value);
+    }
+
+    #[test]
+    fn test_alloy_address_roundtrip() {
+        let value: H160 = ethereum_types::H160::random().into();
+
+        let alloy_address = alloy_primitives::Address::from(value.clone());
+        let decoded_value = H160::from(alloy_address);
+
+        assert_eq!(value, decoded_value);
+    }
+
+    #[test]
+    fn test_alloy_h256_roundtrip() {
+        let value: H256 = ethereum_types::H256::random().into();
+
+        let alloy_h256 = alloy_primitives::B256::from(value.clone());
+        let decoded_value = H256::from(alloy_h256);
+
+        assert_eq!(value, decoded_value);
+    }
+
+    #[test]
+    fn test_alloy_h64_roundtrip() {
+        let value: H64 = ethereum_types::H64::random().into();
+
+        let alloy_h64 = alloy_primitives::B64::from(value.clone());
+        let decoded_value = H64::from(alloy_h64);
 
         assert_eq!(value, decoded_value);
     }

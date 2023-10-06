@@ -5,10 +5,8 @@ use candid::{CandidType, Decode, Deserialize, Encode, Principal};
 use ic_stable_structures::{get_memory_by_id, CellStructure, StableCell, Storable};
 
 use super::Settings;
-use crate::{
-    memory::{MemoryType, MEMORY_MANAGER},
-    state::CONFIG_MEMORY_ID,
-};
+use crate::memory::{MemoryType, MEMORY_MANAGER};
+use crate::state::CONFIG_MEMORY_ID;
 
 /// Minter canister configuration.
 #[derive(Default)]
