@@ -1,10 +1,4 @@
-use anyhow::Context;
-use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt};
-use serde_json::{json, Value};
-
-pub const MAX_BATCH_REQUESTS: usize = 5; // Max batch size is 5 in EVM
-
-/// Get Blocks by number
+/// Get blocks by number
 pub async fn get_blocks_by_number(
     url: &str,
     blocks: &[BlockNumber],
@@ -20,15 +14,22 @@ pub async fn get_blocks_by_number(
         })
         .collect();
 
+    trace!(
+        "sending request: {}",
+        serde_json::to_string(&requests).unwrap()
+    );
+
     let response = reqwest::Client::new()
         .post(url)
         .json(&requests)
         .send()
         .await
-        .context("Failed to get blocks")?
+        .context("failed to get blocks")?
         .json::<Value>()
         .await
-        .context("Failed to get blocks")?;
+        .context("failed to get blocks")?;
+
+    log::trace!("response: {}", response);
 
     if !response.is_array() {
         anyhow::bail!("response is not an array");
@@ -49,7 +50,7 @@ pub async fn get_blocks_by_number(
     Ok(blocks)
 }
 
-/// Get Blocks by number
+/// Get receipt by number
 pub async fn get_receipts_by_number(
     url: &str,
     block: &Block<Transaction>,
@@ -67,17 +68,22 @@ pub async fn get_receipts_by_number(
             })
             .collect();
 
-        println!("{}", serde_json::to_string(&requests).unwrap());
+        log::trace!(
+            "sending request: {}",
+            serde_json::to_string(&requests).unwrap()
+        );
 
         let response = reqwest::Client::new()
             .post(url)
             .json(&requests)
             .send()
             .await
-            .context("Failed to get transaction receipt")?
+            .context("failed to get transaction receipt")?
             .json::<Value>()
             .await
-            .context("Failed to get transaction receipt")?;
+            .context("failed to get transaction receipt")?;
+
+        log::trace!("response: {}", response);
 
         if !response.is_array() {
             anyhow::bail!("response is not an array");
@@ -97,4 +103,23 @@ pub async fn get_receipts_by_number(
     }
 
     Ok(receipts)
+}
+
+pub async fn get_block_number(url: &str) -> anyhow::Result<u64> {
+    let request: serde_json::Value =
+        json!({"jsonrpc":"2.0", "method":"eth_blockNumber", "params":[], "id":1});
+
+    log::trace!("sending request: {}", request);
+
+    let response = reqwest::Client::new()
+        .post(url)
+        .json(&request)
+        .send()
+        .await
+        .context("failed to get block number")?
+        .json::<Value>()
+        .await
+        .context("failed to get block number")?;
+
+    log::trace!("response: {}", response);
 }

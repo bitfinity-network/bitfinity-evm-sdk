@@ -1,5 +1,4 @@
 mod blocks_writer;
-mod rpc_client;
 
 use std::path::PathBuf;
 
