@@ -6,11 +6,13 @@ use blocks_writer::BlocksWriter;
 use clap::Parser;
 use ethers_core::types::{Block, BlockNumber, Transaction};
 use itertools::Itertools;
+use rpc_client::{get_full_blocks_by_number, get_receipts_by_hash};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
 
-const BLOCKS_PER_REQUEST: usize = rpc_client::MAX_BATCH_REQUESTS; // Max batch size is 5 in EVM
+/// The rpc client splits batches into chunks itself, so here we just specify the number of blocks to hold in memory
+const BLOCKS_PER_REQUEST: usize = 1000;
 
 /// Simple CLI program for Benchmarking BitFinity Network
 #[derive(Parser, Debug)]
@@ -81,7 +83,7 @@ async fn collect_blocks(
             block_numbers.first().unwrap(),
             block_numbers.last().unwrap()
         );
-        let blocks = rpc_client::get_blocks_by_number(rpc_url, &block_numbers).await?;
+        let blocks = get_full_blocks_by_number(rpc_url, block_numbers.clone()).await?;
         if blocks.is_empty() {
             log::info!("there are no more blocks available on the EVM");
             break;
@@ -92,7 +94,8 @@ async fn collect_blocks(
                 "getting receipts for block {}",
                 block.number.unwrap().as_u64()
             );
-            let receipts = rpc_client::get_receipts_by_number(rpc_url, block).await?;
+            let tx_hashes = block.transactions.iter().map(|tx| tx.hash());
+            let receipts = get_receipts_by_hash(rpc_url, tx_hashes).await?;
             log::info!("writing {} receipts", receipts.len());
             blocks_writer.write_receipts(block.number.unwrap().as_u64(), &receipts)?;
         }

@@ -25,6 +25,7 @@ reqwest = { workspace = true, features = [
   "rustls-tls",
   "trust-dns",
 ] }
+rpc-client = { path = "../rpc-client" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
