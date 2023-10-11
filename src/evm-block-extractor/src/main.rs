@@ -12,7 +12,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
 
 /// The rpc client splits batches into chunks itself, so here we just specify the number of blocks to hold in memory
-const BLOCKS_PER_REQUEST: usize = 1000;
+const BLOCKS_PER_REQUEST: usize = 500;
 
 /// Simple CLI program for Benchmarking BitFinity Network
 #[derive(Parser, Debug)]
@@ -91,7 +91,8 @@ async fn collect_blocks(
         // get tx receipts
         for block in blocks.iter() {
             log::info!(
-                "getting receipts for block {}",
+                "getting {} receipts for block {}",
+                block.transactions.len(),
                 block.number.unwrap().as_u64()
             );
             let tx_hashes = block.transactions.iter().map(|tx| tx.hash());
