@@ -12,8 +12,18 @@ repository.workspace = true
 anyhow = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }
-reqwest = { workspace = true }
+reqwest = { workspace = true, features = [
+  "gzip",
+  "json",
+  "rustls-tls",
+  "trust-dns",
+] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 ethers-core = { workspace = true }
 jsonrpc-core = { workspace = true }
+
+[dev-dependencies]
+env_logger = {workspace = true}
+hex = { workspace = true }
+tokio = { workspace = true }

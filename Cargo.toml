@@ -69,4 +69,4 @@ zip = "0.6.6"
 alloy-primitives = { version = "0.4", default-features = false }
 
 [profile.dev]
-debug = false
+debug = true

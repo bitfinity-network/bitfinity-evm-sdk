@@ -19,7 +19,8 @@ pub async fn get_block_by_number(url: &str, block: BlockNumber) -> anyhow::Resul
         url,
         GET_BLOCK_BY_NUMBER_METHOD.to_string(),
         make_params_array!(block, false),
-        Id::Null,
+        // For some reason some JSON RPC services fail to parse requests with null id
+        Id::Str("get_block_by_number".to_string()),
     )
     .await
 }
@@ -33,7 +34,8 @@ pub async fn get_full_block_by_number(
         url,
         GET_BLOCK_BY_NUMBER_METHOD.to_string(),
         make_params_array!(block, true),
-        Id::Null,
+        // For some reason some JSON RPC services fail to parse requests with null id
+        Id::Str("get_full_block_by_number".to_string()),
     )
     .await
 }
