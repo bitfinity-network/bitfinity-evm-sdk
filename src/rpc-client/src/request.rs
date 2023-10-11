@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use anyhow::Context;
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};

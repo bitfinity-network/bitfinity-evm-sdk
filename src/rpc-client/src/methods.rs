@@ -59,7 +59,7 @@ pub async fn get_receipts_by_hash(
 pub async fn get_block_number(url: &str) -> anyhow::Result<u64> {
     single_request::<U64>(
         url,
-        GET_BLOCK_BY_NUMBER_METHOD.to_string(),
+        GET_BLOCK_NUMBER_METHOD.to_string(),
         make_params_array!(),
         Id::Null,
     )
