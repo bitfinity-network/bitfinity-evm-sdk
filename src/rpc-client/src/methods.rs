@@ -13,6 +13,17 @@ macro_rules! make_params_array {
     };
 }
 
+/// Returns block with transaction hashes by number
+pub async fn get_block_by_number(url: &str, block: BlockNumber) -> anyhow::Result<Block<H256>> {
+    single_request(
+        url,
+        GET_BLOCK_BY_NUMBER_METHOD.to_string(),
+        make_params_array!(block, false),
+        Id::Null,
+    )
+    .await
+}
+
 /// Returns full block by number
 pub async fn get_full_block_by_number(
     url: &str,
@@ -56,6 +67,7 @@ pub async fn get_receipts_by_hash(
     batch_request(url, GET_TRANSACTION_RECEIPT_METHOD.to_string(), params).await
 }
 
+/// Returns chain block number
 pub async fn get_block_number(url: &str) -> anyhow::Result<u64> {
     single_request::<U64>(
         url,
