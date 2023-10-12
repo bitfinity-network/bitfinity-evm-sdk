@@ -2,12 +2,12 @@
       "canisters": {
             "ic-sign-test-canister": {
                   "candid": "./target/artifact/ic-sign-test-canister.did",
-                  "wasm": "./target/artifact/ic-sign-test-canister-opt.wasm.gz",
+                  "wasm": "./target/artifact/ic-sign-test-canister.wasm.gz",
                   "type": "custom"
             },
             "iceth-client-test-canister": {
                   "candid": "./target/artifact/iceth-client-test-canister.did",
-                  "wasm": "./target/artifact/iceth-client-test-canister-opt.wasm.gz",
+                  "wasm": "./target/artifact/iceth-client-test-canister.wasm.gz",
                   "type": "custom"
             },
             "iceth": {
