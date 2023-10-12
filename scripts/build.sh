@@ -14,8 +14,6 @@ build_iceth_client_test_canisters() {
     cargo run -p iceth-client-test-canister --features export-api --release > $WASM_DIR/iceth-client-test-canister.did
     cargo build -p iceth-client-test-canister --target wasm32-unknown-unknown --features export-api --release
     ic-wasm target/wasm32-unknown-unknown/release/iceth-client-test-canister.wasm -o $WASM_DIR/iceth-client-test-canister.wasm shrink
-    gzip -k $WASM_DIR/iceth-client-test-canister.wasm --force
-
 }
 
 build_ic_sign_test_canister() {
@@ -23,7 +21,6 @@ build_ic_sign_test_canister() {
     cargo run -p ic-sign-test-canister --features "export-api" > $WASM_DIR/ic-sign-test-canister.did
     cargo build -p ic-sign-test-canister --target wasm32-unknown-unknown --release --features "export-api"
     ic-wasm target/wasm32-unknown-unknown/release/ic-sign-test-canister.wasm -o $WASM_DIR/ic-sign-test-canister.wasm shrink
-    gzip -k $WASM_DIR/ic-sign-test-canister.wasm --force
 }
 
 main() {

@@ -29,7 +29,6 @@ jobs:
         export RUST_BACKTRACE="full"
         ./scripts/test.sh
         ./scripts/build.sh
-        ./scripts/dfx_deploy.sh
         ./scripts/dfx_test.sh
       
     secrets:

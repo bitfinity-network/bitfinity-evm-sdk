@@ -13,7 +13,6 @@ use crate::state::CONFIG_MEMORY_ID;
 pub struct Config {}
 
 impl Config {
-
     /// Clear configuration and initialize it with data from `settings`.
     pub fn reset(&mut self, settings: Settings) {
         let new_data = ConfigData {
