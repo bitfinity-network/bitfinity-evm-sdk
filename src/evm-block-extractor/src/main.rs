@@ -4,9 +4,9 @@ use std::path::PathBuf;
 
 use blocks_writer::BlocksWriter;
 use clap::Parser;
+use ethereum_json_rpc_client::{get_full_blocks_by_number, get_receipts_by_hash};
 use ethers_core::types::{Block, BlockNumber, Transaction};
 use itertools::Itertools;
-use ethereum_json_rpc_client::{get_full_blocks_by_number, get_receipts_by_hash};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");

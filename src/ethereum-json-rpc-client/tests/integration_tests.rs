@@ -1,8 +1,8 @@
-use ethers_core::types::{BlockNumber, H256};
 use ethereum_json_rpc_client::{
     get_block_by_number, get_block_number, get_full_block_by_number, get_full_blocks_by_number,
     get_receipts_by_hash,
 };
+use ethers_core::types::{BlockNumber, H256};
 
 const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
 
