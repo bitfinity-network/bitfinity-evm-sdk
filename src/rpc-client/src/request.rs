@@ -64,8 +64,16 @@ where
 
     let value_from_json = |value| serde_json::from_value::<R>(value);
 
-    for chunk in &params.into_iter().chunks(MAX_BATCH_REQUESTS) {
+    // Collect chunks before iteration, otherwise the future won't be `Send`
+    let chunks = params
+        .into_iter()
+        .chunks(MAX_BATCH_REQUESTS)
+        .into_iter()
+        .map(Iterator::collect::<Vec<_>>)
+        .collect::<Vec<_>>();
+    for chunk in chunks {
         let method_calls = chunk
+            .into_iter()
             .map(|(params, id)| {
                 Call::MethodCall(MethodCall {
                     jsonrpc: Some(Version::V2),
