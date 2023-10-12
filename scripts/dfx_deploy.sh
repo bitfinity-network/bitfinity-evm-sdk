@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export WASM_DIR=.artifact
+export WASM_DIR=./target/artifact
 
 dfx start --clean --background
 

@@ -1,18 +1,18 @@
 {
       "canisters": {
             "ic-sign-test-canister": {
-                  "candid": ".artifact/ic-sign-test-canister.did",
-                  "wasm": ".artifact/ic-sign-test-canister-opt.wasm.gz",
+                  "candid": "./target/artifact/ic-sign-test-canister.did",
+                  "wasm": "./target/artifact/ic-sign-test-canister-opt.wasm.gz",
                   "type": "custom"
             },
             "iceth-client-test-canister": {
-                  "candid": ".artifact/iceth-client-test-canister.did",
-                  "wasm": ".artifact/iceth-client-test-canister-opt.wasm.gz",
+                  "candid": "./target/artifact/iceth-client-test-canister.did",
+                  "wasm": "./target/artifact/iceth-client-test-canister-opt.wasm.gz",
                   "type": "custom"
             },
             "iceth": {
-                  "candid": ".artifact/iceth.did",
-                  "wasm": ".artifact/iceth.wasm",
+                  "candid": "./target/artifact/iceth.did",
+                  "wasm": "./target/artifact/iceth.wasm",
                   "type": "custom"
             }
       },

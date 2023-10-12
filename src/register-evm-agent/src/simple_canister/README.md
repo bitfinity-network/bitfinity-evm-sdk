@@ -110,11 +110,11 @@ dfx canister --network ic call evm account_basic '("0x20bc9e20dfef83780349356779
 
 Install [ic-wasm](https://github.com/dfinity/ic-wasm) first, and run:
 ```sh
-cargo run -p simple_canister --features "export-api" > ./.artifact/simple_canister.did
+cargo run -p simple_canister --features "export-api" > ././target/artifact/simple_canister.did
 
 cargo build --target wasm32-unknown-unknown --release --package simple_canister --features "export-api"
 
-ic-wasm target/wasm32-unknown-unknown/release/simple_canister.wasm -o ./.artifact/simple_canister.wasm shrink
+ic-wasm target/wasm32-unknown-unknown/release/simple_canister.wasm -o ././target/artifact/simple_canister.wasm shrink
 ```
 
 ## deploy and test simple canister

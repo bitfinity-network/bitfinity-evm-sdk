@@ -2,8 +2,8 @@
     "canisters": {
         "simple_canister": {
             "build": "",
-            "candid": ".artifact/simple_canister.did",
-            "wasm": ".artifact/simple_canister.wasm",
+            "candid": "./target/artifact/simple_canister.did",
+            "wasm": "./target/artifact/simple_canister.wasm",
             "type": "custom"
         },
         "evm": {

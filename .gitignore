@@ -37,8 +37,5 @@ solidity/broadcast/
 # Dotenv file
 .env
 
-# Artifacts folder
-.artifact
-
 # Wasm files
 *.wasm

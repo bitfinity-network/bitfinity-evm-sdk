@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export WASM_DIR=.artifact
+export WASM_DIR=./target/artifact
 mkdir -p $WASM_DIR
 
 echo "Building iceth-client artifacts..."

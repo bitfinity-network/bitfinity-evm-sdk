@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export WASM_DIR=.artifact
+export WASM_DIR=./target/artifact
 
 echo "Running dfx tests for iceth-client..."
 dfx canister call iceth-client-test-canister test_send_raw_transaction_signed_with_signing_key
