@@ -3,7 +3,7 @@ use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::Deserialize;
 
-const MAX_BATCH_REQUESTS: usize = 5; // Max batch size is 5 in EVM
+const MAX_BATCH_REQUESTS: usize = 50; // Max batch size is 50 in EVM
 
 async fn send_rpc_request(url: &str, request: Request) -> anyhow::Result<Response> {
     log::trace!("sending request {request:?}");

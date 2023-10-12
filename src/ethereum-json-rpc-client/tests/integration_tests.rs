@@ -1,5 +1,5 @@
 use ethers_core::types::{BlockNumber, H256};
-use rpc_client::{
+use ethereum_json_rpc_client::{
     get_block_by_number, get_block_number, get_full_block_by_number, get_full_blocks_by_number,
     get_receipts_by_hash,
 };

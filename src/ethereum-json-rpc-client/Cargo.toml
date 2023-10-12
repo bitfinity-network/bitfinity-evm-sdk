@@ -1,5 +1,5 @@
 [package]
-name = "rpc-client"
+name = "ethereum-json-rpc-client"
 
 authors.workspace = true
 homepage.workspace = true

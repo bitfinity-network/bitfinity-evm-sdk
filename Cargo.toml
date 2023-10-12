@@ -12,7 +12,7 @@ members = [
     "src/minter-did",
     "src/register-evm-agent/src/register_evm_agent",
     "src/register-evm-agent/src/simple_canister",
-    "src/rpc-client",
+    "src/ethereum-json-rpc-client",
     "src/signature-verification-canister-client",
 ]
 resolver = "2"
