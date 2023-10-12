@@ -1,10 +1,7 @@
-use std::path::PathBuf;
-
 use candid::Principal;
 use did::error::EvmError;
 use did::H256;
 use eth_signer::WalletError;
-use evm_canister_client::ic_agent::identity::PemError;
 use evm_canister_client::ic_agent::AgentError;
 use evm_canister_client::CanisterClientError;
 use thiserror::Error;
@@ -25,8 +22,6 @@ pub enum Error {
     CanisterClientError(CanisterClientError),
     #[error("parse error: {0}")]
     Parse(candid::Error),
-    #[error("failed to read PEM file {0}: {1}")]
-    Pem(PathBuf, PemError),
     #[error("wallet error: {0}")]
     Wallet(WalletError),
 

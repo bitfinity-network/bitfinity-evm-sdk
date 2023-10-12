@@ -6,9 +6,9 @@ use clap::{Args, Parser, Subcommand};
 use did::H160;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
+use evm_canister_client::agent::identity::init_agent;
 
 use super::reservation::ReservationService;
-use crate::agent::init_agent;
 use crate::error::Error;
 use crate::transaction::SignTransactionArgs;
 
