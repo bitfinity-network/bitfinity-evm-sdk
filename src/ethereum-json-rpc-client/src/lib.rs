@@ -1,4 +1,4 @@
 mod methods;
-mod request;
+pub mod request;
 
 pub use methods::*;
