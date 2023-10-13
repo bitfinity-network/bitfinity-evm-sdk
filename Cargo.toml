@@ -10,8 +10,7 @@ members = [
     "src/minter-did",
     "src/minter-client",
     "src/iceth-client/test-canister",
-    "src/register-evm-agent/src/register_evm_agent",
-    "src/register-evm-agent/src/simple_canister",
+    "src/register-evm-agent",
     "src/signature-verification-canister-client",
 ]
 resolver = "2"
