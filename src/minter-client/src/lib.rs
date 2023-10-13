@@ -136,21 +136,21 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
     /// # Arguments
     /// - `user` is an address of wallet which has been used for Wrapped token burning.
     /// - `operation_id` is an ID retuned by `BFTBridge::burn()` operation.
-    pub async fn approve_icrc2_mint(
+    pub async fn start_icrc2_mint(
         &self,
         user: &H160,
         operation_id: u32,
     ) -> CanisterClientResult<McResult<Nat>> {
         self.client
-            .update("approve_icrc2_mint", (user, operation_id))
+            .update("start_icrc2_mint", (user, operation_id))
             .await
     }
 
     /// Transfers ICRC-2 tokens from minter canister to recepient.
     ///
-    /// Before it can be used, ICRC-2 token must be approved by `approve_icrc2_mint`.
+    /// Before it can be used, ICRC-2 token must be approved by `start_icrc2_mint` which approves the transfer.
     /// After the approval, user should finalize Wrapped token burning, using `BFTBridge::finish_burn()`.
-    pub async fn transfer_icrc2(
+    pub async fn finish_icrc2_mint(
         &self,
         operation_id: u32,
         address: &H160,
@@ -160,7 +160,7 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
     ) -> CanisterClientResult<McResult<Nat>> {
         self.client
             .update(
-                "transfer_icrc2",
+                "finish_icrc2_mint",
                 (operation_id, address, icrc2_token, recipient, amount),
             )
             .await
