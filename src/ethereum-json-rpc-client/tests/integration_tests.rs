@@ -5,6 +5,7 @@ use ethereum_json_rpc_client::{
 use ethers_core::types::{BlockNumber, H256};
 
 const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
+const MAX_BATCH_SIZE: usize = 5;
 
 fn to_hash(string: &str) -> H256 {
     H256::from_slice(
@@ -66,6 +67,7 @@ async fn should_get_full_blocks_by_number() {
             BlockNumber::Number(11588465.into()),
             BlockNumber::Number(11588466.into()),
         ],
+        MAX_BATCH_SIZE
     )
     .await
     .unwrap();
@@ -106,6 +108,7 @@ async fn should_get_transaction_receipts() {
     let receipts = get_receipts_by_hash(
         ETHEREUM_JSON_API_URL,
         vec![block.transactions[0], block.transactions[1]],
+        MAX_BATCH_SIZE
     )
     .await
     .unwrap();

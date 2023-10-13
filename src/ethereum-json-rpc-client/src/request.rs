@@ -3,8 +3,6 @@ use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::Deserialize;
 
-const MAX_BATCH_REQUESTS: usize = 50; // Max batch size is 50 in EVM
-
 async fn send_rpc_request(url: &str, request: Request) -> anyhow::Result<Response> {
     log::trace!("sending request {request:?}");
 
@@ -56,6 +54,7 @@ pub async fn batch_request<R>(
     url: &str,
     method: String,
     params: impl IntoIterator<Item = (Params, Id)>,
+    max_batch_size: usize,
 ) -> anyhow::Result<Vec<R>>
 where
     R: for<'a> Deserialize<'a>,
@@ -67,7 +66,7 @@ where
     // Collect chunks before iteration, otherwise the future won't be `Send`
     let chunks = params
         .into_iter()
-        .chunks(MAX_BATCH_REQUESTS)
+        .chunks(max_batch_size)
         .into_iter()
         .map(Iterator::collect::<Vec<_>>)
         .collect::<Vec<_>>();

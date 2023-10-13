@@ -44,6 +44,7 @@ pub async fn get_full_block_by_number(
 pub async fn get_full_blocks_by_number(
     url: &str,
     blocks: impl IntoIterator<Item = BlockNumber>,
+    max_batch_size: usize,
 ) -> anyhow::Result<Vec<Block<Transaction>>> {
     let params = blocks
         .into_iter()
@@ -52,13 +53,14 @@ pub async fn get_full_blocks_by_number(
             Ok((make_params_array!(block_number, true), Id::Num(index as _)))
         })
         .collect::<anyhow::Result<Vec<_>>>()?;
-    batch_request(url, GET_BLOCK_BY_NUMBER_METHOD.to_string(), params).await
+    batch_request(url, GET_BLOCK_BY_NUMBER_METHOD.to_string(), params, max_batch_size).await
 }
 
 /// Get receipt by number
 pub async fn get_receipts_by_hash(
     url: &str,
     hashes: impl IntoIterator<Item = H256>,
+    max_batch_size: usize,
 ) -> anyhow::Result<Vec<TransactionReceipt>> {
     let params = hashes
         .into_iter()
@@ -66,7 +68,7 @@ pub async fn get_receipts_by_hash(
             Ok((make_params_array!(hash), Id::Str(hash.to_string())))
         })
         .collect::<anyhow::Result<Vec<_>>>()?;
-    batch_request(url, GET_TRANSACTION_RECEIPT_METHOD.to_string(), params).await
+    batch_request(url, GET_TRANSACTION_RECEIPT_METHOD.to_string(), params, max_batch_size).await
 }
 
 /// Returns chain block number
