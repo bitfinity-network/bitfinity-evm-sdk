@@ -63,7 +63,14 @@ async fn main() -> anyhow::Result<()> {
     let blocks_writer = BlocksWriter::new(&args.output_file)?;
     log::info!("blocks-writer initialized");
 
-    collect_blocks(&args.rpc_url, blocks_writer, start_block, end_block, args.batch_size).await?;
+    collect_blocks(
+        &args.rpc_url,
+        blocks_writer,
+        start_block,
+        end_block,
+        args.batch_size,
+    )
+    .await?;
 
     Ok(())
 }
@@ -88,7 +95,8 @@ async fn collect_blocks(
             block_numbers.first().unwrap(),
             block_numbers.last().unwrap()
         );
-        let blocks = get_full_blocks_by_number(rpc_url, block_numbers.clone(), max_batch_size).await?;
+        let blocks =
+            get_full_blocks_by_number(rpc_url, block_numbers.clone(), max_batch_size).await?;
         if blocks.is_empty() {
             log::info!("there are no more blocks available on the EVM");
             break;

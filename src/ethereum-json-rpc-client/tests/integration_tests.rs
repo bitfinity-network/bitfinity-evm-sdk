@@ -67,7 +67,7 @@ async fn should_get_full_blocks_by_number() {
             BlockNumber::Number(11588465.into()),
             BlockNumber::Number(11588466.into()),
         ],
-        MAX_BATCH_SIZE
+        MAX_BATCH_SIZE,
     )
     .await
     .unwrap();
@@ -108,7 +108,7 @@ async fn should_get_transaction_receipts() {
     let receipts = get_receipts_by_hash(
         ETHEREUM_JSON_API_URL,
         vec![block.transactions[0], block.transactions[1]],
-        MAX_BATCH_SIZE
+        MAX_BATCH_SIZE,
     )
     .await
     .unwrap();
