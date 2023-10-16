@@ -1,17 +1,18 @@
 mod blocks_writer;
-mod rpc_client;
 
 use std::path::PathBuf;
 
 use blocks_writer::BlocksWriter;
 use clap::Parser;
+use ethereum_json_rpc_client::{get_full_blocks_by_number, get_receipts_by_hash};
 use ethers_core::types::{Block, BlockNumber, Transaction};
 use itertools::Itertools;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
 
-const BLOCKS_PER_REQUEST: usize = rpc_client::MAX_BATCH_REQUESTS; // Max batch size is 5 in EVM
+/// The rpc client splits batches into chunks itself, so here we just specify the number of blocks to hold in memory
+const BLOCKS_PER_REQUEST: usize = 500;
 
 /// Simple CLI program for Benchmarking BitFinity Network
 #[derive(Parser, Debug)]
@@ -35,6 +36,10 @@ struct Args {
     /// block to start with (if not provided, all blocks will be loaded)
     #[arg(long, short('e'))]
     end_block: Option<u64>,
+
+    /// Max number of requests in a single RPC batch
+    #[arg(long, default_value = "50")]
+    batch_size: usize,
 }
 
 #[tokio::main]
@@ -58,7 +63,14 @@ async fn main() -> anyhow::Result<()> {
     let blocks_writer = BlocksWriter::new(&args.output_file)?;
     log::info!("blocks-writer initialized");
 
-    collect_blocks(&args.rpc_url, blocks_writer, start_block, end_block).await?;
+    collect_blocks(
+        &args.rpc_url,
+        blocks_writer,
+        start_block,
+        end_block,
+        args.batch_size,
+    )
+    .await?;
 
     Ok(())
 }
@@ -74,6 +86,7 @@ async fn collect_blocks(
     mut blocks_writer: BlocksWriter,
     start_block: u64,
     end_block: u64,
+    max_batch_size: usize,
 ) -> anyhow::Result<()> {
     for block_numbers in &(start_block..end_block).chunks(BLOCKS_PER_REQUEST) {
         let block_numbers: Vec<BlockNumber> = block_numbers.map(|number| number.into()).collect();
@@ -82,7 +95,8 @@ async fn collect_blocks(
             block_numbers.first().unwrap(),
             block_numbers.last().unwrap()
         );
-        let blocks = rpc_client::get_blocks_by_number(rpc_url, &block_numbers).await?;
+        let blocks =
+            get_full_blocks_by_number(rpc_url, block_numbers.clone(), max_batch_size).await?;
         if blocks.is_empty() {
             log::info!("there are no more blocks available on the EVM");
             break;
@@ -90,10 +104,12 @@ async fn collect_blocks(
         // get tx receipts
         for block in blocks.iter() {
             log::info!(
-                "getting receipts for block {}",
+                "getting {} receipts for block {}",
+                block.transactions.len(),
                 block.number.unwrap().as_u64()
             );
-            let receipts = rpc_client::get_receipts_by_number(rpc_url, block).await?;
+            let tx_hashes = block.transactions.iter().map(|tx| tx.hash());
+            let receipts = get_receipts_by_hash(rpc_url, tx_hashes, max_batch_size).await?;
             log::info!("writing {} receipts", receipts.len());
             blocks_writer.write_receipts(block.number.unwrap().as_u64(), &receipts)?;
         }
