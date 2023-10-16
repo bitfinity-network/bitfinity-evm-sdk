@@ -27,9 +27,8 @@ jobs:
       enable-target-cache: true
       test-script: |
         export RUST_BACKTRACE="full"
-        cargo test
+        ./scripts/test.sh
         ./scripts/build.sh
-        ./scripts/dfx_deploy.sh
         ./scripts/dfx_test.sh
       
     secrets:
@@ -77,8 +76,8 @@ jobs:
 
       - name: Prepare artifact files
         run: |
-          mkdir -p .artifact
-          mv target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} .artifact/${{ matrix.platform.bin }}
+          mkdir -p ./target/artifact
+          mv target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} ./target/artifact/${{ matrix.platform.bin }}
       
       - name: "Uploading artifact"
         uses: actions/upload-artifact@v3
@@ -86,7 +85,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           name: ${{ matrix.platform.release_for }}
-          path: .artifact/*
+          path: ./target/artifact/*
 
   publish-release:
     if: ${{github.ref_type == 'tag'}}

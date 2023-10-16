@@ -7,11 +7,11 @@ members = [
     "src/evm-block-extractor",
     "src/evm-canister-client",
     "src/iceth-client",
-    "src/minter-did",
-    "src/minter-client",
     "src/iceth-client/test-canister",
-    "src/register-evm-agent/src/register_evm_agent",
-    "src/register-evm-agent/src/simple_canister",
+    "src/minter-client",
+    "src/minter-did",
+    "src/register-evm-agent",
+    "src/ethereum-json-rpc-client",
     "src/signature-verification-canister-client",
 ]
 resolver = "2"
