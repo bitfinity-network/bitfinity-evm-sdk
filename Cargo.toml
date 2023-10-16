@@ -10,8 +10,7 @@ members = [
     "src/iceth-client/test-canister",
     "src/minter-client",
     "src/minter-did",
-    "src/register-evm-agent/src/register_evm_agent",
-    "src/register-evm-agent/src/simple_canister",
+    "src/register-evm-agent",
     "src/ethereum-json-rpc-client",
     "src/signature-verification-canister-client",
 ]

@@ -37,7 +37,7 @@ solidity/broadcast/
 .env
 
 # Artifacts folder
-.artifact
+./target/artifact
 
 # Wasm files
 *.wasm
