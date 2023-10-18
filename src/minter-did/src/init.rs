@@ -1,5 +1,6 @@
+use std::borrow::Cow;
+use std::mem::size_of;
 use std::time::Duration;
-use std::{borrow::Cow, mem::size_of};
 
 use candid::{CandidType, Principal};
 use did::codec::ByteChunkReader;
@@ -68,7 +69,6 @@ impl Default for OperationPricing {
 impl OperationPricing {
     pub const STORABLE_BYTE_SIZE: usize = size_of::<u32>() * 6;
 }
-
 
 impl Storable for OperationPricing {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
