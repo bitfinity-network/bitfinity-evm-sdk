@@ -47,7 +47,7 @@ impl<'a> ByteChunkReader<'a> {
 
     /// Reads the remaining data and update the reader internal pointer.
     /// It panics if not enough data is present
-    pub fn read_all(&mut self) -> &'a [u8] {
+    pub fn read_to_end(mut self) -> &'a [u8] {
         self.read(self.data.len() - self.position)
     }
 }
@@ -65,6 +65,6 @@ mod tests {
         assert_eq!(&[1u8, 2], reader.read(2));
         assert_eq!(&[3u8, 4u8, 5u8, 6u8], reader.read_slice::<4>());
         assert_eq!(&[7u8], reader.read(1));
-        assert_eq!(&[8u8, 9, 10, 11, 12, 13], reader.read_all());
+        assert_eq!(&[8u8, 9, 10, 11, 12, 13], reader.read_to_end());
     }
 }
