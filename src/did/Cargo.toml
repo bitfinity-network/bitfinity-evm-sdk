@@ -18,7 +18,6 @@ bincode = { workspace = true }
 bytes = { workspace = true }
 candid = { workspace = true }
 derive_more = { workspace = true }
-encode-macros = { path = "../encode-macros" }
 ethereum-types = { workspace = true }
 ethers-core = { workspace = true }
 hex = { workspace = true }

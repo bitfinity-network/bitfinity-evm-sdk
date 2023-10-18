@@ -6,7 +6,7 @@ use did::transaction::Signature;
 use did::{H160, U256};
 use eth_signer::sign_strategy::TransactionSigner;
 use ethers_core::utils::keccak256;
-use ic_stable_structures::{BoundedStorable, Storable};
+use ic_stable_structures::{Bound, Storable};
 use serde::de::Visitor;
 use serde::Deserialize;
 
@@ -239,6 +239,9 @@ impl DerefMut for SignedMintOrder {
 }
 
 impl Storable for SignedMintOrder {
+
+    const BOUND: Bound = Bound::Bounded { max_size: MintOrder::SIGNED_ENCODED_DATA_SIZE as _, is_fixed_size: true };
+
     fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         self.0.to_bytes()
     }
@@ -250,7 +253,3 @@ impl Storable for SignedMintOrder {
     }
 }
 
-impl BoundedStorable for SignedMintOrder {
-    const MAX_SIZE: u32 = MintOrder::SIGNED_ENCODED_DATA_SIZE as _;
-    const IS_FIXED_SIZE: bool = true;
-}

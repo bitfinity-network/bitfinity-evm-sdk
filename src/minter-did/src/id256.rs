@@ -2,10 +2,12 @@ use std::borrow::Cow;
 
 use candid::{CandidType, Principal};
 use did::H160;
-use ic_stable_structures::{BoundedStorable, Storable};
+use ic_stable_structures::{Bound, Storable};
 use serde::Deserialize;
 
 use crate::error::Error;
+
+const ID_256_BYTE_SIZE: usize = 32;
 
 /// 32-bytes entity identifier.
 /// Uniquely identifies:
@@ -35,16 +37,18 @@ use crate::error::Error;
     Deserialize,
     serde::Serialize,
 )]
-pub struct Id256(pub [u8; 32]);
+pub struct Id256(pub [u8; ID_256_BYTE_SIZE]);
 
 impl Id256 {
+
+    pub const BYTE_SIZE: usize = ID_256_BYTE_SIZE;
     pub const PRINCIPAL_MARK: u8 = 0;
     pub const EVM_ADDRESS_MARK: u8 = 1;
 
     /// Creates unique identifier for contract.
     /// Chain id required to make identifiers unique across all chains.
     pub fn from_evm_address(address: &H160, chain_id: u32) -> Self {
-        let mut buf = [0u8; 32];
+        let mut buf = [0u8; Self::BYTE_SIZE];
 
         buf[0] = Self::EVM_ADDRESS_MARK;
 
@@ -85,14 +89,14 @@ impl Id256 {
     }
 
     pub fn native_address() -> H160 {
-        let mut bytes = [0u8; 20];
+        let mut bytes = [0u8; H160::BYTE_SIZE];
         const NO_TO_TOKEN_MARK: u8 = 2;
         bytes[19] = NO_TO_TOKEN_MARK;
         H160::from_slice(&bytes)
     }
 
     pub fn no_to_address() -> H160 {
-        let mut bytes = [0u8; 20];
+        let mut bytes = [0u8; H160::BYTE_SIZE];
         const NO_TO_TOKEN_MARK: u8 = 3;
         bytes[19] = NO_TO_TOKEN_MARK;
         H160::from_slice(&bytes)
@@ -103,7 +107,7 @@ impl TryFrom<&[u8]> for Id256 {
     type Error = Error;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let inner: [u8; Self::MAX_SIZE as _] = value
+        let inner: [u8; Self::BYTE_SIZE as _] = value
             .try_into()
             .map_err(|_| Error::Internal("data of Id256 should contain exactly 32 bytes".into()))?;
 
@@ -158,6 +162,9 @@ impl TryFrom<Id256> for H160 {
 }
 
 impl Storable for Id256 {
+    
+    const BOUND: Bound = Bound::Bounded { max_size: Self::BYTE_SIZE as _, is_fixed_size: true };
+
     fn to_bytes(&self) -> Cow<'_, [u8]> {
         (&self.0[..]).into()
     }
@@ -165,11 +172,7 @@ impl Storable for Id256 {
     fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
         Self::try_from(bytes.as_ref()).expect("failed to deserialize Id256")
     }
-}
 
-impl BoundedStorable for Id256 {
-    const MAX_SIZE: u32 = 32;
-    const IS_FIXED_SIZE: bool = true;
 }
 
 #[cfg(test)]

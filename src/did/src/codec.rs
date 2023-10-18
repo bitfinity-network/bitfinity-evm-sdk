@@ -15,5 +15,3 @@ pub fn bincode_encode<T: serde::Serialize>(item: &T) -> Vec<u8> {
 pub fn bincode_decode<'a, T: serde::Deserialize<'a>>(bytes: &'a [u8]) -> T {
     bincode::deserialize(bytes).expect("failed to deserialize item with bincode")
 }
-
-pub use encode_macros::FixedStorable;

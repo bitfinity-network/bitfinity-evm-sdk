@@ -5,7 +5,7 @@ use candid::{CandidType, Principal};
 use did::{codec, H160, U256};
 use eth_signer::sign_strategy::SigningStrategy;
 use ic_log::LogSettings;
-use ic_stable_structures::Storable;
+use ic_stable_structures::{Bound, Storable};
 use serde::Deserialize;
 
 /// Minter canister initialization data.
@@ -64,12 +64,14 @@ impl Default for OperationPricing {
     }
 }
 
-impl Storable for OperationPricing {
-    fn to_bytes(&self) -> Cow<'_, [u8]> {
-        codec::encode(self).into()
-    }
+// impl Storable for OperationPricing {
+//     fn to_bytes(&self) -> Cow<'_, [u8]> {
+//         codec::encode(self).into()
+//     }
 
-    fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
-        codec::decode(&bytes)
-    }
-}
+//     fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
+//         codec::decode(&bytes)
+//     }
+
+//     const BOUND: ic_stable_structures::Bound;
+// }
