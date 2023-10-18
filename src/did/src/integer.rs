@@ -375,7 +375,10 @@ impl Storable for U256 {
         Self::from_big_endian(bytes.as_ref())
     }
 
-    const BOUND: Bound = Bound::Bounded { max_size: U256::BYTE_SIZE as u32, is_fixed_size: true };
+    const BOUND: Bound = Bound::Bounded {
+        max_size: U256::BYTE_SIZE as u32,
+        is_fixed_size: true,
+    };
 }
 
 impl CandidType for U64 {

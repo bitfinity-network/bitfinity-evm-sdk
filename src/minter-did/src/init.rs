@@ -1,8 +1,9 @@
-use std::borrow::Cow;
 use std::time::Duration;
+use std::{borrow::Cow, mem::size_of};
 
 use candid::{CandidType, Principal};
-use did::{codec, H160, U256};
+use did::codec::ByteChunkReader;
+use did::{H160, U256};
 use eth_signer::sign_strategy::SigningStrategy;
 use ic_log::LogSettings;
 use ic_stable_structures::{Bound, Storable};
@@ -64,14 +65,92 @@ impl Default for OperationPricing {
     }
 }
 
-// impl Storable for OperationPricing {
-//     fn to_bytes(&self) -> Cow<'_, [u8]> {
-//         codec::encode(self).into()
-//     }
+const OPERATING_PRICE_SIZE: usize = size_of::<u32>() * 6;
 
-//     fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
-//         codec::decode(&bytes)
-//     }
+impl Storable for OperationPricing {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
+        let mut buf = Vec::with_capacity(OPERATING_PRICE_SIZE);
+        buf.extend_from_slice(&self.evmc_notification.to_be_bytes());
+        buf.extend_from_slice(&self.evm_registration.to_be_bytes());
+        buf.extend_from_slice(&self.icrc_mint_approval.to_be_bytes());
+        buf.extend_from_slice(&self.icrc_transfer.to_be_bytes());
+        buf.extend_from_slice(&self.erc20_mint.to_be_bytes());
+        buf.extend_from_slice(&self.endpoint_query.to_be_bytes());
+        buf.into()
+    }
 
-//     const BOUND: ic_stable_structures::Bound;
-// }
+    fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
+        let mut reader = ByteChunkReader::new(&bytes);
+        let evmc_notification = u32::from_be_bytes(
+            reader
+                .read(4)
+                .try_into()
+                .expect("Should read the exact size of bytes"),
+        );
+        let evm_registration = u32::from_be_bytes(
+            reader
+                .read(4)
+                .try_into()
+                .expect("Should read the exact size of bytes"),
+        );
+        let icrc_mint_approval = u32::from_be_bytes(
+            reader
+                .read(4)
+                .try_into()
+                .expect("Should read the exact size of bytes"),
+        );
+        let icrc_transfer = u32::from_be_bytes(
+            reader
+                .read(4)
+                .try_into()
+                .expect("Should read the exact size of bytes"),
+        );
+        let erc20_mint = u32::from_be_bytes(
+            reader
+                .read(4)
+                .try_into()
+                .expect("Should read the exact size of bytes"),
+        );
+        let endpoint_query = u32::from_be_bytes(
+            reader
+                .read(4)
+                .try_into()
+                .expect("Should read the exact size of bytes"),
+        );
+        Self {
+            evmc_notification,
+            evm_registration,
+            icrc_mint_approval,
+            icrc_transfer,
+            erc20_mint,
+            endpoint_query,
+        }
+    }
+
+    const BOUND: Bound = Bound::Bounded {
+        max_size: OPERATING_PRICE_SIZE as _,
+        is_fixed_size: true,
+    };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn operation_pricing_storable_roundtrip() {
+        let operation_pricing = OperationPricing {
+            evmc_notification: rand::random(),
+            evm_registration: rand::random(),
+            icrc_mint_approval: rand::random(),
+            icrc_transfer: rand::random(),
+            erc20_mint: rand::random(),
+            endpoint_query: rand::random(),
+        };
+
+        let bytes = operation_pricing.to_bytes();
+        let decoded = OperationPricing::from_bytes(bytes);
+
+        assert_eq!(operation_pricing, decoded);
+    }
+}

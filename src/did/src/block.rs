@@ -306,7 +306,6 @@ pub fn calculate_next_block_base_fee(
 }
 
 impl Storable for Block<H256> {
-
     const BOUND: Bound = Bound::Unbounded;
 
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
@@ -467,7 +466,6 @@ impl ExeResult {
 }
 
 impl Storable for ExeResult {
-
     const BOUND: Bound = Bound::Unbounded;
 
     fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {

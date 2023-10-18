@@ -290,7 +290,6 @@ impl From<Transaction> for ethers_core::types::Transaction {
 }
 
 impl Storable for Transaction {
-
     const BOUND: Bound = Bound::Unbounded;
 
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
@@ -557,7 +556,6 @@ pub struct StorableExecutionResult {
 }
 
 impl Storable for StorableExecutionResult {
-
     const BOUND: Bound = Bound::Unbounded;
 
     fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {

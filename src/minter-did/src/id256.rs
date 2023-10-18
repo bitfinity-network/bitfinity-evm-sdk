@@ -40,7 +40,6 @@ const ID_256_BYTE_SIZE: usize = 32;
 pub struct Id256(pub [u8; ID_256_BYTE_SIZE]);
 
 impl Id256 {
-
     pub const BYTE_SIZE: usize = ID_256_BYTE_SIZE;
     pub const PRINCIPAL_MARK: u8 = 0;
     pub const EVM_ADDRESS_MARK: u8 = 1;
@@ -162,8 +161,10 @@ impl TryFrom<Id256> for H160 {
 }
 
 impl Storable for Id256 {
-    
-    const BOUND: Bound = Bound::Bounded { max_size: Self::BYTE_SIZE as _, is_fixed_size: true };
+    const BOUND: Bound = Bound::Bounded {
+        max_size: Self::BYTE_SIZE as _,
+        is_fixed_size: true,
+    };
 
     fn to_bytes(&self) -> Cow<'_, [u8]> {
         (&self.0[..]).into()
@@ -172,7 +173,6 @@ impl Storable for Id256 {
     fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
         Self::try_from(bytes.as_ref()).expect("failed to deserialize Id256")
     }
-
 }
 
 #[cfg(test)]

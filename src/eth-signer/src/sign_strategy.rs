@@ -65,9 +65,8 @@ impl SigningStrategy {
 }
 
 impl Storable for SigningStrategy {
-
     const BOUND: Bound = Bound::Unbounded;
-    
+
     fn to_bytes(&self) -> Cow<[u8]> {
         codec::bincode_encode(self).into()
     }
@@ -75,7 +74,6 @@ impl Storable for SigningStrategy {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         codec::bincode_decode(&bytes)
     }
-
 }
 
 /// Transaction signer

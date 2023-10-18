@@ -239,8 +239,10 @@ impl DerefMut for SignedMintOrder {
 }
 
 impl Storable for SignedMintOrder {
-
-    const BOUND: Bound = Bound::Bounded { max_size: MintOrder::SIGNED_ENCODED_DATA_SIZE as _, is_fixed_size: true };
+    const BOUND: Bound = Bound::Bounded {
+        max_size: MintOrder::SIGNED_ENCODED_DATA_SIZE as _,
+        is_fixed_size: true,
+    };
 
     fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         self.0.to_bytes()
@@ -252,4 +254,3 @@ impl Storable for SignedMintOrder {
         ))
     }
 }
-
