@@ -6,7 +6,7 @@ use candid::{CandidType, Deserialize};
 use derive_more::Display;
 use ethers_core::types::transaction::eip2930;
 use ethers_core::types::Signature as EthersSignature;
-use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
+use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
@@ -290,6 +290,9 @@ impl From<Transaction> for ethers_core::types::Transaction {
 }
 
 impl Storable for Transaction {
+
+    const BOUND: Bound = Bound::Unbounded;
+
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         codec::encode(self).into()
     }
@@ -554,6 +557,9 @@ pub struct StorableExecutionResult {
 }
 
 impl Storable for StorableExecutionResult {
+
+    const BOUND: Bound = Bound::Unbounded;
+
     fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         codec::encode(self).into()
     }

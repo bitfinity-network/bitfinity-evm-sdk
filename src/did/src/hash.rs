@@ -6,7 +6,7 @@ use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::Display;
 use ethers_core::types::NameOrAddress;
-use ic_stable_structures::{BoundedStorable, Storable};
+use ic_stable_structures::{Bound, Storable};
 use serde::Serialize;
 
 #[derive(
@@ -105,6 +105,8 @@ impl Storable for H160 {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self(ethereum_types::H160::from_slice(bytes.as_ref()))
     }
+
+    const BOUND: Bound = Bound::Bounded { max_size: 20, is_fixed_size: true };
 }
 
 impl Storable for H256 {
@@ -115,16 +117,8 @@ impl Storable for H256 {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self(ethereum_types::H256::from_slice(bytes.as_ref()))
     }
-}
 
-impl BoundedStorable for H160 {
-    const MAX_SIZE: u32 = 20;
-    const IS_FIXED_SIZE: bool = true;
-}
-
-impl BoundedStorable for H256 {
-    const MAX_SIZE: u32 = 32;
-    const IS_FIXED_SIZE: bool = true;
+    const BOUND: Bound = Bound::Bounded { max_size: 32, is_fixed_size: true };
 }
 
 impl CandidType for H64 {
