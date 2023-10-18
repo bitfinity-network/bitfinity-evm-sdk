@@ -65,11 +65,14 @@ impl Default for OperationPricing {
     }
 }
 
-const OPERATING_PRICE_SIZE: usize = size_of::<u32>() * 6;
+impl OperationPricing {
+    pub const STORABLE_BYTE_SIZE: usize = size_of::<u32>() * 6;
+}
+
 
 impl Storable for OperationPricing {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
-        let mut buf = Vec::with_capacity(OPERATING_PRICE_SIZE);
+        let mut buf = Vec::with_capacity(Self::STORABLE_BYTE_SIZE);
         buf.extend_from_slice(&self.evmc_notification.to_be_bytes());
         buf.extend_from_slice(&self.evm_registration.to_be_bytes());
         buf.extend_from_slice(&self.icrc_mint_approval.to_be_bytes());
@@ -128,7 +131,7 @@ impl Storable for OperationPricing {
     }
 
     const BOUND: Bound = Bound::Bounded {
-        max_size: OPERATING_PRICE_SIZE as _,
+        max_size: Self::STORABLE_BYTE_SIZE as _,
         is_fixed_size: true,
     };
 }

@@ -7,8 +7,6 @@ use serde::Deserialize;
 
 use crate::error::Error;
 
-const ID_256_BYTE_SIZE: usize = 32;
-
 /// 32-bytes entity identifier.
 /// Uniquely identifies:
 /// - an EVM address,
@@ -38,6 +36,8 @@ const ID_256_BYTE_SIZE: usize = 32;
     serde::Serialize,
 )]
 pub struct Id256(pub [u8; ID_256_BYTE_SIZE]);
+
+const ID_256_BYTE_SIZE: usize = 32;
 
 impl Id256 {
     pub const BYTE_SIZE: usize = ID_256_BYTE_SIZE;
