@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 
 use encode_macros::FixedStorable;
-use ic_stable_structures::{BoundedStorable, Storable};
 
 #[derive(FixedStorable, PartialEq, Eq, Debug)]
 struct StorableType<const SIZE: usize>([u8; SIZE]);
@@ -29,7 +28,7 @@ struct TwoValuesNamedStruct {
 #[derive(FixedStorable, Eq, PartialEq, Debug)]
 struct TwoValueTuple(StorableType<10>, StorableType<20>);
 
-fn check_storable_roundtrip<T: Storable + Eq + Debug>(val: &T) {
+fn check_storable_roundtrip<T: ic_stable_structures::Storable + Eq + Debug>(val: &T) {
     let restored_value = T::from_bytes(val.to_bytes());
     assert_eq!(&restored_value, val);
 }

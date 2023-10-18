@@ -10,7 +10,7 @@ use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::utils;
 #[cfg(feature = "ic_sign")]
 pub use ic_sign::{IcSigner, ManagementCanisterSigner, SigningKeyId};
-use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
+use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
 use serde::{Deserialize, Serialize};
 
 use crate::{Signer, Wallet};
@@ -65,6 +65,9 @@ impl SigningStrategy {
 }
 
 impl Storable for SigningStrategy {
+
+    const BOUND: Bound = Bound::Unbounded;
+    
     fn to_bytes(&self) -> Cow<[u8]> {
         codec::bincode_encode(self).into()
     }
@@ -72,6 +75,7 @@ impl Storable for SigningStrategy {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         codec::bincode_decode(&bytes)
     }
+
 }
 
 /// Transaction signer
@@ -90,6 +94,8 @@ impl Storable for TxSigner {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         codec::bincode_decode(&bytes)
     }
+
+    const BOUND: Bound = Bound::Unbounded;
 }
 
 impl SlicedStorable for TxSigner {

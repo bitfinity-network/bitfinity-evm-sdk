@@ -52,6 +52,17 @@ fn derive_fixed_storable_struct(
 
     quote::quote!(
         impl #impl_generics ic_stable_structures::Storable for #struct_name #ty_generics #where_clause {
+
+            const BOUND: ic_stable_structures::Bound = ic_stable_structures::Bound::Bounded { 
+                max_size: #max_size_tokens, 
+                is_fixed_size: {
+                    let is_fixed = #is_fixed_tokens;
+                    assert!(is_fixed);
+    
+                    is_fixed
+                } 
+            };
+
             fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
                 let full_size = #max_size_tokens;
 
@@ -65,8 +76,8 @@ fn derive_fixed_storable_struct(
                 let mut offset: usize = 0;
 
                 #(
-                    let size = <#field_types as BoundedStorable>::MAX_SIZE as usize;
-                    let #local_names: #field_types = Storable::from_bytes((&bytes.as_ref()[offset..(offset + size)]).into());
+                    let size = Self::MAX_SIZE as usize;
+                    let #local_names: #field_types = ic_stable_structures::Storable::from_bytes((&bytes.as_ref()[offset..(offset + size)]).into());
                     offset += size;
                 )*
 
@@ -74,7 +85,7 @@ fn derive_fixed_storable_struct(
             }
         }
 
-        impl #impl_generics ic_stable_structures::BoundedStorable for #struct_name #ty_generics #where_clause {
+        impl #impl_generics #struct_name #ty_generics #where_clause {
             const MAX_SIZE: u32 = #max_size_tokens;
 
             const IS_FIXED_SIZE: bool = {
