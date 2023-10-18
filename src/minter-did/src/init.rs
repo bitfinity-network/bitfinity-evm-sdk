@@ -84,42 +84,12 @@ impl Storable for OperationPricing {
 
     fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
         let mut reader = ByteChunkReader::new(&bytes);
-        let evmc_notification = u32::from_be_bytes(
-            reader
-                .read(4)
-                .try_into()
-                .expect("Should read the exact size of bytes"),
-        );
-        let evm_registration = u32::from_be_bytes(
-            reader
-                .read(4)
-                .try_into()
-                .expect("Should read the exact size of bytes"),
-        );
-        let icrc_mint_approval = u32::from_be_bytes(
-            reader
-                .read(4)
-                .try_into()
-                .expect("Should read the exact size of bytes"),
-        );
-        let icrc_transfer = u32::from_be_bytes(
-            reader
-                .read(4)
-                .try_into()
-                .expect("Should read the exact size of bytes"),
-        );
-        let erc20_mint = u32::from_be_bytes(
-            reader
-                .read(4)
-                .try_into()
-                .expect("Should read the exact size of bytes"),
-        );
-        let endpoint_query = u32::from_be_bytes(
-            reader
-                .read(4)
-                .try_into()
-                .expect("Should read the exact size of bytes"),
-        );
+        let evmc_notification = u32::from_be_bytes(reader.read_slice().to_owned());
+        let evm_registration = u32::from_be_bytes(reader.read_slice().to_owned());
+        let icrc_mint_approval = u32::from_be_bytes(reader.read_slice().to_owned());
+        let icrc_transfer = u32::from_be_bytes(reader.read_slice().to_owned());
+        let erc20_mint = u32::from_be_bytes(reader.read_slice().to_owned());
+        let endpoint_query = u32::from_be_bytes(reader.read_slice().to_owned());
         Self {
             evmc_notification,
             evm_registration,

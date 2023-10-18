@@ -34,4 +34,12 @@ impl<'a> ByteChunkReader<'a> {
         self.position += chunk_size;
         res
     }
+
+    /// Reads a chunk of data and update the reader internal pointer
+    /// to the beginning of the next chunk
+    pub fn read_slice<const N: usize>(&mut self) -> &'a [u8; N] {
+        self.read(N)
+            .try_into()
+            .expect("Should read the exact size of bytes")
+    }
 }
