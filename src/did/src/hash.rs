@@ -6,7 +6,7 @@ use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::Display;
 use ethers_core::types::NameOrAddress;
-use ic_stable_structures::{BoundedStorable, Storable};
+use ic_stable_structures::{Bound, Storable};
 use serde::Serialize;
 
 #[derive(
@@ -32,6 +32,8 @@ pub fn from_hex_str<const SIZE: usize>(mut s: &str) -> Result<[u8; SIZE], hex::F
 }
 
 impl H64 {
+    pub const BYTE_SIZE: usize = 8;
+
     pub fn new(value: ethereum_types::H64) -> Self {
         Self(value)
     }
@@ -54,6 +56,8 @@ impl H64 {
 }
 
 impl H160 {
+    pub const BYTE_SIZE: usize = 20;
+
     pub fn new(value: ethereum_types::H160) -> Self {
         Self(value)
     }
@@ -76,6 +80,8 @@ impl H160 {
 }
 
 impl H256 {
+    pub const BYTE_SIZE: usize = 32;
+
     pub fn new(value: ethereum_types::H256) -> Self {
         Self(value)
     }
@@ -97,6 +103,21 @@ impl H256 {
     }
 }
 
+impl Storable for H64 {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
+        self.0.as_ref().into()
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self(ethereum_types::H64::from_slice(bytes.as_ref()))
+    }
+
+    const BOUND: Bound = Bound::Bounded {
+        max_size: H64::BYTE_SIZE as u32,
+        is_fixed_size: true,
+    };
+}
+
 impl Storable for H160 {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
         self.0.as_ref().into()
@@ -105,6 +126,11 @@ impl Storable for H160 {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self(ethereum_types::H160::from_slice(bytes.as_ref()))
     }
+
+    const BOUND: Bound = Bound::Bounded {
+        max_size: H160::BYTE_SIZE as u32,
+        is_fixed_size: true,
+    };
 }
 
 impl Storable for H256 {
@@ -115,16 +141,11 @@ impl Storable for H256 {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self(ethereum_types::H256::from_slice(bytes.as_ref()))
     }
-}
 
-impl BoundedStorable for H160 {
-    const MAX_SIZE: u32 = 20;
-    const IS_FIXED_SIZE: bool = true;
-}
-
-impl BoundedStorable for H256 {
-    const MAX_SIZE: u32 = 32;
-    const IS_FIXED_SIZE: bool = true;
+    const BOUND: Bound = Bound::Bounded {
+        max_size: H256::BYTE_SIZE as u32,
+        is_fixed_size: true,
+    };
 }
 
 impl CandidType for H64 {
@@ -342,8 +363,19 @@ mod tests {
     }
 
     #[test]
+    fn test_storable_h64() {
+        let bytes: Vec<_> = (0..(H64::BYTE_SIZE as u8)).collect();
+        let h64 = H64::from_slice(&bytes);
+
+        let serialized = h64.to_bytes();
+        let deserialized = H64::from_bytes(serialized);
+
+        assert_eq!(h64, deserialized);
+    }
+
+    #[test]
     fn test_storable_h160() {
-        let bytes: Vec<_> = (0..20).collect();
+        let bytes: Vec<_> = (0..(H160::BYTE_SIZE as u8)).collect();
         let h160 = H160::from_slice(&bytes);
 
         let serialized = h160.to_bytes();
@@ -354,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_storable_h256() {
-        let bytes: Vec<_> = (0..32).collect();
+        let bytes: Vec<_> = (0..(H256::BYTE_SIZE as u8)).collect();
         let h256 = H256::from_slice(&bytes);
 
         let serialized = h256.to_bytes();

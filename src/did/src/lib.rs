@@ -9,6 +9,7 @@ pub mod codec;
 pub mod constant;
 pub mod error;
 pub mod hash;
+pub mod ic;
 pub mod integer;
 pub mod keccak;
 pub mod mint_order_exemption;

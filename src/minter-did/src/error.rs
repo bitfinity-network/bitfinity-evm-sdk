@@ -1,6 +1,5 @@
 use candid::{CandidType, Deserialize};
 use did::H160;
-use eth_signer::ic_sign::IcSignerError;
 use ic_exports::ic_kit::RejectionCode;
 use ic_exports::icrc_types::icrc2::approve::ApproveError;
 use ic_exports::icrc_types::icrc2::transfer_from::TransferFromError;
@@ -63,12 +62,6 @@ impl From<(RejectionCode, String)> for Error {
             "inter-canister call failed {:?}: {}",
             value.0, value.1
         ))
-    }
-}
-
-impl From<IcSignerError> for Error {
-    fn from(value: eth_signer::ic_sign::IcSignerError) -> Self {
-        Self::from(format!("ic signer error: {}", value))
     }
 }
 

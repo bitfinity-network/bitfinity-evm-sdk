@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize, Nat};
-use ic_stable_structures::{BoundedStorable, Storable};
+use ic_stable_structures::{Bound, Storable};
 use num::BigUint;
 use serde::Serialize;
 
@@ -374,11 +374,11 @@ impl Storable for U256 {
     fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
         Self::from_big_endian(bytes.as_ref())
     }
-}
 
-impl BoundedStorable for U256 {
-    const MAX_SIZE: u32 = 32;
-    const IS_FIXED_SIZE: bool = true;
+    const BOUND: Bound = Bound::Bounded {
+        max_size: U256::BYTE_SIZE as u32,
+        is_fixed_size: true,
+    };
 }
 
 impl CandidType for U64 {

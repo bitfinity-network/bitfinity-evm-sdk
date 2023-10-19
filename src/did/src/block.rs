@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use candid::{CandidType, Deserialize};
 use ethers_core::types::Log as EthersLog;
-use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
+use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -306,6 +306,8 @@ pub fn calculate_next_block_base_fee(
 }
 
 impl Storable for Block<H256> {
+    const BOUND: Bound = Bound::Unbounded;
+
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         codec::encode(self).into()
     }
@@ -464,6 +466,8 @@ impl ExeResult {
 }
 
 impl Storable for ExeResult {
+    const BOUND: Bound = Bound::Unbounded;
+
     fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         codec::encode(self).into()
     }
