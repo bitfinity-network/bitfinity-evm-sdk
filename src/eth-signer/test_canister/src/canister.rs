@@ -79,7 +79,7 @@ impl TestCanister {
 
     /// Signs and recovers two same transactions with same derivation path.
     /// IC uses non-deterministic signing, so signatures will be different.
-    /// 
+    ///
     /// Discussed in https://forum.dfinity.org/t/deterministic-ecdsa-k-generation/23907
     #[update]
     pub async fn non_deterministic_signing(&self) {
