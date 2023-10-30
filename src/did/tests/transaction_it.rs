@@ -23,11 +23,11 @@ fn build_transaction(
     .unwrap();
 
     match tx_type {
-        Some(tx_type) if tx_type == 1 => {
+        Some(1) => {
             tx.transaction_type = Some(U64::from(1u64));
             tx.gas_price = gas_price;
         }
-        Some(tx_type) if tx_type == 2 => {
+        Some(2) => {
             tx.transaction_type = Some(U64::from(2u64));
             tx.max_priority_fee_per_gas = max_priority_fee_per_gas;
             tx.max_fee_per_gas = max_fee_per_gas;

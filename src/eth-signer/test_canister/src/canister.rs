@@ -77,6 +77,40 @@ impl TestCanister {
         assert_eq!(recovered_from, from);
     }
 
+    /// Signs and recovers two same transactions with same derivation path.
+    /// IC uses non-deterministic signing, so signatures will be different.
+    /// 
+    /// Discussed in https://forum.dfinity.org/t/deterministic-ecdsa-k-generation/23907
+    #[update]
+    pub async fn non_deterministic_signing(&self) {
+        let digest = [43u8; 32];
+        let derivation_path = vec![vec![42; 4]];
+
+        let pubkey = IcSigner
+            .public_key(SigningKeyId::Dfx, derivation_path.clone())
+            .await
+            .unwrap();
+        let from = IcSigner.pubkey_to_address(&pubkey).unwrap();
+
+        let signature1 = IcSigner
+            .sign_digest(&from, digest, SigningKeyId::Dfx, derivation_path.clone())
+            .await
+            .unwrap();
+
+        let from1 = signature1.recover(digest).unwrap();
+        assert_eq!(from1, from);
+
+        let signature2 = IcSigner
+            .sign_digest(&from, digest, SigningKeyId::Dfx, derivation_path)
+            .await
+            .unwrap();
+
+        let from2 = signature2.recover(digest).unwrap();
+        assert_eq!(from2, from);
+
+        assert!(signature1 != signature2)
+    }
+
     /// Important: This function must be added to the canister to provide the idl.
     pub fn idl() -> Idl {
         generate_idl!()
