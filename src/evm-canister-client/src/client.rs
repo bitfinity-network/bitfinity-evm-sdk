@@ -441,10 +441,14 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     ///
     /// * `block_number` - The block number to revert to.
+    ///
+    /// # Returns
+    ///
+    /// - The new last block.
     pub async fn revert_blockchain_to_block(
         &self,
         block_number: u64,
-    ) -> CanisterClientResult<Result<()>> {
+    ) -> CanisterClientResult<Result<u64>> {
         self.client
             .update("revert_blockchain_to_block", (block_number,))
             .await
