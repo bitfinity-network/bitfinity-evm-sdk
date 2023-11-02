@@ -1,5 +1,6 @@
 use candid::Principal;
 use did::block::{BlockResult, ExeResult};
+use did::error::Result;
 use did::{
     BasicAccount, Block, BlockNumber, Bytes, Transaction, TransactionReceipt, H160, H256, U256,
 };
@@ -443,7 +444,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn revert_blockchain_to_block(
         &self,
         block_number: u64,
-    ) -> CanisterClientResult<EvmResult<()>> {
+    ) -> CanisterClientResult<Result<()>> {
         self.client
             .update("revert_blockchain_to_block", (block_number,))
             .await
@@ -457,7 +458,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn append_blockchain_blocks(
         &self,
         blocks_with_data: BlockWithData,
-    ) -> CanisterClientResult<EvmResult<()>> {
+    ) -> CanisterClientResult<Result<()>> {
         self.client
             .update("append_blockchain_blocks", (blocks_with_data,))
             .await
@@ -468,7 +469,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     ///
     /// * `disabled` - Whether to disable or enable the EVM.
-    pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<EvmResult<()>> {
+    pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<Result<()>> {
         self.client.update("admin_disable_evm", (disabled,)).await
     }
 
