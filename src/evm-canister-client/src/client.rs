@@ -1,9 +1,13 @@
 use candid::Principal;
-use did::block::BlockResult;
-use did::{BasicAccount, BlockNumber, Bytes, Transaction, TransactionReceipt, H160, H256, U256};
+use did::block::{BlockResult, ExeResult};
+use did::{
+    BasicAccount, Block, BlockNumber, Bytes, Transaction, TransactionReceipt, H160, H256, U256,
+};
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 
 use crate::EvmResult;
+
+type BlockWithData = Vec<(Block<H256>, Vec<(Transaction, ExeResult)>)>;
 
 /// An EVM canister client.
 #[derive(Debug)]
@@ -429,6 +433,43 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client
             .query("is_address_reserved", (principal, address))
             .await
+    }
+
+    /// Revert the blockchain to a certain block, identified by the provided number.
+    ///
+    /// # Arguments
+    ///
+    /// * `block_number` - The block number to revert to.
+    pub async fn revert_blockchain_to_block(
+        &self,
+        block_number: u64,
+    ) -> CanisterClientResult<EvmResult<()>> {
+        self.client
+            .update("revert_blockchain_to_block", (block_number,))
+            .await
+    }
+
+    /// Append blocks to the blockchain. If the blocks already exist in the blockchain, they will be overwritten.
+    ///
+    /// # Arguments
+    ///
+    /// * `blocks_with_data` - The blocks to append to the blockchain.
+    pub async fn append_blockchain_blocks(
+        &self,
+        blocks_with_data: BlockWithData,
+    ) -> CanisterClientResult<EvmResult<()>> {
+        self.client
+            .update("append_blockchain_blocks", (blocks_with_data,))
+            .await
+    }
+
+    /// Disable or enable the EVM. This function requires admin permissions.
+    ///
+    /// # Arguments
+    ///
+    /// * `disabled` - Whether to disable or enable the EVM.
+    pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<EvmResult<()>> {
+        self.client.update("admin_disable_evm", (disabled,)).await
     }
 
     /// Returns the chain ID used for signing replay-protected transactions.
