@@ -59,6 +59,9 @@ pub enum EvmError {
 
     #[error("The request is not valid: {0}")]
     BadRequest(String),
+
+    #[error("The transaction has been reverted: {0}")]
+    TransactionReverted(String),
 }
 
 /// Variant of `TransactionPool` error
@@ -113,10 +116,16 @@ impl From<EvmError> for jsonrpc_core::error::Error {
             EvmError::NotAuthorized => -32002,      // NO_AUTHOR
             _ => -32015,                            // EXECUTION_ERROR
         };
+
+        let data = match &err {
+            EvmError::TransactionReverted(msg) => Some(msg),
+            _ => None,
+        };
+
         Error {
             code: ErrorCode::ServerError(code),
             message: err.to_string(),
-            data: None,
+            data: data.map(|s| s.as_str().into()),
         }
     }
 }
