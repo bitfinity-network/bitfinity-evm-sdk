@@ -455,6 +455,19 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Updates the runtime configuration of the logger with a new filter in the same form as the `RUST_LOG`
+    /// environment variable.
+    /// Example of valid filters:
+    /// - info
+    /// - debug,crate1::mod1=error,crate1::mod2,crate2=debug
+    ///
+    /// # Arguments
+    ///
+    /// * `filter` - The new filter.
+    pub async fn set_logger_filter(&self, filter: &str) -> CanisterClientResult<Result<()>> {
+        self.client.update("set_logger_filter", (filter,)).await
+    }
+
     /// Disable or enable the EVM. This function requires admin permissions.
     ///
     /// # Arguments
