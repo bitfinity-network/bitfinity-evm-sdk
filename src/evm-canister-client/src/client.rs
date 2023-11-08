@@ -2,7 +2,8 @@ use candid::Principal;
 use did::block::{BlockResult, ExeResult};
 use did::error::Result;
 use did::{
-    BasicAccount, Block, BlockNumber, Bytes, Transaction, TransactionReceipt, H160, H256, U256,
+    BasicAccount, Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt,
+    H160, H256, U256,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 
@@ -329,29 +330,15 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ///
     /// # Arguments
     ///
-    /// * `from` - The address of the caller
-    /// * `to` - The address of the contract to call
-    /// * `gas_limit` - The gas limit for the call
-    /// * `value` - The value to send to the contract
-    /// * `input` - The data to send to the contract
-    ///
+    /// * `request` - The request to estimate the gas for the call
     /// # Returns
     ///
     /// The estimated gas for the call
     pub async fn eth_estimate_gas(
         &self,
-        from: H160,
-        to: Option<H160>,
-        gas_limit: u64,
-        value: U256,
-        input: Bytes,
+        request: EstimateGasRequest,
     ) -> CanisterClientResult<EvmResult<U256>> {
-        self.client
-            .query(
-                "eth_estimate_gas",
-                (from, to, gas_limit, value, gas_limit, input),
-            )
-            .await
+        self.client.query("eth_estimate_gas", (request,)).await
     }
 
     /// Get the transaction count at a given block hash
