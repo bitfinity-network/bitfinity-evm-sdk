@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use blocks_writer::BlocksWriter;
 use clap::Parser;
-use ethereum_json_rpc_client::{get_full_blocks_by_number, get_receipts_by_hash};
+use ethereum_json_rpc_client::{EthJsonRcpClient, reqwest::ReqwestClient};
 use ethers_core::types::{Block, BlockNumber, Transaction};
 use itertools::Itertools;
 
@@ -88,6 +88,9 @@ async fn collect_blocks(
     end_block: u64,
     max_batch_size: usize,
 ) -> anyhow::Result<()> {
+
+    let client = EthJsonRcpClient::new(Box::new(ReqwestClient::new(rpc_url.to_string())));
+
     for block_numbers in &(start_block..end_block).chunks(BLOCKS_PER_REQUEST) {
         let block_numbers: Vec<BlockNumber> = block_numbers.map(|number| number.into()).collect();
         log::info!(
@@ -96,7 +99,7 @@ async fn collect_blocks(
             block_numbers.last().unwrap()
         );
         let blocks =
-            get_full_blocks_by_number(rpc_url, block_numbers.clone(), max_batch_size).await?;
+        client.get_full_blocks_by_number( block_numbers.clone(), max_batch_size).await?;
         if blocks.is_empty() {
             log::info!("there are no more blocks available on the EVM");
             break;
@@ -109,7 +112,7 @@ async fn collect_blocks(
                 block.number.unwrap().as_u64()
             );
             let tx_hashes = block.transactions.iter().map(|tx| tx.hash());
-            let receipts = get_receipts_by_hash(rpc_url, tx_hashes, max_batch_size).await?;
+            let receipts = client.get_receipts_by_hash(tx_hashes, max_batch_size).await?;
             log::info!("writing {} receipts", receipts.len());
             blocks_writer.write_receipts(block.number.unwrap().as_u64(), &receipts)?;
         }
