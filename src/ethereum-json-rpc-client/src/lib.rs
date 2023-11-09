@@ -129,7 +129,7 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
             id,
         }));
     
-        let response = std::pin::pin![self.client.send_rpc_query_request(request)].await?;
+        let response = std::pin::pin![self.client.send_rpc_query_request(&request)].await?;
     
         match response {
             Response::Single(response) => match response {
@@ -178,7 +178,7 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
             let chunk_size = method_calls.len();
             let request = Request::Batch(method_calls);
     
-            let response = self.client.send_rpc_query_request(request).await?;
+            let response = self.client.send_rpc_query_request(&request).await?;
     
             match response {
                 Response::Single(response) => match response {
@@ -223,8 +223,8 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
 #[async_trait::async_trait]
 pub trait Client: Clone + Send + Sync + 'static {
 
-    async fn send_rpc_query_request(&self, request: Request) -> anyhow::Result<Response>;
+    async fn send_rpc_query_request(&self, request: &Request) -> anyhow::Result<Response>;
 
-    async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response>;
+    async fn send_rpc_update_request(&self, request: &Request) -> anyhow::Result<Response>;
 
 }

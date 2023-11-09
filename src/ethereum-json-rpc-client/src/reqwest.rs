@@ -31,7 +31,7 @@ impl ReqwestClient {
 #[async_trait::async_trait]
 impl Client for ReqwestClient {
 
-    async fn send_rpc_query_request(&self, request: Request) -> anyhow::Result<Response> {
+    async fn send_rpc_query_request(&self, request: &Request) -> anyhow::Result<Response> {
         log::trace!("ReqwestClient - sending request {request:?}");
 
         let response = self.client
@@ -49,7 +49,7 @@ impl Client for ReqwestClient {
         Ok(response)
     }
 
-    async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response> {
+    async fn send_rpc_update_request(&self, request: &Request) -> anyhow::Result<Response> {
         self.send_rpc_query_request(request).await
     }
 
