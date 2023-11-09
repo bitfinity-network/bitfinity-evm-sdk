@@ -14,7 +14,7 @@ pub mod canister_client;
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
 pub struct EthJsonRcpClient {
-    client: Arc<dyn Client>,    
+    client: Arc<dyn Client + Send + Sync>,    
 }
 
 macro_rules! make_params_array {
@@ -27,14 +27,13 @@ const GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
 const GET_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 
-
 impl EthJsonRcpClient {
 
     /// Create a new client.
     ///
     /// # Arguments
     /// * `client` - The canister client.
-    pub fn new(client: Arc<dyn Client>) -> Self {
+    pub fn new(client: Arc<dyn Client + Send + Sync>) -> Self {
         Self { client }
     }
     
