@@ -14,8 +14,8 @@ fn to_hash(string: &str) -> H256 {
     )
 }
 
-fn reqwest_client() -> EthJsonRcpClient {
-    EthJsonRcpClient::new(Arc::new(ReqwestClient::new(ETHEREUM_JSON_API_URL.to_string())))
+fn reqwest_client() -> EthJsonRcpClient<ReqwestClient> {
+    EthJsonRcpClient::new(ReqwestClient::new(ETHEREUM_JSON_API_URL.to_string()))
 }
 
 #[tokio::test]

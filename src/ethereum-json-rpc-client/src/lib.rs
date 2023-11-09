@@ -1,4 +1,4 @@
-use std::{pin::Pin, future::Future};
+use std::{pin::Pin, future::Future, sync::Arc};
 
 use anyhow::Context;
 use ethers_core::types::{BlockNumber, Block, H256, Transaction, U64, TransactionReceipt};
@@ -8,8 +8,8 @@ use serde::{Deserialize, de::DeserializeOwned};
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
-#[cfg(feature = "ic-canister-client")]
-pub mod canister_client;
+// #[cfg(feature = "ic-canister-client")]
+// pub mod canister_client;
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
@@ -27,7 +27,7 @@ const GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
 const GET_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 
-impl <C: Client + Clone> EthJsonRcpClient<C> {
+impl <C: Client> EthJsonRcpClient<C> {
 
     /// Create a new client.
     ///
@@ -115,34 +115,34 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
     }
 
 
-    pub fn sync_single_request<R: DeserializeOwned>(
-        &self,
-        method: String,
-        params: Params,
-        id: Id,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<R>> + 'static + Send + Sync>>
-    {
-        Box::pin(async {
-            let request = Request::Single(Call::MethodCall(MethodCall {
-                jsonrpc: Some(Version::V2),
-                method,
-                params,
-                id,
-            }));
+    // pub fn sync_single_request<R: DeserializeOwned>(
+    //     &self,
+    //     method: String,
+    //     params: Params,
+    //     id: Id,
+    // ) -> Pin<Box<dyn Future<Output = anyhow::Result<R>> + 'static + Send + Sync>>
+    // {
+    //     Box::pin(async {
+    //         let request = Request::Single(Call::MethodCall(MethodCall {
+    //             jsonrpc: Some(Version::V2),
+    //             method,
+    //             params,
+    //             id,
+    //         }));
         
-            let response = self.client.clone().send_rpc_query_request(request).await?;
+    //         let response = self.client.clone().send_rpc_query_request(request).await?;
         
-            match response {
-                Response::Single(response) => match response {
-                    Output::Success(result) => {
-                        serde_json::from_value(result.result).context("failed to deserialize value")
-                    }
-                    Output::Failure(err) => Err(anyhow::format_err!("{err:?}")),
-                },
-                Response::Batch(_) => Err(anyhow::format_err!("unexpected response type: batch")),
-            }
-        })
-    }
+    //         match response {
+    //             Response::Single(response) => match response {
+    //                 Output::Success(result) => {
+    //                     serde_json::from_value(result.result).context("failed to deserialize value")
+    //                 }
+    //                 Output::Failure(err) => Err(anyhow::format_err!("{err:?}")),
+    //             },
+    //             Response::Batch(_) => Err(anyhow::format_err!("unexpected response type: batch")),
+    //         }
+    //     })
+    // }
 
     /// Performs a single request.
     pub async fn single_request<R: DeserializeOwned>(
@@ -249,9 +249,9 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
 }
 
 // #[async_trait::async_trait]
-pub trait Client: Clone + Send + Sync + 'static {
+pub trait Client: Clone + Send + Sync {
 
-    fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + 'static + Send + Sync>>;
+    fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
 
     // async fn send_rpc_query_request(self, request: Request) -> Response;
 

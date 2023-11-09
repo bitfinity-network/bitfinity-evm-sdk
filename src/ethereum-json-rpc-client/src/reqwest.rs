@@ -33,13 +33,15 @@ impl ReqwestClient {
 // #[async_trait::async_trait]
 impl Client for ReqwestClient {
 
-    fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + 'static + Send + Sync>> {
-        Box::pin(async {
+    fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
+        let client = self.client.clone();
+        let endpoint_url = self.endpoint_url.clone();
+        Box::pin(async move {
 
             log::trace!("ReqwestClient - sending request {request:?}");
             
-            let response = self.client
-            .post(&self.endpoint_url)
+            let response = client
+            .post(&endpoint_url)
             .json(&request)
             .send()
             .await
