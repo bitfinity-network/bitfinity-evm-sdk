@@ -11,7 +11,7 @@ pub mod canister_client;
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
-pub struct EthJsonRcpClient<C: Client + Clone> {
+pub struct EthJsonRcpClient<C: Client> {
     client: C,    
 }
 
@@ -221,7 +221,7 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
 }
 
 #[async_trait::async_trait]
-pub trait Client {
+pub trait Client: Clone + Send + Sync {
 
     async fn send_rpc_query_request(&self, request: Request) -> anyhow::Result<Response>;
 
