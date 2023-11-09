@@ -1,7 +1,8 @@
-use std::{pin::Pin, future::Future};
+use std::future::Future;
+use std::pin::Pin;
 
 use anyhow::Context;
-use ethers_core::types::{BlockNumber, Block, H256, Transaction, U64, TransactionReceipt};
+use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256, U64};
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
@@ -14,7 +15,7 @@ pub mod state_machine_tests_client;
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
 pub struct EthJsonRcpClient<C: Client> {
-    client: C,    
+    client: C,
 }
 
 macro_rules! make_params_array {
@@ -27,8 +28,7 @@ const GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
 const GET_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 
-impl <C: Client> EthJsonRcpClient<C> {
-
+impl<C: Client> EthJsonRcpClient<C> {
     /// Create a new client.
     ///
     /// # Arguments
@@ -36,7 +36,7 @@ impl <C: Client> EthJsonRcpClient<C> {
     pub fn new(client: C) -> Self {
         Self { client }
     }
-    
+
     /// Returns block with transaction hashes by number
     pub async fn get_block_by_number(&self, block: BlockNumber) -> anyhow::Result<Block<H256>> {
         self.single_request(
@@ -47,10 +47,10 @@ impl <C: Client> EthJsonRcpClient<C> {
         )
         .await
     }
-    
+
     /// Returns full block by number
     pub async fn get_full_block_by_number(
-        &self, 
+        &self,
         block: BlockNumber,
     ) -> anyhow::Result<Block<Transaction>> {
         self.single_request(
@@ -61,10 +61,10 @@ impl <C: Client> EthJsonRcpClient<C> {
         )
         .await
     }
-    
+
     /// Returns full blocks by number
     pub async fn get_full_blocks_by_number(
-        &self, 
+        &self,
         blocks: impl IntoIterator<Item = BlockNumber>,
         max_batch_size: usize,
     ) -> anyhow::Result<Vec<Block<Transaction>>> {
@@ -82,10 +82,10 @@ impl <C: Client> EthJsonRcpClient<C> {
         )
         .await
     }
-    
+
     /// Get receipt by number
     pub async fn get_receipts_by_hash(
-        &self, 
+        &self,
         hashes: impl IntoIterator<Item = H256>,
         max_batch_size: usize,
     ) -> anyhow::Result<Vec<TransactionReceipt>> {
@@ -102,7 +102,7 @@ impl <C: Client> EthJsonRcpClient<C> {
         )
         .await
     }
-    
+
     /// Returns chain block number
     pub async fn get_block_number(&self) -> anyhow::Result<u64> {
         self.single_request::<U64>(
@@ -113,7 +113,6 @@ impl <C: Client> EthJsonRcpClient<C> {
         .await
         .map(|v| v.as_u64())
     }
-
 
     // pub fn sync_single_request<R: DeserializeOwned>(
     //     &self,
@@ -129,9 +128,9 @@ impl <C: Client> EthJsonRcpClient<C> {
     //             params,
     //             id,
     //         }));
-        
+
     //         let response = self.client.clone().send_rpc_query_request(request).await?;
-        
+
     //         match response {
     //             Response::Single(response) => match response {
     //                 Output::Success(result) => {
@@ -150,17 +149,16 @@ impl <C: Client> EthJsonRcpClient<C> {
         method: String,
         params: Params,
         id: Id,
-    ) -> anyhow::Result<R>
-    {
+    ) -> anyhow::Result<R> {
         let request = Request::Single(Call::MethodCall(MethodCall {
             jsonrpc: Some(Version::V2),
             method,
             params,
             id,
         }));
-    
+
         let response = self.client.send_rpc_query_request(request).await?;
-    
+
         match response {
             Response::Single(response) => match response {
                 Output::Success(result) => {
@@ -171,19 +169,18 @@ impl <C: Client> EthJsonRcpClient<C> {
             Response::Batch(_) => Err(anyhow::format_err!("unexpected response type: batch")),
         }
     }
-    
+
     /// Performs a batch request.
     pub async fn batch_request<R: DeserializeOwned>(
         &self,
         method: String,
         params: impl IntoIterator<Item = (Params, Id)>,
         max_batch_size: usize,
-    ) -> anyhow::Result<Vec<R>>
-    {
+    ) -> anyhow::Result<Vec<R>> {
         let mut results = Vec::new();
-    
+
         let value_from_json = |value| serde_json::from_value::<R>(value);
-    
+
         // Collect chunks before iteration, otherwise the future won't be `Send`
         let chunks = params
             .into_iter()
@@ -205,9 +202,9 @@ impl <C: Client> EthJsonRcpClient<C> {
                 .collect::<Vec<_>>();
             let chunk_size = method_calls.len();
             let request = Request::Batch(method_calls);
-    
+
             let response = self.client.send_rpc_query_request(request).await?;
-    
+
             match response {
                 Response::Single(response) => match response {
                     Output::Success(result) => {
@@ -227,7 +224,9 @@ impl <C: Client> EthJsonRcpClient<C> {
                     if chunk_size == response.len() {
                         for resp in response.into_iter() {
                             match resp {
-                                Output::Success(resp) => results.push(value_from_json(resp.result)?),
+                                Output::Success(resp) => {
+                                    results.push(value_from_json(resp.result)?)
+                                }
                                 Output::Failure(err) => {
                                     anyhow::bail!("{err:?}");
                                 }
@@ -243,16 +242,20 @@ impl <C: Client> EthJsonRcpClient<C> {
                 }
             }
         }
-    
+
         Ok(results)
     }
 }
 
 // #[async_trait::async_trait]
 pub trait Client: Clone + Send + Sync {
+    fn send_rpc_query_request(
+        &self,
+        request: Request,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
 
-    fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
-
-    fn send_rpc_update_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
-
+    fn send_rpc_update_request(
+        &self,
+        request: Request,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
 }

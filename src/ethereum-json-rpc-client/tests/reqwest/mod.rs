@@ -1,4 +1,5 @@
-use ethereum_json_rpc_client::{EthJsonRcpClient, reqwest::ReqwestClient};
+use ethereum_json_rpc_client::reqwest::ReqwestClient;
+use ethereum_json_rpc_client::EthJsonRcpClient;
 use ethers_core::types::{BlockNumber, H256};
 
 const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
@@ -24,7 +25,8 @@ async fn should_get_block_number() {
 
 #[tokio::test]
 async fn should_get_block_by_number() {
-    let result = reqwest_client().get_block_by_number(BlockNumber::Number(11588465.into()))
+    let result = reqwest_client()
+        .get_block_by_number(BlockNumber::Number(11588465.into()))
         .await
         .unwrap();
 
@@ -40,11 +42,10 @@ async fn should_get_block_by_number() {
 
 #[tokio::test]
 async fn should_get_full_block_by_number() {
-    let result =
-    reqwest_client().
-        get_full_block_by_number(BlockNumber::Number(11588465.into()))
-            .await
-            .unwrap();
+    let result = reqwest_client()
+        .get_full_block_by_number(BlockNumber::Number(11588465.into()))
+        .await
+        .unwrap();
 
     let expected_hash =
         to_hash("0x719c3309fe7052a7adf34954418e1458c48d0e4b899d1d833d291ae6369f3500");
@@ -63,15 +64,16 @@ async fn should_get_full_block_by_number() {
 
 #[tokio::test]
 async fn should_get_full_blocks_by_number() {
-    let result = reqwest_client().get_full_blocks_by_number(
-        vec![
-            BlockNumber::Number(11588465.into()),
-            BlockNumber::Number(11588466.into()),
-        ],
-        MAX_BATCH_SIZE,
-    )
-    .await
-    .unwrap();
+    let result = reqwest_client()
+        .get_full_blocks_by_number(
+            vec![
+                BlockNumber::Number(11588465.into()),
+                BlockNumber::Number(11588466.into()),
+            ],
+            MAX_BATCH_SIZE,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(result.len(), 2);
 
@@ -102,16 +104,18 @@ async fn should_get_full_blocks_by_number() {
 
 #[tokio::test]
 async fn should_get_transaction_receipts() {
-    let block = reqwest_client().get_block_by_number(BlockNumber::Number(11588465.into()))
+    let block = reqwest_client()
+        .get_block_by_number(BlockNumber::Number(11588465.into()))
         .await
         .unwrap();
 
-    let receipts = reqwest_client().get_receipts_by_hash(
-        vec![block.transactions[0], block.transactions[1]],
-        MAX_BATCH_SIZE,
-    )
-    .await
-    .unwrap();
+    let receipts = reqwest_client()
+        .get_receipts_by_hash(
+            vec![block.transactions[0], block.transactions[1]],
+            MAX_BATCH_SIZE,
+        )
+        .await
+        .unwrap();
     assert_eq!(receipts[0].gas_used, Some(21000.into()));
     assert_eq!(receipts[1].gas_used, Some(52358.into()));
 }

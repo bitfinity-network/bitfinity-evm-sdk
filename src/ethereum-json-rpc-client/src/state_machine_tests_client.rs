@@ -1,4 +1,6 @@
-use std::{collections::HashMap, pin::Pin, future::Future};
+use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
@@ -9,32 +11,40 @@ use serde_bytes::ByteBuf;
 
 use crate::Client;
 
-impl  Client for StateMachineCanisterClient {
-
-    fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
+impl Client for StateMachineCanisterClient {
+    fn send_rpc_query_request(
+        &self,
+        request: Request,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
         let client = self.clone();
-        Box::pin(async move {
-            send_request(&client, "http_request", request).await
-        })
+        Box::pin(async move { send_request(&client, "http_request", request).await })
     }
 
-    fn send_rpc_update_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
+    fn send_rpc_update_request(
+        &self,
+        request: Request,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
         let client = self.clone();
-        Box::pin(async move {
-            send_request(&client, "http_request_update", request).await
-        })
+        Box::pin(async move { send_request(&client, "http_request_update", request).await })
     }
 }
 
-async fn send_request(client: &StateMachineCanisterClient, method: &'static str, request: Request) -> anyhow::Result<Response> {
+async fn send_request(
+    client: &StateMachineCanisterClient,
+    method: &'static str,
+    request: Request,
+) -> anyhow::Result<Response> {
     log::trace!("CanisterClient - sending {method}. request: {request:?}");
 
     let args = HttpRequest::new(&request)?;
 
-    let http_response: HttpResponse = client.query(method, (args,))
-    .await.context("failed to send RPC request")?;
+    let http_response: HttpResponse = client
+        .query(method, (args,))
+        .await
+        .context("failed to send RPC request")?;
 
-    let response = serde_json::from_slice(&http_response.body).context("failed to deserialize RPC request")?;
+    let response =
+        serde_json::from_slice(&http_response.body).context("failed to deserialize RPC request")?;
 
     log::trace!("response: {:?}", response);
 
@@ -59,7 +69,9 @@ impl HttpRequest {
         Ok(Self {
             method: "POST",
             headers,
-            body: ByteBuf::from(serde_json::to_vec(data).context("failed to serialize RPC request")?),
+            body: ByteBuf::from(
+                serde_json::to_vec(data).context("failed to serialize RPC request")?,
+            ),
         })
     }
 }
