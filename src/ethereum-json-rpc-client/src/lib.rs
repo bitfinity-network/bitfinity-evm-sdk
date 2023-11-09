@@ -129,7 +129,10 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
             id,
         }));
     
-        let response = std::pin::pin![self.client.send_rpc_query_request(&request)].await?;
+        let response = {
+            let result = self.client.send_rpc_query_request(&request).await;
+            result.unwrap()
+        };
     
         match response {
             Response::Single(response) => match response {
