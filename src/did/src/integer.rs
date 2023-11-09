@@ -9,7 +9,6 @@ use candid::{CandidType, Deserialize, Nat};
 use ic_stable_structures::{Bound, Storable};
 use num::BigUint;
 use serde::Serialize;
-
 #[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 #[serde(transparent)]
 pub struct U256(pub ethereum_types::U256);
@@ -231,6 +230,12 @@ impl From<u64> for U256 {
 impl From<u128> for U256 {
     fn from(value: u128) -> Self {
         Self(value.into())
+    }
+}
+
+impl From<[u64; 4]> for U256 {
+    fn from(value: [u64; 4]) -> Self {
+        Self(ethereum_types::U256(value))
     }
 }
 
