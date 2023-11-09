@@ -8,11 +8,15 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+reqwest = ["dep:reqwest"]
+
 [dependencies]
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }
-reqwest = { workspace = true, features = [
+reqwest = { workspace = true, optional = true, features = [
   "gzip",
   "json",
   "rustls-tls",
