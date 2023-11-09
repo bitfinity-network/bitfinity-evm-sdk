@@ -77,7 +77,7 @@ impl ReserveArgs {
 
         info!("initializing agent...");
         let network = network_url(&self.network);
-        let agent = init_agent(&self.identity, network).await?;
+        let agent = init_agent(&self.identity, network, None).await?;
 
         match ReservationService::new(
             agent,

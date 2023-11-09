@@ -58,7 +58,7 @@ impl SignTransactionArgs {
     pub async fn exec(&self) -> anyhow::Result<()> {
         info!("initializing agent...");
         let network = network_url(&self.network);
-        let agent = init_agent(&self.identity, network).await?;
+        let agent = init_agent(&self.identity, network, None).await?;
         let client = EvmCanisterClient::new(IcAgentClient::with_agent(self.evm, agent));
         let wallet = get_wallet(self.signing_key.as_str())?;
 
