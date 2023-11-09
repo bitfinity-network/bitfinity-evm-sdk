@@ -6,6 +6,7 @@ pub use reqwest;
 use crate::Client;
 
 /// Reqwest client implementation.
+#[derive(Clone)]
 pub struct ReqwestClient {
     client: reqwest::Client,
     endpoint_url: String,
