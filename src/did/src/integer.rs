@@ -239,6 +239,12 @@ impl From<[u64; 4]> for U256 {
     }
 }
 
+impl From<&[u64; 4]> for U256 {
+    fn from(value: &[u64; 4]) -> Self {
+        Self(ethereum_types::U256(value.clone()))
+    }
+}
+
 impl TryFrom<U256> for u128 {
     type Error = &'static str;
 
