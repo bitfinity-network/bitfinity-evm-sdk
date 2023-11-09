@@ -1,27 +1,32 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, pin::Pin, future::Future};
 
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
-use ic_canister_client::CanisterClient;
+use ic_canister_client::StateMachineCanisterClient;
 use jsonrpc_core::{Request, Response};
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
 use crate::Client;
 
-#[async_trait::async_trait]
-impl <T: CanisterClient + Send + Sync + Clone + 'static> Client for T {
+impl  Client for StateMachineCanisterClient {
 
-    async fn send_rpc_query_request(&self, request: Request) -> anyhow::Result<Response> {
-        send_request(self, "http_request", request).await
+    fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
+        let client = self.clone();
+        Box::pin(async move {
+            send_request(&client, "http_request", request).await
+        })
     }
 
-    async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response> {
-        send_request(self, "http_request_update", request).await
+    fn send_rpc_update_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
+        let client = self.clone();
+        Box::pin(async move {
+            send_request(&client, "http_request_update", request).await
+        })
     }
 }
 
-async fn send_request<T: CanisterClient>(client: &T, method: &str, request: Request) -> anyhow::Result<Response> {
+async fn send_request(client: &StateMachineCanisterClient, method: &'static str, request: Request) -> anyhow::Result<Response> {
     log::trace!("CanisterClient - sending {method}. request: {request:?}");
 
     let args = HttpRequest::new(&request)?;

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use ethereum_json_rpc_client::{EthJsonRcpClient, reqwest::ReqwestClient};
 use ethers_core::types::{BlockNumber, H256};
 

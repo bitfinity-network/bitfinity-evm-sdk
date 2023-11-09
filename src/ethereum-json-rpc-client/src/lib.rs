@@ -1,15 +1,15 @@
-use std::{pin::Pin, future::Future, sync::Arc};
+use std::{pin::Pin, future::Future};
 
 use anyhow::Context;
 use ethers_core::types::{BlockNumber, Block, H256, Transaction, U64, TransactionReceipt};
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
-use serde::{Deserialize, de::DeserializeOwned};
+use serde::de::DeserializeOwned;
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
-// #[cfg(feature = "ic-canister-client")]
-// pub mod canister_client;
+#[cfg(feature = "state-machine-tests-client")]
+pub mod state_machine_tests_client;
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
@@ -253,8 +253,6 @@ pub trait Client: Clone + Send + Sync {
 
     fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
 
-    // async fn send_rpc_query_request(self, request: Request) -> Response;
-
-    // async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response>;
+    fn send_rpc_update_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
 
 }
