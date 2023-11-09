@@ -6,15 +6,16 @@ use std::str::FromStr;
 
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize, Nat};
+use derive_more::{From, Into};
 use ic_stable_structures::{Bound, Storable};
 use num::BigUint;
 use serde::Serialize;
-#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into)]
 #[serde(transparent)]
 pub struct U256(pub ethereum_types::U256);
 
 #[derive(
-    Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash,
+    Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into
 )]
 #[serde(transparent)]
 pub struct U64(pub ethereum_types::U64);
@@ -146,30 +147,6 @@ impl U64 {
 
     pub fn from_little_endian(slice: &[u8]) -> Self {
         Self(ethereum_types::U64::from_little_endian(slice))
-    }
-}
-
-impl From<ethereum_types::U64> for U64 {
-    fn from(v: ethereum_types::U64) -> Self {
-        Self(v)
-    }
-}
-
-impl From<U64> for ethereum_types::U64 {
-    fn from(value: U64) -> Self {
-        value.0
-    }
-}
-
-impl From<ethereum_types::U256> for U256 {
-    fn from(v: ethereum_types::U256) -> Self {
-        Self(v)
-    }
-}
-
-impl From<U256> for ethereum_types::U256 {
-    fn from(value: U256) -> Self {
-        value.0
     }
 }
 
