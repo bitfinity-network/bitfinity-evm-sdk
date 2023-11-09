@@ -1,4 +1,6 @@
 
+use std::{pin::Pin, future::Future};
+
 use anyhow::Context;
 use jsonrpc_core::{Request, Response};
 pub use reqwest;
@@ -28,29 +30,32 @@ impl ReqwestClient {
     }
 }
 
-#[async_trait::async_trait]
+// #[async_trait::async_trait]
 impl Client for ReqwestClient {
 
-    async fn send_rpc_query_request(&self, request: Request) -> Response {
-        log::trace!("ReqwestClient - sending request {request:?}");
+    fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + 'static + Send + Sync>> {
+        Box::pin(async {
 
-        let response = self.client
+            log::trace!("ReqwestClient - sending request {request:?}");
+            
+            let response = self.client
             .post(&self.endpoint_url)
             .json(&request)
             .send()
             .await
-            .context("failed to send RPC request").unwrap()
+            .context("failed to send RPC request")?
             .json::<Response>()
             .await
-            .context("failed to decode RPC response").unwrap();
-    
-        log::trace!("response: {:?}", response);
-    
-        response
+            .context("failed to decode RPC response")?;
+        
+            log::trace!("response: {:?}", response);
+            
+            Ok(response)
+        })
     }
 
-    async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response> {
-        Ok(self.send_rpc_query_request(request).await)
-    }
+    // async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response> {
+    //     Ok(self.send_rpc_query_request(request).await)
+    // }
 
 }

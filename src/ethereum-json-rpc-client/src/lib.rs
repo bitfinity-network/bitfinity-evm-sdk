@@ -1,3 +1,5 @@
+use std::{pin::Pin, future::Future};
+
 use anyhow::Context;
 use ethers_core::types::{BlockNumber, Block, H256, Transaction, U64, TransactionReceipt};
 use itertools::Itertools;
@@ -112,6 +114,36 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
         .map(|v| v.as_u64())
     }
 
+
+    pub fn sync_single_request<R: DeserializeOwned>(
+        &self,
+        method: String,
+        params: Params,
+        id: Id,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<R>> + 'static + Send + Sync>>
+    {
+        Box::pin(async {
+            let request = Request::Single(Call::MethodCall(MethodCall {
+                jsonrpc: Some(Version::V2),
+                method,
+                params,
+                id,
+            }));
+        
+            let response = self.client.clone().send_rpc_query_request(request).await?;
+        
+            match response {
+                Response::Single(response) => match response {
+                    Output::Success(result) => {
+                        serde_json::from_value(result.result).context("failed to deserialize value")
+                    }
+                    Output::Failure(err) => Err(anyhow::format_err!("{err:?}")),
+                },
+                Response::Batch(_) => Err(anyhow::format_err!("unexpected response type: batch")),
+            }
+        })
+    }
+
     /// Performs a single request.
     pub async fn single_request<R: DeserializeOwned>(
         &self,
@@ -127,7 +159,7 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
             id,
         }));
     
-        let response = self.client.send_rpc_query_request(request).await;
+        let response = self.client.send_rpc_query_request(request).await?;
     
         match response {
             Response::Single(response) => match response {
@@ -174,7 +206,7 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
             let chunk_size = method_calls.len();
             let request = Request::Batch(method_calls);
     
-            let response = self.client.send_rpc_query_request(request).await;
+            let response = self.client.send_rpc_query_request(request).await?;
     
             match response {
                 Response::Single(response) => match response {
@@ -216,11 +248,13 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
     }
 }
 
-#[async_trait::async_trait]
+// #[async_trait::async_trait]
 pub trait Client: Clone + Send + Sync + 'static {
 
-    async fn send_rpc_query_request(&self, request: Request) -> Response;
+    fn send_rpc_query_request(&self, request: Request) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + 'static + Send + Sync>>;
 
-    async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response>;
+    // async fn send_rpc_query_request(self, request: Request) -> Response;
+
+    // async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response>;
 
 }
