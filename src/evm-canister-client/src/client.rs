@@ -12,7 +12,7 @@ use crate::EvmResult;
 type BlockWithData = Vec<(Block<H256>, Vec<(Transaction, ExeResult)>)>;
 
 /// An EVM canister client.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EvmCanisterClient<C>
 where
     C: CanisterClient,

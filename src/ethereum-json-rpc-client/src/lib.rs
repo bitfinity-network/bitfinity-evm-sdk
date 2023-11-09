@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Context;
 use ethers_core::types::{BlockNumber, Block, H256, Transaction, U64, TransactionReceipt};
 use itertools::Itertools;
@@ -10,8 +12,9 @@ pub mod reqwest;
 pub mod canister_client;
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
+#[derive(Clone)]
 pub struct EthJsonRcpClient {
-    client: Box<dyn Client>,    
+    client: Arc<dyn Client>,    
 }
 
 macro_rules! make_params_array {
@@ -31,7 +34,7 @@ impl EthJsonRcpClient {
     ///
     /// # Arguments
     /// * `client` - The canister client.
-    pub fn new(client: Box<dyn Client>) -> Self {
+    pub fn new(client: Arc<dyn Client>) -> Self {
         Self { client }
     }
     

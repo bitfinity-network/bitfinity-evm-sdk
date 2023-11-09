@@ -1,6 +1,6 @@
 mod blocks_writer;
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use blocks_writer::BlocksWriter;
 use clap::Parser;
@@ -89,7 +89,7 @@ async fn collect_blocks(
     max_batch_size: usize,
 ) -> anyhow::Result<()> {
 
-    let client = EthJsonRcpClient::new(Box::new(ReqwestClient::new(rpc_url.to_string())));
+    let client = EthJsonRcpClient::new(Arc::new(ReqwestClient::new(rpc_url.to_string())));
 
     for block_numbers in &(start_block..end_block).chunks(BLOCKS_PER_REQUEST) {
         let block_numbers: Vec<BlockNumber> = block_numbers.map(|number| number.into()).collect();

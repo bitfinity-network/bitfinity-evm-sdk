@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ethereum_json_rpc_client::{EthJsonRcpClient, reqwest::ReqwestClient};
 use ethers_core::types::{BlockNumber, H256};
 
@@ -13,7 +15,7 @@ fn to_hash(string: &str) -> H256 {
 }
 
 fn reqwest_client() -> EthJsonRcpClient {
-    EthJsonRcpClient::new(Box::new(ReqwestClient::new(ETHEREUM_JSON_API_URL.to_string())))
+    EthJsonRcpClient::new(Arc::new(ReqwestClient::new(ETHEREUM_JSON_API_URL.to_string())))
 }
 
 #[tokio::test]
