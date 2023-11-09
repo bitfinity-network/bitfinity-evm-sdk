@@ -31,7 +31,7 @@ impl ReqwestClient {
 #[async_trait::async_trait]
 impl Client for ReqwestClient {
 
-    async fn send_rpc_query_request(&self, request: Request) -> anyhow::Result<Response> {
+    async fn send_rpc_query_request(&self, request: Request) -> Response {
         log::trace!("ReqwestClient - sending request {request:?}");
 
         let response = self.client
@@ -39,18 +39,18 @@ impl Client for ReqwestClient {
             .json(&request)
             .send()
             .await
-            .context("failed to send RPC request")?
+            .context("failed to send RPC request").unwrap()
             .json::<Response>()
             .await
-            .context("failed to decode RPC response")?;
+            .context("failed to decode RPC response").unwrap();
     
         log::trace!("response: {:?}", response);
     
-        Ok(response)
+        response
     }
 
     async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response> {
-        self.send_rpc_query_request(request).await
+        Ok(self.send_rpc_query_request(request).await)
     }
 
 }
