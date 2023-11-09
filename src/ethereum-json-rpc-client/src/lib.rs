@@ -2,7 +2,7 @@ use anyhow::Context;
 use ethers_core::types::{BlockNumber, Block, H256, Transaction, U64, TransactionReceipt};
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
-use serde::Deserialize;
+use serde::{Deserialize, de::DeserializeOwned};
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
@@ -113,14 +113,12 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
     }
 
     /// Performs a single request.
-    pub async fn single_request<R>(
+    pub async fn single_request<R: DeserializeOwned>(
         &self,
         method: String,
         params: Params,
         id: Id,
     ) -> anyhow::Result<R>
-    where
-        R: for<'a> Deserialize<'a>,
     {
         let request = Request::Single(Call::MethodCall(MethodCall {
             jsonrpc: Some(Version::V2),
@@ -130,7 +128,7 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
         }));
     
         let response = {
-            let result = self.client.send_rpc_query_request(&request).await;
+            let result = self.client.send_rpc_query_request(request).await;
             result.unwrap()
         };
     
@@ -146,14 +144,12 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
     }
     
     /// Performs a batch request.
-    pub async fn batch_request<R>(
+    pub async fn batch_request<R: DeserializeOwned>(
         &self,
         method: String,
         params: impl IntoIterator<Item = (Params, Id)>,
         max_batch_size: usize,
     ) -> anyhow::Result<Vec<R>>
-    where
-        R: for<'a> Deserialize<'a>,
     {
         let mut results = Vec::new();
     
@@ -181,7 +177,7 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
             let chunk_size = method_calls.len();
             let request = Request::Batch(method_calls);
     
-            let response = self.client.send_rpc_query_request(&request).await?;
+            let response = self.client.send_rpc_query_request(request).await?;
     
             match response {
                 Response::Single(response) => match response {
@@ -226,8 +222,8 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
 #[async_trait::async_trait]
 pub trait Client: Clone + Send + Sync + 'static {
 
-    async fn send_rpc_query_request(&self, request: &Request) -> anyhow::Result<Response>;
+    async fn send_rpc_query_request(&self, request: Request) -> anyhow::Result<Response>;
 
-    async fn send_rpc_update_request(&self, request: &Request) -> anyhow::Result<Response>;
+    async fn send_rpc_update_request(&self, request: Request) -> anyhow::Result<Response>;
 
 }
