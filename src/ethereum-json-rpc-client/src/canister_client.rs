@@ -10,7 +10,7 @@ use serde_bytes::ByteBuf;
 use crate::Client;
 
 #[async_trait::async_trait]
-impl <T: CanisterClient + Send + Sync + Clone> Client for T {
+impl <T: CanisterClient + Send + Sync + Clone + 'static> Client for T {
 
     async fn send_rpc_query_request(&self, request: Request) -> anyhow::Result<Response> {
         send_request(self, "http_request", request).await

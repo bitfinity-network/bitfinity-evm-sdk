@@ -221,7 +221,7 @@ impl <C: Client + Clone> EthJsonRcpClient<C> {
 }
 
 #[async_trait::async_trait]
-pub trait Client: Clone + Send + Sync {
+pub trait Client: Clone + Send + Sync + 'static {
 
     async fn send_rpc_query_request(&self, request: Request) -> anyhow::Result<Response>;
 
