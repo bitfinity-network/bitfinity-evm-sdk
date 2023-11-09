@@ -9,11 +9,14 @@ license.workspace = true
 repository.workspace = true
 
 [features]
+ic-canister-client = ["candid", "dep:ic-canister-client"]
 reqwest = ["dep:reqwest"]
 
 [dependencies]
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+candid = { workspace = true, optional = true }
+ic-canister-client = { workspace = true, optional = true }
 itertools = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true, optional = true, features = [
@@ -23,6 +26,7 @@ reqwest = { workspace = true, optional = true, features = [
   "trust-dns",
 ] }
 serde = { workspace = true }
+serde_bytes = { workspace = true }
 serde_json = { workspace = true }
 ethers-core = { workspace = true }
 jsonrpc-core = { workspace = true }

@@ -6,8 +6,8 @@ use serde::Deserialize;
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
-
-// pub use methods::*;
+#[cfg(feature = "ic-canister-client")]
+pub mod canister_client;
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 pub struct EthJsonRcpClient {
