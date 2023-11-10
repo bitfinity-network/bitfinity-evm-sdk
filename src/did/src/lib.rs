@@ -15,8 +15,8 @@ pub mod integer;
 pub mod keccak;
 pub mod mint_order_exemption;
 pub mod notify;
-pub mod transaction;
 pub mod state;
+pub mod transaction;
 
 pub mod fees;
 #[cfg(test)]

@@ -488,9 +488,9 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     ///
     /// * `actions` - list of operations should be applied.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
     pub async fn apply_state_storage_changes(
@@ -534,9 +534,9 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     ///
     /// * `actions` - list of operations should be applied.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
     pub async fn apply_clear_info_changes(
@@ -551,9 +551,9 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     ///
     /// * `indices` - indices to set.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
     pub async fn set_storage_indices(
@@ -568,9 +568,9 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     ///
     /// * `root` - root to set.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
     pub async fn set_state_root(
