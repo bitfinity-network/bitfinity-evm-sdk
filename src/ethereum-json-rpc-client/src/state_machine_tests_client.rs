@@ -18,23 +18,23 @@ impl Client for StateMachineCanisterClient {
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
         let client = self.clone();
 
-        Box::pin(async move { 
+        Box::pin(async move {
             log::trace!("CanisterClient - sending 'http_request'. request: {request:?}");
 
             let args = HttpRequest::new(&request)?;
-        
+
             let http_response: HttpResponse = client
                 .query("http_request", (args,))
                 .await
                 .context("failed to send RPC request")?;
-        
-            let response =
-                serde_json::from_slice(&http_response.body).context("failed to deserialize RPC request")?;
-        
+
+            let response = serde_json::from_slice(&http_response.body)
+                .context("failed to deserialize RPC request")?;
+
             log::trace!("response: {:?}", response);
-        
+
             Ok(response)
-         })
+        })
     }
 
     fn send_rpc_update_request(
@@ -43,23 +43,23 @@ impl Client for StateMachineCanisterClient {
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
         let client = self.clone();
 
-        Box::pin(async move { 
+        Box::pin(async move {
             log::trace!("CanisterClient - sending 'http_request_update'. request: {request:?}");
 
             let args = HttpRequest::new(&request)?;
-        
+
             let http_response: HttpResponse = client
                 .update("http_request_update", (args,))
                 .await
                 .context("failed to send RPC request")?;
-        
-            let response =
-                serde_json::from_slice(&http_response.body).context("failed to deserialize RPC request")?;
-        
+
+            let response = serde_json::from_slice(&http_response.body)
+                .context("failed to deserialize RPC request")?;
+
             log::trace!("response: {:?}", response);
-        
+
             Ok(response)
-         })
+        })
     }
 }
 

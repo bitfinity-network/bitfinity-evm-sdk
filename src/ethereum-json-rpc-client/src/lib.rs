@@ -284,5 +284,4 @@ mod test {
         assert!(is_update_call(super::ETH_SEND_RAW_TRANSACTION_METHOD));
         assert!(!is_update_call(super::ETH_CHAIN_ID_METHOD));
     }
-
 }
