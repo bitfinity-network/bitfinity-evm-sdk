@@ -15,6 +15,7 @@ reqwest = ["dep:reqwest"]
 [dependencies]
 anyhow = { workspace = true }
 candid = { workspace = true, optional = true }
+hex = { workspace = true }
 ic-canister-client = { workspace = true, optional = true, features = ["state-machine-tests-client"]}
 itertools = { workspace = true }
 log = { workspace = true }
