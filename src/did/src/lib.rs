@@ -15,6 +15,7 @@ pub mod integer;
 pub mod keccak;
 pub mod mint_order_exemption;
 pub mod notify;
+pub mod state;
 pub mod transaction;
 
 pub mod fees;
@@ -22,7 +23,6 @@ pub mod fees;
 mod test_utils;
 
 pub use block::Block;
-use candid::{CandidType, Deserialize};
 pub use error::{ExitFatal, HaltError};
 pub use fees::FeeHistory;
 pub use gas::*;
@@ -33,11 +33,3 @@ pub use notify::NotificationInput;
 pub use transaction::{BlockNumber, Transaction, TransactionReceipt};
 
 pub use crate::bytes::Bytes;
-
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, CandidType)]
-pub struct BasicAccount {
-    /// Account balance.
-    pub balance: U256,
-    /// Account nonce.
-    pub nonce: U256,
-}

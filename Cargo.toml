@@ -62,6 +62,7 @@ sha3 = "0.10"
 thiserror = "1.0"
 tokio = { version = "1.24", features = ["macros", "rt"] }
 zip = "0.6"
+murmur3 = "0.5"
 alloy-primitives = { version = "0.4", default-features = false }
 
 [profile.dev]
