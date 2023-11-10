@@ -474,11 +474,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
     pub async fn get_state_storage_item_hashes(
-        client: &impl CanisterClient,
+        &self,
         prev_key: Option<H256>,
         limit: u32,
     ) -> CanisterClientResult<EvmResult<Vec<(H256, u128)>>> {
-        client
+        self.client
             .query("get_state_storage_item_hashes", (prev_key, limit))
             .await
     }
@@ -494,10 +494,10 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
     pub async fn apply_state_storage_changes(
-        client: &impl CanisterClient,
+        &self,
         actions: Vec<StateUpdateAction<H256, FullStorageValue>>,
     ) -> CanisterClientResult<EvmResult<()>> {
-        client
+        self.client
             .update("apply_state_storage_changes", (actions,))
             .await
     }
@@ -520,11 +520,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
     pub async fn get_clear_info_entries(
-        client: &impl CanisterClient,
+        &self,
         prev_key: Option<(u64, H256)>,
         limit: u32,
     ) -> CanisterClientResult<EvmResult<Vec<(u64, H256)>>> {
-        client
+        self.client
             .query("get_clear_info_entries", (prev_key, limit))
             .await
     }
@@ -540,10 +540,12 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
     pub async fn apply_clear_info_changes(
-        client: &impl CanisterClient,
+        &self,
         actions: Vec<StateUpdateAction<(u64, H256), ()>>,
     ) -> CanisterClientResult<EvmResult<()>> {
-        client.update("apply_clear_info_changes", (actions,)).await
+        self.client
+            .update("apply_clear_info_changes", (actions,))
+            .await
     }
 
     /// Sets low-level storage indices.
@@ -557,10 +559,10 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
     pub async fn set_storage_indices(
-        client: &impl CanisterClient,
+        &self,
         indices: Indices,
     ) -> CanisterClientResult<EvmResult<()>> {
-        client.update("set_storage_indices", (indices,)).await
+        self.client.update("set_storage_indices", (indices,)).await
     }
 
     /// Sets state root hash.
@@ -573,11 +575,8 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ///
     /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
     /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
-    pub async fn set_state_root(
-        client: &impl CanisterClient,
-        root: H256,
-    ) -> CanisterClientResult<EvmResult<()>> {
-        client.update("set_state_root", (root,)).await
+    pub async fn set_state_root(&self, root: H256) -> CanisterClientResult<EvmResult<()>> {
+        self.client.update("set_state_root", (root,)).await
     }
 
     /// Updates the runtime configuration of the logger with a new filter in the same form as the `RUST_LOG`
