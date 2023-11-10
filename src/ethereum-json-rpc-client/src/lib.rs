@@ -114,35 +114,6 @@ impl<C: Client> EthJsonRcpClient<C> {
         .map(|v| v.as_u64())
     }
 
-    // pub fn sync_single_request<R: DeserializeOwned>(
-    //     &self,
-    //     method: String,
-    //     params: Params,
-    //     id: Id,
-    // ) -> Pin<Box<dyn Future<Output = anyhow::Result<R>> + 'static + Send + Sync>>
-    // {
-    //     Box::pin(async {
-    //         let request = Request::Single(Call::MethodCall(MethodCall {
-    //             jsonrpc: Some(Version::V2),
-    //             method,
-    //             params,
-    //             id,
-    //         }));
-
-    //         let response = self.client.clone().send_rpc_query_request(request).await?;
-
-    //         match response {
-    //             Response::Single(response) => match response {
-    //                 Output::Success(result) => {
-    //                     serde_json::from_value(result.result).context("failed to deserialize value")
-    //                 }
-    //                 Output::Failure(err) => Err(anyhow::format_err!("{err:?}")),
-    //             },
-    //             Response::Batch(_) => Err(anyhow::format_err!("unexpected response type: batch")),
-    //         }
-    //     })
-    // }
-
     /// Performs a single request.
     pub async fn single_request<R: DeserializeOwned>(
         &self,
