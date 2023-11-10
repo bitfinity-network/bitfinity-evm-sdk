@@ -33,6 +33,7 @@ sha3 = { workspace = true }
 thiserror = { workspace = true }
 once_cell = { workspace = true }
 alloy-primitives = { workspace = true }
+murmur3 = { workspace = true }
 
 [dev-dependencies]
 eth-signer = { path = "../eth-signer" }
