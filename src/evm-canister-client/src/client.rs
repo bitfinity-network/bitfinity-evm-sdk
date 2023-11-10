@@ -1,15 +1,16 @@
 use candid::Principal;
 use did::block::{BlockResult, ExeResult};
 use did::error::Result;
+use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
 use did::{
-    BasicAccount, Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt,
-    H160, H256, U256,
+    Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256,
+    U256,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 
 use crate::EvmResult;
 
-type BlockWithData = Vec<(Block<H256>, Vec<(Transaction, ExeResult)>)>;
+pub type BlockWithData = Vec<(Block<H256>, Vec<(Transaction, ExeResult)>)>;
 
 /// An EVM canister client.
 #[derive(Debug)]
@@ -453,6 +454,130 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client
             .update("append_blockchain_blocks", (blocks_with_data,))
             .await
+    }
+
+    /// Returns requested part of low-level representation of EVM state.
+    /// Supports pagination.
+    ///
+    /// # Arguments
+    ///
+    /// * `prev_key` - returned keys will be `key > prev_key` if provided.
+    /// * `limit` - maximum number of keys to return.
+    ///
+    /// # Returns
+    ///
+    /// - Vector of ordered pairs `(storage_key, storage_value_hash)` with `len <= limit`.
+    /// - First `storage_key > prev_key` if `prev_key` is `Some(_)`.
+    ///
+    /// # Errors
+    ///
+    /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
+    /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
+    pub async fn get_state_storage_item_hashes(
+        client: &impl CanisterClient,
+        prev_key: Option<H256>,
+        limit: u32,
+    ) -> CanisterClientResult<EvmResult<Vec<(H256, u128)>>> {
+        client
+            .query("get_state_storage_item_hashes", (prev_key, limit))
+            .await
+    }
+
+    /// Applies the given list of low-level state changes.
+    ///
+    /// # Arguments
+    ///
+    /// * `actions` - list of operations should be applied.
+    /// 
+    /// # Errors
+    /// 
+    /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
+    /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
+    pub async fn apply_state_storage_changes(
+        client: &impl CanisterClient,
+        actions: Vec<StateUpdateAction<H256, FullStorageValue>>,
+    ) -> CanisterClientResult<EvmResult<()>> {
+        client
+            .update("apply_state_storage_changes", (actions,))
+            .await
+    }
+
+    /// Returns requested part of low-level representation of EVM clear info.
+    /// Supports pagination.
+    ///
+    /// # Arguments
+    ///
+    /// * `prev_key` - returned keys will be `key > prev_key` if provided.
+    /// * `limit` - maximum number of keys to return.
+    ///
+    /// # Returns
+    ///
+    /// - Vector of ordered pairs `(key_1, key_2)` with `len <= limit`.
+    /// - First pair `(key_1, key_2) > prev_key` if `prev_key` is `Some(_)`.
+    ///
+    /// # Errors
+    ///
+    /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
+    /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
+    pub async fn get_clear_info_entries(
+        client: &impl CanisterClient,
+        prev_key: Option<(u64, H256)>,
+        limit: u32,
+    ) -> CanisterClientResult<EvmResult<Vec<(u64, H256)>>> {
+        client
+            .query("get_clear_info_entries", (prev_key, limit))
+            .await
+    }
+
+    /// Applies the given list of low-level clear info changes.
+    ///
+    /// # Arguments
+    ///
+    /// * `actions` - list of operations should be applied.
+    /// 
+    /// # Errors
+    /// 
+    /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
+    /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
+    pub async fn apply_clear_info_changes(
+        client: &impl CanisterClient,
+        actions: Vec<StateUpdateAction<(u64, H256), ()>>,
+    ) -> CanisterClientResult<EvmResult<()>> {
+        client.update("apply_clear_info_changes", (actions,)).await
+    }
+
+    /// Sets low-level storage indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `indices` - indices to set.
+    /// 
+    /// # Errors
+    /// 
+    /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
+    /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
+    pub async fn set_storage_indices(
+        client: &impl CanisterClient,
+        indices: Indices,
+    ) -> CanisterClientResult<EvmResult<()>> {
+        client.update("set_storage_indices", (indices,)).await
+    }
+
+    /// Sets state root hash.
+    ///
+    /// # Arguments
+    ///
+    /// * `root` - root to set.
+    /// 
+    /// # Errors
+    /// 
+    /// - If evm-canister not disabled, returns `EvmError::Internal(msg)`;
+    /// - If caller have not `Permission::UpdateBlockchain` permission, returns `EvmError::Unauthorized`;
+    pub async fn set_state_root(
+        client: &impl CanisterClient,
+        root: H256,
+    ) -> CanisterClientResult<EvmResult<()>> {
+        client.update("set_state_root", (root,)).await
     }
 
     /// Updates the runtime configuration of the logger with a new filter in the same form as the `RUST_LOG`
