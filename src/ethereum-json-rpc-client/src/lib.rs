@@ -129,7 +129,7 @@ impl<C: Client> EthJsonRcpClient<C> {
 
     /// Sends raw transaction and returns transaction hash
     pub async fn send_raw_transaction(&self, transaction: Transaction) -> anyhow::Result<H256> {
-        let bytes = ethers_core::types::Transaction::from(transaction).rlp();
+        let bytes = transaction.rlp();
         let transaction = format!("0x{}", hex::encode(bytes));
 
         self.single_request::<H256>(
