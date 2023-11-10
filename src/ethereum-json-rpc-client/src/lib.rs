@@ -261,7 +261,6 @@ fn is_update_call(method: &str) -> bool {
     method.eq(ETH_SEND_RAW_TRANSACTION_METHOD)
 }
 
-// #[async_trait::async_trait]
 pub trait Client: Clone + Send + Sync {
     fn send_rpc_query_request(
         &self,
