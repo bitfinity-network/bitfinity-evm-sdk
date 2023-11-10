@@ -52,10 +52,12 @@ async fn send_request(
 }
 
 /// The important components of an HTTP request.
-#[derive(Clone, Debug, CandidType, Deserialize)]
+#[derive(Clone, Debug, CandidType)]
 struct HttpRequest {
     /// The HTTP method string.
     pub method: &'static str,
+    /// The URL method string.
+    pub url: &'static str,
     /// The request headers.
     pub headers: HashMap<&'static str, &'static str>,
     /// The request body.
@@ -69,6 +71,7 @@ impl HttpRequest {
         Ok(Self {
             method: "POST",
             headers,
+            url: "",
             body: ByteBuf::from(
                 serde_json::to_vec(data).context("failed to serialize RPC request")?,
             ),
