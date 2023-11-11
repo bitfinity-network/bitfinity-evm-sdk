@@ -242,7 +242,7 @@ impl Client {
     /// Mints BETH tokens for the given address. Available only in testnet.
     pub async fn mint_evm_token(&self, address: &H160, amount: U256) -> Result<U256, Error> {
         let data = format!(
-            r#"{{"jsonrpc":"2.0","id":"3","method":"ic_mintEVMToken","params":["{address:#x}", "{amount:#x}"]}}"#,
+            r#"{{"jsonrpc":"2.0","id":"3","method":"ic_mintNativeToken","params":["{address:#x}", "{amount:#x}"]}}"#,
         );
         let result = self.json_rpc_call(&data, 1024).await?;
         self.process_json_rpc_response(&result)
