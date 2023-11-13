@@ -138,6 +138,18 @@ impl CandidType for BlockID {
     }
 }
 
+impl From<U64> for BlockID {
+    fn from(n: U64) -> Self {
+        Self::BlockNumber(n.into())
+    }
+}
+
+impl From<u64> for BlockID {
+    fn from(n: u64) -> Self {
+        Self::BlockNumber(n.into())
+    }
+}
+
 /// ECDSA signature representation
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 pub struct Signature {
