@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
-use derive_more::Display;
+use derive_more::{Display, From};
 use ethers_core::types::transaction::eip2930;
 use ethers_core::types::Signature as EthersSignature;
 use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
@@ -90,7 +90,7 @@ impl From<u64> for BlockNumber {
     }
 }
 
-#[derive(Debug, Display, Clone, PartialEq, Eq)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, From)]
 pub enum BlockID {
     BlockNumber(BlockNumber),
     BlockHash(H256),
