@@ -141,7 +141,7 @@ impl<C: Client> EthJsonRcpClient<C> {
     }
 
     /// Performs a request.
-    pub async fn request<R: DeserializeOwned>(&self, request: Request) -> anyhow::Result<Response> {
+    pub async fn request(&self, request: Request) -> anyhow::Result<Response> {
         self.client.send_rpc_request(request).await
     }
 
