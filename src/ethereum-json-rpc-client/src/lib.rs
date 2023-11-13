@@ -140,6 +140,12 @@ impl<C: Client> EthJsonRcpClient<C> {
         .await
     }
 
+    /// Performs a request.
+    pub async fn request<R: DeserializeOwned>(&self, request: Request) -> anyhow::Result<Response> {
+        self.client.send_rpc_request(request).await
+    }
+
+
     /// Performs a single request.
     pub async fn single_request<R: DeserializeOwned>(
         &self,
@@ -147,7 +153,6 @@ impl<C: Client> EthJsonRcpClient<C> {
         params: Params,
         id: Id,
     ) -> anyhow::Result<R> {
-        let is_update_call = is_update_call(&method);
 
         let request = Request::Single(Call::MethodCall(MethodCall {
             jsonrpc: Some(Version::V2),
@@ -156,11 +161,7 @@ impl<C: Client> EthJsonRcpClient<C> {
             id,
         }));
 
-        let response = if is_update_call {
-            self.client.send_rpc_update_request(request).await?
-        } else {
-            self.client.send_rpc_query_request(request).await?
-        };
+        let response = self.client.send_rpc_request(request).await?;
 
         match response {
             Response::Single(response) => match response {
@@ -180,7 +181,6 @@ impl<C: Client> EthJsonRcpClient<C> {
         params: impl IntoIterator<Item = (Params, Id)>,
         max_batch_size: usize,
     ) -> anyhow::Result<Vec<R>> {
-        let is_update_call = is_update_call(&method);
 
         let mut results = Vec::new();
 
@@ -208,11 +208,7 @@ impl<C: Client> EthJsonRcpClient<C> {
             let chunk_size = method_calls.len();
             let request = Request::Batch(method_calls);
 
-            let response = if is_update_call {
-                self.client.send_rpc_update_request(request).await?
-            } else {
-                self.client.send_rpc_query_request(request).await?
-            };
+            let response = self.client.send_rpc_request(request).await?;
 
             match response {
                 Response::Single(response) => match response {
@@ -256,31 +252,10 @@ impl<C: Client> EthJsonRcpClient<C> {
     }
 }
 
-#[inline]
-fn is_update_call(method: &str) -> bool {
-    method.eq(ETH_SEND_RAW_TRANSACTION_METHOD)
-}
-
 pub trait Client: Clone + Send + Sync {
-    fn send_rpc_query_request(
-        &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
-
-    fn send_rpc_update_request(
+    fn send_rpc_request(
         &self,
         request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
 }
 
-#[cfg(test)]
-mod test {
-
-    use super::*;
-
-    #[test]
-    fn test_is_update_call() {
-        assert!(is_update_call(super::ETH_SEND_RAW_TRANSACTION_METHOD));
-        assert!(!is_update_call(super::ETH_CHAIN_ID_METHOD));
-    }
-}

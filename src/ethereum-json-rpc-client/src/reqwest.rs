@@ -30,7 +30,7 @@ impl ReqwestClient {
 }
 
 impl Client for ReqwestClient {
-    fn send_rpc_query_request(
+    fn send_rpc_request(
         &self,
         request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
@@ -52,10 +52,4 @@ impl Client for ReqwestClient {
         })
     }
 
-    fn send_rpc_update_request(
-        &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
-        self.send_rpc_query_request(request)
-    }
 }

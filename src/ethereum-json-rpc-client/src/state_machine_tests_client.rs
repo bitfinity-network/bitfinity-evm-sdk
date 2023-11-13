@@ -5,14 +5,14 @@ use std::pin::Pin;
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
 use ic_canister_client::StateMachineCanisterClient;
-use jsonrpc_core::{Request, Response};
+use jsonrpc_core::{Request, Response, Call};
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
-use crate::Client;
+use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
 
 impl Client for StateMachineCanisterClient {
-    fn send_rpc_query_request(
+    fn send_rpc_request(
         &self,
         request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
@@ -21,37 +21,33 @@ impl Client for StateMachineCanisterClient {
         Box::pin(async move {
             log::trace!("CanisterClient - sending 'http_request'. request: {request:?}");
 
-            let args = HttpRequest::new(&request)?;
-
-            let http_response: HttpResponse = client
-                .query("http_request", (args,))
-                .await
-                .context("failed to send RPC request")?;
-
-            let response = serde_json::from_slice(&http_response.body)
-                .context("failed to deserialize RPC request")?;
-
-            log::trace!("response: {:?}", response);
-
-            Ok(response)
-        })
-    }
-
-    fn send_rpc_update_request(
-        &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
-        let client = self.clone();
-
-        Box::pin(async move {
-            log::trace!("CanisterClient - sending 'http_request_update'. request: {request:?}");
+            let is_update_call = match &request {
+                Request::Single(Call::MethodCall(call)) => {
+                    is_update_call(&call.method)
+                },
+                Request::Batch(calls) => {
+                    calls.iter().any(|call| {
+                        if let Call::MethodCall(call) = call {
+                            is_update_call(&call.method)
+                        } else {
+                            false
+                        }
+                    })
+                },
+                _ => false,
+            };
 
             let args = HttpRequest::new(&request)?;
 
-            let http_response: HttpResponse = client
+            let http_response: HttpResponse = if is_update_call {
+                client
                 .update("http_request_update", (args,))
                 .await
-                .context("failed to send RPC request")?;
+            } else {
+                client
+                .query("http_request", (args,))
+                .await
+            }.context("failed to send RPC request")?;
 
             let response = serde_json::from_slice(&http_response.body)
                 .context("failed to deserialize RPC request")?;
@@ -61,6 +57,7 @@ impl Client for StateMachineCanisterClient {
             Ok(response)
         })
     }
+
 }
 
 /// The important components of an HTTP request.
@@ -99,4 +96,23 @@ pub struct HttpResponse {
     pub headers: HashMap<String, String>,
     /// The response body.
     pub body: ByteBuf,
+}
+
+#[inline]
+fn is_update_call(method: &str) -> bool {
+    method.eq(ETH_SEND_RAW_TRANSACTION_METHOD)
+}
+
+
+#[cfg(test)]
+mod test {
+
+    use crate::ETH_CHAIN_ID_METHOD;
+    use super::*;
+
+    #[test]
+    fn test_is_update_call() {
+        assert!(is_update_call(ETH_SEND_RAW_TRANSACTION_METHOD));
+        assert!(!is_update_call(ETH_CHAIN_ID_METHOD));
+    }
 }
