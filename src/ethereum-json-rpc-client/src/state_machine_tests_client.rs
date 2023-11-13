@@ -15,7 +15,7 @@ impl Client for StateMachineCanisterClient {
     fn send_rpc_request(
         &self,
         request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>> {
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
         let client = self.clone();
 
         Box::pin(async move {
