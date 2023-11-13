@@ -5,7 +5,7 @@ use std::pin::Pin;
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
 use ic_canister_client::StateMachineCanisterClient;
-use jsonrpc_core::{Request, Response, Call};
+use jsonrpc_core::{Call, Request, Response};
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
@@ -22,32 +22,25 @@ impl Client for StateMachineCanisterClient {
             log::trace!("CanisterClient - sending 'http_request'. request: {request:?}");
 
             let is_update_call = match &request {
-                Request::Single(Call::MethodCall(call)) => {
-                    is_update_call(&call.method)
-                },
-                Request::Batch(calls) => {
-                    calls.iter().any(|call| {
-                        if let Call::MethodCall(call) = call {
-                            is_update_call(&call.method)
-                        } else {
-                            false
-                        }
-                    })
-                },
+                Request::Single(Call::MethodCall(call)) => is_update_call(&call.method),
+                Request::Batch(calls) => calls.iter().any(|call| {
+                    if let Call::MethodCall(call) = call {
+                        is_update_call(&call.method)
+                    } else {
+                        false
+                    }
+                }),
                 _ => false,
             };
 
             let args = HttpRequest::new(&request)?;
 
             let http_response: HttpResponse = if is_update_call {
-                client
-                .update("http_request_update", (args,))
-                .await
+                client.update("http_request_update", (args,)).await
             } else {
-                client
-                .query("http_request", (args,))
-                .await
-            }.context("failed to send RPC request")?;
+                client.query("http_request", (args,)).await
+            }
+            .context("failed to send RPC request")?;
 
             let response = serde_json::from_slice(&http_response.body)
                 .context("failed to deserialize RPC request")?;
@@ -57,7 +50,6 @@ impl Client for StateMachineCanisterClient {
             Ok(response)
         })
     }
-
 }
 
 /// The important components of an HTTP request.
@@ -103,12 +95,11 @@ fn is_update_call(method: &str) -> bool {
     method.eq(ETH_SEND_RAW_TRANSACTION_METHOD)
 }
 
-
 #[cfg(test)]
 mod test {
 
-    use crate::ETH_CHAIN_ID_METHOD;
     use super::*;
+    use crate::ETH_CHAIN_ID_METHOD;
 
     #[test]
     fn test_is_update_call() {

@@ -51,5 +51,4 @@ impl Client for ReqwestClient {
             Ok(response)
         })
     }
-
 }

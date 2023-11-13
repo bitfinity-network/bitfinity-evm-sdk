@@ -145,7 +145,6 @@ impl<C: Client> EthJsonRcpClient<C> {
         self.client.send_rpc_request(request).await
     }
 
-
     /// Performs a single request.
     pub async fn single_request<R: DeserializeOwned>(
         &self,
@@ -153,7 +152,6 @@ impl<C: Client> EthJsonRcpClient<C> {
         params: Params,
         id: Id,
     ) -> anyhow::Result<R> {
-
         let request = Request::Single(Call::MethodCall(MethodCall {
             jsonrpc: Some(Version::V2),
             method,
@@ -181,7 +179,6 @@ impl<C: Client> EthJsonRcpClient<C> {
         params: impl IntoIterator<Item = (Params, Id)>,
         max_batch_size: usize,
     ) -> anyhow::Result<Vec<R>> {
-
         let mut results = Vec::new();
 
         let value_from_json = |value| serde_json::from_value::<R>(value);
@@ -258,4 +255,3 @@ pub trait Client: Clone + Send + Sync {
         request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send + Sync>>;
 }
-
