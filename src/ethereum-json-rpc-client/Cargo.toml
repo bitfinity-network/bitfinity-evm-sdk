@@ -9,14 +9,15 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-state-machine-tests-client = ["candid", "dep:ic-canister-client"]
+ic-canister-client = ["candid", "dep:ic-canister-client"]
+state-machine-tests-client = ["ic-canister-client", "ic-canister-client/state-machine-tests-client"]
 reqwest = ["dep:reqwest"]
 
 [dependencies]
 anyhow = { workspace = true }
 candid = { workspace = true, optional = true }
 hex = { workspace = true }
-ic-canister-client = { workspace = true, optional = true, features = ["state-machine-tests-client"]}
+ic-canister-client = { workspace = true, optional = true }
 itertools = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true, optional = true, features = [

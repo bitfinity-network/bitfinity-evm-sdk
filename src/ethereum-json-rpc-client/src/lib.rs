@@ -9,8 +9,10 @@ use serde::de::DeserializeOwned;
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
-#[cfg(feature = "state-machine-tests-client")]
-pub mod state_machine_tests_client;
+// #[cfg(feature = "state-machine-tests-client")]
+// pub mod state_machine_tests_client;
+#[cfg(feature = "ic-canister-client")]
+pub mod canister_client;
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]

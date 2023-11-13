@@ -4,14 +4,14 @@ use std::pin::Pin;
 
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
-use ic_canister_client::StateMachineCanisterClient;
+use ic_canister_client::CanisterClient;
 use jsonrpc_core::{Call, Request, Response};
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
 use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
 
-impl Client for StateMachineCanisterClient {
+impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(
         &self,
         request: Request,
