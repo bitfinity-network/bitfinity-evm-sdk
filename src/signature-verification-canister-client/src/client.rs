@@ -61,4 +61,9 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
         self.client.update("set_owner", (principal,)).await
     }
+
+    /// Get the access control list
+    pub async fn get_access_list(&self) -> CanisterClientResult<Vec<Principal>> {
+        self.client.query("get_access_list", ()).await
+    }
 }
