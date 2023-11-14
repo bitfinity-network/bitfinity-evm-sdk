@@ -91,38 +91,38 @@ impl From<u64> for BlockNumber {
 }
 
 #[derive(Debug, Display, Clone, PartialEq, Eq, From)]
-pub enum BlockID {
+pub enum BlockId {
     BlockNumber(BlockNumber),
     BlockHash(H256),
 }
 
-impl Serialize for BlockID {
+impl Serialize for BlockId {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         match self {
-            BlockID::BlockHash(hash) => hash.serialize(serializer),
-            BlockID::BlockNumber(number) => number.serialize(serializer),
+            BlockId::BlockHash(hash) => hash.serialize(serializer),
+            BlockId::BlockNumber(number) => number.serialize(serializer),
         }
     }
 }
 
-impl<'de> Deserialize<'de> for BlockID {
+impl<'de> Deserialize<'de> for BlockId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?.to_lowercase();
         if let Ok(hash) = H256::from_hex_str(&s) {
-            return Ok(BlockID::BlockHash(hash))
+            return Ok(BlockId::BlockHash(hash))
         }
 
-        Ok(BlockID::BlockNumber(BlockNumber::from_str(&s).map_err(serde::de::Error::custom)?))
+        Ok(BlockId::BlockNumber(BlockNumber::from_str(&s).map_err(serde::de::Error::custom)?))
     }
 }
 
-impl CandidType for BlockID {
+impl CandidType for BlockId {
     fn _ty() -> candid::types::Type {
         Type(Rc::new(TypeInner::Text))
     }
@@ -132,19 +132,19 @@ impl CandidType for BlockID {
         S: candid::types::Serializer,
     {
         match self {
-            BlockID::BlockHash(hash) => hash.idl_serialize(serializer),
-            BlockID::BlockNumber(block_num) => block_num.idl_serialize(serializer),
+            BlockId::BlockHash(hash) => hash.idl_serialize(serializer),
+            BlockId::BlockNumber(block_num) => block_num.idl_serialize(serializer),
         }
     }
 }
 
-impl From<U64> for BlockID {
+impl From<U64> for BlockId {
     fn from(n: U64) -> Self {
         Self::BlockNumber(n.into())
     }
 }
 
-impl From<u64> for BlockID {
+impl From<u64> for BlockId {
     fn from(n: u64) -> Self {
         Self::BlockNumber(n.into())
     }
@@ -945,29 +945,29 @@ mod test {
 
     #[test]
     fn test_encoding_decoding_block_id() {
-        let block = BlockID::BlockNumber(BlockNumber::Latest);
+        let block = BlockId::BlockNumber(BlockNumber::Latest);
         let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockID).unwrap();
+        let res = Decode!(res0.as_slice(), BlockId).unwrap();
         assert_eq!(block, res);
 
-        let block = BlockID::BlockNumber(BlockNumber::Number(123_u64.into()));
+        let block = BlockId::BlockNumber(BlockNumber::Number(123_u64.into()));
         let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockID).unwrap();
+        let res = Decode!(res0.as_slice(), BlockId).unwrap();
         assert_eq!(block, res);
 
-        let block = BlockID::BlockNumber(BlockNumber::Earliest);
+        let block = BlockId::BlockNumber(BlockNumber::Earliest);
         let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockID).unwrap();
+        let res = Decode!(res0.as_slice(), BlockId).unwrap();
         assert_eq!(block, res);
 
-        let block = BlockID::BlockNumber(BlockNumber::Pending);
+        let block = BlockId::BlockNumber(BlockNumber::Pending);
         let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockID).unwrap();
+        let res = Decode!(res0.as_slice(), BlockId).unwrap();
         assert_eq!(block, res);
 
-        let block = BlockID::BlockHash(H256::from_slice(&[42; 32]));
+        let block = BlockId::BlockHash(H256::from_slice(&[42; 32]));
         let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockID).unwrap();
+        let res = Decode!(res0.as_slice(), BlockId).unwrap();
         assert_eq!(block, res);
     }
 

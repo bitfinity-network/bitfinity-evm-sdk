@@ -6,7 +6,7 @@ use rlp::DecoderError;
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::{BlockNumber, H160, U256, transaction::BlockID};
+use crate::{BlockNumber, H160, U256, transaction::BlockId};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 
@@ -46,7 +46,7 @@ pub enum EvmError {
     NoHistoryDataForBlock(BlockNumber),
 
     #[error("block doesn't exist: {0}")]
-    BlockDoesNotExist(BlockID),
+    BlockDoesNotExist(BlockId),
 
     #[error("Transaction Signature error: {0}")]
     TransactionSignature(String),
