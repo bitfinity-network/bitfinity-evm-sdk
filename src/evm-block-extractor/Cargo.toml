@@ -14,18 +14,9 @@ anyhow = { workspace = true }
 clap = { workspace = true }
 env_logger = { workspace = true }
 ethers-core = { workspace = true }
-evm-canister-client = { path = "../evm-canister-client", features = [
-  "ic-agent-client",
-] }
 itertools = { workspace = true }
 log = { workspace = true }
-reqwest = { workspace = true, features = [
-  "gzip",
-  "json",
-  "rustls-tls",
-  "trust-dns",
-] }
-ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client" }
+ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = ["reqwest"]}
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
