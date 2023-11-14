@@ -56,7 +56,8 @@ impl<'de> Deserialize<'de> for BlockNumber {
     where
         D: Deserializer<'de>,
     {
-        BlockNumber::from_str(&String::deserialize(deserializer)?.to_lowercase()).map_err(serde::de::Error::custom)
+        BlockNumber::from_str(&String::deserialize(deserializer)?.to_lowercase())
+            .map_err(serde::de::Error::custom)
     }
 }
 
@@ -115,10 +116,12 @@ impl<'de> Deserialize<'de> for BlockId {
     {
         let s = String::deserialize(deserializer)?.to_lowercase();
         if let Ok(hash) = H256::from_hex_str(&s) {
-            return Ok(BlockId::BlockHash(hash))
+            return Ok(BlockId::BlockHash(hash));
         }
 
-        Ok(BlockId::BlockNumber(BlockNumber::from_str(&s).map_err(serde::de::Error::custom)?))
+        Ok(BlockId::BlockNumber(
+            BlockNumber::from_str(&s).map_err(serde::de::Error::custom)?,
+        ))
     }
 }
 

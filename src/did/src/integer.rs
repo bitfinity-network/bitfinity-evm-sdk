@@ -10,12 +10,26 @@ use derive_more::{From, Into};
 use ic_stable_structures::{Bound, Storable};
 use num::BigUint;
 use serde::Serialize;
-#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into)]
+#[derive(
+    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into,
+)]
 #[serde(transparent)]
 pub struct U256(pub ethereum_types::U256);
 
 #[derive(
-    Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into
+    Debug,
+    Default,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    Hash,
+    From,
+    Into,
 )]
 #[serde(transparent)]
 pub struct U64(pub ethereum_types::U64);
