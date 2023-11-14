@@ -230,4 +230,6 @@ pub enum SignatureVerificationError {
     RecoveryError { expected: H160, recovered: H160 },
     #[error("failed to verify signature: {0}")]
     InternalError(String),
+    #[error("unauthorized principal")]
+    Unauthorized,
 }
