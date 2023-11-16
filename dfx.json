@@ -4,16 +4,6 @@
                   "candid": "./target/artifact/ic-sign-test-canister.did",
                   "wasm": "./target/artifact/ic-sign-test-canister.wasm",
                   "type": "custom"
-            },
-            "iceth-client-test-canister": {
-                  "candid": "./target/artifact/iceth-client-test-canister.did",
-                  "wasm": "./target/artifact/iceth-client-test-canister.wasm",
-                  "type": "custom"
-            },
-            "iceth": {
-                  "candid": "./target/artifact/iceth.did",
-                  "wasm": "./target/artifact/iceth.wasm",
-                  "type": "custom"
             }
       },
       "version": 1
