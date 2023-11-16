@@ -10,7 +10,7 @@ repository.workspace = true
 
 [features]
 ic-canister-client = ["candid", "dep:ic-canister-client"]
-state-machine-tests-client = ["ic-canister-client", "ic-canister-client/state-machine-tests-client"]
+pocket-ic-tests-client = ["ic-canister-client", "ic-canister-client/pocket-ic-client"]
 reqwest = ["dep:reqwest"]
 
 [dependencies]
