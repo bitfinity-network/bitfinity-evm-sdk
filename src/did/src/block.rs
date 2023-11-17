@@ -351,7 +351,7 @@ impl<D, T: From<D>> From<ethers_core::types::Block<D>> for Block<T> {
     }
 }
 
-impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T> {
+impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T> where T: Default {
     fn from(block: Block<D>) -> Self {
         ethers_core::types::Block {
             hash: Some(block.hash.into()),
@@ -378,8 +378,7 @@ impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T> {
             base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
             other: ethers_core::types::OtherFields::default(),
             // We can leave it empty because we don't need it for our fork
-            withdrawals_root: None,
-            withdrawals: None,
+            ..Default::default()
         }
     }
 }
