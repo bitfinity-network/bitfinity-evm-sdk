@@ -351,7 +351,10 @@ impl<D, T: From<D>> From<ethers_core::types::Block<D>> for Block<T> {
     }
 }
 
-impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T> where T: Default {
+impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T>
+where
+    T: Default,
+{
     fn from(block: Block<D>) -> Self {
         ethers_core::types::Block {
             hash: Some(block.hash.into()),
