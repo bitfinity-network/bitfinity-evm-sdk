@@ -524,6 +524,7 @@ impl BlockResult {
 #[cfg(test)]
 mod test {
 
+    use std::fmt::Debug;
     use std::str::FromStr;
 
     use candid::{Decode, Encode};
@@ -531,6 +532,7 @@ mod test {
     use super::*;
     use crate::test_utils::read_all_files_to_json;
     use crate::transaction::StorableExecutionResult;
+    use crate::BlockId;
 
     #[test]
     fn test_storable_block() {
@@ -781,5 +783,25 @@ mod test {
             ),
             expected
         );
+    }
+
+    fn check_serialization_roundtrip<T>(val: &T)
+    where
+        for<'a> T: Serialize + Deserialize<'a> + Eq + Debug,
+    {
+        let json: String = serde_json::to_string(val).unwrap();
+        let deserialized: T = serde_json::from_str(&json).unwrap();
+        assert_eq!(val, &deserialized);
+    }
+
+    #[test]
+    fn block_id_should_roundtrip_serialization() {
+        check_serialization_roundtrip(&BlockId::BlockHash(H256::from_slice(&[42; 32])));
+        check_serialization_roundtrip(&BlockId::BlockNumber(crate::BlockNumber::Earliest));
+        check_serialization_roundtrip(&BlockId::BlockNumber(crate::BlockNumber::Latest));
+        check_serialization_roundtrip(&BlockId::BlockNumber(crate::BlockNumber::Pending));
+        check_serialization_roundtrip(&BlockId::BlockNumber(crate::BlockNumber::Number(
+            42u64.into(),
+        )));
     }
 }
