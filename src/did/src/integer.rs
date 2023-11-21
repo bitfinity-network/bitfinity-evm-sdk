@@ -646,6 +646,18 @@ mod tests {
     }
 
     #[test]
+    fn test_u256_conversion() {
+        assert_eq!(
+            U256::from([1u64, 2u64, 3u64, 4u64]),
+            U256(ethereum_types::U256([1u64, 2u64, 3u64, 4u64]))
+        );
+        assert_eq!(
+            U256::from(&[1u64, 2u64, 3u64, 4u64]),
+            U256(ethereum_types::U256([1u64, 2u64, 3u64, 4u64]))
+        );
+    }
+
+    #[test]
     fn test_u256_transparent_serde_serialization() {
         let value: U256 = ethereum_types::U256::from(rand::random::<u128>()).into();
 

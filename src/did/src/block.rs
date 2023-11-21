@@ -530,7 +530,7 @@ mod test {
     use candid::{Decode, Encode};
 
     use super::*;
-    use crate::test_utils::read_all_files_to_json;
+    use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
     use crate::transaction::StorableExecutionResult;
     use crate::BlockId;
 
@@ -787,11 +787,10 @@ mod test {
 
     fn check_serialization_roundtrip<T>(val: &T)
     where
-        for<'a> T: Serialize + Deserialize<'a> + Eq + Debug,
+        for<'a> T: CandidType + Serialize + Deserialize<'a> + Eq + Debug,
     {
-        let json: String = serde_json::to_string(val).unwrap();
-        let deserialized: T = serde_json::from_str(&json).unwrap();
-        assert_eq!(val, &deserialized);
+        test_json_roundtrip(val);
+        test_candid_roundtrip(val);
     }
 
     #[test]

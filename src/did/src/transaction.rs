@@ -759,7 +759,7 @@ mod test {
     use rlp::Encodable;
 
     use super::*;
-    use crate::test_utils::read_all_files_to_json;
+    use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
     use crate::transaction::{AccessList, AccessListItem};
     use crate::BlockNumber;
 
@@ -924,54 +924,45 @@ mod test {
     }
 
     #[test]
-    fn test_encoding_decoding_block_number() {
+    fn test_block_number_roundtrip() {
         let block = BlockNumber::Latest;
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockNumber).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockNumber::Number(123_u64.into());
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockNumber).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockNumber::Earliest;
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockNumber).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockNumber::Pending;
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockNumber).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
     }
 
     #[test]
     fn test_encoding_decoding_block_id() {
         let block = BlockId::BlockNumber(BlockNumber::Latest);
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockId).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockId::BlockNumber(BlockNumber::Number(123_u64.into()));
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockId).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockId::BlockNumber(BlockNumber::Earliest);
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockId).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockId::BlockNumber(BlockNumber::Pending);
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockId).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockId::BlockHash(H256::from_slice(&[42; 32]));
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockId).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
     }
 
     #[test]
