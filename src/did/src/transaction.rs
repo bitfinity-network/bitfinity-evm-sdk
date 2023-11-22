@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
-use derive_more::Display;
+use derive_more::{Display, From};
 use ethers_core::types::transaction::eip2930;
 use ethers_core::types::Signature as EthersSignature;
 use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
@@ -26,6 +26,17 @@ pub enum BlockNumber {
     Number(U64),
 }
 
+impl BlockNumber {
+    fn from_str(s: &str) -> Result<BlockNumber, String> {
+        Ok(match s {
+            "latest" => Self::Latest,
+            "earliest" => Self::Earliest,
+            "pending" => Self::Pending,
+            n => BlockNumber::Number(U64::from_hex_str(n)?),
+        })
+    }
+}
+
 impl Serialize for BlockNumber {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -45,13 +56,8 @@ impl<'de> Deserialize<'de> for BlockNumber {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?.to_lowercase();
-        Ok(match s.as_str() {
-            "latest" => Self::Latest,
-            "earliest" => Self::Earliest,
-            "pending" => Self::Pending,
-            n => BlockNumber::Number(U64::from_hex_str(n).map_err(serde::de::Error::custom)?),
-        })
+        BlockNumber::from_str(&String::deserialize(deserializer)?.to_lowercase())
+            .map_err(serde::de::Error::custom)
     }
 }
 
@@ -82,6 +88,68 @@ impl From<U64> for BlockNumber {
 impl From<u64> for BlockNumber {
     fn from(n: u64) -> Self {
         Self::Number(n.into())
+    }
+}
+
+#[derive(Debug, Display, Clone, PartialEq, Eq, From)]
+pub enum BlockId {
+    BlockNumber(BlockNumber),
+    BlockHash(H256),
+}
+
+impl Serialize for BlockId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            BlockId::BlockHash(hash) => hash.serialize(serializer),
+            BlockId::BlockNumber(number) => number.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for BlockId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?.to_lowercase();
+        if let Ok(hash) = H256::from_hex_str(&s) {
+            return Ok(BlockId::BlockHash(hash));
+        }
+
+        Ok(BlockId::BlockNumber(
+            BlockNumber::from_str(&s).map_err(serde::de::Error::custom)?,
+        ))
+    }
+}
+
+impl CandidType for BlockId {
+    fn _ty() -> candid::types::Type {
+        Type(Rc::new(TypeInner::Text))
+    }
+
+    fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
+    where
+        S: candid::types::Serializer,
+    {
+        match self {
+            BlockId::BlockHash(hash) => hash.idl_serialize(serializer),
+            BlockId::BlockNumber(block_num) => block_num.idl_serialize(serializer),
+        }
+    }
+}
+
+impl From<U64> for BlockId {
+    fn from(n: U64) -> Self {
+        Self::BlockNumber(n.into())
+    }
+}
+
+impl From<u64> for BlockId {
+    fn from(n: u64) -> Self {
+        Self::BlockNumber(n.into())
     }
 }
 
@@ -691,7 +759,7 @@ mod test {
     use rlp::Encodable;
 
     use super::*;
-    use crate::test_utils::read_all_files_to_json;
+    use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
     use crate::transaction::{AccessList, AccessListItem};
     use crate::BlockNumber;
 
@@ -856,26 +924,45 @@ mod test {
     }
 
     #[test]
-    fn test_encoding_decoding_block_number() {
+    fn test_block_number_roundtrip() {
         let block = BlockNumber::Latest;
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockNumber).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockNumber::Number(123_u64.into());
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockNumber).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockNumber::Earliest;
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockNumber).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
 
         let block = BlockNumber::Pending;
-        let res0 = Encode!(&block).unwrap();
-        let res = Decode!(res0.as_slice(), BlockNumber).unwrap();
-        assert_eq!(block, res);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
+    }
+
+    #[test]
+    fn test_encoding_decoding_block_id() {
+        let block = BlockId::BlockNumber(BlockNumber::Latest);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
+
+        let block = BlockId::BlockNumber(BlockNumber::Number(123_u64.into()));
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
+
+        let block = BlockId::BlockNumber(BlockNumber::Earliest);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
+
+        let block = BlockId::BlockNumber(BlockNumber::Pending);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
+
+        let block = BlockId::BlockHash(H256::from_slice(&[42; 32]));
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
     }
 
     #[test]

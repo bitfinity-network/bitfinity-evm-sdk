@@ -6,16 +6,30 @@ use std::str::FromStr;
 
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize, Nat};
+use derive_more::{From, Into};
 use ic_stable_structures::{Bound, Storable};
 use num::BigUint;
 use serde::Serialize;
-
-#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
+#[derive(
+    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into,
+)]
 #[serde(transparent)]
 pub struct U256(pub ethereum_types::U256);
 
 #[derive(
-    Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash,
+    Debug,
+    Default,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+    Hash,
+    From,
+    Into,
 )]
 #[serde(transparent)]
 pub struct U64(pub ethereum_types::U64);
@@ -150,30 +164,6 @@ impl U64 {
     }
 }
 
-impl From<ethereum_types::U64> for U64 {
-    fn from(v: ethereum_types::U64) -> Self {
-        Self(v)
-    }
-}
-
-impl From<U64> for ethereum_types::U64 {
-    fn from(value: U64) -> Self {
-        value.0
-    }
-}
-
-impl From<ethereum_types::U256> for U256 {
-    fn from(v: ethereum_types::U256) -> Self {
-        Self(v)
-    }
-}
-
-impl From<U256> for ethereum_types::U256 {
-    fn from(value: U256) -> Self {
-        value.0
-    }
-}
-
 impl TryFrom<&Nat> for U256 {
     type Error = &'static str;
 
@@ -231,6 +221,18 @@ impl From<u64> for U256 {
 impl From<u128> for U256 {
     fn from(value: u128) -> Self {
         Self(value.into())
+    }
+}
+
+impl From<[u64; 4]> for U256 {
+    fn from(value: [u64; 4]) -> Self {
+        Self(ethereum_types::U256(value))
+    }
+}
+
+impl From<&[u64; 4]> for U256 {
+    fn from(value: &[u64; 4]) -> Self {
+        Self(ethereum_types::U256(*value))
     }
 }
 
@@ -641,6 +643,18 @@ mod tests {
         let mut c = a;
         c += b;
         assert_eq!(add, c);
+    }
+
+    #[test]
+    fn test_u256_conversion() {
+        assert_eq!(
+            U256::from([1u64, 2u64, 3u64, 4u64]),
+            U256(ethereum_types::U256([1u64, 2u64, 3u64, 4u64]))
+        );
+        assert_eq!(
+            U256::from(&[1u64, 2u64, 3u64, 4u64]),
+            U256(ethereum_types::U256([1u64, 2u64, 3u64, 4u64]))
+        );
     }
 
     #[test]

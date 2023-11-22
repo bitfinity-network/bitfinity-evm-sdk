@@ -14,6 +14,7 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+alloy-primitives = { workspace = true }
 bincode = { workspace = true }
 bytes = { workspace = true }
 candid = { workspace = true }
@@ -24,16 +25,15 @@ hex = { workspace = true }
 ic-stable-structures = { workspace = true }
 jsonrpc-core = { workspace = true }
 log = { workspace = true }
+murmur3 = { workspace = true }
 num = { workspace = true }
+once_cell = { workspace = true }
 rlp = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
 sha3 = { workspace = true }
 thiserror = { workspace = true }
-once_cell = { workspace = true }
-alloy-primitives = { workspace = true }
-murmur3 = { workspace = true }
 
 [dev-dependencies]
 eth-signer = { path = "../eth-signer" }

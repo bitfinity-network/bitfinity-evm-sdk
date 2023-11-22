@@ -351,7 +351,10 @@ impl<D, T: From<D>> From<ethers_core::types::Block<D>> for Block<T> {
     }
 }
 
-impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T> {
+impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T>
+where
+    T: Default,
+{
     fn from(block: Block<D>) -> Self {
         ethers_core::types::Block {
             hash: Some(block.hash.into()),
@@ -378,8 +381,7 @@ impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T> {
             base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
             other: ethers_core::types::OtherFields::default(),
             // We can leave it empty because we don't need it for our fork
-            withdrawals_root: None,
-            withdrawals: None,
+            ..Default::default()
         }
     }
 }
@@ -522,13 +524,15 @@ impl BlockResult {
 #[cfg(test)]
 mod test {
 
+    use std::fmt::Debug;
     use std::str::FromStr;
 
     use candid::{Decode, Encode};
 
     use super::*;
-    use crate::test_utils::read_all_files_to_json;
+    use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
     use crate::transaction::StorableExecutionResult;
+    use crate::BlockId;
 
     #[test]
     fn test_storable_block() {
@@ -779,5 +783,24 @@ mod test {
             ),
             expected
         );
+    }
+
+    fn check_serialization_roundtrip<T>(val: &T)
+    where
+        for<'a> T: CandidType + Serialize + Deserialize<'a> + Eq + Debug,
+    {
+        test_json_roundtrip(val);
+        test_candid_roundtrip(val);
+    }
+
+    #[test]
+    fn block_id_should_roundtrip_serialization() {
+        check_serialization_roundtrip(&BlockId::BlockHash(H256::from_slice(&[42; 32])));
+        check_serialization_roundtrip(&BlockId::BlockNumber(crate::BlockNumber::Earliest));
+        check_serialization_roundtrip(&BlockId::BlockNumber(crate::BlockNumber::Latest));
+        check_serialization_roundtrip(&BlockId::BlockNumber(crate::BlockNumber::Pending));
+        check_serialization_roundtrip(&BlockId::BlockNumber(crate::BlockNumber::Number(
+            42u64.into(),
+        )));
     }
 }
