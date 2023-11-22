@@ -23,11 +23,12 @@ include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 name = "bitfinity-evm-sdk"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.8.0"
+version = "0.8.1"
 
 [workspace.dependencies]
-anyhow = "1.0"
+alloy-primitives = { version = "0.4", default-feures = false }
 async-trait = "0.1"
+anyhow = "1.0"
 bincode = "1.3"
 bytes = "1.3"
 candid = "0.9"
@@ -41,12 +42,13 @@ hex = "0.4"
 ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.11.x" }
 ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.11.x" }
 ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.11.x" }
+ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.11.x" }
 ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.11.x" }
 ic-storage = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-storage", tag = "v0.11.x" }
-ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.11.x" }
 itertools = "0.11"
 jsonrpc-core = "18.0"
 log = "0.4"
+murmur3 = "0.5"
 num = "0.4"
 once_cell = "1.16"
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
@@ -60,8 +62,6 @@ sha3 = "0.10"
 thiserror = "1.0"
 tokio = { version = "1.24", features = ["macros", "rt"] }
 zip = "0.6"
-murmur3 = "0.5"
-alloy-primitives = { version = "0.4", default-features = false }
 
 [profile.dev]
 debug = false
