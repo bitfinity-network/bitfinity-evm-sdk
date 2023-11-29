@@ -6,7 +6,8 @@ use rlp::DecoderError;
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::{transaction::BlockId, BlockNumber, H160, U256};
+use crate::transaction::BlockId;
+use crate::{BlockNumber, H160, U256};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 

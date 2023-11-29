@@ -184,7 +184,7 @@ impl From<EthersSignature> for Signature {
 impl Signature {
     /// Upper limit for signature S field.
     /// See comment to `Signature::check_malleability()` for more details.
-    pub const S_UPPER_LIMIT_HEX_STR: &str =
+    pub const S_UPPER_LIMIT_HEX_STR: &'static str =
         "0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0";
 
     /// This comment copied from OpenZeppelin `ECDSA::tryRecover()` function.
