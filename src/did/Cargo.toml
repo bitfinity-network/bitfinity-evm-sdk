@@ -34,6 +34,7 @@ serde_json = { workspace = true }
 sha2 = { workspace = true }
 sha3 = { workspace = true }
 thiserror = { workspace = true }
+ic-log = { workspace = true }
 
 [dev-dependencies]
 eth-signer = { path = "../eth-signer" }
