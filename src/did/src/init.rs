@@ -28,6 +28,22 @@ pub struct EvmCanisterInitData {
     pub coinbase: H160,
 }
 
+impl Default for EvmCanisterInitData {
+    fn default() -> Self {
+        Self {
+            signature_verification_principal: Principal::anonymous(),
+            min_gas_price: Default::default(),
+            chain_id: Default::default(),
+            log_settings: Default::default(),
+            permissions: Default::default(),
+            transaction_processing_interval: Default::default(),
+            owner: Principal::management_canister(),
+            genesis_accounts: vec![],
+            coinbase: Default::default(),
+        }
+    }
+}
+
 /// Principal specific permission
 #[derive(
     Debug, Clone, CandidType, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
