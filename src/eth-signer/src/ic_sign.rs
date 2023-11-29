@@ -110,7 +110,8 @@ impl IcSigner {
             Principal::management_canister(),
             "sign_with_ecdsa",
             (request,),
-            SignWithEcdsaResponse
+            SignWithEcdsaResponse,
+            100_000_000_000
         )
         .await
         .map_err(|(code, msg)| IcSignerError::SigningFailed(code, msg))?
