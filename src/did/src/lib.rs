@@ -11,6 +11,7 @@ pub mod error;
 pub mod gas;
 pub mod hash;
 pub mod ic;
+pub mod init;
 pub mod integer;
 pub mod keccak;
 pub mod mint_order_exemption;
