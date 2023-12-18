@@ -5,11 +5,19 @@ use std::pin::Pin;
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
 use ic_canister_client::CanisterClient;
+use ic_exports::ic_cdk::api::call;
 use jsonrpc_core::{Call, Request, Response};
+use reqwest::Url;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
+use crate::outcall::{HttpOutcall, HttpOutcallArgs};
 use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
+
+use ic_exports::ic_cdk::api::management_canister::http_request::{
+    http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod,
+    HttpResponse as MHttpResponse, TransformArgs, TransformContext,
+};
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(
@@ -48,6 +56,68 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
             log::trace!("response: {:?}", response);
 
             Ok(response)
+        })
+    }
+}
+
+impl<T: CanisterClient + Sync + 'static> HttpOutcall for T {
+    fn http_outcall(
+        &self,
+        arg: crate::outcall::HttpOutcallArgs,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<MHttpResponse>> + Send>> {
+        Box::pin(async move {
+            let HttpOutcallArgs {
+                ref url,
+                method,
+                ref body,
+                cost,
+                max_response_bytes,
+            } = arg;
+
+            log::debug!("http_outcall url: {}, method: {:?}, ", url, method);
+
+            let real_url =
+                Url::parse(&url).map_err(|e| anyhow::format_err!("error parsing the url {e}"))?;
+
+            let host = real_url
+                .host_str()
+                .ok_or_else(|| anyhow::format_err!("empty host of url".to_string()))?;
+
+            let headers = vec![
+                HttpHeader {
+                    name: "Host".to_string(),
+                    value: host.to_string(),
+                },
+                HttpHeader {
+                    name: "Content-Type".to_string(),
+                    value: "application/json".to_string(),
+                },
+            ];
+
+            let request = CanisterHttpRequestArgument {
+                url: url.clone(),
+                max_response_bytes,
+                method,
+                headers,
+                body: body.clone(),
+                transform: Some(TransformContext::from_name("transform".to_string(), vec![])),
+            };
+
+            let cost = cost.unwrap_or_else(|| arg.get_request_costs());
+
+            let cycles_available = call::msg_cycles_available128();
+            if cycles_available < cost {
+                anyhow::bail!("Too few cycles, expected: {cost}, received: {cycles_available}");
+            }
+
+            let res = http_request(request.clone(), cost)
+                .await
+                .map(|(res,)| res)
+                .map_err(|(r, m)| {
+                    anyhow::format_err!(format!("RejectionCode: {r:?}, Error: {m}"))
+                })?;
+
+            Ok(res)
         })
     }
 }
