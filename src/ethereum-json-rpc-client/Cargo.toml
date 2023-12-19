@@ -9,7 +9,7 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-ic-canister-client = ["candid", "dep:ic-canister-client"]
+ic-canister-client = ["dep:ic-canister-client"]
 pocket-ic-tests-client = [
   "ic-canister-client",
   "ic-canister-client/pocket-ic-client",
@@ -18,7 +18,7 @@ reqwest = ["dep:reqwest"]
 
 [dependencies]
 anyhow = { workspace = true }
-candid = { workspace = true, optional = true }
+candid = { workspace = true }
 hex = { workspace = true }
 ic-exports = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }

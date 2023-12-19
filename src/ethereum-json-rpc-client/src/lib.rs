@@ -3,9 +3,9 @@ use std::pin::Pin;
 
 use anyhow::Context;
 use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256, U64};
+use http_outcall::HttpOutCallArgs;
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
-use outcall::HttpOutCallArgs;
 use serde::de::DeserializeOwned;
 
 #[cfg(feature = "reqwest")]
@@ -13,8 +13,8 @@ pub mod reqwest;
 
 #[cfg(feature = "ic-canister-client")]
 pub mod canister_client;
-#[cfg(feature = "ic-canister-client")]
-mod outcall;
+
+mod http_outcall;
 
 const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
 const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
