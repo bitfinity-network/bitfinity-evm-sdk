@@ -2,10 +2,10 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
-use jsonrpc_core::{Request, Response};
+use jsonrpc_core::Response;
 pub use reqwest;
 
-use crate::Client;
+use crate::{Client, ClientRequest};
 
 /// Reqwest client implementation.
 #[derive(Clone)]
@@ -30,11 +30,16 @@ impl ReqwestClient {
 }
 
 impl Client for ReqwestClient {
-    fn send_rpc_request(
+    fn send_request(
         &self,
-        request: Request,
+        request: ClientRequest,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
         log::trace!("ReqwestClient - sending request {request:?}");
+
+        let request = match request {
+            ClientRequest::RpcRequest(req) => req,
+            ClientRequest::HttpOutCall(_) => unreachable!(),
+        };
 
         let request_builder = self.client.post(&self.endpoint_url).json(&request);
 

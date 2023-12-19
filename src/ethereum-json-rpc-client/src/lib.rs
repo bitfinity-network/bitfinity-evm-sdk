@@ -5,6 +5,7 @@ use anyhow::Context;
 use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256, U64};
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
+use outcall::HttpOutCallArgs;
 use serde::de::DeserializeOwned;
 
 #[cfg(feature = "reqwest")]
@@ -145,7 +146,9 @@ impl<C: Client> EthJsonRcpClient<C> {
 
     /// Performs a request.
     pub async fn request(&self, request: Request) -> anyhow::Result<Response> {
-        self.client.send_rpc_request(request).await
+        self.client
+            .send_request(ClientRequest::RpcRequest(request))
+            .await
     }
 
     /// Performs a single request.
@@ -162,7 +165,10 @@ impl<C: Client> EthJsonRcpClient<C> {
             id,
         }));
 
-        let response = self.client.send_rpc_request(request).await?;
+        let response = self
+            .client
+            .send_request(ClientRequest::RpcRequest(request))
+            .await?;
 
         match response {
             Response::Single(response) => match response {
@@ -208,7 +214,10 @@ impl<C: Client> EthJsonRcpClient<C> {
             let chunk_size = method_calls.len();
             let request = Request::Batch(method_calls);
 
-            let response = self.client.send_rpc_request(request).await?;
+            let response = self
+                .client
+                .send_request(ClientRequest::RpcRequest(request))
+                .await?;
 
             match response {
                 Response::Single(response) => match response {
@@ -253,8 +262,20 @@ impl<C: Client> EthJsonRcpClient<C> {
 }
 
 pub trait Client: Clone + Send + Sync {
-    fn send_rpc_request(
+    /// Send RPC request.
+    ///
+    fn send_request(
         &self,
-        request: Request,
+        request: ClientRequest,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>>;
+}
+
+/// An enum representing the different clients which are supported
+/// for sending request.
+///
+/// It can either use HttpOutCalls or Rpc Request
+#[derive(Debug)]
+pub enum ClientRequest {
+    RpcRequest(Request),
+    HttpOutCall(HttpOutCallArgs),
 }

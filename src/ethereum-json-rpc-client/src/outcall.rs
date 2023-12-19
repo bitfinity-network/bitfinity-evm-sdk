@@ -1,13 +1,92 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use anyhow::Context;
+use ic_exports::ic_cdk::api::call;
 use ic_exports::ic_cdk::api::management_canister::http_request::{
-    CanisterHttpRequestArgument, HttpMethod, HttpResponse as MHttpResponse,
+    self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
 };
+use reqwest::Url;
+
+use crate::{Client, ClientRequest};
+
+#[derive(Clone)]
+pub struct HttpOutcallClient;
+
+impl Client for HttpOutcallClient {
+    fn send_request(
+        &self,
+        request: ClientRequest,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>> {
+        let request = match request {
+            ClientRequest::HttpOutCall(req) => req,
+            ClientRequest::RpcRequest(_) => unreachable!(),
+        };
+
+        Box::pin(async move {
+            let HttpOutCallArgs {
+                url,
+                method,
+                body,
+                max_response_bytes,
+            } = request;
+
+            log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
+
+            let real_url =
+                Url::parse(&url).map_err(|e| anyhow::format_err!("error parsing the url {e}"))?;
+
+            let host = real_url
+                .host_str()
+                .ok_or_else(|| anyhow::format_err!("empty host of url".to_string()))?;
+
+            let headers = vec![
+                HttpHeader {
+                    name: "Host".to_string(),
+                    value: host.to_string(),
+                },
+                HttpHeader {
+                    name: "Content-Type".to_string(),
+                    value: "application/json".to_string(),
+                },
+            ];
+
+            let request = CanisterHttpRequestArgument {
+                url,
+                max_response_bytes,
+                method,
+                headers,
+                body,
+                transform: Some(TransformContext::from_name("transform".to_string(), vec![])),
+            };
+
+            let cost = http_request_required_cycles(&request);
+
+            let cycles_available = call::msg_cycles_available128();
+            if cycles_available < cost {
+                anyhow::bail!("Too few cycles, expected: {cost}, received: {cycles_available}");
+            }
+
+            let http_response = http_request::http_request(request, cost)
+                .await
+                .map(|(res,)| res)
+                .map_err(|(r, m)| {
+                    anyhow::format_err!(format!("RejectionCode: {r:?}, Error: {m}"))
+                })?;
+
+            let response = serde_json::from_slice(&http_response.body)
+                .context("failed to deserialize RPC request")?;
+
+            log::trace!("CanisterClient - Response from http_outcall'. Response : {response:?}");
+
+            Ok(response)
+        })
+    }
+}
 
 /// http outcall argument
 #[derive(Debug)]
-pub struct HttpOutcallArgs {
+pub struct HttpOutCallArgs {
     pub url: String,
     pub method: HttpMethod,
     pub body: Option<Vec<u8>>,
@@ -17,14 +96,6 @@ pub struct HttpOutcallArgs {
     /// As much as this is optional, it is important to set the value
     /// otherwise it will be set to default 2MiB which uses a lot of cycles
     pub max_response_bytes: Option<u64>,
-}
-
-/// Trait implementation for Http outcalls for canisters
-pub trait HttpOutcall: Clone + Send + Sync {
-    fn http_outcall(
-        &self,
-        args: HttpOutcallArgs,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<MHttpResponse>> + Send>>;
 }
 
 // Calculate cycles for http_request

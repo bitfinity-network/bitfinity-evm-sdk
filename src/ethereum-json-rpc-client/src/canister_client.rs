@@ -5,25 +5,23 @@ use std::pin::Pin;
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
 use ic_canister_client::CanisterClient;
-use ic_exports::ic_cdk::api::call;
-use ic_exports::ic_cdk::api::management_canister::http_request::{
-    http_request, CanisterHttpRequestArgument, HttpHeader, HttpResponse as MHttpResponse,
-    TransformContext,
-};
 use jsonrpc_core::{Call, Request, Response};
-use reqwest::Url;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
-use crate::outcall::{http_request_required_cycles, HttpOutcall, HttpOutcallArgs};
-use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
+use crate::{Client, ClientRequest, ETH_SEND_RAW_TRANSACTION_METHOD};
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
-    fn send_rpc_request(
+    fn send_request(
         &self,
-        request: Request,
+        request: ClientRequest,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
         let client = self.clone();
+
+        let request = match request {
+            ClientRequest::RpcRequest(req) => req,
+            ClientRequest::HttpOutCall(_) => unreachable!(),
+        };
 
         Box::pin(async move {
             log::trace!("CanisterClient - sending 'http_request'. request: {request:?}");
@@ -55,69 +53,6 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
             log::trace!("response: {:?}", response);
 
             Ok(response)
-        })
-    }
-}
-
-impl<T: CanisterClient + Sync + 'static> HttpOutcall for T {
-    fn http_outcall(
-        &self,
-        arg: HttpOutcallArgs,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<MHttpResponse>> + Send>> {
-        Box::pin(async move {
-            let HttpOutcallArgs {
-                url,
-                method,
-                body,
-                max_response_bytes,
-            } = arg;
-
-            log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
-
-            let real_url =
-                Url::parse(&url).map_err(|e| anyhow::format_err!("error parsing the url {e}"))?;
-
-            let host = real_url
-                .host_str()
-                .ok_or_else(|| anyhow::format_err!("empty host of url".to_string()))?;
-
-            let headers = vec![
-                HttpHeader {
-                    name: "Host".to_string(),
-                    value: host.to_string(),
-                },
-                HttpHeader {
-                    name: "Content-Type".to_string(),
-                    value: "application/json".to_string(),
-                },
-            ];
-
-            let request = CanisterHttpRequestArgument {
-                url,
-                max_response_bytes,
-                method,
-                headers,
-                body,
-                transform: Some(TransformContext::from_name("transform".to_string(), vec![])),
-            };
-
-            let cost = http_request_required_cycles(&request);
-
-            let cycles_available = call::msg_cycles_available128();
-            if cycles_available < cost {
-                anyhow::bail!("Too few cycles, expected: {cost}, received: {cycles_available}");
-            }
-
-            let res = http_request(request, cost)
-                .await
-                .map(|(res,)| res)
-                .map_err(|(r, m)| {
-                    anyhow::format_err!(format!("RejectionCode: {r:?}, Error: {m}"))
-                })?;
-
-            log::trace!("CanisterClient - Response from http_outcall'. Response : {res:?}");
-
-            Ok(res)
         })
     }
 }
