@@ -9,11 +9,10 @@ use serde::de::DeserializeOwned;
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
-// #[cfg(feature = "state-machine-tests-client")]
-// pub mod state_machine_tests_client;
+
 #[cfg(feature = "ic-canister-client")]
 pub mod canister_client;
-
+#[cfg(feature = "ic-canister-client")]
 mod outcall;
 
 const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
