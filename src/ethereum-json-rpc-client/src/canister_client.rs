@@ -6,6 +6,10 @@ use anyhow::Context;
 use candid::{CandidType, Deserialize};
 use ic_canister_client::CanisterClient;
 use ic_exports::ic_cdk::api::call;
+use ic_exports::ic_cdk::api::management_canister::http_request::{
+    http_request, CanisterHttpRequestArgument, HttpHeader, HttpResponse as MHttpResponse,
+    TransformContext,
+};
 use jsonrpc_core::{Call, Request, Response};
 use reqwest::Url;
 use serde::Serialize;
@@ -13,11 +17,6 @@ use serde_bytes::ByteBuf;
 
 use crate::outcall::{http_request_required_cycles, HttpOutcall, HttpOutcallArgs};
 use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
-
-use ic_exports::ic_cdk::api::management_canister::http_request::{
-    http_request, CanisterHttpRequestArgument, HttpHeader, HttpResponse as MHttpResponse,
-    TransformContext,
-};
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(
