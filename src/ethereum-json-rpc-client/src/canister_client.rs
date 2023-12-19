@@ -11,12 +11,12 @@ use reqwest::Url;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
-use crate::outcall::{HttpOutcall, HttpOutcallArgs};
+use crate::outcall::{http_request_required_cycles, HttpOutcall, HttpOutcallArgs};
 use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
 
 use ic_exports::ic_cdk::api::management_canister::http_request::{
-    http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod,
-    HttpResponse as MHttpResponse, TransformArgs, TransformContext,
+    http_request, CanisterHttpRequestArgument, HttpHeader, HttpResponse as MHttpResponse,
+    TransformContext,
 };
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
@@ -63,18 +63,17 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
 impl<T: CanisterClient + Sync + 'static> HttpOutcall for T {
     fn http_outcall(
         &self,
-        arg: crate::outcall::HttpOutcallArgs,
+        arg: HttpOutcallArgs,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<MHttpResponse>> + Send>> {
         Box::pin(async move {
             let HttpOutcallArgs {
-                ref url,
+                url,
                 method,
-                ref body,
-                cost,
+                body,
                 max_response_bytes,
             } = arg;
 
-            log::debug!("http_outcall url: {}, method: {:?}, ", url, method);
+            log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
 
             let real_url =
                 Url::parse(&url).map_err(|e| anyhow::format_err!("error parsing the url {e}"))?;
@@ -95,27 +94,29 @@ impl<T: CanisterClient + Sync + 'static> HttpOutcall for T {
             ];
 
             let request = CanisterHttpRequestArgument {
-                url: url.clone(),
+                url,
                 max_response_bytes,
                 method,
                 headers,
-                body: body.clone(),
+                body,
                 transform: Some(TransformContext::from_name("transform".to_string(), vec![])),
             };
 
-            let cost = cost.unwrap_or_else(|| arg.get_request_costs());
+            let cost = http_request_required_cycles(&request);
 
             let cycles_available = call::msg_cycles_available128();
             if cycles_available < cost {
                 anyhow::bail!("Too few cycles, expected: {cost}, received: {cycles_available}");
             }
 
-            let res = http_request(request.clone(), cost)
+            let res = http_request(request, cost)
                 .await
                 .map(|(res,)| res)
                 .map_err(|(r, m)| {
                     anyhow::format_err!(format!("RejectionCode: {r:?}, Error: {m}"))
                 })?;
+
+            log::trace!("CanisterClient - Response from http_outcall'. Response : {res:?}");
 
             Ok(res)
         })

@@ -2,47 +2,21 @@ use std::future::Future;
 use std::pin::Pin;
 
 use ic_exports::ic_cdk::api::management_canister::http_request::{
-    http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod,
-    HttpResponse as MHttpResponse, TransformArgs, TransformContext,
+    CanisterHttpRequestArgument, HttpMethod, HttpResponse as MHttpResponse,
 };
 
-pub const INGRESS_OVERHEAD_BYTES: u128 = 100;
-pub const INGRESS_MESSAGE_RECEIVED_COST: u128 = 1_200_000;
-pub const INGRESS_MESSAGE_BYTE_RECEIVED_COST: u128 = 2_000;
-pub const HTTP_OUTCALL_REQUEST_COST: u128 = 400_000_000;
-pub const HTTP_OUTCALL_BYTE_RECEIVED_COST: u128 = 100_000;
-pub const DEFAULT_NODES_IN_SUBNET: u32 = 13;
-
-pub fn transform(raw: TransformArgs) -> MHttpResponse {
-    MHttpResponse {
-        status: raw.response.status,
-        body: raw.response.body,
-        ..Default::default()
-    }
-}
-
 /// http outcall argument
+#[derive(Debug)]
 pub struct HttpOutcallArgs {
     pub url: String,
     pub method: HttpMethod,
     pub body: Option<Vec<u8>>,
-    /// Cost of the http outcall
-    pub cost: Option<u128>,
-    /// Max response from the call
+    /// Max response from the http outcall
+    ///
+    /// # NOTE
+    /// As much as this is optional, it is important to set the value
+    /// otherwise it will be set to default 2MiB which uses a lot of cycles
     pub max_response_bytes: Option<u64>,
-}
-
-impl HttpOutcallArgs {
-    pub fn get_request_costs(&self) -> u128 {
-        let ingress_bytes = (self.body.clone().unwrap_or_default().len() + self.url.len()) as u128
-            + INGRESS_OVERHEAD_BYTES;
-
-        INGRESS_MESSAGE_RECEIVED_COST
-            + INGRESS_MESSAGE_BYTE_RECEIVED_COST * ingress_bytes
-            + HTTP_OUTCALL_REQUEST_COST
-            + HTTP_OUTCALL_BYTE_RECEIVED_COST
-                * (ingress_bytes + self.max_response_bytes.unwrap_or(8_000) as u128)
-    }
 }
 
 /// Trait implementation for Http outcalls for canisters
@@ -51,4 +25,21 @@ pub trait HttpOutcall: Clone + Send + Sync {
         &self,
         args: HttpOutcallArgs,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<MHttpResponse>> + Send>>;
+}
+
+// Calculate cycles for http_request
+// NOTE:
+// https://github.com/dfinity/cdk-rs/blob/710a6cdcc3eb03d2392df1dfd5f047dff9deee80/examples/management_canister/src/caller/lib.rs#L7-L19
+pub fn http_request_required_cycles(arg: &CanisterHttpRequestArgument) -> u128 {
+    let max_response_bytes = match arg.max_response_bytes {
+        Some(ref n) => *n as u128,
+        None => 2 * 1024 * 1024u128, // default 2MiB
+    };
+    let arg_raw = candid::utils::encode_args((arg,)).expect("Failed to encode arguments.");
+    // The fee is for a 13-node subnet to demonstrate a typical usage.
+    (3_000_000u128
+        + 60_000u128 * 13
+        + (arg_raw.len() as u128 + "http_request".len() as u128) * 400
+        + max_response_bytes * 800)
+        * 13
 }
