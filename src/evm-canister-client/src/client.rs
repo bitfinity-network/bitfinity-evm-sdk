@@ -8,10 +8,9 @@ use did::{
     U256,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
+pub use ic_log::writer::{Log, Logs};
 
 use crate::EvmResult;
-
-pub use ic_log::writer::{Log, Logs};
 pub type BlockWithData = Vec<(Block<H256>, Vec<(Transaction, ExeResult)>)>;
 
 /// An EVM canister client.

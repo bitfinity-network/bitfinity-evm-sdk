@@ -4,7 +4,8 @@ use candid::{CandidType, Nat, Principal};
 use ic_log::LogSettings;
 use serde::Deserialize;
 
-use crate::{H160, U256, permission::Permission};
+use crate::permission::Permission;
+use crate::{H160, U256};
 
 pub type GenesisAccount = (H160, Option<U256>);
 
