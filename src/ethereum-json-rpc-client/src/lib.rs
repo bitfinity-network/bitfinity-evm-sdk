@@ -34,6 +34,7 @@ const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
 const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
+const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 
 impl<C: Client> EthJsonRcpClient<C> {
     /// Create a new client.
@@ -146,11 +147,11 @@ impl<C: Client> EthJsonRcpClient<C> {
     }
 
     /// Returns full blocks by number
-    pub async fn eth_get_logs(&self, params: EthGetLogsParams) -> anyhow::Result<Vec<Log>> {
+    pub async fn get_logs(&self, params: EthGetLogsParams) -> anyhow::Result<Vec<Log>> {
         self.single_request(
-            ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
+            ETH_GET_LOGS_METHOD.to_string(),
             make_params_array!(params),
-            Id::Str("send_rawTransaction".to_string()),
+            Id::Str("ETH_GET_LOGS_METHOD".to_string()),
         )
         .await
     }
