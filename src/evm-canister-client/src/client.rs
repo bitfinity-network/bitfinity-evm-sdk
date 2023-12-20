@@ -1,8 +1,7 @@
 use candid::Principal;
 use did::block::{BlockResult, ExeResult};
 use did::error::Result;
-use did::init::Permission;
-use did::permission::PermissionList;
+use did::permission::{Permission, PermissionList};
 use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
 use did::{
     Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256,

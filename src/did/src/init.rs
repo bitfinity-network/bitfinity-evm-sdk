@@ -4,7 +4,7 @@ use candid::{CandidType, Nat, Principal};
 use ic_log::LogSettings;
 use serde::Deserialize;
 
-use crate::{H160, U256};
+use crate::{H160, U256, permission::Permission};
 
 pub type GenesisAccount = (H160, Option<U256>);
 
@@ -42,19 +42,4 @@ impl Default for EvmCanisterInitData {
             coinbase: Default::default(),
         }
     }
-}
-
-/// Principal specific permission
-#[derive(
-    Debug, Clone, CandidType, Deserialize, Hash, PartialEq, Eq, PartialOrd, Ord, serde::Serialize,
-)]
-pub enum Permission {
-    /// Gives administrator permissions
-    Admin,
-    /// Allows calling the endpoints to read the logs and get runtime statistics
-    ReadLogs,
-    /// Allows calling the endpoints to set the logs configuration
-    UpdateLogsConfiguration,
-    /// Allows caller to update blockchain history
-    UpdateBlockchain,
 }
