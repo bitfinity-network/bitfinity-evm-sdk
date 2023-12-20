@@ -3,7 +3,6 @@ use std::pin::Pin;
 
 use anyhow::Context;
 use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256, U64};
-use http_outcall::HttpOutCallArgs;
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
@@ -14,7 +13,7 @@ pub mod reqwest;
 #[cfg(feature = "ic-canister-client")]
 pub mod canister_client;
 
-mod http_outcall;
+pub mod http_outcall;
 
 const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
 const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
@@ -146,9 +145,7 @@ impl<C: Client> EthJsonRcpClient<C> {
 
     /// Performs a request.
     pub async fn request(&self, request: Request) -> anyhow::Result<Response> {
-        self.client
-            .send_request(ClientRequest::RpcRequest(request))
-            .await
+        self.client.send_rpc_request(request).await
     }
 
     /// Performs a single request.
@@ -165,10 +162,7 @@ impl<C: Client> EthJsonRcpClient<C> {
             id,
         }));
 
-        let response = self
-            .client
-            .send_request(ClientRequest::RpcRequest(request))
-            .await?;
+        let response = self.client.send_rpc_request(request).await?;
 
         match response {
             Response::Single(response) => match response {
@@ -214,10 +208,7 @@ impl<C: Client> EthJsonRcpClient<C> {
             let chunk_size = method_calls.len();
             let request = Request::Batch(method_calls);
 
-            let response = self
-                .client
-                .send_request(ClientRequest::RpcRequest(request))
-                .await?;
+            let response = self.client.send_rpc_request(request).await?;
 
             match response {
                 Response::Single(response) => match response {
@@ -264,18 +255,8 @@ impl<C: Client> EthJsonRcpClient<C> {
 pub trait Client: Clone + Send + Sync {
     /// Send RPC request.
     ///
-    fn send_request(
+    fn send_rpc_request(
         &self,
-        request: ClientRequest,
+        request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>>;
-}
-
-/// An enum representing the different clients which are supported
-/// for sending request.
-///
-/// It can either use HttpOutCalls or Rpc Request
-#[derive(Debug)]
-pub enum ClientRequest {
-    RpcRequest(Request),
-    HttpOutCall(HttpOutCallArgs),
 }

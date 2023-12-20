@@ -6,31 +6,54 @@ use ic_exports::ic_cdk::api::call;
 use ic_exports::ic_cdk::api::management_canister::http_request::{
     self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
 };
+use jsonrpc_core::Request;
 use reqwest::Url;
 
-use crate::{Client, ClientRequest};
+use crate::Client;
 
-#[derive(Clone)]
-pub struct HttpOutcallClient;
+/// Http outcall client implementation.
+#[derive(Debug, Clone)]
+pub struct HttpOutcallClient {
+    url: String,
+    max_response_bytes: Option<u64>,
+}
+
+impl HttpOutcallClient {
+    /// Creates a new client.
+    ///
+    /// # Arguments
+    /// * `url` - The url of the canister.
+    ///
+    pub fn new(url: String) -> Self {
+        Self {
+            url,
+            max_response_bytes: None,
+        }
+    }
+
+    /// The maximal size of the response in bytes. If None, 2MiB will be the
+    /// limit.
+    /// This value affects the cost of the http request and it is highly
+    /// recommended to set it as low as possible to avoid unnecessary extra
+    /// costs.
+    ///
+    /// # Arguments
+    /// * `max_response_bytes` - The max response bytes.
+    pub fn set_max_response_bytes(&mut self, max_response_bytes: Option<u64>) {
+        self.max_response_bytes = max_response_bytes;
+    }
+}
 
 impl Client for HttpOutcallClient {
-    fn send_request(
+    fn send_rpc_request(
         &self,
-        request: ClientRequest,
+        request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>> {
-        let request = match request {
-            ClientRequest::HttpOutCall(req) => req,
-            ClientRequest::RpcRequest(_) => unreachable!(),
-        };
+        let url = self.url.clone();
+        let max_response_bytes = self.max_response_bytes;
+        let body = serde_json::to_vec(&request).expect("failed to serialize body");
 
         Box::pin(async move {
-            let HttpOutCallArgs {
-                url,
-                method,
-                body,
-                max_response_bytes,
-            } = request;
-
             log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
 
             let real_url =
@@ -54,9 +77,9 @@ impl Client for HttpOutcallClient {
             let request = CanisterHttpRequestArgument {
                 url,
                 max_response_bytes,
-                method,
+                method: HttpMethod::POST,
                 headers,
-                body,
+                body: Some(body),
                 transform: Some(TransformContext::from_name("transform".to_string(), vec![])),
             };
 
@@ -82,20 +105,6 @@ impl Client for HttpOutcallClient {
             Ok(response)
         })
     }
-}
-
-/// http outcall argument
-#[derive(Debug)]
-pub struct HttpOutCallArgs {
-    pub url: String,
-    pub method: HttpMethod,
-    pub body: Option<Vec<u8>>,
-    /// Max response from the http outcall
-    ///
-    /// # NOTE
-    /// As much as this is optional, it is important to set the value
-    /// otherwise it will be set to default 2MiB which uses a lot of cycles
-    pub max_response_bytes: Option<u64>,
 }
 
 // Calculate cycles for http_request

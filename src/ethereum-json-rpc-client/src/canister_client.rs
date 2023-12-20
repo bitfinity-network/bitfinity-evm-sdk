@@ -9,19 +9,14 @@ use jsonrpc_core::{Call, Request, Response};
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
-use crate::{Client, ClientRequest, ETH_SEND_RAW_TRANSACTION_METHOD};
+use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
-    fn send_request(
+    fn send_rpc_request(
         &self,
-        request: ClientRequest,
+        request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
         let client = self.clone();
-
-        let request = match request {
-            ClientRequest::RpcRequest(req) => req,
-            ClientRequest::HttpOutCall(_) => unreachable!(),
-        };
 
         Box::pin(async move {
             log::trace!("CanisterClient - sending 'http_request'. request: {request:?}");
