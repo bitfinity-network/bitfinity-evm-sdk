@@ -1,6 +1,8 @@
 use candid::Principal;
 use did::block::{BlockResult, ExeResult};
 use did::error::Result;
+use did::init::Permission;
+use did::permission::PermissionList;
 use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
 use did::{
     Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256,
@@ -607,6 +609,38 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// * `disabled` - Whether to disable or enable the EVM.
     pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<Result<()>> {
         self.client.update("admin_disable_evm", (disabled,)).await
+    }
+
+    /// Adds permissions to a principal and returns the principal permissions
+    pub async fn admin_ic_permissions_add(
+        &self,
+        principal: Principal,
+        permissions: Vec<Permission>,
+    ) -> CanisterClientResult<Result<PermissionList>> {
+        self.client
+            .update("admin_ic_permissions_add", (principal, permissions))
+            .await
+    }
+
+    /// Removes permissions from a principal and returns the principal permissions
+    pub async fn admin_ic_permissions_remove(
+        &mut self,
+        principal: Principal,
+        permissions: Vec<Permission>,
+    ) -> CanisterClientResult<Result<PermissionList>> {
+        self.client
+            .update("admin_ic_permissions_remove", (principal, permissions))
+            .await
+    }
+
+    /// Returns the permissions of a principal
+    pub async fn admin_ic_permissions_get(
+        &self,
+        principal: Principal,
+    ) -> CanisterClientResult<Result<PermissionList>> {
+        self.client
+            .query("admin_ic_permissions_get", (principal,))
+            .await
     }
 
     /// Returns the chain ID used for signing replay-protected transactions.
