@@ -1,6 +1,6 @@
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRcpClient};
-use ethers_core::types::{BlockNumber, H256, Log};
+use ethers_core::types::{BlockNumber, Log, H256};
 
 const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
 const MAX_BATCH_SIZE: usize = 5;
