@@ -7,6 +7,7 @@ use did::{
     U256,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
+use ic_log::writer::Logs;
 
 use crate::EvmResult;
 
@@ -590,6 +591,13 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// * `filter` - The new filter.
     pub async fn set_logger_filter(&self, filter: &str) -> CanisterClientResult<Result<()>> {
         self.client.update("set_logger_filter", (filter,)).await
+    }
+
+    /// Gets the application logs
+    /// - `count` is the number of logs to return
+    /// - `offset` is the offset from the first log to return
+    pub async fn ic_logs(&self, count: usize, offset: usize) -> CanisterClientResult<Result<Logs>> {
+        self.client.query("ic_logs", (count, offset)).await
     }
 
     /// Disable or enable the EVM. This function requires admin permissions.
