@@ -146,7 +146,7 @@ impl<C: Client> EthJsonRcpClient<C> {
         .await
     }
 
-    /// Returns full blocks by number
+    /// Get EVM logs according to the given parameters.
     pub async fn get_logs(&self, params: EthGetLogsParams) -> anyhow::Result<Vec<Log>> {
         self.single_request(
             ETH_GET_LOGS_METHOD.to_string(),
