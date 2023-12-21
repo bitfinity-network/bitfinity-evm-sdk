@@ -7,7 +7,6 @@ use ic_exports::ic_cdk::api::management_canister::http_request::{
     self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
 };
 use jsonrpc_core::Request;
-use reqwest::Url;
 
 use crate::Client;
 
@@ -56,11 +55,6 @@ impl Client for HttpOutcallClient {
             // let request_builder = self.client.post(&self.endpoint_url).json(&request);
 
             Box::pin(async move {
-                // let request_builder = reqwest::Client::new()
-                //     .post(url)
-                //     .header("Content-Type", "application/json")
-                //     .json(&request);
-
                 let response = reqwest::Client::new()
                     .post(url)
                     .header("Content-Type", "application/json")
@@ -79,6 +73,7 @@ impl Client for HttpOutcallClient {
 
         #[cfg(not(feature = "http-outcall-reqwest"))]
         {
+            use reqwest::Url;
             let max_response_bytes = self.max_response_bytes;
             let body = serde_json::to_vec(&request).expect("failed to serialize body");
 
