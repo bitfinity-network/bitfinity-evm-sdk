@@ -45,12 +45,11 @@ impl BlocksReader {
 #[cfg(test)]
 mod test {
 
-    use super::*;
-
-    use crate::BlocksWriter;
-
     use ethers_core::types::Block;
     use tempfile::NamedTempFile;
+
+    use super::*;
+    use crate::BlocksWriter;
 
     #[test]
     fn test_should_get_last_block_number() {
