@@ -12,10 +12,18 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
-// #[cfg(feature = "state-machine-tests-client")]
-// pub mod state_machine_tests_client;
+
 #[cfg(feature = "ic-canister-client")]
 pub mod canister_client;
+
+pub mod http_outcall;
+
+const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
+const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
+const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
+const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
+const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
+const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
@@ -28,13 +36,6 @@ macro_rules! make_params_array {
         Params::Array(vec![$(serde_json::to_value($items)?, )*])
     };
 }
-
-const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
-const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
-const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
-const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
-const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
-const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 
 impl<C: Client> EthJsonRcpClient<C> {
     /// Create a new client.
@@ -284,6 +285,8 @@ pub struct EthGetLogsParams {
 }
 
 pub trait Client: Clone + Send + Sync {
+    /// Send RPC request.
+    ///
     fn send_rpc_request(
         &self,
         request: Request,
