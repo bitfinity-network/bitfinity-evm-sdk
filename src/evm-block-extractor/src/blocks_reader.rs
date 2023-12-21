@@ -16,7 +16,7 @@ impl BlocksReader {
     }
 
     pub fn get_last_block_number(&mut self) -> anyhow::Result<u64> {
-        if self.reader.len() == 0 {
+        if self.reader.is_empty() {
             anyhow::bail!("No blocks found");
         }
         let last_block_file = self.reader.by_index(self.reader.len() - 1)?;
