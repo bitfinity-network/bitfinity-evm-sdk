@@ -52,8 +52,6 @@ impl Client for HttpOutcallClient {
 
         #[cfg(feature = "http-outcall-reqwest")]
         {
-            // let request_builder = self.client.post(&self.endpoint_url).json(&request);
-
             Box::pin(async move {
                 let response = reqwest::Client::new()
                     .post(url)
@@ -73,14 +71,13 @@ impl Client for HttpOutcallClient {
 
         #[cfg(not(feature = "http-outcall-reqwest"))]
         {
-            use reqwest::Url;
             let max_response_bytes = self.max_response_bytes;
             let body = serde_json::to_vec(&request).expect("failed to serialize body");
 
             Box::pin(async move {
                 log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
 
-                let real_url = Url::parse(&url)
+                let real_url = reqwest::Url::parse(&url)
                     .map_err(|e| anyhow::format_err!("error parsing the url {e}"))?;
 
                 let host = real_url

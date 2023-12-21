@@ -16,6 +16,7 @@ pocket-ic-tests-client = [
 ]
 reqwest = ["dep:reqwest"]
 http-outcall-reqwest = ["dep:reqwest"]
+
 [dependencies]
 anyhow = { workspace = true }
 candid = { workspace = true }
@@ -29,7 +30,6 @@ reqwest = { workspace = true, optional = true, features = [
   "json",
   "rustls-tls",
   "trust-dns",
-  "blocking",
 ] }
 serde = { workspace = true }
 serde_bytes = { workspace = true }
