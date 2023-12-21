@@ -15,7 +15,7 @@ pocket-ic-tests-client = [
   "ic-canister-client/pocket-ic-client",
 ]
 reqwest = ["dep:reqwest"]
-
+http-outcall-reqwest = ["dep:reqwest"]
 [dependencies]
 anyhow = { workspace = true }
 candid = { workspace = true }
