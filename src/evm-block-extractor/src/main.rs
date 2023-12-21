@@ -1,7 +1,9 @@
+mod blocks_reader;
 mod blocks_writer;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use blocks_reader::BlocksReader;
 use blocks_writer::BlocksWriter;
 use clap::Parser;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
@@ -49,7 +51,16 @@ async fn main() -> anyhow::Result<()> {
     init_logger()?;
     let args = Args::parse();
 
-    let start_block = args.start_block;
+    let (start_block, append) = match get_last_block_number_from_output_file(&args.output_file) {
+        Some(last_block_number) => {
+            log::info!(
+                "last block number found in output file: {}",
+                last_block_number
+            );
+            (last_block_number + 1, true)
+        }
+        None => (args.start_block, false),
+    };
     let end_block = args.end_block.unwrap_or(u64::MAX);
 
     log::info!("{PACKAGE}");
@@ -61,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     log::info!("----------------------");
 
     log::info!("initializing blocks-writer...");
-    let blocks_writer = BlocksWriter::new(&args.output_file)?;
+    let blocks_writer = BlocksWriter::open(&args.output_file, append)?;
     log::info!("blocks-writer initialized");
 
     collect_blocks(
@@ -143,4 +154,9 @@ fn write_blocks(
     }
 
     Ok(())
+}
+
+fn get_last_block_number_from_output_file(output_file: &Path) -> Option<u64> {
+    let mut reader = BlocksReader::open(Path::new(output_file)).ok()?;
+    reader.get_last_block_number().ok()
 }
