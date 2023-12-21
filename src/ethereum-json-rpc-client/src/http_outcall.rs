@@ -50,60 +50,89 @@ impl Client for HttpOutcallClient {
         request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>> {
         let url = self.url.clone();
-        let max_response_bytes = self.max_response_bytes;
-        let body = serde_json::to_vec(&request).expect("failed to serialize body");
 
-        Box::pin(async move {
-            log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
+        #[cfg(feature = "http-outcall-reqwest")]
+        {
+            // let request_builder = self.client.post(&self.endpoint_url).json(&request);
 
-            let real_url =
-                Url::parse(&url).map_err(|e| anyhow::format_err!("error parsing the url {e}"))?;
+            let request_builder = reqwest::Client::new()
+                .post(url)
+                .header("Content-Type", "application/json")
+                .json(&request);
 
-            let host = real_url
-                .host_str()
-                .ok_or_else(|| anyhow::format_err!("empty host of url".to_string()))?;
+            Box::pin(async move {
+                let response = request_builder
+                    .send()
+                    .await
+                    .context("failed to send RPC request")?
+                    .json::<jsonrpc_core::Response>()
+                    .await
+                    .context("failed to decode RPC response")?;
 
-            let headers = vec![
-                HttpHeader {
-                    name: "Host".to_string(),
-                    value: host.to_string(),
-                },
-                HttpHeader {
-                    name: "Content-Type".to_string(),
-                    value: "application/json".to_string(),
-                },
-            ];
+                log::trace!("response: {:?}", response);
+                Ok(response)
+            })
+        }
 
-            let request = CanisterHttpRequestArgument {
-                url,
-                max_response_bytes,
-                method: HttpMethod::POST,
-                headers,
-                body: Some(body),
-                transform: Some(TransformContext::from_name("transform".to_string(), vec![])),
-            };
+        #[cfg(not(feature = "http-outcall-reqwest"))]
+        {
+            let max_response_bytes = self.max_response_bytes;
+            let body = serde_json::to_vec(&request).expect("failed to serialize body");
 
-            let cost = http_request_required_cycles(&request);
+            Box::pin(async move {
+                log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
 
-            let cycles_available = call::msg_cycles_available128();
-            if cycles_available < cost {
-                anyhow::bail!("Too few cycles, expected: {cost}, received: {cycles_available}");
-            }
+                let real_url = Url::parse(&url)
+                    .map_err(|e| anyhow::format_err!("error parsing the url {e}"))?;
 
-            let http_response = http_request::http_request(request, cost)
-                .await
-                .map(|(res,)| res)
-                .map_err(|(r, m)| {
-                    anyhow::format_err!(format!("RejectionCode: {r:?}, Error: {m}"))
-                })?;
+                let host = real_url
+                    .host_str()
+                    .ok_or_else(|| anyhow::format_err!("empty host of url".to_string()))?;
 
-            let response = serde_json::from_slice(&http_response.body)
-                .context("failed to deserialize RPC request")?;
+                let headers = vec![
+                    HttpHeader {
+                        name: "Host".to_string(),
+                        value: host.to_string(),
+                    },
+                    HttpHeader {
+                        name: "Content-Type".to_string(),
+                        value: "application/json".to_string(),
+                    },
+                ];
 
-            log::trace!("CanisterClient - Response from http_outcall'. Response : {response:?}");
+                let request = CanisterHttpRequestArgument {
+                    url,
+                    max_response_bytes,
+                    method: HttpMethod::POST,
+                    headers,
+                    body: Some(body),
+                    transform: Some(TransformContext::from_name("transform".to_string(), vec![])),
+                };
 
-            Ok(response)
-        })
+                let cost = http_request_required_cycles(&request);
+
+                let cycles_available = call::msg_cycles_available128();
+                if cycles_available < cost {
+                    anyhow::bail!("Too few cycles, expected: {cost}, received: {cycles_available}");
+                }
+
+                let http_response = http_request::http_request(request, cost)
+                    .await
+                    .map(|(res,)| res)
+                    .map_err(|(r, m)| {
+                        anyhow::format_err!(format!("RejectionCode: {r:?}, Error: {m}"))
+                    })?;
+
+                let response = serde_json::from_slice(&http_response.body)
+                    .context("failed to deserialize RPC request")?;
+
+                log::trace!(
+                    "CanisterClient - Response from http_outcall'. Response : {response:?}"
+                );
+
+                Ok(response)
+            })
+        }
     }
 }
 
