@@ -55,12 +55,12 @@ impl Client for HttpOutcallClient {
         {
             // let request_builder = self.client.post(&self.endpoint_url).json(&request);
 
-            let request_builder = reqwest::Client::new()
-                .post(url)
-                .header("Content-Type", "application/json")
-                .json(&request);
-
             Box::pin(async move {
+                let request_builder = reqwest::Client::new()
+                    .post(url)
+                    .header("Content-Type", "application/json")
+                    .json(&request);
+
                 let response = request_builder
                     .send()
                     .await
