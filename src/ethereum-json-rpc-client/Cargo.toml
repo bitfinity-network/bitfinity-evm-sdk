@@ -29,6 +29,7 @@ reqwest = { workspace = true, optional = true, features = [
   "json",
   "rustls-tls",
   "trust-dns",
+  "blocking",
 ] }
 serde = { workspace = true }
 serde_bytes = { workspace = true }

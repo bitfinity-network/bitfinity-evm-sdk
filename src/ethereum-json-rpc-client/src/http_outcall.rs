@@ -48,7 +48,7 @@ impl Client for HttpOutcallClient {
     fn send_rpc_request(
         &self,
         request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<jsonrpc_core::Response>>>> {
         let url = self.url.clone();
 
         #[cfg(feature = "http-outcall-reqwest")]
@@ -56,12 +56,15 @@ impl Client for HttpOutcallClient {
             // let request_builder = self.client.post(&self.endpoint_url).json(&request);
 
             Box::pin(async move {
-                let request_builder = reqwest::Client::new()
+                // let request_builder = reqwest::Client::new()
+                //     .post(url)
+                //     .header("Content-Type", "application/json")
+                //     .json(&request);
+
+                let response = reqwest::Client::new()
                     .post(url)
                     .header("Content-Type", "application/json")
-                    .json(&request);
-
-                let response = request_builder
+                    .json(&request)
                     .send()
                     .await
                     .context("failed to send RPC request")?

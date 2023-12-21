@@ -33,7 +33,7 @@ impl Client for ReqwestClient {
     fn send_rpc_request(
         &self,
         request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>>>> {
         log::trace!("ReqwestClient - sending request {request:?}");
 
         let request_builder = self.client.post(&self.endpoint_url).json(&request);

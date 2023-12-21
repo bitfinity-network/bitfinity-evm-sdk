@@ -15,7 +15,7 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(
         &self,
         request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>>>> {
         let client = self.clone();
 
         Box::pin(async move {
