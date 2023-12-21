@@ -14,8 +14,8 @@ pocket-ic-tests-client = [
   "ic-canister-client",
   "ic-canister-client/pocket-ic-client",
 ]
-reqwest = ["dep:reqwest"]
-http-outcall-reqwest = ["reqwest"]
+
+http-outcall-reqwest = []
 
 [dependencies]
 anyhow = { workspace = true }
@@ -25,7 +25,7 @@ ic-exports = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }
 itertools = { workspace = true }
 log = { workspace = true }
-reqwest = { workspace = true, optional = true, features = [
+reqwest = { workspace = true, features = [
   "gzip",
   "json",
   "rustls-tls",
