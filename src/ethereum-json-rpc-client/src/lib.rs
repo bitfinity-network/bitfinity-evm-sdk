@@ -10,7 +10,7 @@ use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Vers
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "reqwest")]
+// #[cfg(feature = "reqwest")]
 pub mod reqwest;
 
 #[cfg(feature = "ic-canister-client")]
