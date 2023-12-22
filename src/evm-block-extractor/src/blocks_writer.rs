@@ -15,11 +15,11 @@ pub struct BlocksWriter {
 
 impl BlocksWriter {
     /// Try to init a new BlocksWriter
-    pub fn new(output_file: &Path, append: bool) -> anyhow::Result<Self> {
+    pub fn new(output_file: &Path) -> anyhow::Result<Self> {
         let file = OpenOptions::new()
             .write(true)
             .create(true)
-            .append(append)
+            .append(true)
             .open(output_file)?;
 
         Ok(Self {

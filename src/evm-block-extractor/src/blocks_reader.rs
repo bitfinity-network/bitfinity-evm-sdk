@@ -54,7 +54,7 @@ mod test {
     #[test]
     fn test_should_get_last_block_number() {
         let file = NamedTempFile::new().unwrap();
-        let mut writer = BlocksWriter::new(file.path(), false).unwrap();
+        let mut writer = BlocksWriter::new(file.path()).unwrap();
 
         for number in 0..10 {
             let block = Block {
