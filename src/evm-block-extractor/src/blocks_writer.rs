@@ -1,4 +1,4 @@
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
@@ -16,11 +16,7 @@ pub struct BlocksWriter {
 impl BlocksWriter {
     /// Try to init a new BlocksWriter
     pub fn new(output_file: &Path) -> anyhow::Result<Self> {
-        let file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .append(true)
-            .open(output_file)?;
+        let file = File::create(output_file)?;
 
         Ok(Self {
             writer: ZipWriter::new(file),

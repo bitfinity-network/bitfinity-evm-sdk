@@ -9,7 +9,7 @@ The EVM block extractor is a tool which can be used to collect blocks and block 
 ```sh
 evm-block-extractor
   --rpc-url <evmc-rpc-url>
-  --output-file <output-zipfile>
+  --output-dir <output-zipfile>
   --start-block <start-block>
   --end-block <last-block>
   --batch-size <max-batch-size>
@@ -18,7 +18,7 @@ evm-block-extractor
 Where:
 
 - **rpc-url**: is the endpoint of the EVMC json-rpc url
-- **output-file**: path to the ZIP file to write blocks to
+- **output-dir**: path to directory where the ZIP files containing the block are
 - **start-block**: the number of the block to start collecting blocks from
 - **end-block**: the number of the last block to fetch. If not provided blocks will be collected until the last one is reached.
 - **batch-size**: maximum amount of blocks to collect from a single request. (default: 500)

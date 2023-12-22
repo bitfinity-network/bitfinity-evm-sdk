@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 
 use blocks_reader::BlocksReader;
 use blocks_writer::BlocksWriter;
+use chrono::Local;
 use clap::Parser;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
@@ -33,9 +34,9 @@ struct Args {
     #[arg(long = "rpc-url", short('u'))]
     rpc_url: String,
 
-    /// Output ZIP file to write blocks to
-    #[arg(long = "output", short('o'))]
-    output_file: PathBuf,
+    /// Output directory to write archives block to
+    #[arg(long = "output-dir", short('o'))]
+    output_dir: PathBuf,
 
     /// block to start with
     #[arg(long, short('s'), default_value = "0")]
@@ -60,7 +61,14 @@ async fn main() -> anyhow::Result<()> {
     init_logger()?;
     let args = Args::parse();
 
-    let start_block = get_last_block_number_from_output_file(&args.output_file)
+    // create output dir if it doesn't exist
+    if !args.output_dir.exists() {
+        std::fs::create_dir_all(&args.output_dir)?;
+    } else if args.output_dir.is_file() {
+        anyhow::bail!("{}: must be a directory", args.output_dir.display());
+    }
+
+    let start_block = get_last_block_number_from_output_dir(&args.output_dir)
         .map(|last_block_number| last_block_number + 1)
         .unwrap_or(args.start_block);
     let end_block = args.end_block.unwrap_or(u64::MAX);
@@ -70,16 +78,12 @@ async fn main() -> anyhow::Result<()> {
     log::info!("{PACKAGE}");
     log::info!("----------------------");
     log::info!("- rpc-url: {}", args.rpc_url);
-    log::info!("- output-file: {}", args.output_file.display());
+    log::info!("- output-dir: {}", args.output_dir.display());
     log::info!("- start-block: {start_block:#x}");
     log::info!("- end-block: {end_block:#x}");
     log::info!("- fetch-interval: {}", fetch_interval.as_secs());
     log::info!("- max-batch-size: {max_batch_size}");
     log::info!("----------------------");
-
-    log::info!("initializing blocks-writer...");
-    let mut blocks_writer = BlocksWriter::new(&args.output_file)?;
-    log::info!("blocks-writer initialized");
 
     // setup signal handler
     let running = Arc::new(AtomicBool::new(true));
@@ -90,6 +94,11 @@ async fn main() -> anyhow::Result<()> {
 
     let mut next_loop_start_block = start_block;
     'main_loop: loop {
+        let output_file = get_output_file(&args.output_dir);
+        log::info!("initializing blocks-writer...");
+        let mut blocks_writer = BlocksWriter::new(&output_file)?;
+        log::info!("blocks-writer initialized");
+
         next_loop_start_block = match collect_blocks(
             &args.rpc_url,
             &mut blocks_writer,
@@ -102,7 +111,13 @@ async fn main() -> anyhow::Result<()> {
             Ok(last_block_fetched) => last_block_fetched + 1,
             Err((last_block_fetched, err)) => {
                 log::error!("error collecting blocks: {}", err);
-                last_block_fetched + 1
+                // remove output file
+                if last_block_fetched == start_block {
+                    std::fs::remove_file(&output_file)?;
+                    last_block_fetched
+                } else {
+                    last_block_fetched + 1
+                }
             }
         };
 
@@ -200,7 +215,46 @@ fn write_blocks(
     Ok(())
 }
 
+/// Scans the output dir for existing block files and returns the last block number
+fn get_last_block_number_from_output_dir(output_dir: &Path) -> Option<u64> {
+    // scan files in output dir
+    let mut last_block: Option<u64> = None;
+    let mut output_dir = std::fs::read_dir(output_dir).ok()?;
+    for file in output_dir.by_ref() {
+        let file = file.ok()?;
+        log::info!("found file: {}", file.path().display());
+        last_block = match (
+            last_block,
+            get_last_block_number_from_output_file(&file.path()),
+        ) {
+            (last_block, None) => last_block,
+            (Some(last_block), Some(file_last_block)) => Some(last_block.min(file_last_block)),
+            (None, Some(file_last_block)) => Some(file_last_block),
+        };
+    }
+
+    last_block
+}
+
+/// Returns the last block number from the given output file
 fn get_last_block_number_from_output_file(output_file: &Path) -> Option<u64> {
     let mut reader = BlocksReader::new(Path::new(output_file)).ok()?;
     reader.get_last_block_number().ok()
+}
+
+/// Returns the output file path for the given output dir based on the current time
+fn get_output_file(output_dir: &Path) -> PathBuf {
+    let now = Local::now().format("%Y%m%d%H");
+    let mut index = 0;
+    loop {
+        let mut output_file = output_dir.to_path_buf();
+        output_file.push(format!("blocks_{now}_{index}.zip"));
+
+        if output_file.exists() {
+            index += 1;
+            continue;
+        } else {
+            return output_file;
+        }
+    }
 }
