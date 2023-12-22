@@ -1,15 +1,16 @@
 use candid::Principal;
 use did::block::{BlockResult, ExeResult};
 use did::error::Result;
+use did::permission::{Permission, PermissionList};
 use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
 use did::{
     Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256,
     U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
+pub use ic_log::writer::{Log, Logs};
 
 use crate::EvmResult;
-
 pub type BlockWithData = Vec<(Block<H256>, Vec<(Transaction, ExeResult)>)>;
 
 /// An EVM canister client.
@@ -617,6 +618,13 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.update("set_logger_filter", (filter,)).await
     }
 
+    /// Gets the application logs
+    /// - `count` is the number of logs to return
+    /// - `offset` is the offset from the first log to return
+    pub async fn ic_logs(&self, count: usize, offset: usize) -> CanisterClientResult<Result<Logs>> {
+        self.client.query("ic_logs", (count, offset)).await
+    }
+
     /// Disable or enable the EVM. This function requires admin permissions.
     ///
     /// # Arguments
@@ -624,6 +632,38 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// * `disabled` - Whether to disable or enable the EVM.
     pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<Result<()>> {
         self.client.update("admin_disable_evm", (disabled,)).await
+    }
+
+    /// Adds permissions to a principal and returns the principal permissions
+    pub async fn admin_ic_permissions_add(
+        &self,
+        principal: Principal,
+        permissions: Vec<Permission>,
+    ) -> CanisterClientResult<Result<PermissionList>> {
+        self.client
+            .update("admin_ic_permissions_add", (principal, permissions))
+            .await
+    }
+
+    /// Removes permissions from a principal and returns the principal permissions
+    pub async fn admin_ic_permissions_remove(
+        &mut self,
+        principal: Principal,
+        permissions: Vec<Permission>,
+    ) -> CanisterClientResult<Result<PermissionList>> {
+        self.client
+            .update("admin_ic_permissions_remove", (principal, permissions))
+            .await
+    }
+
+    /// Returns the permissions of a principal
+    pub async fn admin_ic_permissions_get(
+        &self,
+        principal: Principal,
+    ) -> CanisterClientResult<Result<PermissionList>> {
+        self.client
+            .query("admin_ic_permissions_get", (principal,))
+            .await
     }
 
     /// Returns the chain ID used for signing replay-protected transactions.

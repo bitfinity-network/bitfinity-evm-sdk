@@ -2,17 +2,28 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
-use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256, U64};
+use ethers_core::types::{
+    Block, BlockNumber, Log, Transaction, TransactionReceipt, H160, H256, U64,
+};
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
-// #[cfg(feature = "state-machine-tests-client")]
-// pub mod state_machine_tests_client;
+
 #[cfg(feature = "ic-canister-client")]
 pub mod canister_client;
+
+pub mod http_outcall;
+
+const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
+const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
+const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
+const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
+const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
+const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
@@ -25,12 +36,6 @@ macro_rules! make_params_array {
         Params::Array(vec![$(serde_json::to_value($items)?, )*])
     };
 }
-
-const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
-const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
-const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
-const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
-const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 
 impl<C: Client> EthJsonRcpClient<C> {
     /// Create a new client.
@@ -138,6 +143,16 @@ impl<C: Client> EthJsonRcpClient<C> {
             ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
             make_params_array!(transaction),
             Id::Str("send_rawTransaction".to_string()),
+        )
+        .await
+    }
+
+    /// Get EVM logs according to the given parameters.
+    pub async fn get_logs(&self, params: EthGetLogsParams) -> anyhow::Result<Vec<Log>> {
+        self.single_request(
+            ETH_GET_LOGS_METHOD.to_string(),
+            make_params_array!(params),
+            Id::Str("ETH_GET_LOGS_METHOD".to_string()),
         )
         .await
     }
@@ -251,9 +266,69 @@ impl<C: Client> EthJsonRcpClient<C> {
     }
 }
 
+/// Parameters to `eth_getLogs`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EthGetLogsParams {
+    /// Addresses of contracts to filter logs for.
+    pub address: Vec<H160>,
+
+    /// Start search logs from this block number.
+    #[serde(rename = "fromBlock")]
+    pub from_block: BlockNumber,
+
+    /// Finish search logs on this block number.
+    #[serde(rename = "toBlock")]
+    pub to_block: BlockNumber,
+
+    /// Filter logs by topics.
+    pub topics: Vec<H256>,
+}
+
 pub trait Client: Clone + Send + Sync {
+    /// Send RPC request.
+    ///
     fn send_rpc_request(
         &self,
         request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eth_get_logs_params_serialization() {
+        let get_logs_params = EthGetLogsParams {
+            address: vec!["0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907"
+                .parse()
+                .unwrap()],
+            from_block: BlockNumber::Number(42u64.into()),
+            to_block: BlockNumber::Latest,
+            topics: vec![
+                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+                    .parse()
+                    .unwrap(),
+                "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75"
+                    .parse()
+                    .unwrap(),
+                "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078"
+                    .parse()
+                    .unwrap(),
+            ],
+        };
+
+        let json = serde_json::to_string(&get_logs_params).unwrap();
+
+        let expected_json = "{\
+            \"address\":[\"0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907\"],\
+            \"fromBlock\":\"0x2a\",\
+            \"toBlock\":\"latest\",\
+            \"topics\":[\
+                \"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef\",\
+                \"0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75\",\
+                \"0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078\"\
+        ]}";
+        assert_eq!(json, expected_json);
+    }
 }
