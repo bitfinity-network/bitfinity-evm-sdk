@@ -3,18 +3,23 @@ use std::path::Path;
 
 use zip::read::ZipArchive;
 
+use crate::constants::{BLOCK_FILE_PREFIX, BLOCK_FILE_SUFFIX};
+
+/// A reader for blocks stored in a zip file
 pub struct BlocksReader {
     reader: ZipArchive<File>,
 }
 
 impl BlocksReader {
-    pub fn open(path: &Path) -> anyhow::Result<Self> {
+    /// Creates a new reader for the blocks stored in the given zip file
+    pub fn new(path: &Path) -> anyhow::Result<Self> {
         let file = File::open(path)?;
         let reader = ZipArchive::new(file)?;
 
         Ok(Self { reader })
     }
 
+    /// Returns the number of the last block stored in the zip file
     pub fn get_last_block_number(&mut self) -> anyhow::Result<u64> {
         if self.reader.is_empty() {
             anyhow::bail!("No blocks found");
@@ -25,17 +30,12 @@ impl BlocksReader {
         Ok(last_block_number)
     }
 
+    /// Returns the number of the block by the name of the file
     fn block_number_from_file_name(file_name: &str) -> anyhow::Result<u64> {
-        let prefix = if file_name.starts_with("block") {
-            "block_0x"
-        } else {
-            "receipt_0x"
-        };
-
         let block_number_str = file_name
-            .strip_prefix(prefix)
+            .strip_prefix(BLOCK_FILE_PREFIX)
             .ok_or_else(|| anyhow::anyhow!("Invalid block file name"))?
-            .strip_suffix(".json")
+            .strip_suffix(BLOCK_FILE_SUFFIX)
             .ok_or_else(|| anyhow::anyhow!("Invalid block file name"))?;
 
         Ok(u64::from_str_radix(block_number_str, 16)?)
@@ -54,7 +54,7 @@ mod test {
     #[test]
     fn test_should_get_last_block_number() {
         let file = NamedTempFile::new().unwrap();
-        let mut writer = BlocksWriter::open(file.path(), false).unwrap();
+        let mut writer = BlocksWriter::new(file.path(), false).unwrap();
 
         for number in 0..10 {
             let block = Block {
@@ -65,7 +65,7 @@ mod test {
         }
         drop(writer);
 
-        let mut reader = BlocksReader::open(file.path()).unwrap();
+        let mut reader = BlocksReader::new(file.path()).unwrap();
         assert_eq!(reader.get_last_block_number().unwrap(), 9);
     }
 }

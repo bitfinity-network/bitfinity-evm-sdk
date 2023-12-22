@@ -1,5 +1,6 @@
 mod blocks_reader;
 mod blocks_writer;
+mod constants;
 
 use std::path::{Path, PathBuf};
 
@@ -72,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
     log::info!("----------------------");
 
     log::info!("initializing blocks-writer...");
-    let blocks_writer = BlocksWriter::open(&args.output_file, append)?;
+    let blocks_writer = BlocksWriter::new(&args.output_file, append)?;
     log::info!("blocks-writer initialized");
 
     collect_blocks(
@@ -157,6 +158,6 @@ fn write_blocks(
 }
 
 fn get_last_block_number_from_output_file(output_file: &Path) -> Option<u64> {
-    let mut reader = BlocksReader::open(Path::new(output_file)).ok()?;
+    let mut reader = BlocksReader::new(Path::new(output_file)).ok()?;
     reader.get_last_block_number().ok()
 }

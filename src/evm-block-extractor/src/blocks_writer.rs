@@ -5,13 +5,17 @@ use std::path::Path;
 use ethers_core::types::{Block, Transaction, TransactionReceipt};
 use zip::write::{FileOptions, ZipWriter};
 
+use crate::constants::{
+    BLOCK_FILE_PREFIX, BLOCK_FILE_SUFFIX, RECEIPT_FILE_PREFIX, RECEIPT_FILE_SUFFIX,
+};
+
 pub struct BlocksWriter {
     writer: ZipWriter<File>,
 }
 
 impl BlocksWriter {
     /// Try to init a new BlocksWriter
-    pub fn open(output_file: &Path, append: bool) -> anyhow::Result<Self> {
+    pub fn new(output_file: &Path, append: bool) -> anyhow::Result<Self> {
         let file = OpenOptions::new()
             .write(true)
             .create(true)
@@ -50,10 +54,16 @@ impl BlocksWriter {
     }
 
     fn file_name_from_block(block: &Block<Transaction>) -> String {
-        format!("block_0x{:016x}.json", block.number.unwrap().as_u64())
+        format!(
+            "{BLOCK_FILE_PREFIX}{:016x}{BLOCK_FILE_SUFFIX}",
+            block.number.unwrap().as_u64()
+        )
     }
 
     fn file_name_from_receipt(block_number: u64) -> String {
-        format!("receipt_0x{:016x}.json", block_number)
+        format!(
+            "{RECEIPT_FILE_PREFIX}{:016x}{RECEIPT_FILE_SUFFIX}",
+            block_number
+        )
     }
 }
