@@ -5,7 +5,7 @@ use did::permission::{Permission, PermissionList};
 use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
 use did::{
     Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256,
-    U256,
+    U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
@@ -261,6 +261,31 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .query(
                 "eth_get_block_by_number",
                 (block_number, include_transactions),
+            )
+            .await
+    }
+
+    /// Get the blocks range by number using a single request.
+    ///
+    /// # Arguments
+    /// * `from` - The index of the first block
+    /// * `count` - Number of blocks to return
+    /// * `include_transactions` - Whether to include the transactions in the
+    /// block
+    ///
+    /// # Returns
+    ///
+    /// The block at the given block number or tag
+    pub async fn eth_get_blocks_by_number(
+        &self,
+        from: U64,
+        count: U64,
+        include_transactions: bool,
+    ) -> CanisterClientResult<EvmResult<Vec<BlockResult>>> {
+        self.client
+            .query(
+                "eth_get_blocks_by_number",
+                (from, count, include_transactions),
             )
             .await
     }
@@ -669,6 +694,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Returns the min gas price
     pub async fn get_min_gas_price(&self) -> CanisterClientResult<U256> {
         self.client.query("get_min_gas_price", ()).await
+    }
+
+    /// Returns the min gas price
+    pub async fn get_genesis_accounts(&self) -> CanisterClientResult<Vec<(H160, U256)>> {
+        self.client.query("get_genesis_accounts", ()).await
     }
 
     /// Returns the list of eth accounts owned by the client.
