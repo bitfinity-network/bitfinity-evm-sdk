@@ -112,7 +112,16 @@ async fn collect_blocks(
         );
         let blocks = client
             .get_full_blocks_by_number(block_numbers.clone(), max_batch_size)
-            .await?;
+            .await;
+
+        let blocks = match blocks {
+            Ok(blocks) => blocks,
+            Err(err) => {
+                log::error!("error getting blocks: {}", err);
+                continue;
+            }
+        };
+
         if blocks.is_empty() {
             log::info!("there are no more blocks available on the EVM");
             break;
