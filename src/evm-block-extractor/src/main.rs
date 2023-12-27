@@ -3,6 +3,8 @@ mod blocks_writer;
 mod constants;
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
 
 use blocks_reader::BlocksReader;
 use blocks_writer::BlocksWriter;
@@ -10,13 +12,12 @@ use clap::Parser;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
 use ethers_core::types::{Block, BlockNumber, Transaction};
-use itertools::Itertools;
+
+use tokio::sync::{mpsc, Semaphore};
+use tokio::time::{self, Instant};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
-
-/// The rpc client splits batches into chunks itself, so here we just specify the number of blocks to hold in memory
-const BLOCKS_PER_REQUEST: usize = 500;
 
 /// Simple CLI program for Benchmarking BitFinity Network
 #[derive(Parser, Debug)]
@@ -41,9 +42,13 @@ struct Args {
     #[arg(long, short('e'))]
     end_block: Option<u64>,
 
-    /// Max number of requests in a single RPC batch
+    /// Max number of parallel requests in a single RPC batch
     #[arg(long, default_value = "50")]
-    batch_size: usize,
+    max_number_of_requests: usize,
+
+    /// Total time to send concurrent requests
+    #[arg(long, default_value = "10")]
+    total_time: u64,
 }
 
 #[tokio::main]
@@ -70,6 +75,8 @@ async fn main() -> anyhow::Result<()> {
     log::info!("- output-file: {}", args.output_file.display());
     log::info!("- start-block: {start_block:#x}");
     log::info!("- end-block: {end_block:#x}");
+    log::info!("- max-number-of-requests: {}", args.max_number_of_requests);
+    log::info!("- total-time: {}", args.total_time);
     log::info!("----------------------");
 
     log::info!("initializing blocks-writer...");
@@ -81,7 +88,8 @@ async fn main() -> anyhow::Result<()> {
         blocks_writer,
         start_block,
         end_block,
-        args.batch_size,
+        args.max_number_of_requests,
+        args.total_time,
     )
     .await?;
 
@@ -99,69 +107,80 @@ async fn collect_blocks(
     mut blocks_writer: BlocksWriter,
     start_block: u64,
     end_block: u64,
-    max_batch_size: usize,
+    max_no_of_requests: usize,
+    total_time: u64,
 ) -> anyhow::Result<()> {
     let client = EthJsonRcpClient::new(ReqwestClient::new(rpc_url.to_string()));
 
-    for block_numbers in &(start_block..end_block).chunks(BLOCKS_PER_REQUEST) {
-        let block_numbers: Vec<BlockNumber> = block_numbers.map(|number| number.into()).collect();
-        log::info!(
-            "collecting blocks from {} to {}",
-            block_numbers.first().unwrap(),
-            block_numbers.last().unwrap()
-        );
-        let blocks = client
-            .get_full_blocks_by_number(block_numbers.clone(), max_batch_size)
-            .await;
+    let mut total_blocks = 0;
 
-        let blocks = match blocks {
-            Ok(blocks) => blocks,
-            Err(err) => {
-                log::error!("error getting blocks: {}", err);
-                continue;
+    let semaphore = Arc::new(Semaphore::new(max_no_of_requests));
+
+    let (tx, mut rx) = mpsc::unbounded_channel::<Block<Transaction>>();
+
+    let mut tasks = Vec::new();
+
+    let mut interval = time::interval(Duration::from_secs(1));
+    let start = Instant::now();
+
+    for block_number in start_block..=end_block {
+        let permit = semaphore.clone().acquire_owned().await?;
+
+        let block_number = BlockNumber::Number(block_number.into());
+
+        let tx = tx.clone();
+        let client = client.clone();
+
+        let task = tokio::spawn(async move {
+            let block = client.get_full_block_by_number(block_number).await;
+            drop(permit);
+
+            match block {
+                Ok(block) => {
+                    tx.send(block).expect("failed to send block");
+                }
+                Err(err) => {
+                    log::error!("error getting block: {}", err);
+                }
             }
-        };
+        });
 
-        if blocks.is_empty() {
-            log::info!("there are no more blocks available on the EVM");
+        tasks.push(task);
+
+        if start.elapsed().as_secs() >= total_time {
             break;
         }
-        // get tx receipts
-        for block in blocks.iter() {
-            log::info!(
-                "getting {} receipts for block {}",
-                block.transactions.len(),
-                block.number.unwrap().as_u64()
-            );
-            let tx_hashes = block.transactions.iter().map(|tx| tx.hash());
-            let receipts = client
-                .get_receipts_by_hash(tx_hashes, max_batch_size)
-                .await?;
-            log::info!("writing {} receipts", receipts.len());
-            blocks_writer.write_receipts(block.number.unwrap().as_u64(), &receipts)?;
-        }
-        log::info!("writing {} blocks", blocks.len());
-        write_blocks(&mut blocks_writer, &blocks)?;
 
-        if blocks.len() < block_numbers.len() {
-            log::info!(
-                "Found last block to be 0x{:x}",
-                blocks.last().unwrap().number.unwrap_or_default()
-            );
-            break;
-        }
+        interval.tick().await;
     }
 
-    Ok(())
-}
+    drop(tx);
 
-fn write_blocks(
-    blocks_writer: &mut BlocksWriter,
-    blocks: &[Block<Transaction>],
-) -> anyhow::Result<()> {
-    for block in blocks {
-        blocks_writer.write_block(block)?;
+    while let Some(block) = rx.recv().await {
+        log::info!(
+            "getting {} receipts for block {}",
+            block.transactions.len(),
+            block.number.unwrap().as_u64()
+        );
+        let tx_hashes = block.transactions.iter().map(|tx| tx.hash());
+        let receipts = client
+            .get_receipts_by_hash(tx_hashes, max_no_of_requests)
+            .await?;
+
+        log::info!("writing {} receipts", receipts.len());
+        blocks_writer.write_receipts(block.number.unwrap().as_u64(), &receipts)?;
+
+        log::info!("writing block {}", block.number.unwrap().as_u64());
+
+        blocks_writer.write_block(&block)?;
+        total_blocks += 1;
     }
+
+    for task in tasks {
+        task.await?;
+    }
+
+    log::info!("total blocks: {}", total_blocks);
 
     Ok(())
 }
