@@ -5,6 +5,7 @@ mod storage_clients;
 use block_extractor::BlockExtractor;
 use clap::Parser;
 
+use crate::constants::{CHUNK_SIZE, MAX_EVM_BLOCKS};
 use crate::storage_clients::gcp_bq::BigQueryBlockChain;
 use crate::storage_clients::BlockChainDB;
 
@@ -61,15 +62,15 @@ async fn main() -> anyhow::Result<()> {
         Box::new(big_query_client.clone()),
     );
 
-    let end_block = extractor.latest_block_number().await.unwrap();
+    let end_block = extractor.latest_block_number().await?;
 
     // get all the blocks on the EVM if you can
-    let start_block = end_block - 3600 * 24 * 28;
+    let start_block = end_block - MAX_EVM_BLOCKS;
     let missing_indices = big_query_client
         .get_missing_blocks_in_range(start_block, end_block)
         .await?;
 
-    for chunk in missing_indices.chunks(10000) {
+    for chunk in missing_indices.chunks(CHUNK_SIZE) {
         let chunk = chunk.to_vec();
         extractor
             .collect_blocks(chunk.into_iter(), args.max_number_of_requests)
