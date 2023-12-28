@@ -51,7 +51,7 @@ impl BlockExtractor {
             let client = client.clone();
             let blockchain = Arc::clone(&self.blockchain);
 
-            let permit = Arc::clone(&semaphore).acquire_owned().await;
+            let permit = Arc::clone(&semaphore).acquire_owned().await?;
 
             let task: JoinHandle<anyhow::Result<()>> = tokio::spawn(async move {
                 let block_number = BlockNumber::Number(block_number_u64.into());

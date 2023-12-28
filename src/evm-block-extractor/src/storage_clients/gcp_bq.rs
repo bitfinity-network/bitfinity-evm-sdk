@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use ethers_core::types::{Block, Transaction, TransactionReceipt};
 use gcp_bigquery_client::model::query_request::QueryRequest;
 use gcp_bigquery_client::model::table_data_insert_all_request::TableDataInsertAllRequest;
@@ -61,9 +62,12 @@ impl BlockChainDB for BigQueryBlockChain {
             .query(self.project_id.as_str(), QueryRequest::new(query))
             .await?;
 
-        let json = response.get_json_value(0)?;
+        let json = response.get_json_value(0)?.ok_or(anyhow::anyhow!(
+            "Block with number {} not found in the database",
+            block_number
+        ))?;
 
-        let block: Block<Transaction> = serde_json::from_value(json.unwrap())?;
+        let block: Block<Transaction> = serde_json::from_value(json)?;
         Ok(block)
     }
 
@@ -86,7 +90,11 @@ impl BlockChainDB for BigQueryBlockChain {
         let mut rows: Vec<u64> = vec![];
 
         while response.next_row() {
-            let name = response.get_i64_by_name("id")?.unwrap() as u64;
+            let name = response.get_i64_by_name("id")?.ok_or(anyhow::anyhow!(
+                "Block with number {} not found in the database",
+                start
+            ))? as u64;
+
             rows.push(name)
         }
 
@@ -175,9 +183,12 @@ impl BlockChainDB for BigQueryBlockChain {
             .query(self.project_id.as_str(), QueryRequest::new(query))
             .await?;
 
-        let json = response.get_json_value(0)?;
+        let json = response.get_json_value(0)?.ok_or(anyhow::anyhow!(
+            "Receipt with tx_hash {} not found in the database",
+            tx_hash
+        ))?;
 
-        let receipt: TransactionReceipt = serde_json::from_value(json.unwrap())?;
+        let receipt: TransactionReceipt = serde_json::from_value(json)?;
         Ok(receipt)
     }
 }
