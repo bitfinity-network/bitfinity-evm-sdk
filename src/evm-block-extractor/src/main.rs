@@ -71,11 +71,11 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     for chunk in missing_indices.chunks(CHUNK_SIZE) {
-        let chunk = chunk.to_vec();
         extractor
-            .collect_blocks(chunk.into_iter(), args.max_number_of_requests)
+            .collect_blocks(chunk.iter().copied(), args.max_number_of_requests)
             .await?;
     }
+
     extractor
         .collect_blocks(start_block..=end_block, args.max_number_of_requests)
         .await?;
