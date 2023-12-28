@@ -29,13 +29,13 @@ impl BlockExtractor {
         }
     }
 
-    async fn latest_block_number(&self) -> anyhow::Result<u64> {
+    pub async fn latest_block_number(&self) -> anyhow::Result<u64> {
         let rpc_url = &self.rpc_url;
         let client = EthJsonRcpClient::new(ReqwestClient::new(rpc_url.to_string()));
         client.get_block_number().await
     }
 
-    async fn collect_blocks(
+    pub async fn collect_blocks(
         &mut self,
         blocks: impl Iterator<Item = u64>,
         max_no_of_requests: usize,
@@ -109,7 +109,7 @@ mod tests {
         let mut extractor = BlockExtractor::new(rpc_url, request_time_out_secs, blockchain);
 
         let end_block = extractor.latest_block_number().await.unwrap();
-        let start_block = end_block - 1000;
+        let start_block = end_block - 7000;
         let max_requests = 50;
         let block_range = start_block..=end_block;
         

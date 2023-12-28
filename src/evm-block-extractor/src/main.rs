@@ -1,13 +1,13 @@
-
-
-mod constants;
 mod block_extractor;
+mod constants;
 mod storage_clients;
-/* 
+
 use clap::Parser;
 
 use block_extractor::BlockExtractor;
 
+use crate::storage_clients::gcp_big_query::BigQueryBlockChain;
+use crate::storage_clients::BlockChainDB;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
@@ -23,25 +23,17 @@ struct Args {
     #[arg(long = "rpc-url", short('u'))]
     rpc_url: String,
 
-    /// Output ZIP file to write blocks to
-    #[arg(long = "output", short('o'))]
-    output_file: PathBuf,
+    /// The dataset ID of the BigQuery table
+    #[arg(long = "dataset-id", short('d'))]
+    dataset_id: String,
 
-    /// block to start with
-    #[arg(long, short('s'), default_value = "0")]
-    start_block: u64,
-
-    /// block to start with (if not provided, all blocks will be loaded)
-    #[arg(long, short('e'))]
-    end_block: Option<u64>,
+    /// The table ID of the BigQuery table
+    #[arg(long = "table-id", short('t'))]
+    table_id: String,
 
     /// Max number of parallel requests in a single RPC batch
     #[arg(long, default_value = "50")]
     max_number_of_requests: usize,
-
-    /// Total time to send concurrent requests
-    #[arg(long, default_value = "10")]
-    total_time: u64,
 }
 
 #[tokio::main]
@@ -50,41 +42,35 @@ async fn main() -> anyhow::Result<()> {
     init_logger()?;
     let args = Args::parse();
 
-    let (start_block, append) = match get_last_block_number_from_output_file(&args.output_file) {
-        Some(last_block_number) => {
-            log::info!(
-                "last block number found in output file: {}",
-                last_block_number
-            );
-            (last_block_number + 1, true)
-        }
-        None => (args.start_block, false),
-    };
-    let end_block = args.end_block.unwrap_or(u64::MAX);
-
     log::info!("{PACKAGE}");
     log::info!("----------------------");
     log::info!("- rpc-url: {}", args.rpc_url);
-    log::info!("- output-file: {}", args.output_file.display());
-    log::info!("- start-block: {start_block:#x}");
-    log::info!("- end-block: {end_block:#x}");
+    log::info!("- dataset-id: {}", args.dataset_id);
+    log::info!("- table-id: {}", args.table_id);
     log::info!("- max-number-of-requests: {}", args.max_number_of_requests);
-    log::info!("- total-time: {}", args.total_time);
     log::info!("----------------------");
 
     log::info!("initializing blocks-writer...");
-    let blocks_writer = BlocksWriter::new(&args.output_file, append)?;
+
     log::info!("blocks-writer initialized");
 
-    collect_blocks(
-        &args.rpc_url,
-        blocks_writer,
-        start_block,
-        end_block,
-        args.max_number_of_requests,
-        args.total_time,
-    )
-    .await?;
+    let big_query_client = BigQueryBlockChain::new(&args.dataset_id, &args.table_id).await?;
+
+    let mut extractor = BlockExtractor::new(
+        args.rpc_url,
+        args.max_number_of_requests as u64,
+        Box::new(big_query_client.clone()),
+    );
+
+    let end_block = extractor.latest_block_number().await.unwrap();
+    let start_block = end_block - 1000;
+    let missing_indices = big_query_client.get_missing_blocks_in_range(start_block, end_block).await?;
+
+    for chunk in missing_indices.chunks(10000) {
+        let chunk = chunk.to_vec();
+        extractor.collect_blocks(chunk.into_iter(), args.max_number_of_requests).await?;
+    }
+    extractor.collect_blocks(start_block..=end_block,args.max_number_of_requests).await?;
 
     Ok(())
 }
@@ -94,6 +80,3 @@ fn init_logger() -> anyhow::Result<()> {
 
     Ok(())
 }
-*/
-
-fn main() {}

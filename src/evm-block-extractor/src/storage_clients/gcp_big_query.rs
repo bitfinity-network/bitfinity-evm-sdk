@@ -15,7 +15,7 @@ pub struct BlockRow {
     id: u64,
     body: String,
 }
-
+#[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
 pub struct BigQueryBlockChain {
     client: Client,
