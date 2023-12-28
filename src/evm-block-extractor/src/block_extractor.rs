@@ -1,26 +1,25 @@
-use crate::storage_clients::BlockChainDB;
 use std::sync::Arc;
-use tokio::time::{self, sleep, Duration};
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
-use ethers_core::types::{Block, BlockNumber, Transaction};
+use ethers_core::types::BlockNumber;
 use tokio::sync::{Mutex, Semaphore};
-
 use tokio::task::JoinHandle;
-use tokio::time::timeout;
+use tokio::time::Duration;
+
+use crate::storage_clients::BlockChainDB;
 
 pub struct BlockExtractor {
     rpc_url: String,
     request_time_out_secs: u64,
-    pub blockchain: Arc<Mutex<Box<dyn BlockChainDB + Send + Sync>>>,
+    pub blockchain: Arc<Mutex<Box<dyn BlockChainDB>>>,
 }
 
 impl BlockExtractor {
     pub fn new(
         rpc_url: String,
         request_time_out_secs: u64,
-        blockchain: Box<dyn BlockChainDB + Send + Sync>,
+        blockchain: Box<dyn BlockChainDB>,
     ) -> Self {
         Self {
             rpc_url,
@@ -45,11 +44,11 @@ impl BlockExtractor {
         let delay = Duration::from_secs(1) / max_no_of_requests as u32;
         let semaphore = Arc::new(Semaphore::new(max_no_of_requests));
 
+        let client = EthJsonRcpClient::new(ReqwestClient::new(rpc_url.to_string()));
+
         for block_number_u64 in blocks {
             let request_time_out_secs = self.request_time_out_secs;
-
-            let client = EthJsonRcpClient::new(ReqwestClient::new(rpc_url.to_string()));
-
+            let client = client.clone();
             let blockchain = Arc::clone(&self.blockchain);
 
             let permit = Arc::clone(&semaphore).acquire_owned().await;
@@ -58,9 +57,9 @@ impl BlockExtractor {
                 let block_number = BlockNumber::Number(block_number_u64.into());
 
                 //throttle the requests
-                sleep(delay).await;
+                tokio::time::sleep(delay).await;
 
-                let result = timeout(
+                let result = tokio::time::timeout(
                     Duration::from_secs(request_time_out_secs),
                     client.get_full_block_by_number(block_number),
                 )
@@ -68,11 +67,16 @@ impl BlockExtractor {
 
                 match result {
                     Ok(Ok(block)) => {
-                        // blockchain.lock().unwrap().insert_block(block).await?;
-
                         let mut blockchain = blockchain.lock().await;
 
-                        blockchain.insert_block(block).await?;
+                        blockchain.insert_block(&block).await?;
+
+                        for tx in block.transactions {
+                            let tx_hash = tx.hash;
+                            let receipts = client.get_receipt_by_hash(tx_hash).await?;
+
+                            blockchain.insert_receipts(receipts).await?;
+                        }
                     }
                     Ok(Err(e)) => {
                         println!("Failed to get block {}: {:?}", block_number_u64, e);
@@ -103,16 +107,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_collect_blocks() {
-        let blockchain = Box::new(HashMapBlockchain::new());
+        let blockchain = Box::<HashMapBlockchain>::default();
         let rpc_url = "https://testnet.bitfinity.network".to_string();
         let request_time_out_secs = 10;
         let mut extractor = BlockExtractor::new(rpc_url, request_time_out_secs, blockchain);
 
         let end_block = extractor.latest_block_number().await.unwrap();
-        let start_block = end_block - 7000;
+        let start_block = end_block - 10;
         let max_requests = 50;
         let block_range = start_block..=end_block;
-        
+
         for block_number in block_range {
             println!("Processing block number: {}", block_number);
         }
@@ -121,11 +125,22 @@ mod tests {
         let result = extractor
             .collect_blocks(start_block..=end_block, max_requests)
             .await;
+
         if let Err(e) = &result {
             println!("Error: {:?}", e);
         }
+
         assert!(result.is_ok());
-        // let latest_block_num = extractor.blockchain.lock().unwrap().get_block_by_number(end_block).unwrap().number.unwrap();
-        // assert_eq!(end_block, latest_block_num.as_u64());
+
+        let latest_block_num = extractor
+            .blockchain
+            .lock()
+            .await
+            .get_block_by_number(end_block)
+            .await
+            .unwrap()
+            .number
+            .unwrap();
+        assert_eq!(end_block, latest_block_num.as_u64());
     }
 }

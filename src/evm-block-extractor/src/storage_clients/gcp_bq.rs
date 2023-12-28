@@ -1,13 +1,11 @@
-use super::BlockChainDB;
-use ethers_core::types::{Block, Transaction};
-//use gcp_bigquery_client::model::entry::Entry;
+use ethers_core::types::{Block, Transaction, TransactionReceipt};
 use gcp_bigquery_client::model::query_request::QueryRequest;
-//use gcp_bigquery_client::model::row::Row;
 use gcp_bigquery_client::model::table_data_insert_all_request::TableDataInsertAllRequest;
 use gcp_bigquery_client::Client;
 use serde::Serialize;
 
-const PROJECT_ID: &str = "bitfinity-evm";
+use super::BlockChainDB;
+use crate::constants::{PROJECT_ID, RECEIPTS_TABLE_ID};
 
 /// A row in the BigQuery table
 #[derive(Debug, Serialize)]
@@ -15,6 +13,13 @@ pub struct BlockRow {
     id: u64,
     body: String,
 }
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ReceiptRow {
+    tx_hash: String,
+    body: String,
+}
+
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
 pub struct BigQueryBlockChain {
@@ -25,9 +30,9 @@ pub struct BigQueryBlockChain {
 }
 
 impl BigQueryBlockChain {
-    pub async fn new(dataset_id: &str, table_id: &str) -> anyhow::Result<Self> {
-        let sa_key = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
-            .map_err(|_| anyhow::anyhow!("GOOGLE_APPLICATION_CREDENTIALS not set"))?;
+    pub async fn new(dataset_id: String, table_id: String) -> anyhow::Result<Self> {
+        let sa_key = std::env::var("GCP_BLOCK_EXTRACTOR_SA_KEY")
+            .map_err(|_| anyhow::anyhow!("GCP_BLOCK_EXTRACTOR_SA_KEY not set"))?;
 
         let client = Client::from_service_account_key_file(&sa_key).await?;
 
@@ -43,7 +48,6 @@ impl BigQueryBlockChain {
 #[async_trait::async_trait]
 impl BlockChainDB for BigQueryBlockChain {
     /// Creates a new client for BigQuery
-
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<Transaction>> {
         let query = format!(
             "SELECT body FROM `{project_id}.{dataset_id}.{table_id}` WHERE id = {block_number}",
@@ -78,18 +82,18 @@ impl BlockChainDB for BigQueryBlockChain {
             .job()
             .query(self.project_id.as_str(), QueryRequest::new(query))
             .await?;
-       
-        let mut rows: Vec<u64> = vec![];
-            while response.next_row() {
-                let name = response.get_i64_by_name("id")?.unwrap() as u64;
-                rows.push(name)
-            }
-    
-        Ok(rows)
 
+        let mut rows: Vec<u64> = vec![];
+
+        while response.next_row() {
+            let name = response.get_i64_by_name("id")?.unwrap() as u64;
+            rows.push(name)
+        }
+
+        Ok(rows)
     }
 
-    async fn insert_block(&mut self, block: Block<Transaction>) -> anyhow::Result<()> {
+    async fn insert_block(&mut self, block: &Block<Transaction>) -> anyhow::Result<()> {
         let mut insert_request = TableDataInsertAllRequest::new();
 
         let block_id = block.number.unwrap().as_u64();
@@ -123,12 +127,66 @@ impl BlockChainDB for BigQueryBlockChain {
 
         Ok(())
     }
+
+    async fn insert_receipts(&mut self, receipts: TransactionReceipt) -> anyhow::Result<()> {
+        let mut insert_request = TableDataInsertAllRequest::new();
+
+        let tx_hash = receipts.transaction_hash.to_string();
+
+        let receipt_row = ReceiptRow {
+            tx_hash: tx_hash.clone(),
+            body: serde_json::to_string(&receipts)?,
+        };
+
+        // Check if block id already exists in the database
+        let _receipt = self.get_transaction_receipt(tx_hash.clone()).await?;
+
+        insert_request.add_row(Some(tx_hash), receipt_row)?;
+
+        let res = self
+            .client
+            .tabledata()
+            .insert_all(
+                self.project_id.as_str(),
+                self.dataset_id.as_str(),
+                RECEIPTS_TABLE_ID,
+                insert_request,
+            )
+            .await?;
+
+        if res.insert_errors.is_some() {
+            println!("error inserting receipt: {:?}", res.insert_errors);
+        }
+
+        Ok(())
+    }
+
+    async fn get_transaction_receipt(&self, tx_hash: String) -> anyhow::Result<TransactionReceipt> {
+        let query = format!(
+            "SELECT body FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = '{tx_hash}'",
+            project_id = self.project_id,
+            dataset_id = self.dataset_id,
+            table_id = RECEIPTS_TABLE_ID,
+            tx_hash = tx_hash
+        );
+        let response = self
+            .client
+            .job()
+            .query(self.project_id.as_str(), QueryRequest::new(query))
+            .await?;
+
+        let json = response.get_json_value(0)?;
+
+        let receipt: TransactionReceipt = serde_json::from_value(json.unwrap())?;
+        Ok(receipt)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::storage_clients::gcp_big_query::{BigQueryBlockChain, BlockChainDB};
     use ethers_core::types::{Block, Transaction};
+
+    use crate::storage_clients::gcp_bq::{BigQueryBlockChain, BlockChainDB};
 
     #[tokio::test]
     async fn test_load_big_query_block_chain() {
@@ -136,7 +194,7 @@ mod tests {
         println!(" Your path is ere {}", sa_key_path.display());
 
         std::env::set_var(
-            "GOOGLE_APPLICATION_CREDENTIALS",
+            "GCP_BLOCK_EXTRACTOR_SA_KEY",
             sa_key_path
                 .to_str()
                 .expect("Failed to convert path to string"),
@@ -148,17 +206,17 @@ mod tests {
         let data_set_id = "testnet";
         let table_id = "blockmaster";
 
-        let mut big_query = BigQueryBlockChain::new(data_set_id, table_id)
+        let mut big_query = BigQueryBlockChain::new(data_set_id.to_string(), table_id.to_string())
             .await
             .unwrap();
 
-        let mut test_block: Block<Transaction> = Block::default();
+        let test_block: Block<Transaction> = Block {
+            number: Some(0u64.into()),
+            ..Default::default()
+        };
 
-        test_block.number = Some(0u64.into());
-        println!("{:?}", test_block);
-
-        //TODO: refactor with enum 
-        match big_query.insert_block(test_block).await {
+        //TODO: refactor with enum
+        match big_query.insert_block(&test_block).await {
             Ok(_) => (),
             Err(e) => {
                 if e.to_string().contains("Block with id") {
@@ -171,7 +229,5 @@ mod tests {
         let blocks_in_range = big_query.get_blocks_in_range(0, 1).await.unwrap();
         println!("{:?}", blocks_in_range);
         assert_eq!(blocks_in_range[0], 0);
-
     }
-
 }
