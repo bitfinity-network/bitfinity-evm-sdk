@@ -111,19 +111,24 @@ impl BlockChainDB for BigQueryBlockChain {
 
 #[cfg(test)]
 mod tests {
-    //use crate::storage_clients::gcp_big_query::BigQueryBlockChain;
-    use std::path::Path;
+    use crate::storage_clients::gcp_big_query::BigQueryBlockChain;
 
     #[tokio::test]
     async fn test_load_big_query_block_chain() {
-        let sa_key_path = "../../GCP_SA.json";
+        
+        let sa_key_path = std::env::current_dir()
+            .unwrap()
+            .join("GCP_SA.json");
+        println!(" Your path is ere {}", sa_key_path.display());
+
+        std::env::set_var("GOOGLE_APPLICATION_CREDENTIALS", sa_key_path.to_str().expect("Failed to convert path to string"));
         assert!(
-            Path::new(sa_key_path).exists(),
+            sa_key_path.exists(),
             "Service account key file does not exist"
         );
+        let data_set_id = "testnet";
+        let table_id = "blocks";
 
-        let client = gcp_bigquery_client::Client::from_service_account_key_file(sa_key_path)
-            .await
-            .unwrap();
+        let _ = BigQueryBlockChain::new(data_set_id, table_id);
     }
 }
