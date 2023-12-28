@@ -6,7 +6,7 @@ use block_extractor::BlockExtractor;
 use clap::Parser;
 
 use crate::constants::{CHUNK_SIZE, MAX_EVM_BLOCKS};
-use crate::storage_clients::gcp_bq::BigQueryBlockChain;
+use crate::storage_clients::gcp_big_query::BigQueryBlockChain;
 use crate::storage_clients::BlockChainDB;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -34,6 +34,9 @@ struct Args {
     /// Max number of parallel requests in a single RPC batch
     #[arg(long, default_value = "50")]
     max_number_of_requests: usize,
+
+    #[arg(long, default_value = "500")]
+    rpc_batch_size: u64
 }
 
 #[tokio::main]
@@ -59,6 +62,7 @@ async fn main() -> anyhow::Result<()> {
     let mut extractor = BlockExtractor::new(
         args.rpc_url,
         args.max_number_of_requests as u64,
+        args.rpc_batch_size,
         Box::new(big_query_client.clone()),
     );
 

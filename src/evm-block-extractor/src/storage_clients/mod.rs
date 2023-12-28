@@ -1,4 +1,4 @@
-pub mod gcp_bq;
+pub mod gcp_big_query;
 pub mod hashmap;
 
 use ethers_core::types::{Block, Transaction, TransactionReceipt};
@@ -29,7 +29,7 @@ pub trait BlockChainDB: Send + Sync {
     }
 
     /// Insert receipts into the database
-    async fn insert_receipts(&mut self, receipts: TransactionReceipt) -> anyhow::Result<()>;
+    async fn insert_receipts(&mut self, receipts: &[TransactionReceipt]) -> anyhow::Result<()>;
 
     /// Get a transaction receipt from the database
     async fn get_transaction_receipt(&self, tx_hash: String) -> anyhow::Result<TransactionReceipt>;

@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use ethers_core::types::{Block, Transaction, TransactionReceipt};
-use gcp_bigquery_client::model::query_request::QueryRequest;
+use gcp_bigquery_client::model::{query_request::QueryRequest, table_data_insert_all_request_rows::TableDataInsertAllRequestRows};
 use gcp_bigquery_client::model::table_data_insert_all_request::TableDataInsertAllRequest;
 use gcp_bigquery_client::Client;
 use serde::Serialize;
@@ -136,20 +136,19 @@ impl BlockChainDB for BigQueryBlockChain {
         Ok(())
     }
 
-    async fn insert_receipts(&mut self, receipts: TransactionReceipt) -> anyhow::Result<()> {
+    async fn insert_receipts(&mut self, receipts: &[TransactionReceipt]) -> anyhow::Result<()> {
+        
         let mut insert_request = TableDataInsertAllRequest::new();
 
-        let tx_hash = receipts.transaction_hash.to_string();
+        let txes = receipts
+            .iter()
+            .map(|r| TableDataInsertAllRequestRows {
+                insert_id: Some(r.transaction_hash.to_string()),
+                json: serde_json::to_value(r).expect("Failed to serialize receipt"),
+            })
+            .collect::<Vec<_>>();
 
-        let receipt_row = ReceiptRow {
-            tx_hash: tx_hash.clone(),
-            body: serde_json::to_string(&receipts)?,
-        };
-
-        // Check if block id already exists in the database
-        let _receipt = self.get_transaction_receipt(tx_hash.clone()).await?;
-
-        insert_request.add_row(Some(tx_hash), receipt_row)?;
+        insert_request.add_rows(txes)?;
 
         let res = self
             .client
@@ -197,12 +196,12 @@ impl BlockChainDB for BigQueryBlockChain {
 mod tests {
     use ethers_core::types::{Block, Transaction};
 
-    use crate::storage_clients::gcp_bq::{BigQueryBlockChain, BlockChainDB};
+    use crate::storage_clients::gcp_big_query::{BigQueryBlockChain, BlockChainDB};
 
     #[tokio::test]
     async fn test_load_big_query_block_chain() {
         let sa_key_path = std::env::current_dir().unwrap().join("GCP_SA.json");
-        println!(" Your path is ere {}", sa_key_path.display());
+        println!(" Your path is here {}", sa_key_path.display());
 
         std::env::set_var(
             "GCP_BLOCK_EXTRACTOR_SA_KEY",

@@ -34,9 +34,11 @@ impl BlockChainDB for HashMapBlockchain {
         Ok(())
     }
 
-    async fn insert_receipts(&mut self, receipts: TransactionReceipt) -> anyhow::Result<()> {
-        self.receipts
-            .insert(receipts.transaction_hash.to_string(), receipts);
+    async fn insert_receipts(&mut self, receipts: &[TransactionReceipt]) -> anyhow::Result<()> {
+        for receipt in receipts {
+            self.receipts
+                .insert(receipt.transaction_hash.to_string(), receipt.clone());
+        }
         Ok(())
     }
 
