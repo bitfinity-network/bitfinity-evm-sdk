@@ -64,12 +64,14 @@ impl BlockChainDB for BigQueryBlockChain {
     }
 
     /// Returns the number of the last block stored in the zip file
-    async fn get_last_block_number(&self) -> anyhow::Result<u64> {
+    async fn get_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>> {
         let query = format!(
-            "SELECT MAX(id) FROM `{project_id}.{dataset_id}.{table_id}`",
+            "SELECT id FROM `{project_id}.{dataset_id}.{table_id}` WHERE id BETWEEN {start} AND {end}",
             project_id = self.project_id,
             dataset_id = self.dataset_id,
-            table_id = self.table_id
+            table_id = self.table_id,
+            start = start,
+            end = end
         );
         let response = self
             .client
@@ -77,11 +79,12 @@ impl BlockChainDB for BigQueryBlockChain {
             .query(self.project_id.as_str(), QueryRequest::new(query))
             .await?;
 
-        let rows = response
+        let ids = response
             .get_i64_by_name("id")?
             .ok_or(anyhow::anyhow!("No id column in response"))?;
+        let ids_u64: Vec<u64> = ids.into_iter().map(|id| id as u64).collect();
 
-        Ok(rows as u64)
+        Ok(ids_u64).collect()
     }
 
     async fn insert_block(&mut self, block: Block<Transaction>) -> anyhow::Result<()> {
@@ -147,5 +150,9 @@ mod tests {
         println!("{:?}", test_block);
 
         big_query.insert_block(test_block).await.unwrap();
+        let blocks_in_range = big_query.get_blocks_in_range(0, 1).await.unwrap();
+        assert_eq!(blocks_in_range[0], 1);
+
     }
+
 }
