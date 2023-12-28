@@ -13,7 +13,7 @@ const PROJECT_ID: &str = "bitfinity-evm";
 #[derive(Debug, Serialize)]
 pub struct BlockRow {
     id: u64,
-    body: serde_json::Value,
+    body: String,
 }
 
 /// A client for BigQuery that can be used to query and insert data
@@ -91,11 +91,12 @@ impl BlockChainDB for BigQueryBlockChain {
             None,
             BlockRow {
                 id: block.number.unwrap().as_u64(),
-                body: serde_json::to_value(block)?,
+                body: serde_json::to_string(&block)?,
             },
         )?;
 
-        self.client
+        let res = self
+            .client
             .tabledata()
             .insert_all(
                 self.project_id.as_str(),
@@ -105,24 +106,30 @@ impl BlockChainDB for BigQueryBlockChain {
             )
             .await?;
 
+        if res.insert_errors.is_some() {
+            println!("error inserting block: {:?}", res.insert_errors);
+        }
+
         Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::storage_clients::gcp_big_query::{BigQueryBlockChain, BlockChainDB};
     use ethers_core::types::{Block, Transaction};
-    use crate::storage_clients::gcp_big_query::{BigQueryBlockChain,BlockChainDB };
 
     #[tokio::test]
     async fn test_load_big_query_block_chain() {
-        
-        let sa_key_path = std::env::current_dir()
-            .unwrap()
-            .join("GCP_SA.json");
+        let sa_key_path = std::env::current_dir().unwrap().join("GCP_SA.json");
         println!(" Your path is ere {}", sa_key_path.display());
 
-        std::env::set_var("GOOGLE_APPLICATION_CREDENTIALS", sa_key_path.to_str().expect("Failed to convert path to string"));
+        std::env::set_var(
+            "GOOGLE_APPLICATION_CREDENTIALS",
+            sa_key_path
+                .to_str()
+                .expect("Failed to convert path to string"),
+        );
         assert!(
             sa_key_path.exists(),
             "Service account key file does not exist"
@@ -130,11 +137,15 @@ mod tests {
         let data_set_id = "testnet";
         let table_id = "blocks";
 
-        let mut big_query = BigQueryBlockChain::new(data_set_id, table_id).await.unwrap();
+        let mut big_query = BigQueryBlockChain::new(data_set_id, table_id)
+            .await
+            .unwrap();
+
         let mut test_block: Block<Transaction> = Block::default();
+
         test_block.number = Some(0u64.into());
         println!("{:?}", test_block);
 
-        let _ = big_query.insert_block(test_block).await.unwrap();
+        big_query.insert_block(test_block).await.unwrap();
     }
 }
