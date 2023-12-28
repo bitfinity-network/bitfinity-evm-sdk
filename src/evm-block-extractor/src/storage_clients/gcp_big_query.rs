@@ -111,7 +111,8 @@ impl BlockChainDB for BigQueryBlockChain {
 
 #[cfg(test)]
 mod tests {
-    use crate::storage_clients::gcp_big_query::BigQueryBlockChain;
+    use ethers_core::types::{Block, Transaction};
+    use crate::storage_clients::gcp_big_query::{BigQueryBlockChain,BlockChainDB };
 
     #[tokio::test]
     async fn test_load_big_query_block_chain() {
@@ -129,6 +130,11 @@ mod tests {
         let data_set_id = "testnet";
         let table_id = "blocks";
 
-        let _ = BigQueryBlockChain::new(data_set_id, table_id);
+        let mut big_query = BigQueryBlockChain::new(data_set_id, table_id).await.unwrap();
+        let mut test_block: Block<Transaction> = Block::default();
+        test_block.number = Some(0u64.into());
+        println!("{:?}", test_block);
+
+        let _ = big_query.insert_block(test_block).await.unwrap();
     }
 }
