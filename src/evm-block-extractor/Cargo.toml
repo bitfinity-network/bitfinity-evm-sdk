@@ -23,6 +23,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 zip = { workspace = true }
-
+gcp-bigquery-client = "0.18"
+async-trait = "0.1"
 [dev-dependencies]
 tempfile = { workspace = true }
