@@ -37,17 +37,15 @@ impl BlockExtractor {
 
     async fn collect_blocks(
         &mut self,
-        start_block: u64,
-        end_block: u64,
+        blocks: impl Iterator<Item = u64>,
         max_no_of_requests: usize,
     ) -> anyhow::Result<()> {
         let rpc_url = &self.rpc_url;
         let mut tasks = Vec::new();
-        let mut failure_count = 0;
         let delay = Duration::from_secs(1) / max_no_of_requests as u32;
         let semaphore = Arc::new(Semaphore::new(max_no_of_requests));
 
-        for block_number_u64 in start_block..=end_block {
+        for block_number_u64 in blocks {
             let request_time_out_secs = self.request_time_out_secs;
 
             let client = EthJsonRcpClient::new(ReqwestClient::new(rpc_url.to_string()));
@@ -78,11 +76,9 @@ impl BlockExtractor {
                     }
                     Ok(Err(e)) => {
                         println!("Failed to get block {}: {:?}", block_number_u64, e);
-                        failure_count += 1;
                     }
                     Err(e) => {
                         println!("Request for block {} timed out: {:?}", block_number_u64, e);
-                        failure_count += 1;
                     }
                 }
 
@@ -96,7 +92,6 @@ impl BlockExtractor {
         for task in tasks {
             let _ = task.await?;
         }
-        println!("Number of failures: {}", failure_count);
         Ok(())
     }
 }
@@ -116,10 +111,15 @@ mod tests {
         let end_block = extractor.latest_block_number().await.unwrap();
         let start_block = end_block - 1000;
         let max_requests = 50;
+        let block_range = start_block..=end_block;
+        
+        for block_number in block_range {
+            println!("Processing block number: {}", block_number);
+        }
         println!("Getting blocks from {} to {}", start_block, end_block);
 
         let result = extractor
-            .collect_blocks(start_block, end_block, max_requests)
+            .collect_blocks(start_block..=end_block, max_requests)
             .await;
         if let Err(e) = &result {
             println!("Error: {:?}", e);

@@ -73,30 +73,38 @@ impl BlockChainDB for BigQueryBlockChain {
             start = start,
             end = end
         );
-        let response = self
+        let mut response = self
             .client
             .job()
             .query(self.project_id.as_str(), QueryRequest::new(query))
             .await?;
+       
+        let mut rows: Vec<u64> = vec![];
+            while response.next_row() {
+                let name = response.get_i64_by_name("id")?.unwrap() as u64;
+                rows.push(name)
+            }
+    
+        Ok(rows)
 
-        let ids = response
-            .get_i64_by_name("id")?
-            .ok_or(anyhow::anyhow!("No id column in response"))?;
-        let ids_u64: Vec<u64> = ids.into_iter().map(|id| id as u64).collect();
-
-        Ok(ids_u64).collect()
     }
 
     async fn insert_block(&mut self, block: Block<Transaction>) -> anyhow::Result<()> {
         let mut insert_request = TableDataInsertAllRequest::new();
 
-        insert_request.add_row(
-            None,
-            BlockRow {
-                id: block.number.unwrap().as_u64(),
-                body: serde_json::to_string(&block)?,
-            },
-        )?;
+        let block_id = block.number.unwrap().as_u64();
+        let block_row = BlockRow {
+            id: block_id,
+            body: serde_json::to_string(&block)?,
+        };
+
+        // Check if block id already exists in the database
+        let existing_blocks = self.get_blocks_in_range(block_id, block_id).await?;
+        if existing_blocks.contains(&block_id) {
+            return Err(anyhow::anyhow!("Block with id {} already exists", block_id));
+        }
+
+        insert_request.add_row(Some(block_id.to_string()), block_row)?;
 
         let res = self
             .client
@@ -138,7 +146,7 @@ mod tests {
             "Service account key file does not exist"
         );
         let data_set_id = "testnet";
-        let table_id = "blocks";
+        let table_id = "blockmaster";
 
         let mut big_query = BigQueryBlockChain::new(data_set_id, table_id)
             .await
@@ -149,9 +157,20 @@ mod tests {
         test_block.number = Some(0u64.into());
         println!("{:?}", test_block);
 
-        big_query.insert_block(test_block).await.unwrap();
+        //TODO: refactor with enum 
+        match big_query.insert_block(test_block).await {
+            Ok(_) => (),
+            Err(e) => {
+                if e.to_string().contains("Block with id") {
+                    println!("Ignoring error: {}", e);
+                } else {
+                    panic!("Unhandled error: {}", e);
+                }
+            }
+        }
         let blocks_in_range = big_query.get_blocks_in_range(0, 1).await.unwrap();
-        assert_eq!(blocks_in_range[0], 1);
+        println!("{:?}", blocks_in_range);
+        assert_eq!(blocks_in_range[0], 0);
 
     }
 

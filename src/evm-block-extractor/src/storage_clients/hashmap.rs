@@ -20,10 +20,6 @@ impl HashMapBlockchain {
 #[async_trait::async_trait]
 impl BlockChainDB for HashMapBlockchain {
 
-    async fn get_last_block_number(&self) -> anyhow::Result<u64> {
-        unimplemented!()
-    }
-
     async fn get_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>> {
         let mut blocks_in_range = Vec::new();
         for block_number in start..=end {
