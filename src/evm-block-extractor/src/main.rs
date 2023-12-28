@@ -63,7 +63,9 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let end_block = extractor.latest_block_number().await.unwrap();
-    let start_block = end_block - 1000;
+    
+    // get all the blocks on the EVM if you can
+    let start_block = end_block -3600 * 24 * 28;
     let missing_indices = big_query_client.get_missing_blocks_in_range(start_block, end_block).await?;
 
     for chunk in missing_indices.chunks(10000) {
