@@ -20,7 +20,7 @@ impl BlockExtractor {
     pub fn new(
         rpc_url: String,
         request_time_out_secs: u64,
-        rpc_batch_size: u64, 
+        rpc_batch_size: u64,
         blockchain: Box<dyn BlockChainDB>,
     ) -> Self {
         Self {
@@ -46,7 +46,7 @@ impl BlockExtractor {
         let mut tasks = Vec::new();
         let delay = Duration::from_secs(1) / max_no_of_requests as u32;
         let semaphore = Arc::new(Semaphore::new(max_no_of_requests));
-        let batch_size= self.rpc_batch_size as usize;
+        let batch_size = self.rpc_batch_size as usize;
 
         let client = EthJsonRcpClient::new(ReqwestClient::new(rpc_url.to_string()));
 
@@ -78,8 +78,9 @@ impl BlockExtractor {
                         let transactions = block.transactions;
                         for chunk in transactions.chunks(batch_size) {
                             let tx_hashes = chunk.iter().map(|tx| tx.hash).collect::<Vec<_>>();
-                            
-                            let receipts = client.get_receipts_by_hash(tx_hashes, batch_size).await?;
+
+                            let receipts =
+                                client.get_receipts_by_hash(tx_hashes, batch_size).await?;
 
                             blockchain.insert_receipts(&receipts).await?;
                         }
@@ -117,7 +118,8 @@ mod tests {
         let rpc_url = "https://testnet.bitfinity.network".to_string();
         let request_time_out_secs = 10;
         let rpc_batch_size = 50;
-        let mut extractor = BlockExtractor::new(rpc_url, request_time_out_secs,rpc_batch_size, blockchain);
+        let mut extractor =
+            BlockExtractor::new(rpc_url, request_time_out_secs, rpc_batch_size, blockchain);
 
         let end_block = extractor.latest_block_number().await.unwrap();
         let start_block = end_block - 10;

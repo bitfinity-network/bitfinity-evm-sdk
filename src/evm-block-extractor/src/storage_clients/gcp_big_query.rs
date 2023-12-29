@@ -1,12 +1,12 @@
-use anyhow::anyhow;
 use ethers_core::types::{Block, Transaction, TransactionReceipt};
-use gcp_bigquery_client::model::{query_request::QueryRequest, table_data_insert_all_request_rows::TableDataInsertAllRequestRows};
+use gcp_bigquery_client::model::query_request::QueryRequest;
 use gcp_bigquery_client::model::table_data_insert_all_request::TableDataInsertAllRequest;
+use gcp_bigquery_client::model::table_data_insert_all_request_rows::TableDataInsertAllRequestRows;
 use gcp_bigquery_client::Client;
 use serde::Serialize;
 
 use super::BlockChainDB;
-use crate::constants::{PROJECT_ID, RECEIPTS_TABLE_ID};
+use crate::constants::{BLOCKS_TABLE_ID, PROJECT_ID, RECEIPTS_TABLE_ID};
 
 /// A row in the BigQuery table
 #[derive(Debug, Serialize)]
@@ -27,11 +27,10 @@ pub struct BigQueryBlockChain {
     client: Client,
     project_id: String,
     dataset_id: String,
-    table_id: String,
 }
 
 impl BigQueryBlockChain {
-    pub async fn new(dataset_id: String, table_id: String) -> anyhow::Result<Self> {
+    pub async fn new(dataset_id: String) -> anyhow::Result<Self> {
         let sa_key = std::env::var("GCP_BLOCK_EXTRACTOR_SA_KEY")
             .map_err(|_| anyhow::anyhow!("GCP_BLOCK_EXTRACTOR_SA_KEY not set"))?;
 
@@ -41,7 +40,6 @@ impl BigQueryBlockChain {
             client,
             project_id: PROJECT_ID.to_string(),
             dataset_id: dataset_id.to_string(),
-            table_id: table_id.to_string(),
         })
     }
 }
@@ -54,7 +52,7 @@ impl BlockChainDB for BigQueryBlockChain {
             "SELECT body FROM `{project_id}.{dataset_id}.{table_id}` WHERE id = {block_number}",
             project_id = self.project_id,
             dataset_id = self.dataset_id,
-            table_id = self.table_id,
+            table_id = BLOCKS_TABLE_ID,
         );
         let response = self
             .client
@@ -77,9 +75,8 @@ impl BlockChainDB for BigQueryBlockChain {
             "SELECT id FROM `{project_id}.{dataset_id}.{table_id}` WHERE id BETWEEN {start} AND {end}",
             project_id = self.project_id,
             dataset_id = self.dataset_id,
-            table_id = self.table_id,
-            start = start,
-            end = end
+            table_id = BLOCKS_TABLE_ID,
+
         );
         let mut response = self
             .client
@@ -124,7 +121,7 @@ impl BlockChainDB for BigQueryBlockChain {
             .insert_all(
                 self.project_id.as_str(),
                 self.dataset_id.as_str(),
-                self.table_id.as_str(),
+                BLOCKS_TABLE_ID,
                 insert_request,
             )
             .await?;
@@ -137,7 +134,6 @@ impl BlockChainDB for BigQueryBlockChain {
     }
 
     async fn insert_receipts(&mut self, receipts: &[TransactionReceipt]) -> anyhow::Result<()> {
-        
         let mut insert_request = TableDataInsertAllRequest::new();
 
         let txes = receipts
@@ -214,9 +210,8 @@ mod tests {
             "Service account key file does not exist"
         );
         let data_set_id = "testnet";
-        let table_id = "blockmaster";
 
-        let mut big_query = BigQueryBlockChain::new(data_set_id.to_string(), table_id.to_string())
+        let mut big_query = BigQueryBlockChain::new(data_set_id.to_string())
             .await
             .unwrap();
 

@@ -27,16 +27,12 @@ struct Args {
     #[arg(long = "dataset-id", short('d'))]
     dataset_id: String,
 
-    /// The table ID of the BigQuery table
-    #[arg(long = "table-id", short('t'))]
-    table_id: String,
-
     /// Max number of parallel requests in a single RPC batch
     #[arg(long, default_value = "50")]
     max_number_of_requests: usize,
 
     #[arg(long, default_value = "500")]
-    rpc_batch_size: u64
+    rpc_batch_size: u64,
 }
 
 #[tokio::main]
@@ -49,7 +45,6 @@ async fn main() -> anyhow::Result<()> {
     log::info!("----------------------");
     log::info!("- rpc-url: {}", args.rpc_url);
     log::info!("- dataset-id: {}", args.dataset_id);
-    log::info!("- table-id: {}", args.table_id);
     log::info!("- max-number-of-requests: {}", args.max_number_of_requests);
     log::info!("----------------------");
 
@@ -57,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("blocks-writer initialized");
 
-    let big_query_client = BigQueryBlockChain::new(args.dataset_id, args.table_id).await?;
+    let big_query_client = BigQueryBlockChain::new(args.dataset_id).await?;
 
     let mut extractor = BlockExtractor::new(
         args.rpc_url,
