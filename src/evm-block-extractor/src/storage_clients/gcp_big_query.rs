@@ -1,4 +1,4 @@
-use ethers_core::types::{Block, Transaction, TransactionReceipt};
+use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use gcp_bigquery_client::model::query_request::QueryRequest;
 use gcp_bigquery_client::model::table_data_insert_all_request::TableDataInsertAllRequest;
 use gcp_bigquery_client::model::table_data_insert_all_request_rows::TableDataInsertAllRequestRows;
@@ -8,33 +8,29 @@ use serde::Serialize;
 use super::BlockChainDB;
 use crate::constants::{BLOCKS_TABLE_ID, PROJECT_ID, RECEIPTS_TABLE_ID};
 
-/// A row in the BigQuery table
-#[derive(Debug, Serialize)]
-pub struct BlockRow {
-    id: u64,
-    body: String,
-}
-
-#[derive(Debug, Serialize, Clone)]
-pub struct ReceiptRow {
-    tx_hash: String,
-    body: String,
-}
-
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
 pub struct BigQueryBlockChain {
     client: Client,
+    /// The project ID of the BigQuery project
     project_id: String,
+    /// The dataset ID of the BigQuery table
+    ///
+    /// Can be mainnet/testnet
     dataset_id: String,
 }
 
 impl BigQueryBlockChain {
+    /// Creates a new BigQuery client
+    /// The service account key should be stored in the
+    /// `GCP_BLOCK_EXTRACTOR_SA_KEY` environment variable
     pub async fn new(dataset_id: String) -> anyhow::Result<Self> {
         let sa_key = std::env::var("GCP_BLOCK_EXTRACTOR_SA_KEY")
             .map_err(|_| anyhow::anyhow!("GCP_BLOCK_EXTRACTOR_SA_KEY not set"))?;
 
-        let client = Client::from_service_account_key_file(&sa_key).await?;
+        let service_account = yup_oauth2::parse_service_account_key(sa_key)?;
+
+        let client = Client::from_service_account_key(service_account, false).await?;
 
         Ok(Self {
             client,
@@ -42,11 +38,31 @@ impl BigQueryBlockChain {
             dataset_id: dataset_id.to_string(),
         })
     }
+
+    async fn execute_query<T: for<'de> serde::Deserialize<'de>>(
+        &self,
+        query: String,
+    ) -> anyhow::Result<T> {
+        let mut response = self
+            .client
+            .job()
+            .query(self.project_id.as_str(), QueryRequest::new(query))
+            .await?;
+
+        if response.next_row() {
+            let result_str = response
+                .get_string(0)?
+                .ok_or(anyhow::anyhow!("Expected result not found in the response"))?;
+            let result: T = serde_json::from_str(&result_str)?;
+            Ok(result)
+        } else {
+            Err(anyhow::anyhow!("No data found for the query"))
+        }
+    }
 }
 
 #[async_trait::async_trait]
 impl BlockChainDB for BigQueryBlockChain {
-    /// Creates a new client for BigQuery
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<Transaction>> {
         let query = format!(
             "SELECT body FROM `{project_id}.{dataset_id}.{table_id}` WHERE id = {block_number}",
@@ -54,19 +70,8 @@ impl BlockChainDB for BigQueryBlockChain {
             dataset_id = self.dataset_id,
             table_id = BLOCKS_TABLE_ID,
         );
-        let response = self
-            .client
-            .job()
-            .query(self.project_id.as_str(), QueryRequest::new(query))
-            .await?;
 
-        let json = response.get_json_value(0)?.ok_or(anyhow::anyhow!(
-            "Block with number {} not found in the database",
-            block_number
-        ))?;
-
-        let block: Block<Transaction> = serde_json::from_value(json)?;
-        Ok(block)
+        self.execute_query(query).await
     }
 
     /// Returns the number of the last block stored in the zip file
@@ -101,7 +106,11 @@ impl BlockChainDB for BigQueryBlockChain {
     async fn insert_block(&mut self, block: &Block<Transaction>) -> anyhow::Result<()> {
         let mut insert_request = TableDataInsertAllRequest::new();
 
-        let block_id = block.number.unwrap().as_u64();
+        let block_id = block
+            .number
+            .ok_or(anyhow::anyhow!("Block number not found"))?
+            .as_u64();
+
         let block_row = BlockRow {
             id: block_id,
             body: serde_json::to_string(&block)?,
@@ -136,15 +145,23 @@ impl BlockChainDB for BigQueryBlockChain {
     async fn insert_receipts(&mut self, receipts: &[TransactionReceipt]) -> anyhow::Result<()> {
         let mut insert_request = TableDataInsertAllRequest::new();
 
-        let txes = receipts
+        let receipts = receipts
             .iter()
-            .map(|r| TableDataInsertAllRequestRows {
-                insert_id: Some(r.transaction_hash.to_string()),
-                json: serde_json::to_value(r).expect("Failed to serialize receipt"),
+            .map(|r| {
+                let tx_hash = r.transaction_hash;
+                let receipt = ReceiptRow {
+                    tx_hash: format!("0x{:x}", tx_hash),
+                    receipt: serde_json::to_string(&r).expect("Failed to serialize receipt"),
+                };
+
+                TableDataInsertAllRequestRows {
+                    insert_id: Some(format!("0x{:x}", r.transaction_hash)),
+                    json: serde_json::to_value(receipt).expect("Failed to serialize receipt"),
+                }
             })
             .collect::<Vec<_>>();
 
-        insert_request.add_rows(txes)?;
+        insert_request.add_rows(receipts)?;
 
         let res = self
             .client
@@ -164,28 +181,85 @@ impl BlockChainDB for BigQueryBlockChain {
         Ok(())
     }
 
-    async fn get_transaction_receipt(&self, tx_hash: String) -> anyhow::Result<TransactionReceipt> {
+    async fn get_transaction_receipt(&self, tx_hash: H256) -> anyhow::Result<TransactionReceipt> {
         let query = format!(
-            "SELECT body FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = '{tx_hash}'",
+            "SELECT receipt FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = '0x{tx_hash:x}'",
             project_id = self.project_id,
             dataset_id = self.dataset_id,
             table_id = RECEIPTS_TABLE_ID,
-            tx_hash = tx_hash
         );
-        let response = self
+
+        self.execute_query(query).await
+    }
+
+    async fn get_latest_block_number(&self) -> anyhow::Result<u64> {
+        let query = format!(
+            "SELECT MAX(id) as max_id FROM `{project_id}.{dataset_id}.{table_id}`",
+            project_id = self.project_id,
+            dataset_id = self.dataset_id,
+            table_id = BLOCKS_TABLE_ID,
+        );
+        let mut response = self
             .client
             .job()
             .query(self.project_id.as_str(), QueryRequest::new(query))
             .await?;
 
-        let json = response.get_json_value(0)?.ok_or(anyhow::anyhow!(
-            "Receipt with tx_hash {} not found in the database",
-            tx_hash
-        ))?;
+        if response.next_row() {
+            let max_id = response.get_i64(0)?.ok_or(anyhow::anyhow!(
+                "Block with number {} not found in the database",
+                0
+            ))? as u64;
 
-        let receipt: TransactionReceipt = serde_json::from_value(json)?;
-        Ok(receipt)
+            Ok(max_id)
+        } else {
+            Err(anyhow::anyhow!(
+                "Block with number {} not found in the database",
+                0
+            ))
+        }
     }
+
+    async fn get_earliest_block_number(&self) -> anyhow::Result<u64> {
+        let query = format!(
+            "SELECT MIN(id) as min_id FROM `{project_id}.{dataset_id}.{table_id}`",
+            project_id = self.project_id,
+            dataset_id = self.dataset_id,
+            table_id = BLOCKS_TABLE_ID,
+        );
+        let mut response = self
+            .client
+            .job()
+            .query(self.project_id.as_str(), QueryRequest::new(query))
+            .await?;
+
+        if response.next_row() {
+            let min_id = response.get_i64(0)?.ok_or(anyhow::anyhow!(
+                "Block with number {} not found in the database",
+                0
+            ))? as u64;
+
+            Ok(min_id)
+        } else {
+            Err(anyhow::anyhow!(
+                "Block with number {} not found in the database",
+                0
+            ))
+        }
+    }
+}
+
+/// A row in the BigQuery table
+#[derive(Debug, Serialize)]
+pub struct BlockRow {
+    id: u64,
+    body: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ReceiptRow {
+    tx_hash: String,
+    receipt: String,
 }
 
 #[cfg(test)]
@@ -199,16 +273,6 @@ mod tests {
         let sa_key_path = std::env::current_dir().unwrap().join("GCP_SA.json");
         println!(" Your path is here {}", sa_key_path.display());
 
-        std::env::set_var(
-            "GCP_BLOCK_EXTRACTOR_SA_KEY",
-            sa_key_path
-                .to_str()
-                .expect("Failed to convert path to string"),
-        );
-        assert!(
-            sa_key_path.exists(),
-            "Service account key file does not exist"
-        );
         let data_set_id = "testnet";
 
         let mut big_query = BigQueryBlockChain::new(data_set_id.to_string())
@@ -216,11 +280,11 @@ mod tests {
             .unwrap();
 
         let test_block: Block<Transaction> = Block {
-            number: Some(0u64.into()),
+            number: Some(10u64.into()),
             ..Default::default()
         };
 
-        //TODO: refactor with enum
+        // //TODO: refactor with enum
         match big_query.insert_block(&test_block).await {
             Ok(_) => (),
             Err(e) => {
@@ -234,5 +298,15 @@ mod tests {
         let blocks_in_range = big_query.get_blocks_in_range(0, 1).await.unwrap();
         println!("{:?}", blocks_in_range);
         assert_eq!(blocks_in_range[0], 0);
+
+        let fake_receipt = ethers_core::types::TransactionReceipt {
+            transaction_hash: ethers_core::types::H256::random(),
+            ..Default::default()
+        };
+
+        big_query
+            .insert_receipts(&[fake_receipt.clone()])
+            .await
+            .unwrap();
     }
 }

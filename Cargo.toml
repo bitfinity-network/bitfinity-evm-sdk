@@ -64,7 +64,7 @@ thiserror = "1.0"
 tokio = { version = "1.24", features = ["macros", "rt"] }
 zip = "0.6"
 gcp-bigquery-client = "0.18"
-
+axum = { version = "0.7", features = ["json", "macros"] }
 
 [profile.dev]
 debug = false

@@ -1,13 +1,8 @@
-mod block_extractor;
-mod constants;
-mod storage_clients;
-
-use block_extractor::BlockExtractor;
 use clap::Parser;
-
-use crate::constants::{CHUNK_SIZE, MAX_EVM_BLOCKS};
-use crate::storage_clients::gcp_big_query::BigQueryBlockChain;
-use crate::storage_clients::BlockChainDB;
+use evm_block_extractor::block_extractor::BlockExtractor;
+use evm_block_extractor::constants::{CHUNK_SIZE, MAX_EVM_BLOCKS};
+use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
+use evm_block_extractor::storage_clients::BlockChainDB;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
