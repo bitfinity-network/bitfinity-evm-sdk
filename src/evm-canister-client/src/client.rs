@@ -265,31 +265,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
-    /// Get the blocks range by number using a single request.
-    ///
-    /// # Arguments
-    /// * `from` - The index of the first block
-    /// * `count` - Number of blocks to return
-    /// * `include_transactions` - Whether to include the transactions in the
-    /// block
-    ///
-    /// # Returns
-    ///
-    /// The block at the given block number or tag
-    pub async fn eth_get_blocks_by_number(
-        &self,
-        from: U64,
-        count: U64,
-        include_transactions: bool,
-    ) -> CanisterClientResult<EvmResult<Vec<BlockResult>>> {
-        self.client
-            .query(
-                "eth_get_blocks_by_number",
-                (from, count, include_transactions),
-            )
-            .await
-    }
-
     /// Returns the number of transactions in a block matching the given block number.
     pub async fn eth_get_block_transaction_count_by_block_number(
         &self,
