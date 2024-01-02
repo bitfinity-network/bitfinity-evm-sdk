@@ -57,9 +57,9 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let end_block = extractor.latest_block_number().await?;
+    log::debug!("latest block number: {}", end_block);
 
-    // get all the blocks on the EVM if you can
-    let start_block = end_block - MAX_EVM_BLOCKS;
+    let start_block = end_block.saturating_sub(MAX_EVM_BLOCKS);
     let missing_indices = big_query_client
         .get_missing_blocks_in_range(start_block, end_block)
         .await?;

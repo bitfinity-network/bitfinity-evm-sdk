@@ -25,14 +25,13 @@ ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = [
 ] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true }
 zip = { workspace = true }
 gcp-bigquery-client = { workspace = true }
 async-trait = { workspace = true }
 axum = { workspace = true }
-jsonrpsee = { version = "0.21", features = ["full"] }
+jsonrpsee = { workspace = true }
 yup-oauth2 = "8.3.2"
-
 did = { path = "../did" }
 
 [dev-dependencies]

@@ -69,6 +69,8 @@ impl BlockExtractor {
                 )
                 .await;
 
+                log::info!("block result: {:?}", result);
+
                 match result {
                     Ok(Ok(block)) => {
                         let mut blockchain = blockchain.lock().await;

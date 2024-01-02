@@ -19,7 +19,7 @@ impl EthImpl {
 }
 
 /// eth_* RPC methods
-#[rpc(server, client, namespace = "eth")]
+#[rpc(server, namespace = "eth")]
 pub trait Eth {
     #[method(name = "getBlockByNumber")]
     /// Get a block by number
@@ -35,7 +35,7 @@ pub trait Eth {
 }
 
 /// ic_* RPC methods
-#[rpc(server, client, namespace = "ic")]
+#[rpc(server, namespace = "ic")]
 pub trait IC {
     #[method(name = "getBlocksRLP")]
     async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<Vec<u8>>;
