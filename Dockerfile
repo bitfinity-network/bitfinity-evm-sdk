@@ -30,4 +30,4 @@ EXPOSE 8080
 
 ENTRYPOINT ["./evm-block-extractor-server"]
 
-CMD ["-d", "testnet"]
+CMD ["-d", "testnet", "-s", "0.0.0.0:8080"]
