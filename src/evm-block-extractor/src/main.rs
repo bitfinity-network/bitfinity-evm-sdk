@@ -19,6 +19,9 @@ struct Args {
     rpc_url: String,
 
     /// The dataset ID of the BigQuery table
+    /// The dataset ID can be one of the following:
+    /// - `testnet`
+    /// - `mainnet`
     #[arg(long = "dataset-id", short('d'))]
     dataset_id: String,
 
@@ -39,6 +42,13 @@ async fn main() -> anyhow::Result<()> {
     // Initialize logger
     init_logger()?;
     let args = Args::parse();
+
+    // Check if the dataset ID is valid
+    if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
+        return Err(anyhow::anyhow!(
+            "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
+        ));
+    }
 
     log::info!("{PACKAGE}");
     log::info!("----------------------");

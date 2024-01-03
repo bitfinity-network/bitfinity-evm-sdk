@@ -17,7 +17,7 @@ FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
 RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates \
     && update-ca-certificates \
     # Clean up
     && apt-get autoremove -y \

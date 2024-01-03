@@ -3,11 +3,13 @@ use evm_block_extractor::rpc::{EthImpl, EthServer};
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
 use jsonrpsee::server::Server;
 use jsonrpsee::RpcModule;
-use tokio::sync::oneshot;
 
 #[derive(Debug, Clone, Parser)]
 pub struct ServerConfig {
     /// The dataset ID of the BigQuery table
+    /// The dataset ID can be one of the following:
+    /// - `testnet`
+    /// - `mainnet`
     #[arg(long = "dataset-id", short('d'))]
     pub dataset_id: String,
 
@@ -26,6 +28,13 @@ async fn main() -> anyhow::Result<()> {
     init_logger()?;
     let args = ServerConfig::parse();
 
+    // Check if the dataset ID is valid
+    if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
+        return Err(anyhow::anyhow!(
+            "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
+        ));
+    }
+
     let server = Server::builder().build(args.server_address).await?;
 
     let db = BigQueryBlockChain::new(args.dataset_id, args.sa_key).await?;
@@ -40,26 +49,18 @@ async fn main() -> anyhow::Result<()> {
 
     let handle = server.start(module);
 
-    let (stopped_snd, stopped_recv) = oneshot::channel();
+    match tokio::signal::ctrl_c().await {
+        Ok(_) => {
+            log::info!("Received shutdown signal");
+        }
+        Err(err) => log::error!("Failed to listen for shutdown signal: {err}"),
+    }
 
-    tokio::spawn(graceful_shutdown(stopped_snd));
-    stopped_recv.await?;
     handle.stop()?;
 
     log::info!("Server stopped gracefully");
 
     Ok(())
-}
-
-async fn graceful_shutdown(stopped_snd: oneshot::Sender<()>) {
-    match tokio::signal::ctrl_c().await {
-        Ok(_) => {
-            if stopped_snd.send(()).is_err() {
-                log::error!("Failed to send shutdown signal");
-            }
-        }
-        Err(err) => log::error!("Failed to listen for shutdown signal: {err}"),
-    }
 }
 
 fn init_logger() -> anyhow::Result<()> {
