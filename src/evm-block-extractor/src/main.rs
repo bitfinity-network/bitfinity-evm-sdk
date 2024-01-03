@@ -28,6 +28,10 @@ struct Args {
 
     #[arg(long, default_value = "500")]
     rpc_batch_size: u64,
+
+    /// The service account key in JSON format
+    #[arg(long = "sa-key", short('k'), env = "GCP_BLOCK_EXTRACTOR_SA_KEY")]
+    sa_key: String,
 }
 
 #[tokio::main]
@@ -47,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("blocks-writer initialized");
 
-    let big_query_client = BigQueryBlockChain::new(args.dataset_id).await?;
+    let big_query_client = BigQueryBlockChain::new(args.dataset_id, args.sa_key).await?;
 
     let mut extractor = BlockExtractor::new(
         args.rpc_url,

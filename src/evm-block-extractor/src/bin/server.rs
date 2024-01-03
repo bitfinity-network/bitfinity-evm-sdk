@@ -14,6 +14,10 @@ pub struct ServerConfig {
     /// Server address
     #[arg(long = "server-address", short('s'), default_value = "127.0.0.1:8080")]
     pub server_address: String,
+
+    /// The service account key in JSON format
+    #[arg(long = "sa-key", short('k'), env = "GCP_BLOCK_EXTRACTOR_SA_KEY")]
+    pub sa_key: String,
 }
 
 #[tokio::main]
@@ -24,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
 
     let server = Server::builder().build(args.server_address).await?;
 
-    let db = BigQueryBlockChain::new(args.dataset_id).await?;
+    let db = BigQueryBlockChain::new(args.dataset_id, args.sa_key).await?;
 
     let eth = EthImpl::new(db);
 

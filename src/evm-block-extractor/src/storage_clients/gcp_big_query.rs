@@ -24,10 +24,7 @@ impl BigQueryBlockChain {
     /// Creates a new BigQuery client
     /// The service account key should be stored in the
     /// `GCP_BLOCK_EXTRACTOR_SA_KEY` environment variable
-    pub async fn new(dataset_id: String) -> anyhow::Result<Self> {
-        let sa_key = std::env::var("GCP_BLOCK_EXTRACTOR_SA_KEY")
-            .map_err(|_| anyhow::anyhow!("GCP_BLOCK_EXTRACTOR_SA_KEY not set"))?;
-
+    pub async fn new(dataset_id: String, sa_key: String) -> anyhow::Result<Self> {
         let service_account = yup_oauth2::parse_service_account_key(sa_key)?;
 
         let client = Client::from_service_account_key(service_account, false).await?;

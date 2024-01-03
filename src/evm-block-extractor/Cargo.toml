@@ -29,9 +29,8 @@ tokio = { workspace = true }
 zip = { workspace = true }
 gcp-bigquery-client = { workspace = true }
 async-trait = { workspace = true }
-axum = { workspace = true }
 jsonrpsee = { workspace = true }
-yup-oauth2 = "8.3.2"
+yup-oauth2 = { workspace = true }
 did = { path = "../did" }
 
 [dev-dependencies]
