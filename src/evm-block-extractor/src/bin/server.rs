@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use clap::{arg, Parser};
 use evm_block_extractor::rpc::{EthImpl, EthServer};
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
@@ -28,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
 
     let db = BigQueryBlockChain::new(args.dataset_id).await?;
 
-    let eth = EthImpl::new(Arc::new(Box::new(db)));
+    let eth = EthImpl::new(db);
 
     let mut module = RpcModule::new(());
 

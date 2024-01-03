@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256, U256, U64};
 use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
@@ -8,12 +6,12 @@ use jsonrpsee::proc_macros::rpc;
 use crate::storage_clients::BlockChainDB;
 
 #[derive(Clone)]
-pub struct EthImpl {
-    pub blockchain: Arc<Box<dyn BlockChainDB>>,
+pub struct EthImpl<B: BlockChainDB + 'static> {
+    pub blockchain: B,
 }
 
-impl EthImpl {
-    pub fn new(db: Arc<Box<dyn BlockChainDB>>) -> Self {
+impl<B: BlockChainDB + 'static> EthImpl<B> {
+    pub fn new(db: B) -> Self {
         Self { blockchain: db }
     }
 }
@@ -23,7 +21,11 @@ impl EthImpl {
 pub trait Eth {
     #[method(name = "getBlockByNumber")]
     /// Get a block by number
-    async fn get_block_by_number(&self, block_number: U256) -> RpcResult<Block<Transaction>>;
+    async fn get_block_by_number(
+        &self,
+        block_number: U256,
+        full_transactions: bool,
+    ) -> RpcResult<Block<Transaction>>;
 
     #[method(name = "getTransactionReceipt")]
     /// Get a transaction receipt
@@ -42,7 +44,7 @@ pub trait IC {
 }
 
 #[async_trait::async_trait]
-impl ICServer for EthImpl {
+impl<B: BlockChainDB + 'static> ICServer for EthImpl<B> {
     async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<Vec<u8>> {
         let db = &self.blockchain;
         let from = match from {
@@ -89,8 +91,12 @@ impl ICServer for EthImpl {
 }
 
 #[async_trait::async_trait]
-impl EthServer for EthImpl {
-    async fn get_block_by_number(&self, block_number: U256) -> RpcResult<Block<Transaction>> {
+impl<B: BlockChainDB + 'static> EthServer for EthImpl<B> {
+    async fn get_block_by_number(
+        &self,
+        block_number: U256,
+        _full_transaction: bool,
+    ) -> RpcResult<Block<Transaction>> {
         let block_number = block_number.as_u64();
 
         let block = self
