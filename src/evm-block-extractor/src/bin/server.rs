@@ -20,13 +20,18 @@ pub struct ServerConfig {
     /// The service account key in JSON format
     #[arg(long = "sa-key", short('k'), env = "GCP_BLOCK_EXTRACTOR_SA_KEY")]
     pub sa_key: String,
+
+    /// Log level (default: info, options: trace, debug, info, warn, error)
+    #[arg(long, default_value = "info")]
+    pub log_level: String,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Initialize logger
-    init_logger()?;
     let args = ServerConfig::parse();
+
+    init_logger(args.log_level)?;
 
     // Check if the dataset ID is valid
     if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
@@ -56,19 +61,19 @@ async fn main() -> anyhow::Result<()> {
         Err(err) => log::error!("Failed to listen for shutdown signal: {err}"),
     }
 
-    handle.stop()?;
+    handle.stopped().await;
 
     log::info!("Server stopped gracefully");
 
     Ok(())
 }
 
-fn init_logger() -> anyhow::Result<()> {
-    let env = env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info");
+fn init_logger(log_level: String) -> anyhow::Result<()> {
+    let level = log_level
+        .parse::<log::LevelFilter>()
+        .unwrap_or(log::LevelFilter::Info);
 
-    env_logger::Builder::from_env(env)
-        .format_timestamp_millis()
-        .init();
+    env_logger::Builder::new().filter(None, level).try_init()?;
 
     Ok(())
 }

@@ -35,6 +35,10 @@ struct Args {
     /// The service account key in JSON format
     #[arg(long = "sa-key", short('k'), env = "GCP_BLOCK_EXTRACTOR_SA_KEY")]
     sa_key: String,
+
+    /// Log level (default: info, options: trace, debug, info, warn, error)
+    #[arg(long, default_value = "info")]
+    log_level: String,
 }
 
 #[tokio::main]

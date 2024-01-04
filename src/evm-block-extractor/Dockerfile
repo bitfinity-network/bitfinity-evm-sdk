@@ -15,6 +15,8 @@ RUN cargo build --release --bin evm-block-extractor-server
 
 FROM debian:bookworm-slim AS runtime
 
+ENV DATASET=testnet
+
 WORKDIR /app
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends ca-certificates \
@@ -30,4 +32,4 @@ EXPOSE 8080
 
 ENTRYPOINT ["./evm-block-extractor-server"]
 
-CMD ["-d", "testnet", "-s", "0.0.0.0:8080"]
+CMD ["-d", ${DATASET},  "-s", "0.0.0.0:8080"]
