@@ -66,6 +66,8 @@ zip = "0.6"
 gcp-bigquery-client = "0.18"
 jsonrpsee = { version = "0.21", features = ["server", "macros"] }
 yup-oauth2 = "8.3.2"
+testcontainers = "0.15"
+wiremock = "0.5"
 
 [profile.dev]
 debug = false

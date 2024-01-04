@@ -35,3 +35,5 @@ did = { path = "../did" }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+testcontainers = { workspace = true }
+wiremock = { workspace = true }
