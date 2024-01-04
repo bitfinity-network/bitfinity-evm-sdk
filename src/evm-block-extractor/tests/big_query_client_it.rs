@@ -5,97 +5,15 @@
 //! docker run -p 9050:9050 ghcr.io/goccy/bigquery-emulator:latest --project=my_project
 //! ```
 
-use auth_mock::GoogleAuthMock;
+mod client;
 use bq::BQ;
-use testcontainers::{GenericImage, core::WaitFor, clients::Cli, RunnableImage};
+use evm_block_extractor::{storage_clients::BlockChainDB, storage_clients::gcp_big_query::BigQueryBlockChain};
+use testcontainers::clients::Cli;
 
-mod auth_mock {
-    use serde::Serialize;
-    use std::ops::Deref;
-    use wiremock::{
-        matchers::{method, path},
-        Mock, MockServer, ResponseTemplate, Times,
-    };
-
-    pub const AUTH_TOKEN_ENDPOINT: &str = "/:o/oauth2/token";
-
-    pub struct GoogleAuthMock {
-        server: MockServer,
-    }
-
-    impl Deref for GoogleAuthMock {
-        type Target = MockServer;
-
-        fn deref(&self) -> &Self::Target {
-            &self.server
-        }
-    }
-
-    impl GoogleAuthMock {
-        pub async fn start() -> Self {
-            Self {
-                server: MockServer::start().await,
-            }
-        }
-    }
-
-    #[derive(Eq, PartialEq, Serialize, Debug, Clone)]
-    pub struct Token {
-        access_token: String,
-        token_type: String,
-        expires_in: u32,
-    }
-
-    impl Token {
-        fn fake() -> Self {
-            Self {
-                access_token: "aaaa".to_string(),
-                token_type: "bearer".to_string(),
-                expires_in: 9999999,
-            }
-        }
-    }
-
-    impl GoogleAuthMock {
-        /// Mock token, given how many times the endpoint will be called.
-        pub async fn mock_token<T: Into<Times>>(&self, n_times: T) {
-            let response = ResponseTemplate::new(200).set_body_json(Token::fake());
-            Mock::given(method("POST"))
-                .and(path(AUTH_TOKEN_ENDPOINT))
-                .respond_with(response)
-                .named("mock token")
-                .expect(n_times)
-                .mount(self)
-                .await;
-        }
-    }
-}
-
-pub fn dummy_configuration(oauth_server: &str) -> serde_json::Value {
-    let oauth_endpoint = format!("{oauth_server}/:o/oauth2");
-    serde_json::json!({
-      "type": "service_account",
-      "project_id": "dummy",
-      "private_key_id": "dummy",
-      "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDNk6cKkWP/4NMu\nWb3s24YHfM639IXzPtTev06PUVVQnyHmT1bZgQ/XB6BvIRaReqAqnQd61PAGtX3e\n8XocTw+u/ZfiPJOf+jrXMkRBpiBh9mbyEIqBy8BC20OmsUc+O/YYh/qRccvRfPI7\n3XMabQ8eFWhI6z/t35oRpvEVFJnSIgyV4JR/L/cjtoKnxaFwjBzEnxPiwtdy4olU\nKO/1maklXexvlO7onC7CNmPAjuEZKzdMLzFszikCDnoKJC8k6+2GZh0/JDMAcAF4\nwxlKNQ89MpHVRXZ566uKZg0MqZqkq5RXPn6u7yvNHwZ0oahHT+8ixPPrAEjuPEKM\nUPzVRz71AgMBAAECggEAfdbVWLW5Befkvam3hea2+5xdmeN3n3elrJhkiXxbAhf3\nE1kbq9bCEHmdrokNnI34vz0SWBFCwIiWfUNJ4UxQKGkZcSZto270V8hwWdNMXUsM\npz6S2nMTxJkdp0s7dhAUS93o9uE2x4x5Z0XecJ2ztFGcXY6Lupu2XvnW93V9109h\nkY3uICLdbovJq7wS/fO/AL97QStfEVRWW2agIXGvoQG5jOwfPh86GZZRYP9b8VNw\ntkAUJe4qpzNbWs9AItXOzL+50/wsFkD/iWMGWFuU8DY5ZwsL434N+uzFlaD13wtZ\n63D+tNAxCSRBfZGQbd7WxJVFfZe/2vgjykKWsdyNAQKBgQDnEBgSI836HGSRk0Ub\nDwiEtdfh2TosV+z6xtyU7j/NwjugTOJEGj1VO/TMlZCEfpkYPLZt3ek2LdNL66n8\nDyxwzTT5Q3D/D0n5yE3mmxy13Qyya6qBYvqqyeWNwyotGM7hNNOix1v9lEMtH5Rd\nUT0gkThvJhtrV663bcAWCALmtQKBgQDjw2rYlMUp2TUIa2/E7904WOnSEG85d+nc\norhzthX8EWmPgw1Bbfo6NzH4HhebTw03j3NjZdW2a8TG/uEmZFWhK4eDvkx+rxAa\n6EwamS6cmQ4+vdep2Ac4QCSaTZj02YjHb06Be3gptvpFaFrotH2jnpXxggdiv8ul\n6x+ooCffQQKBgQCR3ykzGoOI6K/c75prELyR+7MEk/0TzZaAY1cSdq61GXBHLQKT\nd/VMgAN1vN51pu7DzGBnT/dRCvEgNvEjffjSZdqRmrAVdfN/y6LSeQ5RCfJgGXSV\nJoWVmMxhCNrxiX3h01Xgp/c9SYJ3VD54AzeR/dwg32/j/oEAsDraLciXGQKBgQDF\nMNc8k/DvfmJv27R06Ma6liA6AoiJVMxgfXD8nVUDW3/tBCVh1HmkFU1p54PArvxe\nchAQqoYQ3dUMBHeh6ZRJaYp2ATfxJlfnM99P1/eHFOxEXdBt996oUMBf53bZ5cyJ\n/lAVwnQSiZy8otCyUDHGivJ+mXkTgcIq8BoEwERFAQKBgQDmImBaFqoMSVihqHIf\nDa4WZqwM7ODqOx0JnBKrKO8UOc51J5e1vpwP/qRpNhUipoILvIWJzu4efZY7GN5C\nImF9sN3PP6Sy044fkVPyw4SYEisxbvp9tfw8Xmpj/pbmugkB2ut6lz5frmEBoJSN\n3osZlZTgx+pM3sO6ITV6U4ID2Q==\n-----END PRIVATE KEY-----\n",
-      "client_email": "dummy@developer.gserviceaccount.com",
-      "client_id": "dummy",
-      "auth_uri": format!("{oauth_endpoint}/auth"),
-      "token_uri": format!("{}{}", oauth_server, auth_mock::AUTH_TOKEN_ENDPOINT),
-      "auth_provider_x509_cert_url": format!("{oauth_endpoint}/v1/certs"),
-      "client_x509_cert_url": format!("{oauth_server}/robot/v1/metadata/x509/457015483506-compute%40developer.gserviceaccount.com")
-    })
-}
-
-// The project ID needs to match with the flag `--project` of the bigquery emulator.
-const PROJECT_ID: &str = "my_project";
-const NAME_COLUMN: &str = "name";
-const TABLE_ID: &str = "table";
 
 mod bq {
     use super::*;
-    use std::path::Path;
-
+    
     // use fake::{Fake, StringFaker};
     use gcp_bigquery_client::{
         model::{
@@ -103,10 +21,13 @@ mod bq {
             table_data_insert_all_request::TableDataInsertAllRequest, table_field_schema::TableFieldSchema,
             table_schema::TableSchema,
         },
-        Client, dataset,
+        Client,
     };
     use serde::Serialize;
-
+    
+    // The project ID needs to match with the flag `--project` of the bigquery emulator.
+    const NAME_COLUMN: &str = "name";
+    const TABLE_ID: &str = "table";
 
     pub struct BQ {
         client: Client,
@@ -121,14 +42,7 @@ mod bq {
     }
 
     impl BQ {
-        pub async fn new(port: u16, sa_config_path: &Path, big_query_auth_base_url: String) -> Self {
-            let client = gcp_bigquery_client::client_builder::ClientBuilder::new()
-                .with_auth_base_url(big_query_auth_base_url)
-                // Url of the BigQuery emulator docker image.
-                .with_v2_base_url(format!("http://localhost:{port}"))
-                .build_from_service_account_key_file(sa_config_path.to_str().unwrap())
-                .await
-                .unwrap();
+        pub async fn new(client: Client, project_id: &str) -> Self {
 
             // Use a random dataset id, so that each run is isolated.
             // let dataset_id: String = {
@@ -137,12 +51,12 @@ mod bq {
             //     f.fake()
             // };
 
-            let dataset_id = "test";
+            let dataset_id = format!("test_{}", rand::random::<u64>());
 
             // Create a new dataset
             let dataset = client
                 .dataset()
-                .create(Dataset::new(PROJECT_ID, &dataset_id))
+                .create(Dataset::new(project_id, &dataset_id))
                 .await
                 .unwrap();
 
@@ -150,7 +64,7 @@ mod bq {
 
             Self {
                 client,
-                project_id: PROJECT_ID.to_string(),
+                project_id: project_id.to_string(),
                 dataset_id: dataset_id.to_string(),
                 table_id: TABLE_ID.to_string(),
             }
@@ -222,25 +136,13 @@ mod bq {
 }
 
 #[tokio::test]
-async fn test_big_query_client() {
+async fn test_big_query_stub() {
 
-    let emulator_image = GenericImage::new("ghcr.io/goccy/bigquery-emulator", "0.4.4")
-       .with_exposed_port(9050)
-       .with_wait_for(WaitFor::message_on_stdout("[bigquery-emulator] gRPC server listening at 0.0.0.0:9060"));
-       
     let docker = Cli::default();
-    let node = docker.run((emulator_image, vec![format!("--project={PROJECT_ID}")]));
-    let port = node.get_host_port_ipv4(9050);
-
-    let google_auth = GoogleAuthMock::start().await;
-    google_auth.mock_token(1).await;
-
-    let google_config = dummy_configuration(&google_auth.uri());
-    // Write google configuration to file.
-    let temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::fs::write(temp_file.path(), serde_json::to_string_pretty(&google_config).unwrap()).unwrap();
-
-    let bq = BQ::new(port, temp_file.path(), google_auth.uri()).await;
+    let project_id = format!("test_project_{}", rand::random::<u64>());
+    let (gcp_client, _node, _temp_file, _auth) = client::new_bigquery_client(&docker, &project_id).await;
+    
+    let bq = BQ::new(gcp_client, &project_id).await;
     let name = "foo";
     bq.insert_row(name.to_string()).await;
     let rows = bq.get_rows().await;
@@ -248,3 +150,22 @@ async fn test_big_query_client() {
     println!("That's all Folks!");
     bq.delete_dataset().await;
 }
+
+
+
+#[tokio::test]
+async fn test_big_query_client() {
+
+    let docker = Cli::default();
+    let project_id = format!("test_project_{}", rand::random::<u64>());
+    let (gcp_client, _node, _temp_file, _auth) = client::new_bigquery_client(&docker, &project_id).await;
+    let dataset_id = format!("test_{}", rand::random::<u64>());
+
+    let blockchain = Box::new(BigQueryBlockChain::new_with_client(project_id, dataset_id, gcp_client).unwrap());
+
+    let earliest_block_number = blockchain.get_earliest_block_number().await.unwrap();
+    let latest_block_number = blockchain.get_latest_block_number().await.unwrap();
+
+
+}
+

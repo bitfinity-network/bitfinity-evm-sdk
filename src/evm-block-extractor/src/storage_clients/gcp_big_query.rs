@@ -6,7 +6,7 @@ use gcp_bigquery_client::Client;
 use serde::Serialize;
 
 use super::BlockChainDB;
-use crate::constants::{BLOCKS_TABLE_ID, PROJECT_ID, RECEIPTS_TABLE_ID};
+use crate::constants::{BLOCKS_TABLE_ID, RECEIPTS_TABLE_ID};
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
@@ -21,18 +21,20 @@ pub struct BigQueryBlockChain {
 }
 
 impl BigQueryBlockChain {
-    /// Creates a new BigQuery client
-    /// The service account key should be stored in the
-    /// `GCP_BLOCK_EXTRACTOR_SA_KEY` environment variable
-    pub async fn new(dataset_id: String, sa_key: String) -> anyhow::Result<Self> {
+
+    /// Creates a new BigQueryBlockChain client
+    pub async fn new(project_id: String, dataset_id: String, sa_key: String) -> anyhow::Result<Self> {
         let service_account = yup_oauth2::parse_service_account_key(sa_key)?;
-
         let client = Client::from_service_account_key(service_account, false).await?;
+        Self::new_with_client(project_id, dataset_id, client)
+    }
 
+    /// Creates a new BigQueryBlockChain client
+    pub fn new_with_client(project_id: String, dataset_id: String, client: Client) -> anyhow::Result<Self> {
         Ok(Self {
             client,
-            project_id: PROJECT_ID.to_string(),
-            dataset_id: dataset_id.to_string(),
+            project_id,
+            dataset_id,
         })
     }
 

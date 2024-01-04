@@ -18,6 +18,10 @@ struct Args {
     #[arg(long = "rpc-url", short('u'))]
     rpc_url: String,
 
+    /// The project ID of the BigQuery table
+    #[arg(long = "project-id", short('p'), default_value = "bitfinity-evm")]
+    project_id: String,
+
     /// The dataset ID of the BigQuery table
     /// The dataset ID can be one of the following:
     /// - `testnet`
@@ -57,6 +61,7 @@ async fn main() -> anyhow::Result<()> {
     log::info!("{PACKAGE}");
     log::info!("----------------------");
     log::info!("- rpc-url: {}", args.rpc_url);
+    log::info!("- project-id: {}", args.project_id);
     log::info!("- dataset-id: {}", args.dataset_id);
     log::info!("- max-number-of-requests: {}", args.max_number_of_requests);
     log::info!("----------------------");
@@ -65,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("blocks-writer initialized");
 
-    let big_query_client = BigQueryBlockChain::new(args.dataset_id, args.sa_key).await?;
+    let big_query_client = BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?;
 
     let mut extractor = BlockExtractor::new(
         args.rpc_url,
