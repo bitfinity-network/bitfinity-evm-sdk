@@ -1,6 +1,6 @@
 use clap::Parser;
 use evm_block_extractor::block_extractor::BlockExtractor;
-use evm_block_extractor::constants::{CHUNK_SIZE, MAX_EVM_BLOCKS};
+use evm_block_extractor::constants::CHUNK_SIZE;
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
 use evm_block_extractor::storage_clients::BlockChainDB;
 
@@ -70,7 +70,8 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("blocks-writer initialized");
 
-    let big_query_client = BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?;
+    let big_query_client =
+        BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?;
 
     let mut extractor = BlockExtractor::new(
         args.rpc_url,
@@ -82,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
     let end_block = extractor.latest_block_number().await?;
     log::debug!("latest block number: {}", end_block);
 
-    let start_block = end_block.saturating_sub(MAX_EVM_BLOCKS);
+    let start_block = extractor.latest_block_number_stored().await?;
     let missing_indices = big_query_client
         .get_missing_blocks_in_range(start_block, end_block)
         .await?;

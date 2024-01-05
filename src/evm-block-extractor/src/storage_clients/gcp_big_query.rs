@@ -1,8 +1,13 @@
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use gcp_bigquery_client::model::dataset_reference::DatasetReference;
+use gcp_bigquery_client::model::query_parameter::QueryParameter;
+use gcp_bigquery_client::model::query_parameter_type::QueryParameterType;
+use gcp_bigquery_client::model::query_parameter_value::QueryParameterValue;
 use gcp_bigquery_client::model::query_request::QueryRequest;
 use gcp_bigquery_client::model::table_data_insert_all_request::TableDataInsertAllRequest;
 use gcp_bigquery_client::model::table_data_insert_all_request_rows::TableDataInsertAllRequestRows;
 use gcp_bigquery_client::Client;
+use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use super::BlockChainDB;
@@ -21,16 +26,16 @@ pub struct BigQueryBlockChain {
 }
 
 impl BigQueryBlockChain {
-
-    /// Creates a new BigQueryBlockChain client
-    pub async fn new(project_id: String, dataset_id: String, sa_key: String) -> anyhow::Result<Self> {
+    /// Creates a new BigQuery client
+    pub async fn new(
+        project_id: String,
+        dataset_id: String,
+        sa_key: String,
+    ) -> anyhow::Result<Self> {
         let service_account = yup_oauth2::parse_service_account_key(sa_key)?;
-        let client = Client::from_service_account_key(service_account, false).await?;
-        Self::new_with_client(project_id, dataset_id, client)
-    }
 
-    /// Creates a new BigQueryBlockChain client
-    pub fn new_with_client(project_id: String, dataset_id: String, client: Client) -> anyhow::Result<Self> {
+        let client = Client::from_service_account_key(service_account, false).await?;
+
         Ok(Self {
             client,
             project_id,
@@ -38,14 +43,27 @@ impl BigQueryBlockChain {
         })
     }
 
-    async fn execute_query<T: for<'de> serde::Deserialize<'de>>(
+    /// Creates a new BigQuery client with a custom client
+    pub fn new_with_client(
+        project_id: String,
+        dataset_id: String,
+        client: Client,
+    ) -> anyhow::Result<Self> {
+        Ok(Self {
+            client,
+            project_id,
+            dataset_id,
+        })
+    }
+
+    async fn execute_query<T: DeserializeOwned + Default>(
         &self,
-        query: String,
+        query: QueryRequest,
     ) -> anyhow::Result<T> {
         let mut response = self
             .client
             .job()
-            .query(self.project_id.as_str(), QueryRequest::new(query))
+            .query(self.project_id.as_str(), query)
             .await?;
 
         if response.next_row() {
@@ -63,29 +81,74 @@ impl BigQueryBlockChain {
 #[async_trait::async_trait]
 impl BlockChainDB for BigQueryBlockChain {
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<Transaction>> {
-        let query = format!(
-            "SELECT body FROM `{project_id}.{dataset_id}.{table_id}` WHERE id = {block_number}",
-            project_id = self.project_id,
-            dataset_id = self.dataset_id,
-            table_id = BLOCKS_TABLE_ID,
-        );
+        let query_request = QueryRequest {
+            default_dataset: Some(DatasetReference {
+                dataset_id: self.dataset_id.clone(),
+                project_id: self.project_id.clone(),
+            }),
+            query_parameters: Some(vec![QueryParameter {
+                name: Some("id".to_string()),
+                parameter_type: Some(QueryParameterType {
+                    r#type: "INTEGER".to_string(),
+                    ..Default::default()
+                }),
+                parameter_value: Some(QueryParameterValue {
+                    value: Some(block_number.to_string()),
+                    ..Default::default()
+                }),
+            }]),
+            query: format!(
+                "SELECT body FROM `{project_id}.{dataset_id}.{table_id}` WHERE id = @id",
+                project_id = self.project_id,
+                dataset_id = self.dataset_id,
+                table_id = BLOCKS_TABLE_ID,
+            ),
+            ..Default::default()
+        };
 
-        self.execute_query(query).await
+        self.execute_query(query_request).await
     }
 
     /// Returns the number of the last block stored in the zip file
     async fn get_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>> {
-        let query = format!(
-            "SELECT id FROM `{project_id}.{dataset_id}.{table_id}` WHERE id BETWEEN {start} AND {end}",
-            project_id = self.project_id,
-            dataset_id = self.dataset_id,
-            table_id = BLOCKS_TABLE_ID,
+        let query_request = QueryRequest {
+            query_parameters: Some(vec![
+                QueryParameter {
+                    name: Some("start".to_string()),
+                    parameter_type: Some(QueryParameterType {
+                        r#type: "INTEGER".to_string(),
+                        ..Default::default()
+                    }),
+                    parameter_value: Some(QueryParameterValue {
+                        value: Some(start.to_string()),
+                        ..Default::default()
+                    }),
+                },
+                QueryParameter {
+                    name: Some("end".to_string()),
+                    parameter_type: Some(QueryParameterType {
+                        r#type: "INTEGER".to_string(),
+                        ..Default::default()
+                    }),
+                    parameter_value: Some(QueryParameterValue {
+                        value: Some(end.to_string()),
+                        ..Default::default()
+                    }),
+                },
+            ]),
+            query: format!(
+                "SELECT id FROM `{project_id}.{dataset_id}.{table_id}` WHERE id BETWEEN @start AND @end",
+                project_id = self.project_id,
+                dataset_id = self.dataset_id,
+                table_id = BLOCKS_TABLE_ID,
+            ),
+            ..Default::default()
+        };
 
-        );
         let mut response = self
             .client
             .job()
-            .query(self.project_id.as_str(), QueryRequest::new(query))
+            .query(self.project_id.as_str(), query_request)
             .await?;
 
         let mut rows: Vec<u64> = vec![];
@@ -109,6 +172,8 @@ impl BlockChainDB for BigQueryBlockChain {
             .number
             .ok_or(anyhow::anyhow!("Block number not found"))?
             .as_u64();
+
+        println!("Inserting block: {:?}", block);
 
         let block_row = BlockRow {
             id: block_id,
@@ -181,14 +246,30 @@ impl BlockChainDB for BigQueryBlockChain {
     }
 
     async fn get_transaction_receipt(&self, tx_hash: H256) -> anyhow::Result<TransactionReceipt> {
-        let query = format!(
-            "SELECT receipt FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = '0x{tx_hash:x}'",
-            project_id = self.project_id,
-            dataset_id = self.dataset_id,
-            table_id = RECEIPTS_TABLE_ID,
-        );
+        let query_request = QueryRequest {
+            query_parameters: Some(vec![
+                QueryParameter {
+                    name: Some("tx_hash".to_string()),
+                    parameter_type: Some(QueryParameterType {
+                        r#type: "STRING".to_string(),
+                        ..Default::default()
+                    }),
+                    parameter_value: Some(QueryParameterValue {
+                        value: Some(format!("0x{:x}", tx_hash)),
+                        ..Default::default()
+                    }),
+                },
+            ]),
+            query:format!(
+                "SELECT receipt FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = @tx_hash",
+                project_id = self.project_id,
+                dataset_id = self.dataset_id,
+                table_id = RECEIPTS_TABLE_ID,
+            ),
+            ..Default::default()
+        };
 
-        self.execute_query(query).await
+        self.execute_query(query_request).await
     }
 
     async fn get_latest_block_number(&self) -> anyhow::Result<u64> {

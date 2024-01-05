@@ -1,19 +1,20 @@
-use evm_block_extractor::{block_extractor::BlockExtractor, storage_clients::gcp_big_query::BigQueryBlockChain};
+use evm_block_extractor::{
+    block_extractor::BlockExtractor, storage_clients::gcp_big_query::BigQueryBlockChain,
+};
 use testcontainers::clients::Cli;
-
-
 
 mod client;
 
 #[tokio::test]
 async fn test_extractor_collect_blocks() {
-
     let docker = Cli::default();
     let project_id = format!("test_project_{}", rand::random::<u64>());
-    let (gcp_client, _node, _temp_file, _auth) = client::new_bigquery_client(&docker, &project_id).await;
+    let (gcp_client, _node, _temp_file, _auth) =
+        client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
-    let blockchain = Box::new(BigQueryBlockChain::new_with_client(project_id, dataset_id, gcp_client).unwrap());
+    let blockchain =
+        Box::new(BigQueryBlockChain::new_with_client(project_id, dataset_id, gcp_client).unwrap());
 
     let rpc_url = "https://testnet.bitfinity.network".to_string();
     let request_time_out_secs = 10;
@@ -41,6 +42,15 @@ async fn test_extractor_collect_blocks() {
 
     assert!(result.is_ok());
 
+    dbg!(
+        extractor
+            .blockchain
+            .lock()
+            .await
+            .get_block_by_number(start_block)
+            .await
+    );
+
     let latest_block_num = extractor
         .blockchain
         .lock()
@@ -52,4 +62,3 @@ async fn test_extractor_collect_blocks() {
         .unwrap();
     assert_eq!(end_block, latest_block_num.as_u64());
 }
-

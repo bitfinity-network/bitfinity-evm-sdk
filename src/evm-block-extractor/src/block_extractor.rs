@@ -37,6 +37,11 @@ impl BlockExtractor {
         client.get_block_number().await
     }
 
+    pub async fn latest_block_number_stored(&self) -> anyhow::Result<u64> {
+        let blockchain = self.blockchain.lock().await;
+        blockchain.get_latest_block_number().await
+    }
+
     pub async fn collect_blocks(
         &mut self,
         blocks: impl Iterator<Item = u64>,

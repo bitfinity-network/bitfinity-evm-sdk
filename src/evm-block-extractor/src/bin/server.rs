@@ -6,7 +6,6 @@ use jsonrpsee::RpcModule;
 
 #[derive(Debug, Clone, Parser)]
 pub struct ServerConfig {
-
     /// The project ID of the BigQuery table
     #[arg(long = "project-id", short('p'), default_value = "bitfinity-evm")]
     project_id: String,
@@ -39,15 +38,15 @@ async fn main() -> anyhow::Result<()> {
     init_logger(args.log_level)?;
 
     // Check if the dataset ID is valid
-    if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
-        return Err(anyhow::anyhow!(
-            "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
-        ));
-    }
+    // if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
+    //     return Err(anyhow::anyhow!(
+    //         "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
+    //     ));
+    // }
 
     let server = Server::builder().build(args.server_address).await?;
 
-    let db = BigQueryBlockChain::new(args.project_id ,args.dataset_id, args.sa_key).await?;
+    let db = BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?;
 
     let eth = EthImpl::new(db);
 
@@ -66,7 +65,11 @@ async fn main() -> anyhow::Result<()> {
         Err(err) => log::error!("Failed to listen for shutdown signal: {err}"),
     }
 
-    handle.stopped().await;
+    // Stop the server
+    {
+        handle.stop()?;
+        handle.stopped().await;
+    }
 
     log::info!("Server stopped gracefully");
 
