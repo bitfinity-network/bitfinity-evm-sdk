@@ -1,6 +1,8 @@
 use gcp_bigquery_client::Client;
 use tempfile::NamedTempFile;
-use testcontainers::{clients::Cli, core::WaitFor, Container, GenericImage};
+use testcontainers::clients::Cli;
+use testcontainers::core::WaitFor;
+use testcontainers::{Container, GenericImage};
 
 use self::auth_mock::GoogleAuthMock;
 
@@ -45,12 +47,11 @@ pub async fn new_bigquery_client<'a>(
 }
 
 pub mod auth_mock {
-    use serde::Serialize;
     use std::ops::Deref;
-    use wiremock::{
-        matchers::{method, path},
-        Mock, MockServer, ResponseTemplate, Times,
-    };
+
+    use serde::Serialize;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate, Times};
 
     pub const AUTH_TOKEN_ENDPOINT: &str = "/:o/oauth2/token";
 

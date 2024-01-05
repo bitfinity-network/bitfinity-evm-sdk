@@ -1,11 +1,17 @@
+use std::fmt::Debug;
+
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use gcp_bigquery_client::model::dataset::Dataset;
 use gcp_bigquery_client::model::dataset_reference::DatasetReference;
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
 use gcp_bigquery_client::model::query_parameter_type::QueryParameterType;
 use gcp_bigquery_client::model::query_parameter_value::QueryParameterValue;
 use gcp_bigquery_client::model::query_request::QueryRequest;
+use gcp_bigquery_client::model::table::Table;
 use gcp_bigquery_client::model::table_data_insert_all_request::TableDataInsertAllRequest;
 use gcp_bigquery_client::model::table_data_insert_all_request_rows::TableDataInsertAllRequestRows;
+use gcp_bigquery_client::model::table_field_schema::TableFieldSchema;
+use gcp_bigquery_client::model::table_schema::TableSchema;
 use gcp_bigquery_client::Client;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -56,21 +62,67 @@ impl BigQueryBlockChain {
         })
     }
 
-    async fn execute_query<T: DeserializeOwned + Default>(
+    pub async fn init(&self) -> anyhow::Result<()> {
+        let dataset = Dataset::new(&self.project_id, &self.dataset_id);
+
+        // Define tables with their respective schemas
+        let tables = [
+            (
+                BLOCKS_TABLE_ID,
+                vec![
+                    TableFieldSchema::integer("id"),
+                    TableFieldSchema::string("body"),
+                ],
+            ),
+            (
+                RECEIPTS_TABLE_ID,
+                vec![
+                    TableFieldSchema::string("tx_hash"),
+                    TableFieldSchema::string("receipt"),
+                ],
+            ),
+        ];
+
+        // Check each table and create if it does not exist
+        for (table_id, schema_fields) in &tables {
+            let table_exists = self
+                .client
+                .table()
+                .get(&self.project_id, &self.dataset_id, table_id, None)
+                .await
+                .is_ok();
+
+            if !table_exists {
+                dataset
+                    .create_table(
+                        &self.client,
+                        Table::new(
+                            &self.project_id,
+                            &self.dataset_id,
+                            table_id,
+                            TableSchema::new(schema_fields.clone()),
+                        ),
+                    )
+                    .await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn execute_query<T: DeserializeOwned + Debug>(
         &self,
         query: QueryRequest,
     ) -> anyhow::Result<T> {
-        let mut response = self
-            .client
-            .job()
-            .query(self.project_id.as_str(), query)
-            .await?;
+        let mut response = self.client.job().query(&self.project_id, query).await?;
 
         if response.next_row() {
             let result_str = response
                 .get_string(0)?
                 .ok_or(anyhow::anyhow!("Expected result not found in the response"))?;
+            dbg!(&result_str);
             let result: T = serde_json::from_str(&result_str)?;
+
             Ok(result)
         } else {
             Err(anyhow::anyhow!("No data found for the query"))
@@ -148,7 +200,7 @@ impl BlockChainDB for BigQueryBlockChain {
         let mut response = self
             .client
             .job()
-            .query(self.project_id.as_str(), query_request)
+            .query(&self.project_id, query_request)
             .await?;
 
         let mut rows: Vec<u64> = vec![];
@@ -173,8 +225,6 @@ impl BlockChainDB for BigQueryBlockChain {
             .ok_or(anyhow::anyhow!("Block number not found"))?
             .as_u64();
 
-        println!("Inserting block: {:?}", block);
-
         let block_row = BlockRow {
             id: block_id,
             body: serde_json::to_string(&block)?,
@@ -192,8 +242,8 @@ impl BlockChainDB for BigQueryBlockChain {
             .client
             .tabledata()
             .insert_all(
-                self.project_id.as_str(),
-                self.dataset_id.as_str(),
+                &self.project_id,
+                &self.dataset_id,
                 BLOCKS_TABLE_ID,
                 insert_request,
             )
@@ -231,8 +281,8 @@ impl BlockChainDB for BigQueryBlockChain {
             .client
             .tabledata()
             .insert_all(
-                self.project_id.as_str(),
-                self.dataset_id.as_str(),
+                &self.project_id,
+                &self.dataset_id,
                 RECEIPTS_TABLE_ID,
                 insert_request,
             )
@@ -282,7 +332,7 @@ impl BlockChainDB for BigQueryBlockChain {
         let mut response = self
             .client
             .job()
-            .query(self.project_id.as_str(), QueryRequest::new(query))
+            .query(&self.project_id, QueryRequest::new(query))
             .await?;
 
         if response.next_row() {
@@ -310,7 +360,7 @@ impl BlockChainDB for BigQueryBlockChain {
         let mut response = self
             .client
             .job()
-            .query(self.project_id.as_str(), QueryRequest::new(query))
+            .query(&self.project_id, QueryRequest::new(query))
             .await?;
 
         if response.next_row() {
