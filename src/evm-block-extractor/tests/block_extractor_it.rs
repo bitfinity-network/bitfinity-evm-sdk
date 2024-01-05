@@ -1,6 +1,5 @@
-use evm_block_extractor::{
-    block_extractor::BlockExtractor, storage_clients::gcp_big_query::BigQueryBlockChain,
-};
+use evm_block_extractor::block_extractor::BlockExtractor;
+use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
 use testcontainers::testcontainers::clients::Cli;
 
 mod client;
@@ -41,15 +40,6 @@ async fn test_extractor_collect_blocks() {
     }
 
     assert!(result.is_ok());
-
-    dbg!(
-        extractor
-            .blockchain
-            .lock()
-            .await
-            .get_block_by_number(start_block)
-            .await
-    );
 
     let latest_block_num = extractor
         .blockchain
