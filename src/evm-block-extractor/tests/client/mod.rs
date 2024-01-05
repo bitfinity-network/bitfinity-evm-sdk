@@ -1,14 +1,24 @@
 use gcp_bigquery_client::Client;
 use tempfile::NamedTempFile;
-use testcontainers::{clients::Cli, Container, GenericImage, core::WaitFor};
+use testcontainers::{clients::Cli, core::WaitFor, Container, GenericImage};
 
 use self::auth_mock::GoogleAuthMock;
 
-pub async fn new_bigquery_client<'a>(docker: &'a Cli, project_id: &str) -> (Client, Container<'a, GenericImage>, NamedTempFile, GoogleAuthMock) {
+pub async fn new_bigquery_client<'a>(
+    docker: &'a Cli,
+    project_id: &str,
+) -> (
+    Client,
+    Container<'a, GenericImage>,
+    NamedTempFile,
+    GoogleAuthMock,
+) {
     let emulator_image = GenericImage::new("ghcr.io/goccy/bigquery-emulator", "0.4.4")
-    .with_exposed_port(9050)
-    .with_wait_for(WaitFor::message_on_stdout("[bigquery-emulator] gRPC server listening at 0.0.0.0:9060"));
-    
+        .with_exposed_port(9050)
+        .with_wait_for(WaitFor::message_on_stdout(
+            "[bigquery-emulator] gRPC server listening at 0.0.0.0:9060",
+        ));
+
     let node = docker.run((emulator_image, vec![format!("--project={project_id}")]));
     let port = node.get_host_port_ipv4(9050);
 
@@ -18,14 +28,18 @@ pub async fn new_bigquery_client<'a>(docker: &'a Cli, project_id: &str) -> (Clie
     let google_config = dummy_configuration(&google_auth.uri());
     // Write google configuration to file.
     let temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::fs::write(temp_file.path(), serde_json::to_string_pretty(&google_config).unwrap()).unwrap();
+    std::fs::write(
+        temp_file.path(),
+        serde_json::to_string_pretty(&google_config).unwrap(),
+    )
+    .unwrap();
 
     let gcp_client = gcp_bigquery_client::client_builder::ClientBuilder::new()
-    .with_auth_base_url(google_auth.uri())
-    .with_v2_base_url(format!("http://localhost:{port}"))
-    .build_from_service_account_key_file(temp_file.path().to_str().unwrap())
-    .await
-    .unwrap();
+        .with_auth_base_url(google_auth.uri())
+        .with_v2_base_url(format!("http://localhost:{port}"))
+        .build_from_service_account_key_file(temp_file.path().to_str().unwrap())
+        .await
+        .unwrap();
 
     (gcp_client, node, temp_file, google_auth)
 }

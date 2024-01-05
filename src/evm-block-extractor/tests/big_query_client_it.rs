@@ -12,10 +12,7 @@ use evm_block_extractor::{
     storage_clients::gcp_big_query::BigQueryBlockChain, storage_clients::BlockChainDB,
 };
 use gcp_bigquery_client::model::dataset::Dataset;
-use gcp_bigquery_client::model::field_type::FieldType;
-use gcp_bigquery_client::model::table::Table;
-use gcp_bigquery_client::model::table_field_schema::TableFieldSchema;
-use gcp_bigquery_client::model::table_schema::TableSchema;
+
 use testcontainers::clients::Cli;
 
 mod bq {
@@ -144,6 +141,40 @@ mod bq {
             .await
             .unwrap();
     }
+
+    pub async fn create_block_table(client: &Client, dataset: &Dataset) {
+        dataset
+            .create_table(
+                client,
+                Table::from_dataset(
+                    dataset,
+                    "blocks",
+                    TableSchema::new(vec![
+                        TableFieldSchema::integer("id"),
+                        TableFieldSchema::string("body"),
+                    ]),
+                ),
+            )
+            .await
+            .unwrap();
+    }
+
+    pub async fn create_receipt_table(client: &Client, dataset: &Dataset) {
+        dataset
+            .create_table(
+                client,
+                Table::from_dataset(
+                    dataset,
+                    "receipts",
+                    TableSchema::new(vec![
+                        TableFieldSchema::string("tx_hash"),
+                        TableFieldSchema::string("receipt"),
+                    ]),
+                ),
+            )
+            .await
+            .unwrap();
+    }
 }
 
 #[tokio::test]
@@ -163,15 +194,6 @@ async fn test_big_query_stub() {
 }
 
 #[tokio::test]
-async fn test_big_query_client() {
-    let docker = Cli::default();
-    let project_id = format!("test_project_{}", rand::random::<u64>());
-    let (gcp_client, _node, _temp_file, _auth) =
-        client::new_bigquery_client(&docker, &project_id).await;
-    let dataset_id = format!("test_{}", rand::random::<u64>());
-}
-
-#[tokio::test]
 async fn test_insertion_of_blocks_and_retrieval_in_bq() {
     let docker = Cli::default();
     let project_id = format!("test_project_{}", rand::random::<u64>());
@@ -186,21 +208,7 @@ async fn test_insertion_of_blocks_and_retrieval_in_bq() {
         .await
         .unwrap();
 
-    dataset
-        .create_table(
-            &gcp_client,
-            Table::new(
-                &project_id,
-                &dataset_id,
-                "blocks",
-                TableSchema::new(vec![
-                    TableFieldSchema::new("id", FieldType::Integer),
-                    TableFieldSchema::new("body", FieldType::String),
-                ]),
-            ),
-        )
-        .await
-        .unwrap();
+    bq::create_block_table(&gcp_client, &dataset).await;
 
     let mut blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
@@ -242,21 +250,7 @@ async fn test_insertion_of_receipts_and_retrieval_in_bq() {
         .await
         .unwrap();
 
-    dataset
-        .create_table(
-            &gcp_client,
-            Table::new(
-                &project_id,
-                &dataset_id,
-                "receipts",
-                TableSchema::new(vec![
-                    TableFieldSchema::new("tx_hash", FieldType::String),
-                    TableFieldSchema::new("receipt", FieldType::String),
-                ]),
-            ),
-        )
-        .await
-        .unwrap();
+    bq::create_receipt_table(&gcp_client, &dataset).await;
 
     let mut blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
@@ -294,22 +288,7 @@ async fn test_getting_block_range() {
         .create(Dataset::new(&project_id, &dataset_id))
         .await
         .unwrap();
-
-    dataset
-        .create_table(
-            &gcp_client,
-            Table::new(
-                &project_id,
-                &dataset_id,
-                "blocks",
-                TableSchema::new(vec![
-                    TableFieldSchema::new("id", FieldType::Integer),
-                    TableFieldSchema::new("body", FieldType::String),
-                ]),
-            ),
-        )
-        .await
-        .unwrap();
+    bq::create_block_table(&gcp_client, &dataset).await;
 
     let mut blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
@@ -352,22 +331,7 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
         .create(Dataset::new(&project_id, &dataset_id))
         .await
         .unwrap();
-
-    dataset
-        .create_table(
-            &gcp_client,
-            Table::new(
-                &project_id,
-                &dataset_id,
-                "blocks",
-                TableSchema::new(vec![
-                    TableFieldSchema::new("id", FieldType::Integer),
-                    TableFieldSchema::new("body", FieldType::String),
-                ]),
-            ),
-        )
-        .await
-        .unwrap();
+    bq::create_block_table(&gcp_client, &dataset).await;
 
     let mut blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
