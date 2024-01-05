@@ -16,10 +16,8 @@ pub struct PostgresBlockchain {
 impl PostgresBlockchain {
 
     /// Create a new Postgres blockchain client
-    pub async fn new(pool: PgPool) -> anyhow::Result<Self> {
-        MIGRATOR.run(&pool).await?;
-
-        Ok(Self { pool })
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
     }
 
     /// Initialize the database
