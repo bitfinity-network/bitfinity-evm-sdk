@@ -275,7 +275,123 @@ async fn test_insertion_of_receipts_and_retrieval_in_bq() {
 
     blockchain.insert_receipts(&[dummy_receipt]).await.unwrap();
 
-    let block = blockchain.get_transaction_receipt(tx_hash).await.unwrap();
+    let receipt = blockchain.get_transaction_receipt(tx_hash).await.unwrap();
 
-    assert_eq!(block.transaction_hash, tx_hash);
+    assert_eq!(receipt.transaction_hash, tx_hash);
+}
+
+#[tokio::test]
+async fn test_getting_block_range() {
+    let docker = Cli::default();
+    let project_id = format!("test_project_{}", rand::random::<u64>());
+    let (gcp_client, _node, _temp_file, _auth) =
+        client::new_bigquery_client(&docker, &project_id).await;
+    let dataset_id = format!("test_{}", rand::random::<u64>());
+
+    // Create dataset
+    let dataset = gcp_client
+        .dataset()
+        .create(Dataset::new(&project_id, &dataset_id))
+        .await
+        .unwrap();
+
+    dataset
+        .create_table(
+            &gcp_client,
+            Table::new(
+                &project_id,
+                &dataset_id,
+                "blocks",
+                TableSchema::new(vec![
+                    TableFieldSchema::new("id", FieldType::Integer),
+                    TableFieldSchema::new("body", FieldType::String),
+                ]),
+            ),
+        )
+        .await
+        .unwrap();
+
+    let mut blockchain = Box::new(
+        BigQueryBlockChain::new_with_client(
+            project_id.clone(),
+            dataset_id.clone(),
+            gcp_client.clone(),
+        )
+        .unwrap(),
+    );
+
+    for i in 1..=10 {
+        let dummy_block: Block<Transaction> = ethers_core::types::Block {
+            number: Some(ethers_core::types::U64::from(i)),
+            ..Default::default()
+        };
+
+        blockchain.insert_block(&dummy_block).await.unwrap();
+    }
+
+    let block_range = blockchain.get_blocks_in_range(1, 10).await.unwrap();
+
+    assert_eq!(block_range, (1..=10).collect::<Vec<u64>>());
+
+    let block_range = blockchain.get_blocks_in_range(1, 5).await.unwrap();
+
+    assert_eq!(block_range, (1..=5).collect::<Vec<u64>>());
+}
+
+#[tokio::test]
+async fn test_retrieval_of_latest_and_oldest_block_number() {
+    let docker = Cli::default();
+    let project_id = format!("test_project_{}", rand::random::<u64>());
+    let (gcp_client, _node, _temp_file, _auth) =
+        client::new_bigquery_client(&docker, &project_id).await;
+    let dataset_id = format!("test_{}", rand::random::<u64>());
+
+    // Create dataset
+    let dataset = gcp_client
+        .dataset()
+        .create(Dataset::new(&project_id, &dataset_id))
+        .await
+        .unwrap();
+
+    dataset
+        .create_table(
+            &gcp_client,
+            Table::new(
+                &project_id,
+                &dataset_id,
+                "blocks",
+                TableSchema::new(vec![
+                    TableFieldSchema::new("id", FieldType::Integer),
+                    TableFieldSchema::new("body", FieldType::String),
+                ]),
+            ),
+        )
+        .await
+        .unwrap();
+
+    let mut blockchain = Box::new(
+        BigQueryBlockChain::new_with_client(
+            project_id.clone(),
+            dataset_id.clone(),
+            gcp_client.clone(),
+        )
+        .unwrap(),
+    );
+
+    for i in 1..=10 {
+        let dummy_block: Block<Transaction> = ethers_core::types::Block {
+            number: Some(ethers_core::types::U64::from(i)),
+            ..Default::default()
+        };
+
+        blockchain.insert_block(&dummy_block).await.unwrap();
+    }
+
+    let latest_block_number = blockchain.get_latest_block_number().await.unwrap();
+
+    assert_eq!(latest_block_number, 10);
+
+    let earliest_block_number = blockchain.get_earliest_block_number().await.unwrap();
+
+    assert_eq!(earliest_block_number, 1);
 }
