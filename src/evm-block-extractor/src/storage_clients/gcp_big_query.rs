@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use gcp_bigquery_client::model::dataset::Dataset;
-use gcp_bigquery_client::model::dataset_reference::DatasetReference;
+
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
 use gcp_bigquery_client::model::query_parameter_type::QueryParameterType;
 use gcp_bigquery_client::model::query_parameter_value::QueryParameterValue;
@@ -71,14 +71,14 @@ impl BigQueryBlockChain {
                 BLOCKS_TABLE_ID,
                 vec![
                     TableFieldSchema::integer("id"),
-                    TableFieldSchema::string("body"),
+                    TableFieldSchema::json("body"),
                 ],
             ),
             (
                 RECEIPTS_TABLE_ID,
                 vec![
                     TableFieldSchema::string("tx_hash"),
-                    TableFieldSchema::string("receipt"),
+                    TableFieldSchema::json("receipt"),
                 ],
             ),
         ];
@@ -110,17 +110,16 @@ impl BigQueryBlockChain {
         Ok(())
     }
 
-    async fn execute_query<T: DeserializeOwned + Debug>(
-        &self,
-        query: QueryRequest,
-    ) -> anyhow::Result<T> {
+    async fn execute_query<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
         let mut response = self.client.job().query(&self.project_id, query).await?;
 
         if response.next_row() {
             let result_str = response
                 .get_string(0)?
-                .ok_or(anyhow::anyhow!("Expected result not found in the response"))?;
-            dbg!(&result_str);
+                .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
+                .trim_matches('"')
+                .replace("\\\"", "\"");
+
             let result: T = serde_json::from_str(&result_str)?;
 
             Ok(result)
@@ -134,10 +133,6 @@ impl BigQueryBlockChain {
 impl BlockChainDB for BigQueryBlockChain {
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<Transaction>> {
         let query_request = QueryRequest {
-            default_dataset: Some(DatasetReference {
-                dataset_id: self.dataset_id.clone(),
-                project_id: self.project_id.clone(),
-            }),
             query_parameters: Some(vec![QueryParameter {
                 name: Some("id".to_string()),
                 parameter_type: Some(QueryParameterType {
@@ -227,7 +222,7 @@ impl BlockChainDB for BigQueryBlockChain {
 
         let block_row = BlockRow {
             id: block_id,
-            body: serde_json::to_string(&block)?,
+            body: serde_json::to_string(block)?,
         };
 
         // Check if block id already exists in the database

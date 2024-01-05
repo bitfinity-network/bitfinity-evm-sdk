@@ -170,8 +170,6 @@ async fn test_insertion_of_blocks_and_retrieval_in_bq() {
         .await
         .unwrap();
 
-    // bq::create_block_table(&gcp_client, &dataset).await;
-
     let mut blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
             project_id.clone(),
@@ -322,4 +320,57 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
     let earliest_block_number = blockchain.get_earliest_block_number().await.unwrap();
 
     assert_eq!(earliest_block_number, 1);
+}
+
+#[tokio::test]
+async fn test_init_idempotency() {
+    let docker = Cli::default();
+    let project_id = format!("test_project_{}", rand::random::<u64>());
+    let (gcp_client, _node, _temp_file, _auth) =
+        client::new_bigquery_client(&docker, &project_id).await;
+    let dataset_id = format!("test_{}", rand::random::<u64>());
+
+    // Create dataset
+    gcp_client
+        .dataset()
+        .create(Dataset::new(&project_id, &dataset_id))
+        .await
+        .unwrap();
+
+    let mut blockchain = Box::new(
+        BigQueryBlockChain::new_with_client(
+            project_id.clone(),
+            dataset_id.clone(),
+            gcp_client.clone(),
+        )
+        .unwrap(),
+    );
+
+    // Add a block
+    let dummy_block: Block<Transaction> = ethers_core::types::Block {
+        number: Some(ethers_core::types::U64::from(1)),
+        ..Default::default()
+    };
+
+    assert!(blockchain.insert_block(&dummy_block).await.is_err());
+
+    // First initialization - creates tables
+    blockchain.init().await.unwrap();
+
+    // Add a block
+    let dummy_block: Block<Transaction> = ethers_core::types::Block {
+        number: Some(ethers_core::types::U64::from(1)),
+        ..Default::default()
+    };
+
+    assert!(blockchain.insert_block(&dummy_block).await.is_ok());
+
+    assert!(blockchain.init().await.is_ok());
+
+    // Retrieve the block
+    let block = blockchain.get_block_by_number(1).await.unwrap();
+
+    assert_eq!(block.number.unwrap().as_u64(), 1);
+
+    
 }

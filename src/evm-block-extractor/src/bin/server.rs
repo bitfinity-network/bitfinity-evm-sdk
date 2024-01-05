@@ -38,15 +38,17 @@ async fn main() -> anyhow::Result<()> {
     init_logger(args.log_level)?;
 
     // Check if the dataset ID is valid
-    // if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
-    //     return Err(anyhow::anyhow!(
-    //         "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
-    //     ));
-    // }
+    if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
+        return Err(anyhow::anyhow!(
+            "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
+        ));
+    }
 
     let server = Server::builder().build(args.server_address).await?;
 
     let db = BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?;
+
+    db.init().await?;
 
     let eth = EthImpl::new(db);
 
