@@ -1,6 +1,6 @@
 use evm_block_extractor::block_extractor::BlockExtractor;
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
-use testcontainers::clients::Cli;
+use testcontainers::testcontainers::clients::Cli;
 
 mod client;
 

@@ -12,6 +12,7 @@ pub struct HashMapBlockchain {
 
 #[async_trait::async_trait]
 impl BlockChainDB for HashMapBlockchain {
+    
     async fn get_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>> {
         let mut blocks_in_range = Vec::new();
         for block_number in start..=end {

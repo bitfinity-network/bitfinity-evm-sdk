@@ -11,7 +11,8 @@ use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
 use evm_block_extractor::storage_clients::BlockChainDB;
 use gcp_bigquery_client::model::dataset::Dataset;
-use testcontainers::clients::Cli;
+
+use testcontainers::testcontainers::clients::Cli;
 
 mod bq {
 

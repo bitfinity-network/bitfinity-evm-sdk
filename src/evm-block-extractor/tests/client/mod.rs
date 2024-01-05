@@ -1,8 +1,6 @@
 use gcp_bigquery_client::Client;
 use tempfile::NamedTempFile;
-use testcontainers::clients::Cli;
-use testcontainers::core::WaitFor;
-use testcontainers::{Container, GenericImage};
+use testcontainers::testcontainers::{clients::Cli, core::WaitFor, Container, GenericImage};
 
 use self::auth_mock::GoogleAuthMock;
 
