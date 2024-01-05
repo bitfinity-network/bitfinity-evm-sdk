@@ -371,6 +371,4 @@ async fn test_init_idempotency() {
     let block = blockchain.get_block_by_number(1).await.unwrap();
 
     assert_eq!(block.number.unwrap().as_u64(), 1);
-
-    
 }

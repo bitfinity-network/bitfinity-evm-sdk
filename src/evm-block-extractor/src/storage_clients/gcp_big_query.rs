@@ -2,7 +2,6 @@ use std::fmt::Debug;
 
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use gcp_bigquery_client::model::dataset::Dataset;
-
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
 use gcp_bigquery_client::model::query_parameter_type::QueryParameterType;
 use gcp_bigquery_client::model::query_parameter_value::QueryParameterValue;
