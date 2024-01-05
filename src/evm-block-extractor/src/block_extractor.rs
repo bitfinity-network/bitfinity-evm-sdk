@@ -117,7 +117,7 @@ impl BlockExtractor {
 #[cfg(test)]
 mod tests {
     use super::BlockExtractor;
-    use crate::storage_clients::hashmap::HashMapBlockchain;
+    use crate::storage_clients::hashmap_client::HashMapBlockchain;
 
     #[tokio::test]
     async fn test_collect_blocks() {
