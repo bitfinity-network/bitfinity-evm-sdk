@@ -25,6 +25,7 @@ ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = [
 ] }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sqlx = { workspace = true, features = ["postgres"] }
 tokio = { workspace = true }
 zip = { workspace = true }
 gcp-bigquery-client = { workspace = true }

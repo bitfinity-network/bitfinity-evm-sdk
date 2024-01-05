@@ -13,7 +13,7 @@ use evm_block_extractor::{
 };
 use gcp_bigquery_client::model::dataset::Dataset;
 
-use testcontainers::clients::Cli;
+use testcontainers::testcontainers::clients::Cli;
 
 mod bq {
     use super::*;
