@@ -1,0 +1,5 @@
+target/
+scripts/
+.github
+.artifacts
+.gitignore

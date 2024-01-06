@@ -40,3 +40,5 @@ solidity/broadcast/
 # Wasm files
 *.wasm
 *.wasm.gz
+
+.cargo

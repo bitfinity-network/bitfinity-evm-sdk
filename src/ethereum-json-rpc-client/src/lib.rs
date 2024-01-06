@@ -112,6 +112,16 @@ impl<C: Client> EthJsonRcpClient<C> {
         .await
     }
 
+    /// Get receipt by hash
+    pub async fn get_receipt_by_hash(&self, hash: H256) -> anyhow::Result<TransactionReceipt> {
+        self.single_request(
+            ETH_GET_TRANSACTION_RECEIPT_METHOD.to_string(),
+            make_params_array!(hash),
+            Id::Str(hash.to_string()),
+        )
+        .await
+    }
+
     /// Returns chain block number
     pub async fn get_block_number(&self) -> anyhow::Result<u64> {
         self.single_request::<U64>(
