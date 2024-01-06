@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use gcp_bigquery_client::model::dataset::Dataset;
+use gcp_bigquery_client::model::field_type::serialize_json_as_string;
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
 use gcp_bigquery_client::model::query_parameter_type::QueryParameterType;
 use gcp_bigquery_client::model::query_parameter_value::QueryParameterValue;
@@ -14,6 +15,7 @@ use gcp_bigquery_client::model::table_schema::TableSchema;
 use gcp_bigquery_client::Client;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde_json::Value;
 
 use super::BlockChainDB;
 use crate::constants::{BLOCKS_TABLE_ID, RECEIPTS_TABLE_ID};
@@ -221,11 +223,12 @@ impl BlockChainDB for BigQueryBlockChain {
 
         let block_row = BlockRow {
             id: block_id,
-            body: serde_json::to_string(block)?,
+            body: serde_json::to_value(block)?,
         };
 
         // Check if block id already exists in the database
         let existing_blocks = self.get_blocks_in_range(block_id, block_id).await?;
+
         if existing_blocks.contains(&block_id) {
             return Err(anyhow::anyhow!("Block with id {} already exists", block_id));
         }
@@ -259,11 +262,11 @@ impl BlockChainDB for BigQueryBlockChain {
                 let tx_hash = r.transaction_hash;
                 let receipt = ReceiptRow {
                     tx_hash: format!("0x{:x}", tx_hash),
-                    receipt: serde_json::to_string(&r).expect("Failed to serialize receipt"),
+                    receipt: serde_json::to_value(r).expect("Failed to serialize receipt"),
                 };
 
                 TableDataInsertAllRequestRows {
-                    insert_id: Some(format!("0x{:x}", r.transaction_hash)),
+                    insert_id: Some(format!("0x{:x}", tx_hash)),
                     json: serde_json::to_value(receipt).expect("Failed to serialize receipt"),
                 }
             })
@@ -377,11 +380,13 @@ impl BlockChainDB for BigQueryBlockChain {
 #[derive(Debug, Serialize)]
 pub struct BlockRow {
     id: u64,
-    body: String,
+    #[serde(serialize_with = "serialize_json_as_string")]
+    body: Value,
 }
 
 #[derive(Debug, Serialize, Clone)]
 pub struct ReceiptRow {
     tx_hash: String,
-    receipt: String,
+    #[serde(serialize_with = "serialize_json_as_string")]
+    receipt: Value,
 }
