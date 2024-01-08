@@ -1,5 +1,6 @@
 use evm_block_extractor::block_extractor::BlockExtractor;
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
+use gcp_bigquery_client::model::dataset::Dataset;
 use testcontainers::testcontainers::clients::Cli;
 
 mod client;
@@ -12,8 +13,23 @@ async fn test_extractor_collect_blocks() {
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
-    let blockchain =
-        Box::new(BigQueryBlockChain::new_with_client(project_id, dataset_id, gcp_client).unwrap());
+    let blockchain = Box::new(
+        BigQueryBlockChain::new_with_client(
+            project_id.clone(),
+            dataset_id.clone(),
+            gcp_client.clone(),
+        )
+        .unwrap(),
+    );
+
+    // Create dataset
+    gcp_client
+        .dataset()
+        .create(Dataset::new(&project_id, &dataset_id))
+        .await
+        .unwrap();
+
+    blockchain.init().await.unwrap();
 
     let rpc_url = "https://testnet.bitfinity.network".to_string();
     let request_time_out_secs = 10;
@@ -50,5 +66,6 @@ async fn test_extractor_collect_blocks() {
         .unwrap()
         .number
         .unwrap();
+
     assert_eq!(end_block, latest_block_num.as_u64());
 }
