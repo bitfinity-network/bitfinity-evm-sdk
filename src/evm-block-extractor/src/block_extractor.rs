@@ -80,7 +80,7 @@ impl BlockExtractor {
                 let tx_hashes = block
                     .transactions
                     .iter()
-                    .map(|tx| tx.hash.clone())
+                    .map(|tx| tx.hash)
                     .collect::<Vec<_>>();
 
                 let client = client.clone();

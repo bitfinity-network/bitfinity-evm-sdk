@@ -76,7 +76,7 @@ impl NotificationInput {
         }
 
         let input = NOTIFICATION.decode_input(call_input).ok()?;
-        let tx_hash = input.get(0)?.clone().into_fixed_bytes()?;
+        let tx_hash = input.first()?.clone().into_fixed_bytes()?;
         let principal_data = input.get(1)?.clone().into_fixed_bytes()?;
         let user_data = input.get(2)?.clone().into_bytes()?;
 
