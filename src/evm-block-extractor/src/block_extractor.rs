@@ -6,14 +6,14 @@ use ethers_core::types::BlockNumber;
 use itertools::Itertools;
 use tokio::time::Duration;
 
-use crate::storage_clients::BlockChainDB;
+use crate::database::DatabaseClient;
 
 /// Extracts blocks from an EVMC and stores them in a database
 pub struct BlockExtractor {
     client: Arc<EthJsonRcpClient<ReqwestClient>>,
     request_time_out_secs: u64,
     rpc_batch_size: usize,
-    blockchain: Arc<dyn BlockChainDB>,
+    blockchain: Arc<dyn DatabaseClient>,
 }
 
 impl BlockExtractor {
@@ -21,7 +21,7 @@ impl BlockExtractor {
         client: Arc<EthJsonRcpClient<ReqwestClient>>,
         request_time_out_secs: u64,
         rpc_batch_size: usize,
-        blockchain: Arc<dyn BlockChainDB>,
+        blockchain: Arc<dyn DatabaseClient>,
     ) -> Self {
         Self {
             client,
@@ -105,11 +105,11 @@ impl BlockExtractor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage_clients::hashmap_client::HashMapBlockchain;
+    use crate::database::in_memory_db_client::InMemoryDbClient;
 
     #[tokio::test]
     async fn test_collect_blocks() {
-        let blockchain = Arc::<HashMapBlockchain>::default();
+        let blockchain = Arc::<InMemoryDbClient>::default();
         let rpc_url = "https://testnet.bitfinity.network".to_string();
         let request_time_out_secs = 10;
         let rpc_batch_size = 50;

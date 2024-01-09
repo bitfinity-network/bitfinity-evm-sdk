@@ -4,8 +4,8 @@ use clap::Parser;
 use ethereum_json_rpc_client::EthJsonRcpClient;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use evm_block_extractor::block_extractor::BlockExtractor;
-use evm_block_extractor::storage_clients::BlockChainDB;
-use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
+use evm_block_extractor::database::DatabaseClient;
+use evm_block_extractor::database::big_query_db_client::BigQueryDbClient;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
     log::info!("blocks-writer initialized");
 
     let big_query_client =
-    Arc::new(BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?);
+    Arc::new(BigQueryDbClient::new(args.project_id, args.dataset_id, args.sa_key).await?);
 
     let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
         args.rpc_url,

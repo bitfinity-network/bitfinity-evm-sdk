@@ -17,12 +17,12 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 
-use super::BlockChainDB;
+use super::DatabaseClient;
 use crate::constants::{BLOCKS_TABLE_ID, RECEIPTS_TABLE_ID};
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
-pub struct BigQueryBlockChain {
+pub struct BigQueryDbClient {
     client: Client,
     /// The project ID of the BigQuery project
     project_id: String,
@@ -32,7 +32,7 @@ pub struct BigQueryBlockChain {
     dataset_id: String,
 }
 
-impl BigQueryBlockChain {
+impl BigQueryDbClient {
     /// Creates a new BigQuery client
     pub async fn new(
         project_id: String,
@@ -163,7 +163,7 @@ impl BigQueryBlockChain {
 }
 
 #[async_trait::async_trait]
-impl BlockChainDB for BigQueryBlockChain {
+impl DatabaseClient for BigQueryDbClient {
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<Transaction>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {

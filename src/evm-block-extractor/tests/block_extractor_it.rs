@@ -3,8 +3,8 @@ use std::sync::Arc;
 use ethereum_json_rpc_client::EthJsonRcpClient;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use evm_block_extractor::block_extractor::BlockExtractor;
-use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
-use evm_block_extractor::storage_clients::BlockChainDB;
+use evm_block_extractor::database::big_query_db_client::BigQueryDbClient;
+use evm_block_extractor::database::DatabaseClient;
 use testcontainers::testcontainers::clients::Cli;
 
 mod client;
@@ -18,7 +18,7 @@ async fn test_extractor_collect_blocks() {
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
     let blockchain = Arc::new(
-        BigQueryBlockChain::new_with_client(
+        BigQueryDbClient::new_with_client(
             project_id.clone(),
             dataset_id.clone(),
             gcp_client.clone(),

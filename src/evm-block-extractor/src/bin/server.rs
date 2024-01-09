@@ -1,6 +1,6 @@
 use clap::{arg, Parser};
 use evm_block_extractor::rpc::{EthImpl, EthServer};
-use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
+use evm_block_extractor::database::big_query_db_client::BigQueryDbClient;
 use jsonrpsee::server::Server;
 use jsonrpsee::RpcModule;
 
@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
 
     let server = Server::builder().build(args.server_address).await?;
 
-    let db = BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?;
+    let db = BigQueryDbClient::new(args.project_id, args.dataset_id, args.sa_key).await?;
 
     db.init().await?;
 

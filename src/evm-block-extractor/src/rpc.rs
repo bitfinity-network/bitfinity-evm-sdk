@@ -3,14 +3,14 @@ use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 
-use crate::storage_clients::BlockChainDB;
+use crate::database::DatabaseClient;
 
 #[derive(Clone)]
-pub struct EthImpl<B: BlockChainDB + 'static> {
+pub struct EthImpl<B: DatabaseClient + 'static> {
     pub blockchain: B,
 }
 
-impl<B: BlockChainDB + 'static> EthImpl<B> {
+impl<B: DatabaseClient + 'static> EthImpl<B> {
     pub fn new(db: B) -> Self {
         Self { blockchain: db }
     }
@@ -44,7 +44,7 @@ pub trait IC {
 }
 
 #[async_trait::async_trait]
-impl<B: BlockChainDB + 'static> ICServer for EthImpl<B> {
+impl<B: DatabaseClient + 'static> ICServer for EthImpl<B> {
     async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<Vec<u8>> {
         let db = &self.blockchain;
         let from = match from {
@@ -91,7 +91,7 @@ impl<B: BlockChainDB + 'static> ICServer for EthImpl<B> {
 }
 
 #[async_trait::async_trait]
-impl<B: BlockChainDB + 'static> EthServer for EthImpl<B> {
+impl<B: DatabaseClient + 'static> EthServer for EthImpl<B> {
     async fn get_block_by_number(
         &self,
         block_number: U256,

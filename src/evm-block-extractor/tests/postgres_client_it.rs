@@ -1,5 +1,5 @@
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
-use evm_block_extractor::storage_clients::{postgres_client::PostgresBlockchain, BlockChainDB};
+use evm_block_extractor::database::{postgres_db_client::PostgresDbClient, DatabaseClient};
 use sqlx::{postgres::PgConnectOptions, PgPool, Row};
 use testcontainers::testcontainers::{clients::Cli, Container};
 
@@ -23,7 +23,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_retrieval_in_bq() {
     let docker = Cli::default();
     let (pool, _node) = new_postgres_pool(&docker).await;
 
-    let blockchain = Box::new(PostgresBlockchain::new(pool));
+    let blockchain = Box::new(PostgresDbClient::new(pool));
     blockchain.init().await.unwrap();
 
     let mut blocks = Vec::new();
@@ -83,7 +83,7 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
     let docker = Cli::default();
     let (pool, _node) = new_postgres_pool(&docker).await;
 
-    let blockchain = Box::new(PostgresBlockchain::new(pool));
+    let blockchain = Box::new(PostgresDbClient::new(pool));
     blockchain.init().await.unwrap();
 
     let latest_block_number = blockchain.get_latest_block_number().await.unwrap();
@@ -116,7 +116,7 @@ async fn test_init_idempotency() {
     let docker = Cli::default();
     let (pool, _node) = new_postgres_pool(&docker).await;
 
-    let blockchain = Box::new(PostgresBlockchain::new(pool));
+    let blockchain = Box::new(PostgresDbClient::new(pool));
 
     // Add a block
     let dummy_block: Block<Transaction> = ethers_core::types::Block {

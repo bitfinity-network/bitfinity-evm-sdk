@@ -3,17 +3,17 @@ use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use serde::de::DeserializeOwned;
 use sqlx::postgres::PgRow;
 
-use super::BlockChainDB;
+use super::DatabaseClient;
 
 static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migrations");
 
 /// A blockchain client for Postgres
 #[derive(Clone)]
-pub struct PostgresBlockchain {
+pub struct PostgresDbClient {
     pool: PgPool,
 }
 
-impl PostgresBlockchain {
+impl PostgresDbClient {
     /// Create a new Postgres blockchain client
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
@@ -27,7 +27,7 @@ impl PostgresBlockchain {
 }
 
 #[async_trait::async_trait]
-impl BlockChainDB for PostgresBlockchain {
+impl DatabaseClient for PostgresDbClient {
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
         sqlx::query("SELECT data FROM EVM_BLOCK WHERE EVM_BLOCK.id = $1")
             .bind(block as i64)

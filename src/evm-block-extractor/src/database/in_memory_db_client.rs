@@ -4,16 +4,16 @@ use std::sync::Arc;
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use tokio::sync::Mutex;
 
-use super::BlockChainDB;
+use super::DatabaseClient;
 
 #[derive(Clone, Default)]
-pub struct HashMapBlockchain {
+pub struct InMemoryDbClient {
     pub blocks: Arc<Mutex<HashMap<u64, Block<Transaction>>>>,
     pub receipts: Arc<Mutex<HashMap<H256, TransactionReceipt>>>,
 }
 
 #[async_trait::async_trait]
-impl BlockChainDB for HashMapBlockchain {
+impl DatabaseClient for InMemoryDbClient {
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
         match self.blocks.lock().await.get(&block) {
             Some(block) => Ok(block.clone()),

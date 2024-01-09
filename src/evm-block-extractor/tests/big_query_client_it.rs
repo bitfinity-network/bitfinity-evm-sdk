@@ -1,7 +1,7 @@
 mod client;
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
-use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
-use evm_block_extractor::storage_clients::BlockChainDB;
+use evm_block_extractor::database::big_query_db_client::BigQueryDbClient;
+use evm_block_extractor::database::DatabaseClient;
 use testcontainers::testcontainers::clients::Cli;
 
 #[tokio::test]
@@ -13,7 +13,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_retrieval_in_bq() {
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
     let blockchain = Box::new(
-        BigQueryBlockChain::new_with_client(
+        BigQueryDbClient::new_with_client(
             project_id.clone(),
             dataset_id.clone(),
             gcp_client.clone(),
@@ -84,7 +84,7 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
     let blockchain = Box::new(
-        BigQueryBlockChain::new_with_client(
+        BigQueryDbClient::new_with_client(
             project_id.clone(),
             dataset_id.clone(),
             gcp_client.clone(),
@@ -127,7 +127,7 @@ async fn test_init_idempotency() {
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
     let blockchain = Box::new(
-        BigQueryBlockChain::new_with_client(
+        BigQueryDbClient::new_with_client(
             project_id.clone(),
             dataset_id.clone(),
             gcp_client.clone(),
