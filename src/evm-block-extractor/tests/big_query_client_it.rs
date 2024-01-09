@@ -94,6 +94,9 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
 
     blockchain.init().await.unwrap();
 
+    let latest_block_number = blockchain.get_latest_block_number().await.unwrap();
+    assert!(latest_block_number.is_none());
+
     for i in 1..=10 {
         let dummy_block: Block<Transaction> = ethers_core::types::Block {
             number: Some(ethers_core::types::U64::from(i)),
@@ -108,8 +111,7 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
     }
 
     let latest_block_number = blockchain.get_latest_block_number().await.unwrap();
-
-    assert_eq!(latest_block_number, 10);
+    assert_eq!(latest_block_number, Some(10));
 
     let earliest_block_number = blockchain.get_earliest_block_number().await.unwrap();
 

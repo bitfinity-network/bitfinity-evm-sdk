@@ -270,7 +270,7 @@ impl BlockChainDB for BigQueryBlockChain {
         self.execute_query(query_request).await
     }
 
-    async fn get_latest_block_number(&self) -> anyhow::Result<u64> {
+    async fn get_latest_block_number(&self) -> anyhow::Result<Option<u64>> {
         let query = format!(
             "SELECT MAX(id) as max_id FROM `{project_id}.{dataset_id}.{table_id}`",
             project_id = self.project_id,
@@ -284,12 +284,8 @@ impl BlockChainDB for BigQueryBlockChain {
             .await?;
 
         if response.next_row() {
-            let max_id = response.get_i64(0)?.ok_or(anyhow::anyhow!(
-                "Block with number {} not found in the database",
-                0
-            ))? as u64;
-
-            Ok(max_id)
+            let max_id = response.get_i64(0)?;
+            Ok(max_id.map(|v| v as u64))
         } else {
             Err(anyhow::anyhow!(
                 "Block with number {} not found in the database",

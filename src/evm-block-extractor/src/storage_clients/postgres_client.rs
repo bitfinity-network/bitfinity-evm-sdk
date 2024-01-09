@@ -87,11 +87,11 @@ impl BlockChainDB for PostgresBlockchain {
     }
 
     /// Get the latest block number
-    async fn get_latest_block_number(&self) -> anyhow::Result<u64> {
+    async fn get_latest_block_number(&self) -> anyhow::Result<Option<u64>> {
         sqlx::query("SELECT MAX(id) FROM EVM_BLOCK")
             .fetch_one(&self.pool)
             .await
-            .and_then(|row| row.try_get::<i64, _>(0).map(|n| n as u64))
+            .map(|row| row.try_get::<i64, _>(0).map(|n| Some(n as u64)).unwrap_or(None))
             .map_err(|e| anyhow::anyhow!("Error getting latest block number: {:?}", e))
     }
 

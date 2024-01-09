@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use clap::Parser;
+use ethereum_json_rpc_client::EthJsonRcpClient;
+use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use evm_block_extractor::block_extractor::BlockExtractor;
+use evm_block_extractor::storage_clients::BlockChainDB;
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -72,22 +75,26 @@ async fn main() -> anyhow::Result<()> {
     log::info!("blocks-writer initialized");
 
     let big_query_client =
-        BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?;
+    Arc::new(BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?);
+
+    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
+        args.rpc_url,
+    )));
 
     let mut extractor = BlockExtractor::new(
-        args.rpc_url,
+        evm_client.clone(),
         args.request_time_out_secs,
         args.rpc_batch_size,
-        Arc::new(big_query_client.clone()),
+        big_query_client.clone(),
     );
 
-    let end_block = extractor.latest_block_number().await?;
+    let end_block = evm_client.get_block_number().await?;
     log::debug!("latest block number in evm: {}", end_block);
 
-    let start_block = extractor.latest_block_number_stored().await?;
-    log::debug!("latest block number stored: {}", start_block);
+    let start_block = big_query_client.get_latest_block_number().await?;
+    log::debug!("latest block number stored: {:?}", start_block);
 
-    extractor.collect_blocks(start_block + 1, end_block).await?;
+    extractor.collect_blocks(start_block.map(|b| b + 1).unwrap_or_default(), end_block).await?;
 
     Ok(())
 }
