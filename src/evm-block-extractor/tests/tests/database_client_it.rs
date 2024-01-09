@@ -85,8 +85,7 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
         assert_eq!(latest_block_number, Some(10));
     
         let earliest_block_number = db_client.get_earliest_block_number().await.unwrap();
-    
-        assert_eq!(earliest_block_number, 1);
+            assert_eq!(earliest_block_number, 1);
     }).await;
 }
 
