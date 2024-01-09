@@ -13,15 +13,6 @@ pub struct HashMapBlockchain {
 
 #[async_trait::async_trait]
 impl BlockChainDB for HashMapBlockchain {
-    async fn get_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>> {
-        let mut blocks_in_range = Vec::new();
-        for block_number in start..=end {
-            if self.blocks.lock().await.contains_key(&block_number) {
-                blocks_in_range.push(block_number);
-            }
-        }
-        Ok(blocks_in_range)
-    }
 
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
         match self.blocks.lock().await.get(&block) {

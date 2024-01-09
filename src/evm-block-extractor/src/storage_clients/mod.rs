@@ -6,24 +6,9 @@ use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 /// A trait for interacting with a blockchain database
 #[async_trait::async_trait]
 pub trait BlockChainDB: Send + Sync {
+
     /// Get a block from the database
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>>;
-
-    async fn get_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>>;
-
-    /// Get the missing blocks in a range
-    async fn get_missing_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>> {
-        let all_blocks = self.get_blocks_in_range(start, end).await?;
-        let mut missing_blocks = Vec::new();
-
-        for block_num in start..=end {
-            if !all_blocks.contains(&block_num) {
-                missing_blocks.push(block_num);
-            }
-        }
-
-        Ok(missing_blocks)
-    }
 
     /// Insert blocks and receipts into the database
     async fn insert_blocks_and_receipts(
@@ -40,4 +25,5 @@ pub trait BlockChainDB: Send + Sync {
 
     /// Get earliest block number
     async fn get_earliest_block_number(&self) -> anyhow::Result<u64>;
+
 }

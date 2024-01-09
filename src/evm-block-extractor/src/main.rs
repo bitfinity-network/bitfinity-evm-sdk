@@ -1,8 +1,6 @@
 use clap::Parser;
 use evm_block_extractor::block_extractor::BlockExtractor;
-use evm_block_extractor::constants::CHUNK_SIZE;
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
-use evm_block_extractor::storage_clients::BlockChainDB;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
@@ -84,15 +82,7 @@ async fn main() -> anyhow::Result<()> {
     log::debug!("latest block number: {}", end_block);
 
     let start_block = extractor.latest_block_number_stored().await?;
-    let missing_indices = big_query_client
-        .get_missing_blocks_in_range(start_block, end_block)
-        .await?;
-
-    for chunk in missing_indices.chunks(CHUNK_SIZE) {
-        extractor
-            .collect_blocks(chunk.iter().copied(), args.max_number_of_requests)
-            .await?;
-    }
+    log::debug!("latest block number stored: {}", start_block);
 
     extractor
         .collect_blocks(start_block..=end_block, args.max_number_of_requests)

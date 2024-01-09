@@ -189,62 +189,6 @@ impl BlockChainDB for BigQueryBlockChain {
         self.execute_query(query_request).await
     }
 
-    /// Returns the number of the last block stored in the zip file
-    async fn get_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>> {
-        let query_request = QueryRequest {
-            query_parameters: Some(vec![
-                QueryParameter {
-                    name: Some("start".to_string()),
-                    parameter_type: Some(QueryParameterType {
-                        r#type: "INTEGER".to_string(),
-                        ..Default::default()
-                    }),
-                    parameter_value: Some(QueryParameterValue {
-                        value: Some(start.to_string()),
-                        ..Default::default()
-                    }),
-                },
-                QueryParameter {
-                    name: Some("end".to_string()),
-                    parameter_type: Some(QueryParameterType {
-                        r#type: "INTEGER".to_string(),
-                        ..Default::default()
-                    }),
-                    parameter_value: Some(QueryParameterValue {
-                        value: Some(end.to_string()),
-                        ..Default::default()
-                    }),
-                },
-            ]),
-            query: format!(
-                "SELECT id FROM `{project_id}.{dataset_id}.{table_id}` WHERE id BETWEEN @start AND @end",
-                project_id = self.project_id,
-                dataset_id = self.dataset_id,
-                table_id = BLOCKS_TABLE_ID,
-            ),
-            ..Default::default()
-        };
-
-        let mut response = self
-            .client
-            .job()
-            .query(&self.project_id, query_request)
-            .await?;
-
-        let mut rows: Vec<u64> = vec![];
-
-        while response.next_row() {
-            let name = response.get_i64_by_name("id")?.ok_or(anyhow::anyhow!(
-                "Block with number {} not found in the database",
-                start
-            ))? as u64;
-
-            rows.push(name)
-        }
-
-        Ok(rows)
-    }
-
     async fn insert_blocks_and_receipts(
         &self,
         block: &[Block<Transaction>],
