@@ -65,6 +65,16 @@ impl BigQueryBlockChain {
 
     pub async fn init(&self) -> anyhow::Result<()> {
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
+        // Make sure the dataset exists
+        if self
+            .client
+            .dataset()
+            .get(&self.project_id, &self.dataset_id)
+            .await
+            .is_err()
+        {
+            self.client.dataset().create(dataset.clone()).await?;
+        }
 
         // Define tables with their respective schemas
         let tables = [
@@ -213,47 +223,11 @@ impl BlockChainDB for BigQueryBlockChain {
         Ok(rows)
     }
 
-    async fn insert_block(&mut self, block: &Block<Transaction>) -> anyhow::Result<()> {
-        let mut insert_request = TableDataInsertAllRequest::new();
-
-        let block_id = block
-            .number
-            .ok_or(anyhow::anyhow!("Block number not found"))?
-            .as_u64();
-
-        let block_row = BlockRow {
-            id: block_id,
-            body: serde_json::to_value(block)?,
-        };
-
-        // Check if block id already exists in the database
-        let existing_blocks = self.get_blocks_in_range(block_id, block_id).await?;
-
-        if existing_blocks.contains(&block_id) {
-            return Err(anyhow::anyhow!("Block with id {} already exists", block_id));
-        }
-
-        insert_request.add_row(Some(block_id.to_string()), block_row)?;
-
-        let res = self
-            .client
-            .tabledata()
-            .insert_all(
-                &self.project_id,
-                &self.dataset_id,
-                BLOCKS_TABLE_ID,
-                insert_request,
-            )
-            .await?;
-
-        if res.insert_errors.is_some() {
-            println!("error inserting block: {:?}", res.insert_errors);
-        }
-
-        Ok(())
-    }
-
-    async fn insert_receipts(&mut self, receipts: &[TransactionReceipt]) -> anyhow::Result<()> {
+    async fn insert_blocks_and_receipts(
+        &mut self,
+        block: &[Block<Transaction>],
+        receipts: &[TransactionReceipt],
+    ) -> anyhow::Result<()> {
         let mut insert_request = TableDataInsertAllRequest::new();
 
         let receipts = receipts
@@ -286,7 +260,52 @@ impl BlockChainDB for BigQueryBlockChain {
             .await?;
 
         if res.insert_errors.is_some() {
-            println!("error inserting receipt: {:?}", res.insert_errors);
+            println!("error inserting receipts: {:?}", res.insert_errors);
+        }
+
+        let mut insert_request = TableDataInsertAllRequest::new();
+
+        let blocks = block
+            .iter()
+            .map(|b| {
+                let block_id = b
+                    .number
+                    .ok_or(anyhow::anyhow!("Block number not found"))
+                    .expect("Block number not found")
+                    .as_u64();
+
+                let block_hash = b
+                    .hash
+                    .ok_or(anyhow::anyhow!("Block hash not found"))
+                    .expect("Block hash not found");
+
+                let block_row = BlockRow {
+                    id: block_id,
+                    body: serde_json::to_value(b).expect("Failed to serialize block"),
+                };
+
+                TableDataInsertAllRequestRows {
+                    insert_id: Some(format!("0x{:x}", block_hash)),
+                    json: serde_json::to_value(block_row).expect("Failed to serialize block"),
+                }
+            })
+            .collect::<Vec<_>>();
+
+        insert_request.add_rows(blocks)?;
+
+        let res = self
+            .client
+            .tabledata()
+            .insert_all(
+                &self.project_id,
+                &self.dataset_id,
+                BLOCKS_TABLE_ID,
+                insert_request,
+            )
+            .await?;
+
+        if res.insert_errors.is_some() {
+            println!("error inserting blocks: {:?}", res.insert_errors);
         }
 
         Ok(())

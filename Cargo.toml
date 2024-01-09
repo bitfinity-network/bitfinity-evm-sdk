@@ -37,6 +37,7 @@ derive_more = "0.99"
 env_logger = { version = "0.10.0", default-features = false }
 ethereum-types = "0.14"
 ethers-core = "2.0"
+futures = "0.3"
 hash-db = "0.16"
 hex = "0.4"
 ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.12.x" }

@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
+use anyhow::Context;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
-use ethers_core::types::BlockNumber;
-use tokio::sync::{Mutex, Semaphore};
-use tokio::task::JoinHandle;
+use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256};
+use itertools::Itertools;
+use tokio::sync::{mpsc, Mutex};
 use tokio::time::Duration;
 
 use crate::storage_clients::BlockChainDB;
@@ -48,68 +49,64 @@ impl BlockExtractor {
         max_no_of_requests: usize,
     ) -> anyhow::Result<()> {
         let rpc_url = &self.rpc_url;
-        let mut tasks = Vec::new();
-        let delay = Duration::from_secs(1) / max_no_of_requests as u32;
-        let semaphore = Arc::new(Semaphore::new(max_no_of_requests));
+        let client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
+            rpc_url.to_string(),
+        )));
+        let request_time_out_secs = self.request_time_out_secs;
         let batch_size = self.rpc_batch_size as usize;
 
-        let client = EthJsonRcpClient::new(ReqwestClient::new(rpc_url.to_string()));
+        let (tx, rx) = mpsc::channel::<Vec<H256>>(max_no_of_requests);
 
-        for block_number_u64 in blocks {
-            let request_time_out_secs = self.request_time_out_secs;
-            let client = client.clone();
-            let blockchain = Arc::clone(&self.blockchain);
+        let rx = Arc::new(Mutex::new(rx));
 
-            let permit = Arc::clone(&semaphore).acquire_owned().await?;
+        for block in &blocks.chunks(batch_size) {
+            let client_clone = client.clone();
+            let tx = tx.clone();
 
-            let task: JoinHandle<anyhow::Result<()>> = tokio::spawn(async move {
-                let block_number = BlockNumber::Number(block_number_u64.into());
+            let block_numbers = block
+                .into_iter()
+                .map(|block| BlockNumber::Number(block.into()))
+                .collect::<Vec<_>>();
 
-                //throttle the requests
-                tokio::time::sleep(delay).await;
-
-                let result = tokio::time::timeout(
+            let block_task = tokio::spawn(async move {
+                let blocks = tokio::time::timeout(
                     Duration::from_secs(request_time_out_secs),
-                    client.get_full_block_by_number(block_number),
+                    client_clone.get_full_blocks_by_number(block_numbers, batch_size),
                 )
-                .await;
+                .await??;
 
-                log::info!("block result: {:?}", result);
+                let tx_hashes = blocks
+                    .iter()
+                    .flat_map(|block| block.transactions.iter().map(|tx| tx.hash))
+                    .collect::<Vec<_>>();
 
-                match result {
-                    Ok(Ok(block)) => {
-                        let mut blockchain = blockchain.lock().await;
+                tx.send(tx_hashes).await?;
 
-                        blockchain.insert_block(&block).await?;
-
-                        let transactions = block.transactions;
-                        for chunk in transactions.chunks(batch_size) {
-                            let tx_hashes = chunk.iter().map(|tx| tx.hash).collect::<Vec<_>>();
-
-                            let receipts =
-                                client.get_receipts_by_hash(tx_hashes, batch_size).await?;
-
-                            blockchain.insert_receipts(&receipts).await?;
-                        }
-                    }
-                    Ok(Err(e)) => {
-                        println!("Failed to get block {}: {:?}", block_number_u64, e);
-                    }
-                    Err(e) => {
-                        println!("Request for block {} timed out: {:?}", block_number_u64, e);
-                    }
-                }
-
-                drop(permit);
-                Ok(())
+                anyhow::Result::<Vec<Block<Transaction>>>::Ok(blocks)
             });
 
-            tasks.push(task);
+            let receipts_task = tokio::spawn({
+                let client = client.clone();
+                let rx = rx.clone();
+                async move {
+                    let mut rx = rx.lock().await;
+                    let tx_hashes = rx.recv().await.context("Error receiving tx hashes")?;
+                    let receipts = client.get_receipts_by_hash(tx_hashes, batch_size).await?;
+                    anyhow::Result::<Vec<TransactionReceipt>>::Ok(receipts)
+                }
+            });
+
+            let (blocks, receipts) = futures::future::join(block_task, receipts_task).await;
+
+            let (blocks, receipts) = (blocks??, receipts??);
+
+            let mut blockchain = self.blockchain.lock().await;
+
+            blockchain
+                .insert_blocks_and_receipts(&blocks, &receipts)
+                .await?;
         }
 
-        for task in tasks {
-            let _ = task.await?;
-        }
         Ok(())
     }
 }

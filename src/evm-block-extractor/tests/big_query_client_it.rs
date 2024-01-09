@@ -10,7 +10,6 @@ use bq::BQ;
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
 use evm_block_extractor::storage_clients::BlockChainDB;
-use gcp_bigquery_client::model::dataset::Dataset;
 use testcontainers::clients::Cli;
 
 mod bq {
@@ -156,19 +155,12 @@ async fn test_big_query_stub() {
 }
 
 #[tokio::test]
-async fn test_insertion_of_blocks_and_retrieval_in_bq() {
+async fn test_batch_insertion_of_blocks_and_receipts_retrieval_in_bq() {
     let docker = Cli::default();
     let project_id = format!("test_project_{}", rand::random::<u64>());
     let (gcp_client, _node, _temp_file, _auth) =
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
-
-    // Create dataset
-    gcp_client
-        .dataset()
-        .create(Dataset::new(&project_id, &dataset_id))
-        .await
-        .unwrap();
 
     let mut blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
@@ -181,59 +173,56 @@ async fn test_insertion_of_blocks_and_retrieval_in_bq() {
 
     blockchain.init().await.unwrap();
 
-    let dummy_block: Block<Transaction> = ethers_core::types::Block {
-        number: Some(ethers_core::types::U64::from(1)),
-        ..Default::default()
-    };
+    let mut blocks = Vec::new();
 
-    blockchain.insert_block(&dummy_block).await.unwrap();
+    for i in 1..=10 {
+        let dummy_block: Block<Transaction> = ethers_core::types::Block {
+            number: Some(ethers_core::types::U64::from(i)),
+            hash: Some(H256::random()),
+            ..Default::default()
+        };
+
+        blocks.push(dummy_block);
+    }
+
+    let mut receipts = Vec::new();
+
+    for _ in 1..=10 {
+        let tx_hash = H256::random();
+        let dummy_receipt: TransactionReceipt = ethers_core::types::TransactionReceipt {
+            transaction_hash: tx_hash,
+            ..Default::default()
+        };
+
+        receipts.push(dummy_receipt);
+    }
+
+    blockchain
+        .insert_blocks_and_receipts(&blocks, &receipts)
+        .await
+        .unwrap();
 
     let block = blockchain.get_block_by_number(1).await.unwrap();
 
     assert_eq!(block.number.unwrap().as_u64(), 1);
 
-    let latest_block_number = blockchain.get_latest_block_number().await.unwrap();
-
-    assert_eq!(latest_block_number, 1);
-}
-
-#[tokio::test]
-async fn test_insertion_of_receipts_and_retrieval_in_bq() {
-    let docker = Cli::default();
-    let project_id = format!("test_project_{}", rand::random::<u64>());
-    let (gcp_client, _node, _temp_file, _auth) =
-        client::new_bigquery_client(&docker, &project_id).await;
-    let dataset_id = format!("test_{}", rand::random::<u64>());
-
-    // Create dataset
-    gcp_client
-        .dataset()
-        .create(Dataset::new(&project_id, &dataset_id))
+    let receipt = blockchain
+        .get_transaction_receipt(receipts[0].transaction_hash)
         .await
         .unwrap();
 
-    let mut blockchain = Box::new(
-        BigQueryBlockChain::new_with_client(
-            project_id.clone(),
-            dataset_id.clone(),
-            gcp_client.clone(),
-        )
-        .unwrap(),
-    );
+    assert_eq!(receipt.transaction_hash, receipts[0].transaction_hash);
 
-    blockchain.init().await.unwrap();
+    let block = blockchain.get_block_by_number(10).await.unwrap();
 
-    let tx_hash = H256::random();
-    let dummy_receipt: TransactionReceipt = ethers_core::types::TransactionReceipt {
-        transaction_hash: tx_hash,
-        ..Default::default()
-    };
+    assert_eq!(block.number.unwrap().as_u64(), 10);
 
-    blockchain.insert_receipts(&[dummy_receipt]).await.unwrap();
+    let receipt = blockchain
+        .get_transaction_receipt(receipts[9].transaction_hash)
+        .await
+        .unwrap();
 
-    let receipt = blockchain.get_transaction_receipt(tx_hash).await.unwrap();
-
-    assert_eq!(receipt.transaction_hash, tx_hash);
+    assert_eq!(receipt.transaction_hash, receipts[9].transaction_hash);
 }
 
 #[tokio::test]
@@ -243,13 +232,6 @@ async fn test_getting_block_range() {
     let (gcp_client, _node, _temp_file, _auth) =
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
-
-    // Create dataset
-    gcp_client
-        .dataset()
-        .create(Dataset::new(&project_id, &dataset_id))
-        .await
-        .unwrap();
 
     let mut blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
@@ -263,10 +245,14 @@ async fn test_getting_block_range() {
     for i in 1..=10 {
         let dummy_block: Block<Transaction> = ethers_core::types::Block {
             number: Some(ethers_core::types::U64::from(i)),
+            hash: Some(H256::random()),
             ..Default::default()
         };
 
-        blockchain.insert_block(&dummy_block).await.unwrap();
+        blockchain
+            .insert_blocks_and_receipts(&[dummy_block], &[])
+            .await
+            .unwrap();
     }
 
     let block_range = blockchain.get_blocks_in_range(1, 10).await.unwrap();
@@ -286,13 +272,6 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
-    // Create dataset
-    gcp_client
-        .dataset()
-        .create(Dataset::new(&project_id, &dataset_id))
-        .await
-        .unwrap();
-
     let mut blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
             project_id.clone(),
@@ -307,10 +286,14 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
     for i in 1..=10 {
         let dummy_block: Block<Transaction> = ethers_core::types::Block {
             number: Some(ethers_core::types::U64::from(i)),
+            hash: Some(H256::random()),
             ..Default::default()
         };
 
-        blockchain.insert_block(&dummy_block).await.unwrap();
+        blockchain
+            .insert_blocks_and_receipts(&[dummy_block], &[])
+            .await
+            .unwrap();
     }
 
     let latest_block_number = blockchain.get_latest_block_number().await.unwrap();
@@ -330,13 +313,6 @@ async fn test_init_idempotency() {
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
-    // Create dataset
-    gcp_client
-        .dataset()
-        .create(Dataset::new(&project_id, &dataset_id))
-        .await
-        .unwrap();
-
     let mut blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
             project_id.clone(),
@@ -349,10 +325,14 @@ async fn test_init_idempotency() {
     // Add a block
     let dummy_block: Block<Transaction> = ethers_core::types::Block {
         number: Some(ethers_core::types::U64::from(1)),
+        hash: Some(H256::random()),
         ..Default::default()
     };
 
-    assert!(blockchain.insert_block(&dummy_block).await.is_err());
+    assert!(blockchain
+        .insert_blocks_and_receipts(&[dummy_block], &[])
+        .await
+        .is_err());
 
     // First initialization - creates tables
     blockchain.init().await.unwrap();
@@ -360,10 +340,14 @@ async fn test_init_idempotency() {
     // Add a block
     let dummy_block: Block<Transaction> = ethers_core::types::Block {
         number: Some(ethers_core::types::U64::from(1)),
+        hash: Some(H256::random()),
         ..Default::default()
     };
 
-    assert!(blockchain.insert_block(&dummy_block).await.is_ok());
+    assert!(blockchain
+        .insert_blocks_and_receipts(&[dummy_block], &[])
+        .await
+        .is_ok());
 
     assert!(blockchain.init().await.is_ok());
 

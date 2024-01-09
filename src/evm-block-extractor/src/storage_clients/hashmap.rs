@@ -28,17 +28,22 @@ impl BlockChainDB for HashMapBlockchain {
             None => Err(anyhow::anyhow!("Block not found")),
         }
     }
-    async fn insert_block(&mut self, block: &Block<Transaction>) -> anyhow::Result<()> {
-        self.blocks
-            .insert(block.number.unwrap().as_u64(), block.clone());
-        Ok(())
-    }
 
-    async fn insert_receipts(&mut self, receipts: &[TransactionReceipt]) -> anyhow::Result<()> {
+    async fn insert_blocks_and_receipts(
+        &mut self,
+        block: &[Block<Transaction>],
+        receipts: &[TransactionReceipt],
+    ) -> anyhow::Result<()> {
         for receipt in receipts {
             self.receipts
                 .insert(receipt.transaction_hash, receipt.clone());
         }
+
+        for block in block {
+            self.blocks
+                .insert(block.number.unwrap().as_u64(), block.clone());
+        }
+
         Ok(())
     }
 
