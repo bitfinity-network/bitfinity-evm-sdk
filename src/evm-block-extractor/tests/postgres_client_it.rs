@@ -1,22 +1,21 @@
-use ethers_core::types::{Block, Transaction, H256, TransactionReceipt};
+use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use evm_block_extractor::storage_clients::{postgres_client::PostgresBlockchain, BlockChainDB};
 use sqlx::{postgres::PgConnectOptions, PgPool, Row};
 use testcontainers::testcontainers::{clients::Cli, Container};
 
 #[tokio::test]
 async fn test_postgres_docker() {
-        
-        let docker = Cli::default();
-        let (pool, _node) = new_postgres_pool(&docker).await;
+    let docker = Cli::default();
+    let (pool, _node) = new_postgres_pool(&docker).await;
 
-        // container is up, we can use it
-        let row: i32 = sqlx::query("SELECT 1 + 1")
-            .fetch_one(&pool)
-            .await
-            .and_then(|row| row.try_get(0))
-            .unwrap();
+    // container is up, we can use it
+    let row: i32 = sqlx::query("SELECT 1 + 1")
+        .fetch_one(&pool)
+        .await
+        .and_then(|row| row.try_get(0))
+        .unwrap();
 
-        assert_eq!(row, 2);
+    assert_eq!(row, 2);
 }
 
 #[tokio::test]
@@ -152,15 +151,17 @@ async fn test_init_idempotency() {
     assert_eq!(block.number.unwrap().as_u64(), 1);
 }
 
-async fn new_postgres_pool(docker: &Cli) -> (PgPool, Container<'_, testcontainers::postgres::Postgres>) {
+async fn new_postgres_pool(
+    docker: &Cli,
+) -> (PgPool, Container<'_, testcontainers::postgres::Postgres>) {
     let node = docker.run(testcontainers::postgres::Postgres::default());
 
     let options = PgConnectOptions::new()
-    .username("postgres")
-    .password("postgres")
-    .database("postgres")
-    .host("127.0.0.1")
-    .port(node.get_host_port_ipv4(5432));
+        .username("postgres")
+        .password("postgres")
+        .database("postgres")
+        .host("127.0.0.1")
+        .port(node.get_host_port_ipv4(5432));
 
     let pool = PgPool::connect_with(options).await.unwrap();
     (pool, node)

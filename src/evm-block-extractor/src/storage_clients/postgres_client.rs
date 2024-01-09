@@ -1,7 +1,7 @@
+use ::sqlx::{migrate::Migrator, *};
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use serde::de::DeserializeOwned;
 use sqlx::postgres::PgRow;
-use ::sqlx::{migrate::Migrator, *};
 
 use super::BlockChainDB;
 
@@ -14,7 +14,6 @@ pub struct PostgresBlockchain {
 }
 
 impl PostgresBlockchain {
-
     /// Create a new Postgres blockchain client
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
@@ -25,19 +24,17 @@ impl PostgresBlockchain {
         MIGRATOR.run(&self.pool).await?;
         Ok(())
     }
-    
 }
 
 #[async_trait::async_trait]
 impl BlockChainDB for PostgresBlockchain {
-
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
         sqlx::query("SELECT data FROM EVM_BLOCK WHERE EVM_BLOCK.id = $1")
             .bind(block as i64)
             .fetch_one(&self.pool)
             .await
             .map_err(|e| anyhow::anyhow!("Error getting block {}: {:?}", block, e))
-            .and_then(|row | from_row_value(&row, 0))
+            .and_then(|row| from_row_value(&row, 0))
     }
 
     async fn insert_blocks_and_receipts(
@@ -45,14 +42,13 @@ impl BlockChainDB for PostgresBlockchain {
         blocks: &[Block<Transaction>],
         receipts: &[TransactionReceipt],
     ) -> anyhow::Result<()> {
-
         let mut tx = self.pool.begin().await?;
 
         for block in blocks {
             let block_id = block
-            .number
-            .ok_or(anyhow::anyhow!("Block number not found"))?
-            .as_u64();
+                .number
+                .ok_or(anyhow::anyhow!("Block number not found"))?
+                .as_u64();
 
             sqlx::query("INSERT INTO EVM_BLOCK (id, data) VALUES ($1, $2)")
                 .bind(block_id as i64)
@@ -80,12 +76,14 @@ impl BlockChainDB for PostgresBlockchain {
     /// Get a transaction receipt from the database
     async fn get_transaction_receipt(&self, tx_hash: H256) -> anyhow::Result<TransactionReceipt> {
         let hex_tx_hash = did::H256::from(tx_hash).to_hex_str();
-        sqlx::query("SELECT data FROM EVM_TRANSACTION_RECEIPT WHERE EVM_TRANSACTION_RECEIPT.id = $1")
+        sqlx::query(
+            "SELECT data FROM EVM_TRANSACTION_RECEIPT WHERE EVM_TRANSACTION_RECEIPT.id = $1",
+        )
         .bind(&hex_tx_hash)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| anyhow::anyhow!("Error getting transaction receipt {}: {:?}", hex_tx_hash, e))
-        .and_then(|row | from_row_value(&row, 0))
+        .and_then(|row| from_row_value(&row, 0))
     }
 
     /// Get the latest block number
@@ -105,7 +103,6 @@ impl BlockChainDB for PostgresBlockchain {
             .and_then(|row| row.try_get::<i64, _>(0).map(|n| n as u64))
             .map_err(|e| anyhow::anyhow!("Error getting earliest block number: {:?}", e))
     }
-
 }
 
 fn from_row_value<T: DeserializeOwned>(row: &PgRow, index: usize) -> anyhow::Result<T> {
