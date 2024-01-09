@@ -48,10 +48,14 @@ impl<B: DatabaseClient + 'static> ICServer for EthImpl<B> {
     async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<Vec<u8>> {
         let db = &self.blockchain;
         let from = match from {
-            BlockNumber::Latest => db.get_latest_block_number().await.map_err(|e| {
-                log::error!("Error getting block number: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
-            })?.unwrap_or(0),
+            BlockNumber::Latest => db
+                .get_latest_block_number()
+                .await
+                .map_err(|e| {
+                    log::error!("Error getting block number: {:?}", e);
+                    jsonrpsee::types::error::ErrorCode::InternalError
+                })?
+                .unwrap_or(0),
             BlockNumber::Earliest => db.get_earliest_block_number().await.map_err(|e| {
                 log::error!("Error getting earliest block number: {:?}", e);
                 jsonrpsee::types::error::ErrorCode::InternalError
@@ -61,10 +65,15 @@ impl<B: DatabaseClient + 'static> ICServer for EthImpl<B> {
             _ => return Ok(EMPTY_LIST_RLP.into()),
         };
 
-        let block_count = db.get_latest_block_number().await.map_err(|e| {
-            log::error!("Error getting block number: {:?}", e);
-            jsonrpsee::types::error::ErrorCode::InternalError
-        })?.unwrap_or(0) + 1;
+        let block_count = db
+            .get_latest_block_number()
+            .await
+            .map_err(|e| {
+                log::error!("Error getting block number: {:?}", e);
+                jsonrpsee::types::error::ErrorCode::InternalError
+            })?
+            .unwrap_or(0)
+            + 1;
 
         let end_block = std::cmp::min(from + std::cmp::min(10, max_number.as_u64()), block_count);
 

@@ -14,7 +14,6 @@ pub struct InMemoryDbClient {
 
 #[async_trait::async_trait]
 impl DatabaseClient for InMemoryDbClient {
-
     async fn init(&self) -> anyhow::Result<()> {
         Ok(())
     }

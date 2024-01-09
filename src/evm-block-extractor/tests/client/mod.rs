@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
-use evm_block_extractor::database::{DatabaseClient, big_query_db_client::BigQueryDbClient};
+use evm_block_extractor::database::big_query_db_client::BigQueryDbClient;
+use evm_block_extractor::database::DatabaseClient;
 use tempfile::NamedTempFile;
-use testcontainers::testcontainers::{clients::Cli, core::WaitFor, Container, GenericImage};
+use testcontainers::testcontainers::clients::Cli;
+use testcontainers::testcontainers::core::WaitFor;
+use testcontainers::testcontainers::{Container, GenericImage};
 
 use self::auth_mock::GoogleAuthMock;
 
@@ -45,14 +48,10 @@ pub async fn new_bigquery_client<'a>(
         .await
         .unwrap();
 
-        let client = Arc::new(
-            BigQueryDbClient::new_with_client(
-                project_id.clone(),
-                dataset_id.clone(),
-                gcp_client,
-            )
+    let client = Arc::new(
+        BigQueryDbClient::new_with_client(project_id.clone(), dataset_id.clone(), gcp_client)
             .unwrap(),
-        );
+    );
 
     (client, node, temp_file, google_auth)
 }

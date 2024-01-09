@@ -106,7 +106,6 @@ impl BigQueryDbClient {
 
 #[async_trait::async_trait]
 impl DatabaseClient for BigQueryDbClient {
-
     async fn init(&self) -> anyhow::Result<()> {
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
         // Make sure the dataset exists
@@ -164,7 +163,7 @@ impl DatabaseClient for BigQueryDbClient {
 
         Ok(())
     }
-    
+
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<Transaction>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {

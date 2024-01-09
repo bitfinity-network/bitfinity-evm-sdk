@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use clap::Parser;
-use ethereum_json_rpc_client::EthJsonRcpClient;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
+use ethereum_json_rpc_client::EthJsonRcpClient;
 use evm_block_extractor::block_extractor::BlockExtractor;
-use evm_block_extractor::database::DatabaseClient;
 use evm_block_extractor::database::big_query_db_client::BigQueryDbClient;
+use evm_block_extractor::database::DatabaseClient;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
@@ -75,11 +75,9 @@ async fn main() -> anyhow::Result<()> {
     log::info!("blocks-writer initialized");
 
     let big_query_client =
-    Arc::new(BigQueryDbClient::new(args.project_id, args.dataset_id, args.sa_key).await?);
+        Arc::new(BigQueryDbClient::new(args.project_id, args.dataset_id, args.sa_key).await?);
 
-    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
-        args.rpc_url,
-    )));
+    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(args.rpc_url)));
 
     let mut extractor = BlockExtractor::new(
         evm_client.clone(),
@@ -94,7 +92,9 @@ async fn main() -> anyhow::Result<()> {
     let start_block = big_query_client.get_latest_block_number().await?;
     log::debug!("latest block number stored: {:?}", start_block);
 
-    extractor.collect_blocks(start_block.map(|b| b + 1).unwrap_or_default(), end_block).await?;
+    extractor
+        .collect_blocks(start_block.map(|b| b + 1).unwrap_or_default(), end_block)
+        .await?;
 
     Ok(())
 }

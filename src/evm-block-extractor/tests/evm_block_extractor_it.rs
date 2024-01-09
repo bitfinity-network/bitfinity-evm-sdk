@@ -1,9 +1,12 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use evm_block_extractor::database::{postgres_db_client::PostgresDbClient, DatabaseClient};
-use sqlx::{postgres::PgConnectOptions, PgPool};
-use testcontainers::testcontainers::{clients::Cli, Container};
+use evm_block_extractor::database::postgres_db_client::PostgresDbClient;
+use evm_block_extractor::database::DatabaseClient;
+use sqlx::postgres::PgConnectOptions;
+use sqlx::PgPool;
+use testcontainers::testcontainers::clients::Cli;
+use testcontainers::testcontainers::Container;
 
 mod client;
 mod tests;
@@ -26,7 +29,10 @@ async fn test_with_clients<T: Fn(Arc<dyn DatabaseClient>) -> F, F: Future<Output
 
 async fn new_postgres_db_client(
     docker: &Cli,
-) -> (Arc<dyn DatabaseClient>, Container<'_, testcontainers::postgres::Postgres>) {
+) -> (
+    Arc<dyn DatabaseClient>,
+    Container<'_, testcontainers::postgres::Postgres>,
+) {
     let node = docker.run(testcontainers::postgres::Postgres::default());
 
     let options = PgConnectOptions::new()

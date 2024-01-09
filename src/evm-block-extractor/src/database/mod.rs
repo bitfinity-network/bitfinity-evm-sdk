@@ -7,7 +7,6 @@ use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 /// A trait for interacting with a blockchain database
 #[async_trait::async_trait]
 pub trait DatabaseClient: Send + Sync {
-
     /// Initialize the database
     async fn init(&self) -> anyhow::Result<()>;
 

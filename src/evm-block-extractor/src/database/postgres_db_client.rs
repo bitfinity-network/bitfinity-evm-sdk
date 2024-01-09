@@ -1,4 +1,5 @@
-use ::sqlx::{migrate::Migrator, *};
+use ::sqlx::migrate::Migrator;
+use ::sqlx::*;
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use serde::de::DeserializeOwned;
 use sqlx::postgres::PgRow;
@@ -22,7 +23,6 @@ impl PostgresDbClient {
 
 #[async_trait::async_trait]
 impl DatabaseClient for PostgresDbClient {
-    
     async fn init(&self) -> anyhow::Result<()> {
         MIGRATOR.run(&self.pool).await?;
         Ok(())
@@ -91,7 +91,11 @@ impl DatabaseClient for PostgresDbClient {
         sqlx::query("SELECT MAX(id) FROM EVM_BLOCK")
             .fetch_one(&self.pool)
             .await
-            .map(|row| row.try_get::<i64, _>(0).map(|n| Some(n as u64)).unwrap_or(None))
+            .map(|row| {
+                row.try_get::<i64, _>(0)
+                    .map(|n| Some(n as u64))
+                    .unwrap_or(None)
+            })
             .map_err(|e| anyhow::anyhow!("Error getting latest block number: {:?}", e))
     }
 

@@ -38,7 +38,6 @@ impl BlockExtractor {
         from_block_inclusive: u64,
         to_block_inclusive: u64,
     ) -> anyhow::Result<(u64, u64)> {
-
         log::info!(
             "Getting blocks from {:?} to {}",
             from_block_inclusive,
@@ -114,12 +113,14 @@ mod tests {
         let request_time_out_secs = 10;
         let rpc_batch_size = 50;
 
-        let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
-            rpc_url,
-        )));
+        let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));
 
-        let mut extractor =
-            BlockExtractor::new(evm_client.clone(), request_time_out_secs, rpc_batch_size, blockchain.clone());
+        let mut extractor = BlockExtractor::new(
+            evm_client.clone(),
+            request_time_out_secs,
+            rpc_batch_size,
+            blockchain.clone(),
+        );
 
         let end_block = evm_client.get_block_number().await.unwrap();
         let start_block = end_block - 10;
