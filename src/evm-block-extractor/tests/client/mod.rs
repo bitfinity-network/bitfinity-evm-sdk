@@ -9,11 +9,11 @@ use testcontainers::testcontainers::{Container, GenericImage};
 
 use self::auth_mock::GoogleAuthMock;
 
-pub async fn new_bigquery_client<'a>(
-    docker: &'a Cli,
+pub async fn new_bigquery_client(
+    docker: &Cli,
 ) -> (
     Arc<dyn DatabaseClient>,
-    Container<'a, GenericImage>,
+    Container<'_, GenericImage>,
     NamedTempFile,
     GoogleAuthMock,
 ) {
