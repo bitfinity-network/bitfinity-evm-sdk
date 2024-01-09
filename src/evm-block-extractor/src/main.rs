@@ -47,9 +47,10 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Initialize logger
-    init_logger()?;
     let args = Args::parse();
+
+    // Initialize logger
+    init_logger(args.log_level)?;
 
     // Check if the dataset ID is valid
     if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
@@ -91,8 +92,12 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn init_logger() -> anyhow::Result<()> {
-    env_logger::init();
+fn init_logger(log_level: String) -> anyhow::Result<()> {
+    let level = log_level
+        .parse::<log::LevelFilter>()
+        .unwrap_or(log::LevelFilter::Info);
+
+    env_logger::Builder::new().filter(None, level).try_init()?;
 
     Ok(())
 }

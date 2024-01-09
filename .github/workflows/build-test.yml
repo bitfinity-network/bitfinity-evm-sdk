@@ -17,12 +17,12 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: tolnay/rust-toolchain@stable
         with:
           toolchain: 1.73.0
-          override: true
-          target: wasm32-unknown-unknown
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
       - name: machine setup
         run: |
           cargo install ic-wasm

@@ -39,7 +39,7 @@ impl BlockExtractor {
     }
 
     /// Returns the latest block number stored in the database
-    pub async fn latest_block_number_stored(&self) -> anyhow::Result<u64> {
+    pub async fn latest_block_number_stored(&self) -> anyhow::Result<Option<u64>> {
         self.blockchain.get_latest_block_number().await
     }
 
