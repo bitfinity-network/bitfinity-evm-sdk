@@ -1,36 +1,66 @@
-# EVM Block Extractor
+# EVM Block Extractor And Server
 
-## Introduction
+## EVM Block Extractor
 
-The EVM block extractor is a tool which can be used to collect blocks and block receipts from the JSON-RPC EVMC endpoint into a ZIP file.
+### Introduction
 
-## Usage
+The EVM block extractor is an advanced tool used to collect EVM blocks and transactions, and send them to a specified BigQuery dataset endpoint. This version is enhanced to handle parallel requests efficiently and integrates with Google Cloud Platform's BigQuery service.
+
+### Usage
 
 ```sh
 evm-block-extractor
   --rpc-url <evmc-rpc-url>
-  --output-file <output-zipfile>
-  --start-block <start-block>
-  --end-block <last-block>
-  --batch-size <max-batch-size>
+  --dataset-id <bigquery-dataset-id>
+  --max-number-of-requests <max-parallel-requests>
+  --rpc-batch-size <rpc-batch-size>
+  --sa-key <service-account-key>
 ```
 
 Where:
 
 - **rpc-url**: is the endpoint of the EVMC json-rpc url
-- **output-file**: path to the ZIP file to write blocks to
-- **start-block**: the number of the block to start collecting blocks from
-- **end-block**: the number of the last block to fetch. If not provided blocks will be collected until the last one is reached.
-- **batch-size**: maximum amount of blocks to collect from a single request. (default: 500)
+- **dataset-id**: is the BigQuery dataset id where the data will be sent
+- **max-number-of-requests**: is the maximum number of parallel requests to be sent to the EVMC json-rpc endpoint
+- **rpc-batch-size**: is the number of blocks to be requested in a single batch
+- **sa-key**: the service account key in JSON format for GCP authentication.
 
-## Output file
+### Output
 
-The output file is a `zip` file containing a receipt and a block file for each block.
-The file names syntax is the following one:
+The data is sent and stored in the specified BigQuery dataset. This allows for enhanced querying and analysis capabilities using BigQuery's features.
 
-- `block_0x{block_number}.json`: JSON encoded block identified by its number in hex representation with 16 digits
-- `receipt_0x{block_number}.json`: JSON encoded receipt identified by its number in hex representation with 16 digits
+## EVM Block Extractor Server
 
-## Resuming
+### Introduction
 
-If the specified `output-file` argument already exists, the extractor will try to read the last archived block number and will start from there.
+The EVM block extractor server is a JSON-RPC server for the EVM block extractor. It is integrated with BigQuery and allows for querying the data stored in the BigQuery dataset.
+
+### Usage
+
+```sh
+evm-block-extractor-server
+  --dataset-id <bigquery-dataset-id>
+  --server-address <server-address>
+  --sa-key <service-account-key>
+```
+
+Where:
+
+- **dataset-id**: The dataset ID of the BigQuery table.
+- **server-address:** The address where the server will be hosted (default: 127.0.0.1:8080).
+- **sa-key**: The service account key in JSON format for GCP authentication.
+
+### Endpoints
+
+This is minimal version of the Ethereum JSON-RPC server. It supports the following endpoints:
+
+- **eth_blockNumber**: Returns the number of most recent block.
+- **eth_getBlockByNumber**: Returns information about a block by block number.
+- **eth_getTransactionReceipt**: Returns the receipt of a transaction by transaction hash.
+- **ic_getBlocksRLP**: Returns a list of blocks in RLP format.
+
+### Example
+
+```sh
+curl -X POST --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://127.0.0.1:8080
+```

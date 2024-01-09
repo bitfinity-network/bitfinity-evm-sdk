@@ -9,6 +9,10 @@ edition = "2021"
 name = "evm-block-extractor"
 path = "src/main.rs"
 
+[[bin]]
+name = "evm-block-extractor-server"
+path = "src/bin/server.rs"
+
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
@@ -23,6 +27,14 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 zip = { workspace = true }
-
+gcp-bigquery-client = { workspace = true }
+async-trait = { workspace = true }
+jsonrpsee = { workspace = true }
+yup-oauth2 = { workspace = true }
+did = { path = "../did" }
+futures = { workspace = true }
 [dev-dependencies]
+rand = { workspace = true }
 tempfile = { workspace = true }
+testcontainers = { workspace = true }
+wiremock = { workspace = true }

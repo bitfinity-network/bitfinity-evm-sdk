@@ -1,22 +1,11 @@
-mod blocks_reader;
-mod blocks_writer;
-mod constants;
+use std::sync::Arc;
 
-use std::path::{Path, PathBuf};
-
-use blocks_reader::BlocksReader;
-use blocks_writer::BlocksWriter;
 use clap::Parser;
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::EthJsonRcpClient;
-use ethers_core::types::{Block, BlockNumber, Transaction};
-use itertools::Itertools;
+use evm_block_extractor::block_extractor::BlockExtractor;
+use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
-
-/// The rpc client splits batches into chunks itself, so here we just specify the number of blocks to hold in memory
-const BLOCKS_PER_REQUEST: usize = 500;
 
 /// Simple CLI program for Benchmarking BitFinity Network
 #[derive(Parser, Debug)]
@@ -29,21 +18,31 @@ struct Args {
     #[arg(long = "rpc-url", short('u'))]
     rpc_url: String,
 
-    /// Output ZIP file to write blocks to
-    #[arg(long = "output", short('o'))]
-    output_file: PathBuf,
+    /// The project ID of the BigQuery table
+    #[arg(long = "project-id", short('p'), default_value = "bitfinity-evm")]
+    project_id: String,
 
-    /// block to start with
-    #[arg(long, short('s'), default_value = "0")]
-    start_block: u64,
+    /// The dataset ID of the BigQuery table
+    /// The dataset ID can be one of the following:
+    /// - `testnet`
+    /// - `mainnet`
+    #[arg(long = "dataset-id", short('d'))]
+    dataset_id: String,
 
-    /// block to start with (if not provided, all blocks will be loaded)
-    #[arg(long, short('e'))]
-    end_block: Option<u64>,
+    /// Time in seconds to wait for a response from the EVMC
+    #[arg(long, default_value = "60")]
+    request_time_out_secs: u64,
 
-    /// Max number of requests in a single RPC batch
     #[arg(long, default_value = "50")]
-    batch_size: usize,
+    rpc_batch_size: usize,
+
+    /// The service account key in JSON format
+    #[arg(long = "sa-key", short('k'), env = "GCP_BLOCK_EXTRACTOR_SA_KEY")]
+    sa_key: String,
+
+    /// Log level (default: info, options: trace, debug, info, warn, error)
+    #[arg(long, default_value = "info")]
+    log_level: String,
 }
 
 #[tokio::main]
@@ -52,38 +51,42 @@ async fn main() -> anyhow::Result<()> {
     init_logger()?;
     let args = Args::parse();
 
-    let (start_block, append) = match get_last_block_number_from_output_file(&args.output_file) {
-        Some(last_block_number) => {
-            log::info!(
-                "last block number found in output file: {}",
-                last_block_number
-            );
-            (last_block_number + 1, true)
-        }
-        None => (args.start_block, false),
-    };
-    let end_block = args.end_block.unwrap_or(u64::MAX);
+    // Check if the dataset ID is valid
+    if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
+        return Err(anyhow::anyhow!(
+            "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
+        ));
+    }
 
     log::info!("{PACKAGE}");
     log::info!("----------------------");
     log::info!("- rpc-url: {}", args.rpc_url);
-    log::info!("- output-file: {}", args.output_file.display());
-    log::info!("- start-block: {start_block:#x}");
-    log::info!("- end-block: {end_block:#x}");
+    log::info!("- project-id: {}", args.project_id);
+    log::info!("- dataset-id: {}", args.dataset_id);
+    log::info!("- request_time_out_secs: {}", args.request_time_out_secs);
     log::info!("----------------------");
 
     log::info!("initializing blocks-writer...");
-    let blocks_writer = BlocksWriter::new(&args.output_file, append)?;
+
     log::info!("blocks-writer initialized");
 
-    collect_blocks(
-        &args.rpc_url,
-        blocks_writer,
-        start_block,
-        end_block,
-        args.batch_size,
-    )
-    .await?;
+    let big_query_client =
+        BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?;
+
+    let mut extractor = BlockExtractor::new(
+        args.rpc_url,
+        args.request_time_out_secs,
+        args.rpc_batch_size,
+        Arc::new(big_query_client.clone()),
+    );
+
+    let end_block = extractor.latest_block_number().await?;
+    log::debug!("latest block number in evm: {}", end_block);
+
+    let start_block = extractor.latest_block_number_stored().await?;
+    log::debug!("latest block number stored: {}", start_block);
+
+    extractor.collect_blocks(start_block + 1, end_block).await?;
 
     Ok(())
 }
@@ -92,81 +95,4 @@ fn init_logger() -> anyhow::Result<()> {
     env_logger::init();
 
     Ok(())
-}
-
-async fn collect_blocks(
-    rpc_url: &str,
-    mut blocks_writer: BlocksWriter,
-    start_block: u64,
-    end_block: u64,
-    max_batch_size: usize,
-) -> anyhow::Result<()> {
-    let client = EthJsonRcpClient::new(ReqwestClient::new(rpc_url.to_string()));
-
-    for block_numbers in &(start_block..end_block).chunks(BLOCKS_PER_REQUEST) {
-        let block_numbers: Vec<BlockNumber> = block_numbers.map(|number| number.into()).collect();
-        log::info!(
-            "collecting blocks from {} to {}",
-            block_numbers.first().unwrap(),
-            block_numbers.last().unwrap()
-        );
-        let blocks = client
-            .get_full_blocks_by_number(block_numbers.clone(), max_batch_size)
-            .await;
-
-        let blocks = match blocks {
-            Ok(blocks) => blocks,
-            Err(err) => {
-                log::error!("error getting blocks: {}", err);
-                continue;
-            }
-        };
-
-        if blocks.is_empty() {
-            log::info!("there are no more blocks available on the EVM");
-            break;
-        }
-        // get tx receipts
-        for block in blocks.iter() {
-            log::info!(
-                "getting {} receipts for block {}",
-                block.transactions.len(),
-                block.number.unwrap().as_u64()
-            );
-            let tx_hashes = block.transactions.iter().map(|tx| tx.hash());
-            let receipts = client
-                .get_receipts_by_hash(tx_hashes, max_batch_size)
-                .await?;
-            log::info!("writing {} receipts", receipts.len());
-            blocks_writer.write_receipts(block.number.unwrap().as_u64(), &receipts)?;
-        }
-        log::info!("writing {} blocks", blocks.len());
-        write_blocks(&mut blocks_writer, &blocks)?;
-
-        if blocks.len() < block_numbers.len() {
-            log::info!(
-                "Found last block to be 0x{:x}",
-                blocks.last().unwrap().number.unwrap_or_default()
-            );
-            break;
-        }
-    }
-
-    Ok(())
-}
-
-fn write_blocks(
-    blocks_writer: &mut BlocksWriter,
-    blocks: &[Block<Transaction>],
-) -> anyhow::Result<()> {
-    for block in blocks {
-        blocks_writer.write_block(block)?;
-    }
-
-    Ok(())
-}
-
-fn get_last_block_number_from_output_file(output_file: &Path) -> Option<u64> {
-    let mut reader = BlocksReader::new(Path::new(output_file)).ok()?;
-    reader.get_last_block_number().ok()
 }
