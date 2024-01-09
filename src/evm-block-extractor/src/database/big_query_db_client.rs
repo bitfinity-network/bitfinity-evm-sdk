@@ -63,7 +63,51 @@ impl BigQueryDbClient {
         })
     }
 
-    pub async fn init(&self) -> anyhow::Result<()> {
+    async fn execute_query<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
+        let mut response = self.client.job().query(&self.project_id, query).await?;
+
+        if response.next_row() {
+            let result_str = response
+                .get_string(0)?
+                .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
+                .trim_matches('"')
+                .replace("\\\"", "\"");
+
+            let result: T = serde_json::from_str(&result_str)?;
+
+            Ok(result)
+        } else {
+            Err(anyhow::anyhow!("No data found for the query"))
+        }
+    }
+
+    async fn insert_batch_data(
+        &self,
+        table_id: &str,
+        rows: Vec<TableDataInsertAllRequestRows>,
+    ) -> anyhow::Result<()> {
+        let mut insert_request = TableDataInsertAllRequest::new();
+
+        insert_request.add_rows(rows)?;
+
+        let res = self
+            .client
+            .tabledata()
+            .insert_all(&self.project_id, &self.dataset_id, table_id, insert_request)
+            .await?;
+
+        if res.insert_errors.is_some() {
+            println!("error inserting data: {:?}", res.insert_errors);
+        }
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl DatabaseClient for BigQueryDbClient {
+
+    async fn init(&self) -> anyhow::Result<()> {
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
         // Make sure the dataset exists
         if self
@@ -120,50 +164,7 @@ impl BigQueryDbClient {
 
         Ok(())
     }
-
-    async fn execute_query<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
-        let mut response = self.client.job().query(&self.project_id, query).await?;
-
-        if response.next_row() {
-            let result_str = response
-                .get_string(0)?
-                .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
-                .trim_matches('"')
-                .replace("\\\"", "\"");
-
-            let result: T = serde_json::from_str(&result_str)?;
-
-            Ok(result)
-        } else {
-            Err(anyhow::anyhow!("No data found for the query"))
-        }
-    }
-
-    async fn insert_batch_data(
-        &self,
-        table_id: &str,
-        rows: Vec<TableDataInsertAllRequestRows>,
-    ) -> anyhow::Result<()> {
-        let mut insert_request = TableDataInsertAllRequest::new();
-
-        insert_request.add_rows(rows)?;
-
-        let res = self
-            .client
-            .tabledata()
-            .insert_all(&self.project_id, &self.dataset_id, table_id, insert_request)
-            .await?;
-
-        if res.insert_errors.is_some() {
-            println!("error inserting data: {:?}", res.insert_errors);
-        }
-
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
-impl DatabaseClient for BigQueryDbClient {
+    
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<Transaction>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {

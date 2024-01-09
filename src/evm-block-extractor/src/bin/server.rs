@@ -1,4 +1,5 @@
 use clap::{arg, Parser};
+use evm_block_extractor::database::DatabaseClient;
 use evm_block_extractor::rpc::{EthImpl, EthServer};
 use evm_block_extractor::database::big_query_db_client::BigQueryDbClient;
 use jsonrpsee::server::Server;

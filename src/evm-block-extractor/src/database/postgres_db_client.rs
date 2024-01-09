@@ -18,16 +18,16 @@ impl PostgresDbClient {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
-    /// Initialize the database
-    pub async fn init(&self) -> anyhow::Result<()> {
-        MIGRATOR.run(&self.pool).await?;
-        Ok(())
-    }
 }
 
 #[async_trait::async_trait]
 impl DatabaseClient for PostgresDbClient {
+    
+    async fn init(&self) -> anyhow::Result<()> {
+        MIGRATOR.run(&self.pool).await?;
+        Ok(())
+    }
+
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
         sqlx::query("SELECT data FROM EVM_BLOCK WHERE EVM_BLOCK.id = $1")
             .bind(block as i64)

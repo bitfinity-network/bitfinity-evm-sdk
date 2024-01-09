@@ -14,6 +14,11 @@ pub struct InMemoryDbClient {
 
 #[async_trait::async_trait]
 impl DatabaseClient for InMemoryDbClient {
+
+    async fn init(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
         match self.blocks.lock().await.get(&block) {
             Some(block) => Ok(block.clone()),

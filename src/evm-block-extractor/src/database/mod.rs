@@ -8,6 +8,9 @@ use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 #[async_trait::async_trait]
 pub trait DatabaseClient: Send + Sync {
 
+    /// Initialize the database
+    async fn init(&self) -> anyhow::Result<()>;
+
     /// Get a block from the database
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>>;
 
