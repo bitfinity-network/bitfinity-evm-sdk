@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use clap::Parser;
 use evm_block_extractor::block_extractor::BlockExtractor;
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
@@ -27,12 +29,12 @@ struct Args {
     #[arg(long = "dataset-id", short('d'))]
     dataset_id: String,
 
-    /// Max number of parallel requests in a single RPC batch
-    #[arg(long, default_value = "50")]
-    max_number_of_requests: usize,
+    /// Time in seconds to wait for a response from the EVMC
+    #[arg(long, default_value = "60")]
+    request_time_out_secs: u64,
 
-    #[arg(long, default_value = "500")]
-    rpc_batch_size: u64,
+    #[arg(long, default_value = "50")]
+    rpc_batch_size: usize,
 
     /// The service account key in JSON format
     #[arg(long = "sa-key", short('k'), env = "GCP_BLOCK_EXTRACTOR_SA_KEY")]
@@ -61,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
     log::info!("- rpc-url: {}", args.rpc_url);
     log::info!("- project-id: {}", args.project_id);
     log::info!("- dataset-id: {}", args.dataset_id);
-    log::info!("- max-number-of-requests: {}", args.max_number_of_requests);
+    log::info!("- request_time_out_secs: {}", args.request_time_out_secs);
     log::info!("----------------------");
 
     log::info!("initializing blocks-writer...");
@@ -73,19 +75,19 @@ async fn main() -> anyhow::Result<()> {
 
     let mut extractor = BlockExtractor::new(
         args.rpc_url,
-        args.max_number_of_requests as u64,
+        args.request_time_out_secs,
         args.rpc_batch_size,
-        Box::new(big_query_client.clone()),
+        Arc::new(big_query_client.clone()),
     );
 
     let end_block = extractor.latest_block_number().await?;
-    log::debug!("latest block number: {}", end_block);
+    log::debug!("latest block number in evm: {}", end_block);
 
     let start_block = extractor.latest_block_number_stored().await?;
     log::debug!("latest block number stored: {}", start_block);
 
     extractor
-        .collect_blocks(start_block..=end_block, args.max_number_of_requests)
+        .collect_blocks(start_block+1, end_block)
         .await?;
 
     Ok(())
