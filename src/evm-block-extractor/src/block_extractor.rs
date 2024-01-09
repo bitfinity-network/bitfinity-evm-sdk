@@ -17,7 +17,6 @@ pub struct BlockExtractor {
 }
 
 impl BlockExtractor {
-
     pub fn new(
         rpc_url: String,
         request_time_out_secs: u64,
@@ -50,8 +49,11 @@ impl BlockExtractor {
         from_block_inclusive: u64,
         to_block_inclusive: u64,
     ) -> anyhow::Result<()> {
-
-        log::info!("Getting blocks from {} to {}", from_block_inclusive, to_block_inclusive);
+        log::info!(
+            "Getting blocks from {} to {}",
+            from_block_inclusive,
+            to_block_inclusive
+        );
 
         let rpc_url = &self.rpc_url;
         let client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
@@ -62,7 +64,6 @@ impl BlockExtractor {
         let batch_size = self.rpc_batch_size;
 
         for blocks_batch in &(from_block_inclusive..=to_block_inclusive).chunks(batch_size) {
-
             let block_numbers = blocks_batch
                 .into_iter()
                 .map(|block| BlockNumber::Number(block.into()))
@@ -103,7 +104,6 @@ impl BlockExtractor {
                         log::warn!("Error getting receipts: {:?}. The process will not be stopped but there will be missing receipts in the DB", e);
                     }
                 }
-
             }
 
             self.blockchain
@@ -138,9 +138,7 @@ mod tests {
         }
         println!("Getting blocks from {} to {}", start_block, end_block);
 
-        let result = extractor
-            .collect_blocks(start_block, end_block)
-            .await;
+        let result = extractor.collect_blocks(start_block, end_block).await;
 
         if let Err(e) = &result {
             println!("Error: {:?}", e);

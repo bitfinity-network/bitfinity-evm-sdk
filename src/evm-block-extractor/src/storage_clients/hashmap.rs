@@ -1,4 +1,5 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use tokio::sync::Mutex;
@@ -13,7 +14,6 @@ pub struct HashMapBlockchain {
 
 #[async_trait::async_trait]
 impl BlockChainDB for HashMapBlockchain {
-
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
         match self.blocks.lock().await.get(&block) {
             Some(block) => Ok(block.clone()),
@@ -28,14 +28,12 @@ impl BlockChainDB for HashMapBlockchain {
     ) -> anyhow::Result<()> {
         let mut receipts_map = self.receipts.lock().await;
         for receipt in receipts {
-            receipts_map
-                .insert(receipt.transaction_hash, receipt.clone());
+            receipts_map.insert(receipt.transaction_hash, receipt.clone());
         }
 
         let mut blocks_map = self.blocks.lock().await;
         for block in block {
-            blocks_map
-                .insert(block.number.unwrap().as_u64(), block.clone());
+            blocks_map.insert(block.number.unwrap().as_u64(), block.clone());
         }
 
         Ok(())

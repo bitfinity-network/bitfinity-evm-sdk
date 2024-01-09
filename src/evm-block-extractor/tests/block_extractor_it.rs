@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use evm_block_extractor::block_extractor::BlockExtractor;
-use evm_block_extractor::storage_clients::BlockChainDB;
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
+use evm_block_extractor::storage_clients::BlockChainDB;
 use gcp_bigquery_client::model::dataset::Dataset;
 use testcontainers::clients::Cli;
 
@@ -37,8 +37,12 @@ async fn test_extractor_collect_blocks() {
     let rpc_url = "https://testnet.bitfinity.network".to_string();
     let request_time_out_secs = 10;
     let rpc_batch_size = 50;
-    let mut extractor =
-        BlockExtractor::new(rpc_url, request_time_out_secs, rpc_batch_size, blockchain.clone());
+    let mut extractor = BlockExtractor::new(
+        rpc_url,
+        request_time_out_secs,
+        rpc_batch_size,
+        blockchain.clone(),
+    );
 
     let end_block = extractor.latest_block_number().await.unwrap();
     let start_block = end_block - 10;
@@ -49,9 +53,7 @@ async fn test_extractor_collect_blocks() {
     }
     println!("Getting blocks from {} to {}", start_block, end_block);
 
-    let result = extractor
-        .collect_blocks(start_block, end_block)
-        .await;
+    let result = extractor.collect_blocks(start_block, end_block).await;
 
     if let Err(e) = &result {
         println!("Error: {:?}", e);

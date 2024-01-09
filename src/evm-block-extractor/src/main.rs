@@ -86,9 +86,7 @@ async fn main() -> anyhow::Result<()> {
     let start_block = extractor.latest_block_number_stored().await?;
     log::debug!("latest block number stored: {}", start_block);
 
-    extractor
-        .collect_blocks(start_block+1, end_block)
-        .await?;
+    extractor.collect_blocks(start_block + 1, end_block).await?;
 
     Ok(())
 }
