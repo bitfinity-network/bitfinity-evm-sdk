@@ -33,7 +33,7 @@ async-trait = { workspace = true }
 jsonrpsee = { workspace = true }
 yup-oauth2 = { workspace = true }
 did = { path = "../did" }
-
+futures = { workspace = true }
 [dev-dependencies]
 rand = { workspace = true }
 tempfile = { workspace = true }

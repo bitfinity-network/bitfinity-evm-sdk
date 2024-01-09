@@ -65,6 +65,16 @@ impl BigQueryBlockChain {
 
     pub async fn init(&self) -> anyhow::Result<()> {
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
+        // Make sure the dataset exists
+        if self
+            .client
+            .dataset()
+            .get(&self.project_id, &self.dataset_id)
+            .await
+            .is_err()
+        {
+            self.client.dataset().create(dataset.clone()).await?;
+        }
 
         // Define tables with their respective schemas
         let tables = [
@@ -128,6 +138,28 @@ impl BigQueryBlockChain {
             Err(anyhow::anyhow!("No data found for the query"))
         }
     }
+
+    async fn insert_batch_data(
+        &self,
+        table_id: &str,
+        rows: Vec<TableDataInsertAllRequestRows>,
+    ) -> anyhow::Result<()> {
+        let mut insert_request = TableDataInsertAllRequest::new();
+
+        insert_request.add_rows(rows)?;
+
+        let res = self
+            .client
+            .tabledata()
+            .insert_all(&self.project_id, &self.dataset_id, table_id, insert_request)
+            .await?;
+
+        if res.insert_errors.is_some() {
+            println!("error inserting data: {:?}", res.insert_errors);
+        }
+
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -157,105 +189,11 @@ impl BlockChainDB for BigQueryBlockChain {
         self.execute_query(query_request).await
     }
 
-    /// Returns the number of the last block stored in the zip file
-    async fn get_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>> {
-        let query_request = QueryRequest {
-            query_parameters: Some(vec![
-                QueryParameter {
-                    name: Some("start".to_string()),
-                    parameter_type: Some(QueryParameterType {
-                        r#type: "INTEGER".to_string(),
-                        ..Default::default()
-                    }),
-                    parameter_value: Some(QueryParameterValue {
-                        value: Some(start.to_string()),
-                        ..Default::default()
-                    }),
-                },
-                QueryParameter {
-                    name: Some("end".to_string()),
-                    parameter_type: Some(QueryParameterType {
-                        r#type: "INTEGER".to_string(),
-                        ..Default::default()
-                    }),
-                    parameter_value: Some(QueryParameterValue {
-                        value: Some(end.to_string()),
-                        ..Default::default()
-                    }),
-                },
-            ]),
-            query: format!(
-                "SELECT id FROM `{project_id}.{dataset_id}.{table_id}` WHERE id BETWEEN @start AND @end",
-                project_id = self.project_id,
-                dataset_id = self.dataset_id,
-                table_id = BLOCKS_TABLE_ID,
-            ),
-            ..Default::default()
-        };
-
-        let mut response = self
-            .client
-            .job()
-            .query(&self.project_id, query_request)
-            .await?;
-
-        let mut rows: Vec<u64> = vec![];
-
-        while response.next_row() {
-            let name = response.get_i64_by_name("id")?.ok_or(anyhow::anyhow!(
-                "Block with number {} not found in the database",
-                start
-            ))? as u64;
-
-            rows.push(name)
-        }
-
-        Ok(rows)
-    }
-
-    async fn insert_block(&mut self, block: &Block<Transaction>) -> anyhow::Result<()> {
-        let mut insert_request = TableDataInsertAllRequest::new();
-
-        let block_id = block
-            .number
-            .ok_or(anyhow::anyhow!("Block number not found"))?
-            .as_u64();
-
-        let block_row = BlockRow {
-            id: block_id,
-            body: serde_json::to_value(block)?,
-        };
-
-        // Check if block id already exists in the database
-        let existing_blocks = self.get_blocks_in_range(block_id, block_id).await?;
-
-        if existing_blocks.contains(&block_id) {
-            return Err(anyhow::anyhow!("Block with id {} already exists", block_id));
-        }
-
-        insert_request.add_row(Some(block_id.to_string()), block_row)?;
-
-        let res = self
-            .client
-            .tabledata()
-            .insert_all(
-                &self.project_id,
-                &self.dataset_id,
-                BLOCKS_TABLE_ID,
-                insert_request,
-            )
-            .await?;
-
-        if res.insert_errors.is_some() {
-            println!("error inserting block: {:?}", res.insert_errors);
-        }
-
-        Ok(())
-    }
-
-    async fn insert_receipts(&mut self, receipts: &[TransactionReceipt]) -> anyhow::Result<()> {
-        let mut insert_request = TableDataInsertAllRequest::new();
-
+    async fn insert_blocks_and_receipts(
+        &self,
+        block: &[Block<Transaction>],
+        receipts: &[TransactionReceipt],
+    ) -> anyhow::Result<()> {
         let receipts = receipts
             .iter()
             .map(|r| {
@@ -272,22 +210,35 @@ impl BlockChainDB for BigQueryBlockChain {
             })
             .collect::<Vec<_>>();
 
-        insert_request.add_rows(receipts)?;
+        self.insert_batch_data(RECEIPTS_TABLE_ID, receipts).await?;
 
-        let res = self
-            .client
-            .tabledata()
-            .insert_all(
-                &self.project_id,
-                &self.dataset_id,
-                RECEIPTS_TABLE_ID,
-                insert_request,
-            )
-            .await?;
+        let blocks = block
+            .iter()
+            .map(|b| {
+                let block_id = b
+                    .number
+                    .ok_or(anyhow::anyhow!("Block number not found"))
+                    .expect("Block number not found")
+                    .as_u64();
 
-        if res.insert_errors.is_some() {
-            println!("error inserting receipt: {:?}", res.insert_errors);
-        }
+                let block_hash = b
+                    .hash
+                    .ok_or(anyhow::anyhow!("Block hash not found"))
+                    .expect("Block hash not found");
+
+                let block_row = BlockRow {
+                    id: block_id,
+                    body: serde_json::to_value(b).expect("Failed to serialize block"),
+                };
+
+                TableDataInsertAllRequestRows {
+                    insert_id: Some(format!("0x{:x}", block_hash)),
+                    json: serde_json::to_value(block_row).expect("Failed to serialize block"),
+                }
+            })
+            .collect::<Vec<_>>();
+
+        self.insert_batch_data(BLOCKS_TABLE_ID, blocks).await?;
 
         Ok(())
     }

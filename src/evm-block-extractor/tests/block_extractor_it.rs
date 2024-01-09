@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use evm_block_extractor::block_extractor::BlockExtractor;
 use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
+use evm_block_extractor::storage_clients::BlockChainDB;
 use gcp_bigquery_client::model::dataset::Dataset;
 use testcontainers::testcontainers::clients::Cli;
 
@@ -13,7 +16,7 @@ async fn test_extractor_collect_blocks() {
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
-    let blockchain = Box::new(
+    let blockchain = Arc::new(
         BigQueryBlockChain::new_with_client(
             project_id.clone(),
             dataset_id.clone(),
@@ -34,12 +37,15 @@ async fn test_extractor_collect_blocks() {
     let rpc_url = "https://testnet.bitfinity.network".to_string();
     let request_time_out_secs = 10;
     let rpc_batch_size = 50;
-    let mut extractor =
-        BlockExtractor::new(rpc_url, request_time_out_secs, rpc_batch_size, blockchain);
+    let mut extractor = BlockExtractor::new(
+        rpc_url,
+        request_time_out_secs,
+        rpc_batch_size,
+        blockchain.clone(),
+    );
 
     let end_block = extractor.latest_block_number().await.unwrap();
     let start_block = end_block - 10;
-    let max_requests = 50;
     let block_range = start_block..=end_block;
 
     for block_number in block_range {
@@ -47,9 +53,7 @@ async fn test_extractor_collect_blocks() {
     }
     println!("Getting blocks from {} to {}", start_block, end_block);
 
-    let result = extractor
-        .collect_blocks(start_block..=end_block, max_requests)
-        .await;
+    let result = extractor.collect_blocks(start_block, end_block).await;
 
     if let Err(e) = &result {
         println!("Error: {:?}", e);
@@ -57,10 +61,7 @@ async fn test_extractor_collect_blocks() {
 
     assert!(result.is_ok());
 
-    let latest_block_num = extractor
-        .blockchain
-        .lock()
-        .await
+    let latest_block_num = blockchain
         .get_block_by_number(end_block)
         .await
         .unwrap()
