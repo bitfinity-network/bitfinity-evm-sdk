@@ -1,34 +1,21 @@
 use clap::{arg, Parser};
-use evm_block_extractor::database::big_query_db_client::BigQueryDbClient;
-use evm_block_extractor::database::DatabaseClient;
+use evm_block_extractor::config::Database;
 use evm_block_extractor::rpc::{EthImpl, EthServer};
 use jsonrpsee::server::Server;
 use jsonrpsee::RpcModule;
 
 #[derive(Debug, Clone, Parser)]
 pub struct ServerConfig {
-    /// The project ID of the BigQuery table
-    #[arg(long = "project-id", short('p'), default_value = "bitfinity-evm")]
-    project_id: String,
-
-    /// The dataset ID of the BigQuery table
-    /// The dataset ID can be one of the following:
-    /// - `testnet`
-    /// - `mainnet`
-    #[arg(long = "dataset-id", short('d'))]
-    pub dataset_id: String,
-
     /// Server address
     #[arg(long = "server-address", short('s'), default_value = "127.0.0.1:8080")]
     pub server_address: String,
 
-    /// The service account key in JSON format
-    #[arg(long = "sa-key", short('k'), env = "GCP_BLOCK_EXTRACTOR_SA_KEY")]
-    pub sa_key: String,
-
     /// Log level (default: info, options: trace, debug, info, warn, error)
     #[arg(long, default_value = "info")]
     pub log_level: String,
+
+    #[command(subcommand)]
+    command: Database,
 }
 
 #[tokio::main]
@@ -38,20 +25,12 @@ async fn main() -> anyhow::Result<()> {
 
     init_logger(args.log_level)?;
 
-    // Check if the dataset ID is valid
-    if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
-        return Err(anyhow::anyhow!(
-            "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
-        ));
-    }
-
     let server = Server::builder().build(args.server_address).await?;
 
-    let db = BigQueryDbClient::new(args.project_id, args.dataset_id, args.sa_key).await?;
+    let db_client = args.command.build_client().await?;
+    db_client.init().await?;
 
-    db.init().await?;
-
-    let eth = EthImpl::new(db);
+    let eth = EthImpl::new(db_client);
 
     let mut module = RpcModule::new(());
 
