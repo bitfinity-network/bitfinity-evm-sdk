@@ -1,10 +1,8 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use evm_block_extractor::database::postgres_db_client::PostgresDbClient;
+use evm_block_extractor::config::Database;
 use evm_block_extractor::database::DatabaseClient;
-use sqlx::postgres::PgConnectOptions;
-use sqlx::PgPool;
 use testcontainers::testcontainers::clients::Cli;
 use testcontainers::testcontainers::Container;
 
@@ -35,14 +33,13 @@ async fn new_postgres_db_client(
 ) {
     let node = docker.run(testcontainers::postgres::Postgres::default());
 
-    let options = PgConnectOptions::new()
-        .username("postgres")
-        .password("postgres")
-        .database("postgres")
-        .host("127.0.0.1")
-        .port(node.get_host_port_ipv4(5432));
+    let db = Database::Postgres {
+        username: "postgres".to_string(),
+        password: "postgres".to_string(),
+        database_name: "postgres".to_string(),
+        database_url: "127.0.0.1".to_owned(),
+        database_port: node.get_host_port_ipv4(5432),
+    };
 
-    let pool = PgPool::connect_with(options).await.unwrap();
-    let db_client = Arc::new(PostgresDbClient::new(pool));
-    (db_client, node)
+    (db.build_client().await.unwrap(), node)
 }
