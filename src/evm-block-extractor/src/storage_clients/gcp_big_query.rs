@@ -138,6 +138,28 @@ impl BigQueryBlockChain {
             Err(anyhow::anyhow!("No data found for the query"))
         }
     }
+
+    async fn insert_batch_data(
+        &self,
+        table_id: &str,
+        rows: Vec<TableDataInsertAllRequestRows>,
+    ) -> anyhow::Result<()> {
+        let mut insert_request = TableDataInsertAllRequest::new();
+
+        insert_request.add_rows(rows)?;
+
+        let res = self
+            .client
+            .tabledata()
+            .insert_all(&self.project_id, &self.dataset_id, table_id, insert_request)
+            .await?;
+
+        if res.insert_errors.is_some() {
+            println!("error inserting data: {:?}", res.insert_errors);
+        }
+
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -228,8 +250,6 @@ impl BlockChainDB for BigQueryBlockChain {
         block: &[Block<Transaction>],
         receipts: &[TransactionReceipt],
     ) -> anyhow::Result<()> {
-        let mut insert_request = TableDataInsertAllRequest::new();
-
         let receipts = receipts
             .iter()
             .map(|r| {
@@ -246,24 +266,7 @@ impl BlockChainDB for BigQueryBlockChain {
             })
             .collect::<Vec<_>>();
 
-        insert_request.add_rows(receipts)?;
-
-        let res = self
-            .client
-            .tabledata()
-            .insert_all(
-                &self.project_id,
-                &self.dataset_id,
-                RECEIPTS_TABLE_ID,
-                insert_request,
-            )
-            .await?;
-
-        if res.insert_errors.is_some() {
-            println!("error inserting receipts: {:?}", res.insert_errors);
-        }
-
-        let mut insert_request = TableDataInsertAllRequest::new();
+        self.insert_batch_data(RECEIPTS_TABLE_ID, receipts).await?;
 
         let blocks = block
             .iter()
@@ -291,22 +294,7 @@ impl BlockChainDB for BigQueryBlockChain {
             })
             .collect::<Vec<_>>();
 
-        insert_request.add_rows(blocks)?;
-
-        let res = self
-            .client
-            .tabledata()
-            .insert_all(
-                &self.project_id,
-                &self.dataset_id,
-                BLOCKS_TABLE_ID,
-                insert_request,
-            )
-            .await?;
-
-        if res.insert_errors.is_some() {
-            println!("error inserting blocks: {:?}", res.insert_errors);
-        }
+        self.insert_batch_data(BLOCKS_TABLE_ID, blocks).await?;
 
         Ok(())
     }
