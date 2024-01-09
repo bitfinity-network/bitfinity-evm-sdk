@@ -20,75 +20,63 @@ async fn test_postgres_docker() {
 }
 
 #[tokio::test]
-async fn test_insertion_of_blocks_and_retrieval_in_bq() {
-
+async fn test_batch_insertion_of_blocks_and_receipts_retrieval_in_bq() {
     let docker = Cli::default();
     let (pool, _node) = new_postgres_pool(&docker).await;
 
-    let mut blockchain = Box::new(PostgresBlockchain::new(pool));
+    let blockchain = Box::new(PostgresBlockchain::new(pool));
     blockchain.init().await.unwrap();
 
-    let dummy_block: Block<Transaction> = ethers_core::types::Block {
-        number: Some(ethers_core::types::U64::from(1)),
-        ..Default::default()
-    };
+    let mut blocks = Vec::new();
 
-    blockchain.insert_block(&dummy_block).await.unwrap();
+    for i in 1..=10 {
+        let dummy_block: Block<Transaction> = ethers_core::types::Block {
+            number: Some(ethers_core::types::U64::from(i)),
+            hash: Some(H256::random()),
+            ..Default::default()
+        };
+
+        blocks.push(dummy_block);
+    }
+
+    let mut receipts = Vec::new();
+
+    for _ in 1..=10 {
+        let tx_hash = H256::random();
+        let dummy_receipt: TransactionReceipt = ethers_core::types::TransactionReceipt {
+            transaction_hash: tx_hash,
+            ..Default::default()
+        };
+
+        receipts.push(dummy_receipt);
+    }
+
+    blockchain
+        .insert_blocks_and_receipts(&blocks, &receipts)
+        .await
+        .unwrap();
 
     let block = blockchain.get_block_by_number(1).await.unwrap();
 
     assert_eq!(block.number.unwrap().as_u64(), 1);
 
-    let latest_block_number = blockchain.get_latest_block_number().await.unwrap();
+    let receipt = blockchain
+        .get_transaction_receipt(receipts[0].transaction_hash)
+        .await
+        .unwrap();
 
-    assert_eq!(latest_block_number, 1);
-}
+    assert_eq!(receipt.transaction_hash, receipts[0].transaction_hash);
 
-#[tokio::test]
-async fn test_insertion_of_receipts_and_retrieval() {
-    let docker = Cli::default();
-    let (pool, _node) = new_postgres_pool(&docker).await;
+    let block = blockchain.get_block_by_number(10).await.unwrap();
 
-    let mut blockchain = Box::new(PostgresBlockchain::new(pool));
-    blockchain.init().await.unwrap();
+    assert_eq!(block.number.unwrap().as_u64(), 10);
 
-    let tx_hash = H256::random();
-    let dummy_receipt: TransactionReceipt = ethers_core::types::TransactionReceipt {
-        transaction_hash: tx_hash,
-        ..Default::default()
-    };
+    let receipt = blockchain
+        .get_transaction_receipt(receipts[9].transaction_hash)
+        .await
+        .unwrap();
 
-    blockchain.insert_receipts(&[dummy_receipt]).await.unwrap();
-
-    let receipt = blockchain.get_transaction_receipt(tx_hash).await.unwrap();
-
-    assert_eq!(receipt.transaction_hash, tx_hash);
-}
-
-#[tokio::test]
-async fn test_getting_block_range() {
-    let docker = Cli::default();
-    let (pool, _node) = new_postgres_pool(&docker).await;
-
-    let mut blockchain = Box::new(PostgresBlockchain::new(pool));
-    blockchain.init().await.unwrap();
-
-    for i in 1..=10 {
-        let dummy_block: Block<Transaction> = ethers_core::types::Block {
-            number: Some(ethers_core::types::U64::from(i)),
-            ..Default::default()
-        };
-
-        blockchain.insert_block(&dummy_block).await.unwrap();
-    }
-
-    let block_range = blockchain.get_blocks_in_range(1, 10).await.unwrap();
-
-    assert_eq!(block_range, (1..=10).collect::<Vec<u64>>());
-
-    let block_range = blockchain.get_blocks_in_range(1, 5).await.unwrap();
-
-    assert_eq!(block_range, (1..=5).collect::<Vec<u64>>());
+    assert_eq!(receipt.transaction_hash, receipts[9].transaction_hash);
 }
 
 #[tokio::test]
@@ -99,6 +87,19 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
     let blockchain = Box::new(PostgresBlockchain::new(pool));
     blockchain.init().await.unwrap();
 
+    for i in 1..=10 {
+        let dummy_block: Block<Transaction> = ethers_core::types::Block {
+            number: Some(ethers_core::types::U64::from(i)),
+            hash: Some(H256::random()),
+            ..Default::default()
+        };
+
+        blockchain
+            .insert_blocks_and_receipts(&[dummy_block], &[])
+            .await
+            .unwrap();
+    }
+
     let latest_block_number = blockchain.get_latest_block_number().await.unwrap();
 
     assert_eq!(latest_block_number, 10);
@@ -108,8 +109,48 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
     assert_eq!(earliest_block_number, 1);
 }
 
+#[tokio::test]
+async fn test_init_idempotency() {
+    let docker = Cli::default();
+    let (pool, _node) = new_postgres_pool(&docker).await;
 
+    let blockchain = Box::new(PostgresBlockchain::new(pool));
+    blockchain.init().await.unwrap();
 
+    // Add a block
+    let dummy_block: Block<Transaction> = ethers_core::types::Block {
+        number: Some(ethers_core::types::U64::from(1)),
+        hash: Some(H256::random()),
+        ..Default::default()
+    };
+
+    assert!(blockchain
+        .insert_blocks_and_receipts(&[dummy_block], &[])
+        .await
+        .is_err());
+
+    // First initialization - creates tables
+    blockchain.init().await.unwrap();
+
+    // Add a block
+    let dummy_block: Block<Transaction> = ethers_core::types::Block {
+        number: Some(ethers_core::types::U64::from(1)),
+        hash: Some(H256::random()),
+        ..Default::default()
+    };
+
+    assert!(blockchain
+        .insert_blocks_and_receipts(&[dummy_block], &[])
+        .await
+        .is_ok());
+
+    assert!(blockchain.init().await.is_ok());
+
+    // Retrieve the block
+    let block = blockchain.get_block_by_number(1).await.unwrap();
+
+    assert_eq!(block.number.unwrap().as_u64(), 1);
+}
 
 async fn new_postgres_pool(docker: &Cli) -> (PgPool, Container<'_, testcontainers::postgres::Postgres>) {
     let node = docker.run(testcontainers::postgres::Postgres::default());

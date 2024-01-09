@@ -40,44 +40,28 @@ impl BlockChainDB for PostgresBlockchain {
             .and_then(|row | from_row_value(&row, 0))
     }
 
-    /// Insert a block into the database
-    async fn insert_block(&mut self, block: &Block<Transaction>) -> anyhow::Result<()> {
+    async fn insert_blocks_and_receipts(
+        &self,
+        blocks: &[Block<Transaction>],
+        receipts: &[TransactionReceipt],
+    ) -> anyhow::Result<()> {
 
-        let block_id = block
+        let mut tx = self.pool.begin().await?;
+
+        for block in blocks {
+            let block_id = block
             .number
             .ok_or(anyhow::anyhow!("Block number not found"))?
             .as_u64();
 
-        sqlx::query("INSERT INTO EVM_BLOCK (id, data) VALUES ($1, $2)")
-            .bind(block_id as i64)
-            .bind(serde_json::to_value(block)?)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| anyhow::anyhow!("Error inserting block {}: {:?}", block_id, e))
-            .map(|_| ())
-
-    }
-
-    async fn get_blocks_in_range(&self, start: u64, end: u64) -> anyhow::Result<Vec<u64>> {
-        sqlx::query("SELECT id, data FROM EVM_BLOCK WHERE id >= $1 AND id <= $2")
-            .bind(start as i64)
-            .bind(end as i64)
-            .fetch_all(&self.pool)
-            .await
-            .and_then(|rows| {
-                let mut res = vec![];
-                for row in rows {
-                    let block_number = row.try_get::<i64, _>(0)?;
-                    res.push(block_number as u64);
-                }
-                Ok(res)
-            })
-            .map_err(|e| anyhow::anyhow!("Error getting blocks in range: {:?}", e))
-    }
-
-    /// Insert receipts into the database
-    async fn insert_receipts(&mut self, receipts: &[TransactionReceipt]) -> anyhow::Result<()> {
-        let mut tx = self.pool.begin().await?;
+            sqlx::query("INSERT INTO EVM_BLOCK (id, data) VALUES ($1, $2)")
+                .bind(block_id as i64)
+                .bind(serde_json::to_value(block)?)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| anyhow::anyhow!("Error inserting block {}: {:?}", block_id, e))
+                .map(|_| ())?;
+        }
 
         for receipt in receipts {
             let hex_tx_hash = did::H256::from(receipt.transaction_hash).to_hex_str();
