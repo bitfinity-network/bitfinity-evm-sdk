@@ -27,7 +27,7 @@ pub trait BlockChainDB: Send + Sync {
 
     /// Insert blocks and receipts into the database
     async fn insert_blocks_and_receipts(
-        &mut self,
+        &self,
         blocks: &[Block<Transaction>],
         receipts: &[TransactionReceipt],
     ) -> anyhow::Result<()>;

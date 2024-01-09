@@ -14,7 +14,7 @@ pub struct BlockExtractor {
     rpc_url: String,
     request_time_out_secs: u64,
     rpc_batch_size: u64,
-    pub blockchain: Arc<Mutex<Box<dyn BlockChainDB>>>,
+    pub blockchain: Box<dyn BlockChainDB>,
 }
 
 impl BlockExtractor {
@@ -26,7 +26,7 @@ impl BlockExtractor {
     ) -> Self {
         Self {
             rpc_url,
-            blockchain: Arc::new(Mutex::new(blockchain)),
+            blockchain,
             rpc_batch_size,
             request_time_out_secs,
         }
@@ -39,8 +39,7 @@ impl BlockExtractor {
     }
 
     pub async fn latest_block_number_stored(&self) -> anyhow::Result<u64> {
-        let blockchain = self.blockchain.lock().await;
-        blockchain.get_latest_block_number().await
+        self.blockchain.get_latest_block_number().await
     }
 
     pub async fn collect_blocks(
@@ -87,7 +86,7 @@ impl BlockExtractor {
 
             let receipts_task = tokio::spawn({
                 let client = client.clone();
-                let rx = rx.clone();
+                let rx: Arc<Mutex<mpsc::Receiver<Vec<H256>>>> = rx.clone();
                 async move {
                     let mut rx = rx.lock().await;
                     let tx_hashes = rx.recv().await.context("Error receiving tx hashes")?;
@@ -100,9 +99,7 @@ impl BlockExtractor {
 
             let (blocks, receipts) = (blocks??, receipts??);
 
-            let mut blockchain = self.blockchain.lock().await;
-
-            blockchain
+            self.blockchain
                 .insert_blocks_and_receipts(&blocks, &receipts)
                 .await?;
         }
@@ -147,8 +144,6 @@ mod tests {
 
         let latest_block_num = extractor
             .blockchain
-            .lock()
-            .await
             .get_block_by_number(end_block)
             .await
             .unwrap()

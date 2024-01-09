@@ -59,8 +59,6 @@ async fn test_extractor_collect_blocks() {
 
     let latest_block_num = extractor
         .blockchain
-        .lock()
-        .await
         .get_block_by_number(end_block)
         .await
         .unwrap()

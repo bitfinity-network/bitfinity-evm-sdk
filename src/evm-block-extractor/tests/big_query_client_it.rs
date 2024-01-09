@@ -162,7 +162,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_retrieval_in_bq() {
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
-    let mut blockchain = Box::new(
+    let blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
             project_id.clone(),
             dataset_id.clone(),
@@ -233,7 +233,7 @@ async fn test_getting_block_range() {
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
-    let mut blockchain = Box::new(
+    let blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
             project_id.clone(),
             dataset_id.clone(),
@@ -272,7 +272,7 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
-    let mut blockchain = Box::new(
+    let blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
             project_id.clone(),
             dataset_id.clone(),
@@ -313,7 +313,7 @@ async fn test_init_idempotency() {
         client::new_bigquery_client(&docker, &project_id).await;
     let dataset_id = format!("test_{}", rand::random::<u64>());
 
-    let mut blockchain = Box::new(
+    let blockchain = Box::new(
         BigQueryBlockChain::new_with_client(
             project_id.clone(),
             dataset_id.clone(),

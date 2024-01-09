@@ -246,7 +246,7 @@ impl BlockChainDB for BigQueryBlockChain {
     }
 
     async fn insert_blocks_and_receipts(
-        &mut self,
+        &self,
         block: &[Block<Transaction>],
         receipts: &[TransactionReceipt],
     ) -> anyhow::Result<()> {
