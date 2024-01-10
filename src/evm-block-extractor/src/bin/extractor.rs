@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use clap::Parser;
+use ethereum_json_rpc_client::reqwest::ReqwestClient;
+use ethereum_json_rpc_client::EthJsonRcpClient;
 use evm_block_extractor::block_extractor::BlockExtractor;
-use evm_block_extractor::storage_clients::gcp_big_query::BigQueryBlockChain;
+use evm_block_extractor::config::Database;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PACKAGE: &str = env!("CARGO_PKG_NAME");
@@ -18,17 +20,6 @@ struct Args {
     #[arg(long = "rpc-url", short('u'))]
     rpc_url: String,
 
-    /// The project ID of the BigQuery table
-    #[arg(long = "project-id", short('p'), default_value = "bitfinity-evm")]
-    project_id: String,
-
-    /// The dataset ID of the BigQuery table
-    /// The dataset ID can be one of the following:
-    /// - `testnet`
-    /// - `mainnet`
-    #[arg(long = "dataset-id", short('d'))]
-    dataset_id: String,
-
     /// Time in seconds to wait for a response from the EVMC
     #[arg(long, default_value = "60")]
     request_time_out_secs: u64,
@@ -36,33 +27,24 @@ struct Args {
     #[arg(long, default_value = "50")]
     rpc_batch_size: usize,
 
-    /// The service account key in JSON format
-    #[arg(long = "sa-key", short('k'), env = "GCP_BLOCK_EXTRACTOR_SA_KEY")]
-    sa_key: String,
-
     /// Log level (default: info, options: trace, debug, info, warn, error)
     #[arg(long, default_value = "info")]
     log_level: String,
+
+    #[command(subcommand)]
+    command: Database,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Initialize logger
-    init_logger()?;
     let args = Args::parse();
 
-    // Check if the dataset ID is valid
-    if args.dataset_id != "testnet" && args.dataset_id != "mainnet" {
-        return Err(anyhow::anyhow!(
-            "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
-        ));
-    }
+    // Initialize logger
+    init_logger(args.log_level)?;
 
     log::info!("{PACKAGE}");
     log::info!("----------------------");
     log::info!("- rpc-url: {}", args.rpc_url);
-    log::info!("- project-id: {}", args.project_id);
-    log::info!("- dataset-id: {}", args.dataset_id);
     log::info!("- request_time_out_secs: {}", args.request_time_out_secs);
     log::info!("----------------------");
 
@@ -70,29 +52,37 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("blocks-writer initialized");
 
-    let big_query_client =
-        BigQueryBlockChain::new(args.project_id, args.dataset_id, args.sa_key).await?;
+    let db_client = args.command.build_client().await?;
+    db_client.init().await?;
+
+    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(args.rpc_url)));
 
     let mut extractor = BlockExtractor::new(
-        args.rpc_url,
+        evm_client.clone(),
         args.request_time_out_secs,
         args.rpc_batch_size,
-        Arc::new(big_query_client.clone()),
+        db_client.clone(),
     );
 
-    let end_block = extractor.latest_block_number().await?;
+    let end_block = evm_client.get_block_number().await?;
     log::debug!("latest block number in evm: {}", end_block);
 
-    let start_block = extractor.latest_block_number_stored().await?;
-    log::debug!("latest block number stored: {}", start_block);
+    let start_block = db_client.get_latest_block_number().await?;
+    log::debug!("latest block number stored: {:?}", start_block);
 
-    extractor.collect_blocks(start_block + 1, end_block).await?;
+    extractor
+        .collect_blocks(start_block.map(|b| b + 1).unwrap_or_default(), end_block)
+        .await?;
 
     Ok(())
 }
 
-fn init_logger() -> anyhow::Result<()> {
-    env_logger::init();
+fn init_logger(log_level: String) -> anyhow::Result<()> {
+    let level = log_level
+        .parse::<log::LevelFilter>()
+        .unwrap_or(log::LevelFilter::Info);
+
+    env_logger::Builder::new().filter(None, level).try_init()?;
 
     Ok(())
 }

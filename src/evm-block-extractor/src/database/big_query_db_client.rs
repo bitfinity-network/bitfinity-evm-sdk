@@ -17,12 +17,12 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 
-use super::BlockChainDB;
+use super::DatabaseClient;
 use crate::constants::{BLOCKS_TABLE_ID, RECEIPTS_TABLE_ID};
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
-pub struct BigQueryBlockChain {
+pub struct BigQueryDbClient {
     client: Client,
     /// The project ID of the BigQuery project
     project_id: String,
@@ -32,7 +32,7 @@ pub struct BigQueryBlockChain {
     dataset_id: String,
 }
 
-impl BigQueryBlockChain {
+impl BigQueryDbClient {
     /// Creates a new BigQuery client
     pub async fn new(
         project_id: String,
@@ -63,7 +63,50 @@ impl BigQueryBlockChain {
         })
     }
 
-    pub async fn init(&self) -> anyhow::Result<()> {
+    async fn execute_query<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
+        let mut response = self.client.job().query(&self.project_id, query).await?;
+
+        if response.next_row() {
+            let result_str = response
+                .get_string(0)?
+                .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
+                .trim_matches('"')
+                .replace("\\\"", "\"");
+
+            let result: T = serde_json::from_str(&result_str)?;
+
+            Ok(result)
+        } else {
+            Err(anyhow::anyhow!("No data found for the query"))
+        }
+    }
+
+    async fn insert_batch_data(
+        &self,
+        table_id: &str,
+        rows: Vec<TableDataInsertAllRequestRows>,
+    ) -> anyhow::Result<()> {
+        let mut insert_request = TableDataInsertAllRequest::new();
+
+        insert_request.add_rows(rows)?;
+
+        let res = self
+            .client
+            .tabledata()
+            .insert_all(&self.project_id, &self.dataset_id, table_id, insert_request)
+            .await?;
+
+        if res.insert_errors.is_some() {
+            println!("error inserting data: {:?}", res.insert_errors);
+        }
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl DatabaseClient for BigQueryDbClient {
+    async fn init(&self) -> anyhow::Result<()> {
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
         // Make sure the dataset exists
         if self
@@ -121,49 +164,6 @@ impl BigQueryBlockChain {
         Ok(())
     }
 
-    async fn execute_query<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
-        let mut response = self.client.job().query(&self.project_id, query).await?;
-
-        if response.next_row() {
-            let result_str = response
-                .get_string(0)?
-                .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
-                .trim_matches('"')
-                .replace("\\\"", "\"");
-
-            let result: T = serde_json::from_str(&result_str)?;
-
-            Ok(result)
-        } else {
-            Err(anyhow::anyhow!("No data found for the query"))
-        }
-    }
-
-    async fn insert_batch_data(
-        &self,
-        table_id: &str,
-        rows: Vec<TableDataInsertAllRequestRows>,
-    ) -> anyhow::Result<()> {
-        let mut insert_request = TableDataInsertAllRequest::new();
-
-        insert_request.add_rows(rows)?;
-
-        let res = self
-            .client
-            .tabledata()
-            .insert_all(&self.project_id, &self.dataset_id, table_id, insert_request)
-            .await?;
-
-        if res.insert_errors.is_some() {
-            println!("error inserting data: {:?}", res.insert_errors);
-        }
-
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
-impl BlockChainDB for BigQueryBlockChain {
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<Transaction>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {
@@ -270,7 +270,7 @@ impl BlockChainDB for BigQueryBlockChain {
         self.execute_query(query_request).await
     }
 
-    async fn get_latest_block_number(&self) -> anyhow::Result<u64> {
+    async fn get_latest_block_number(&self) -> anyhow::Result<Option<u64>> {
         let query = format!(
             "SELECT MAX(id) as max_id FROM `{project_id}.{dataset_id}.{table_id}`",
             project_id = self.project_id,
@@ -284,12 +284,8 @@ impl BlockChainDB for BigQueryBlockChain {
             .await?;
 
         if response.next_row() {
-            let max_id = response.get_i64(0)?.ok_or(anyhow::anyhow!(
-                "Block with number {} not found in the database",
-                0
-            ))? as u64;
-
-            Ok(max_id)
+            let max_id = response.get_i64(0)?;
+            Ok(max_id.map(|v| v as u64))
         } else {
             Err(anyhow::anyhow!(
                 "Block with number {} not found in the database",

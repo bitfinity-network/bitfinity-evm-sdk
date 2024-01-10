@@ -4,16 +4,20 @@ use std::sync::Arc;
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
 use tokio::sync::Mutex;
 
-use super::BlockChainDB;
+use super::DatabaseClient;
 
 #[derive(Clone, Default)]
-pub struct HashMapBlockchain {
+pub struct InMemoryDbClient {
     pub blocks: Arc<Mutex<HashMap<u64, Block<Transaction>>>>,
     pub receipts: Arc<Mutex<HashMap<H256, TransactionReceipt>>>,
 }
 
 #[async_trait::async_trait]
-impl BlockChainDB for HashMapBlockchain {
+impl DatabaseClient for InMemoryDbClient {
+    async fn init(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
+
     async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
         match self.blocks.lock().await.get(&block) {
             Some(block) => Ok(block.clone()),
@@ -46,14 +50,18 @@ impl BlockChainDB for HashMapBlockchain {
         }
     }
 
-    async fn get_latest_block_number(&self) -> anyhow::Result<u64> {
+    async fn get_latest_block_number(&self) -> anyhow::Result<Option<u64>> {
+        let block_map = self.blocks.lock().await;
+        if block_map.is_empty() {
+            return Ok(None);
+        }
         let mut max_block_number = 0;
-        for block_number in self.blocks.lock().await.keys() {
+        for block_number in block_map.keys() {
             if *block_number > max_block_number {
                 max_block_number = *block_number;
             }
         }
-        Ok(max_block_number)
+        Ok(Some(max_block_number))
     }
 
     async fn get_earliest_block_number(&self) -> anyhow::Result<u64> {

@@ -1,20 +1,25 @@
-use gcp_bigquery_client::Client;
+use std::sync::Arc;
+
+use evm_block_extractor::database::big_query_db_client::BigQueryDbClient;
+use evm_block_extractor::database::DatabaseClient;
 use tempfile::NamedTempFile;
-use testcontainers::clients::Cli;
-use testcontainers::core::WaitFor;
-use testcontainers::{Container, GenericImage};
+use testcontainers::testcontainers::clients::Cli;
+use testcontainers::testcontainers::core::WaitFor;
+use testcontainers::testcontainers::{Container, GenericImage};
 
 use self::auth_mock::GoogleAuthMock;
 
-pub async fn new_bigquery_client<'a>(
-    docker: &'a Cli,
-    project_id: &str,
+pub async fn new_bigquery_client(
+    docker: &Cli,
 ) -> (
-    Client,
-    Container<'a, GenericImage>,
+    Arc<dyn DatabaseClient>,
+    Container<'_, GenericImage>,
     NamedTempFile,
     GoogleAuthMock,
 ) {
+    let project_id = format!("test_project_{}", rand::random::<u64>());
+    let dataset_id = format!("test_{}", rand::random::<u64>());
+
     let emulator_image = GenericImage::new("ghcr.io/goccy/bigquery-emulator", "0.4.4")
         .with_exposed_port(9050)
         .with_wait_for(WaitFor::message_on_stdout(
@@ -43,7 +48,12 @@ pub async fn new_bigquery_client<'a>(
         .await
         .unwrap();
 
-    (gcp_client, node, temp_file, google_auth)
+    let client = Arc::new(
+        BigQueryDbClient::new_with_client(project_id.clone(), dataset_id.clone(), gcp_client)
+            .unwrap(),
+    );
+
+    (client, node, temp_file, google_auth)
 }
 
 pub mod auth_mock {

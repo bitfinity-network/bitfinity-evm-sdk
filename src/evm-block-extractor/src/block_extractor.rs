@@ -6,59 +6,45 @@ use ethers_core::types::BlockNumber;
 use itertools::Itertools;
 use tokio::time::Duration;
 
-use crate::storage_clients::BlockChainDB;
+use crate::database::DatabaseClient;
 
 /// Extracts blocks from an EVMC and stores them in a database
 pub struct BlockExtractor {
-    rpc_url: String,
+    client: Arc<EthJsonRcpClient<ReqwestClient>>,
     request_time_out_secs: u64,
     rpc_batch_size: usize,
-    blockchain: Arc<dyn BlockChainDB>,
+    blockchain: Arc<dyn DatabaseClient>,
 }
 
 impl BlockExtractor {
     pub fn new(
-        rpc_url: String,
+        client: Arc<EthJsonRcpClient<ReqwestClient>>,
         request_time_out_secs: u64,
         rpc_batch_size: usize,
-        blockchain: Arc<dyn BlockChainDB>,
+        blockchain: Arc<dyn DatabaseClient>,
     ) -> Self {
         Self {
-            rpc_url,
+            client,
             blockchain,
             rpc_batch_size,
             request_time_out_secs,
         }
     }
 
-    /// Returns the latest block number in the EVMC
-    pub async fn latest_block_number(&self) -> anyhow::Result<u64> {
-        let rpc_url = &self.rpc_url;
-        let client = EthJsonRcpClient::new(ReqwestClient::new(rpc_url.to_string()));
-        client.get_block_number().await
-    }
-
-    /// Returns the latest block number stored in the database
-    pub async fn latest_block_number_stored(&self) -> anyhow::Result<u64> {
-        self.blockchain.get_latest_block_number().await
-    }
-
-    /// Collects blocks from the EVMC and stores them in the database
+    /// Collects blocks from the EVMC and stores them in the database.
+    /// Returns the inclusive range of blocks that were collected.
     pub async fn collect_blocks(
         &mut self,
         from_block_inclusive: u64,
         to_block_inclusive: u64,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<(u64, u64)> {
         log::info!(
-            "Getting blocks from {} to {}",
+            "Getting blocks from {:?} to {}",
             from_block_inclusive,
             to_block_inclusive
         );
 
-        let rpc_url = &self.rpc_url;
-        let client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
-            rpc_url.to_string(),
-        )));
+        let client = self.client.clone();
 
         let request_time_out_secs = self.request_time_out_secs;
         let batch_size = self.rpc_batch_size;
@@ -111,32 +97,35 @@ impl BlockExtractor {
                 .await?;
         }
 
-        Ok(())
+        Ok((from_block_inclusive, to_block_inclusive))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage_clients::hashmap::HashMapBlockchain;
+    use crate::database::in_memory_db_client::InMemoryDbClient;
 
     #[tokio::test]
     async fn test_collect_blocks() {
-        let blockchain = Arc::<HashMapBlockchain>::default();
+        let blockchain = Arc::<InMemoryDbClient>::default();
         let rpc_url = "https://testnet.bitfinity.network".to_string();
         let request_time_out_secs = 10;
         let rpc_batch_size = 50;
-        let mut extractor =
-            BlockExtractor::new(rpc_url, request_time_out_secs, rpc_batch_size, blockchain);
 
-        let end_block = extractor.latest_block_number().await.unwrap();
+        let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));
+
+        let mut extractor = BlockExtractor::new(
+            evm_client.clone(),
+            request_time_out_secs,
+            rpc_batch_size,
+            blockchain.clone(),
+        );
+
+        let end_block = evm_client.get_block_number().await.unwrap();
         let start_block = end_block - 10;
-        let block_range = start_block..=end_block;
 
-        for block_number in block_range {
-            println!("Processing block number: {}", block_number);
-        }
-        println!("Getting blocks from {} to {}", start_block, end_block);
+        println!("Getting blocks from {:?} to {}", start_block, end_block);
 
         let result = extractor.collect_blocks(start_block, end_block).await;
 
@@ -146,8 +135,7 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let latest_block_num = extractor
-            .blockchain
+        let latest_block_num = blockchain
             .get_block_by_number(end_block)
             .await
             .unwrap()

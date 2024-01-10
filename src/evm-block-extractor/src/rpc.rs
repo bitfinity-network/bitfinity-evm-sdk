@@ -1,17 +1,19 @@
+use std::sync::Arc;
+
 use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256, U256, U64};
 use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 
-use crate::storage_clients::BlockChainDB;
+use crate::database::DatabaseClient;
 
 #[derive(Clone)]
-pub struct EthImpl<B: BlockChainDB + 'static> {
-    pub blockchain: B,
+pub struct EthImpl {
+    pub blockchain: Arc<dyn DatabaseClient + 'static>,
 }
 
-impl<B: BlockChainDB + 'static> EthImpl<B> {
-    pub fn new(db: B) -> Self {
+impl EthImpl {
+    pub fn new(db: Arc<dyn DatabaseClient + 'static>) -> Self {
         Self { blockchain: db }
     }
 }
@@ -44,14 +46,18 @@ pub trait IC {
 }
 
 #[async_trait::async_trait]
-impl<B: BlockChainDB + 'static> ICServer for EthImpl<B> {
+impl ICServer for EthImpl {
     async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<Vec<u8>> {
         let db = &self.blockchain;
         let from = match from {
-            BlockNumber::Latest => db.get_latest_block_number().await.map_err(|e| {
-                log::error!("Error getting block number: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
-            })?,
+            BlockNumber::Latest => db
+                .get_latest_block_number()
+                .await
+                .map_err(|e| {
+                    log::error!("Error getting block number: {:?}", e);
+                    jsonrpsee::types::error::ErrorCode::InternalError
+                })?
+                .unwrap_or(0),
             BlockNumber::Earliest => db.get_earliest_block_number().await.map_err(|e| {
                 log::error!("Error getting earliest block number: {:?}", e);
                 jsonrpsee::types::error::ErrorCode::InternalError
@@ -61,10 +67,15 @@ impl<B: BlockChainDB + 'static> ICServer for EthImpl<B> {
             _ => return Ok(EMPTY_LIST_RLP.into()),
         };
 
-        let block_count = db.get_latest_block_number().await.map_err(|e| {
-            log::error!("Error getting block number: {:?}", e);
-            jsonrpsee::types::error::ErrorCode::InternalError
-        })? + 1;
+        let block_count = db
+            .get_latest_block_number()
+            .await
+            .map_err(|e| {
+                log::error!("Error getting block number: {:?}", e);
+                jsonrpsee::types::error::ErrorCode::InternalError
+            })?
+            .unwrap_or(0)
+            + 1;
 
         let end_block = std::cmp::min(from + std::cmp::min(10, max_number.as_u64()), block_count);
 
@@ -91,7 +102,7 @@ impl<B: BlockChainDB + 'static> ICServer for EthImpl<B> {
 }
 
 #[async_trait::async_trait]
-impl<B: BlockChainDB + 'static> EthServer for EthImpl<B> {
+impl EthServer for EthImpl {
     async fn get_block_by_number(
         &self,
         block_number: U256,
@@ -132,7 +143,8 @@ impl<B: BlockChainDB + 'static> EthServer for EthImpl<B> {
             .map_err(|e| {
                 log::error!("Error getting block number: {:?}", e);
                 jsonrpsee::types::error::ErrorCode::InternalError
-            })?;
+            })?
+            .unwrap_or(0);
 
         Ok(block_number.into())
     }
