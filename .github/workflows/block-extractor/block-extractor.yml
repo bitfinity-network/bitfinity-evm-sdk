@@ -1,0 +1,38 @@
+name: Block Extractor Workflow
+
+on:
+  workflow_call:
+    inputs:
+      rpc_url:
+        type: string
+        description: 'RPC URL'
+        required: true
+      dataset:
+        type: string
+        description: 'Dataset'
+        required: true
+      
+
+env:
+  RUST_LOG: info
+  GCP_BLOCK_EXTRACTOR_SA_KEY: ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }}
+
+jobs:
+  backup-blocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Move evm-block-extractor from bin
+        run: mv bin/evm-block-extractor evm-block-extractor
+
+      - name: Make evm-block-extractor executable
+        run: chmod +x evm-block-extractor
+
+      - name: Run evm-block-extractor and backup state
+        run: |
+          ./evm-block-extractor \
+              --rpc-url ${{ inputs.rpc_url }} \
+              -d ${{ inputs.dataset }} \
+              --max-number-of-requests 100

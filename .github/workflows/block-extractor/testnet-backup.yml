@@ -1,0 +1,13 @@
+name: Testnet Backup
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 */3 * * *' # every 3 hours
+
+jobs:
+  testnet:
+    uses: ./.github/workflows/block-extractor.yaml
+    with:
+      rpc_url: 'https://testnet.bitfinity.network'
+      dataset: 'testnet'
