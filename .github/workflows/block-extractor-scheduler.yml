@@ -1,0 +1,76 @@
+name: Block Extractor Workflow
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'
+
+env:
+  RUST_LOG: info
+  GCP_BLOCK_EXTRACTOR_SA_KEY: ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }}
+
+jobs:
+  backup-blocks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [postgres, bigquery]
+        network: [mainnet, testnet]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Compile evm-block-extractor
+        run: cargo build --release -p evm-block-extractor --bin evm-block-extractor-server
+
+      - name: Move binary to root
+        run: mv target/release/evm-block-extractor-server evm-block-extractor-server
+
+      - name: Make binary executable
+        run: chmod +x evm-block-extractor-server
+
+      - name: Set RPC URL and Database Config
+        run: |
+          if [ "${{ matrix.network }}" = "mainnet" ]; then
+              echo "rpc_url=mainnet.bitfinity.network" >> $GITHUB_ENV
+          elif [ "${{ matrix.network }}" = "testnet" ]; then
+              echo "rpc_url=testnet.bitfinity.network" >> $GITHUB_ENV
+          fi
+
+          if [ "${{ matrix.database }}" = "bigquery" ]; then
+              echo "db_project_id=${{ secrets.BIGQUERY_PROJECT_ID }}" >> $GITHUB_ENV
+              echo "db_dataset_id=${{ secrets.BIGQUERY_DATASET_ID }}" >> $GITHUB_ENV
+
+          elif [ "${{ matrix.database }}" = "postgres" ]; then
+              echo "db_username=${{ secrets.POSTGRES_USERNAME }}" >> $GITHUB_ENV
+              echo "db_password=${{ secrets.POSTGRES_PASSWORD }}" >> $GITHUB_ENV
+              echo "db_database_name=${{ secrets.POSTGRES_DATABASE_NAME }}" >> $GITHUB_ENV
+              echo "db_database_url=${{ secrets.POSTGRES_DATABASE_URL }}" >> $GITHUB_ENV
+              echo "db_database_port=${{ secrets.POSTGRES_DATABASE_PORT }}" >> $GITHUB_ENV
+          fi
+
+      - name: Run evm-block-extractor for BigQuery
+        if: matrix.database == 'bigquery'
+        run: |
+          ./evm-block-extractor \
+              --rpc-url ${{ env.rpc_url }} \
+              --max-number-of-requests 100 \
+              --database bigquery \
+              --network ${{ matrix.network }} \
+              --project-id ${{ env.db_project_id }} \
+              --dataset-id ${{ env.db_dataset_id }} \
+              --sa-key ${{ env.GCP_BLOCK_EXTRACTOR_SA_KEY }}
+
+      - name: Run evm-block-extractor for Postgres
+        if: matrix.database == 'postgres'
+        run: |
+          ./evm-block-extractor \
+              --rpc-url ${{ env.rpc_url }} \
+              --max-number-of-requests 100 \
+              --database postgres \
+              --network ${{ matrix.network }} \
+              --username ${{ env.db_username }} \
+              --password ${{ env.db_password }}
+              --database-name ${{ env.db_database_name }} \
+              --database-url ${{ env.db_database_url }} \
+              --database-port ${{ env.db_database_port }}
