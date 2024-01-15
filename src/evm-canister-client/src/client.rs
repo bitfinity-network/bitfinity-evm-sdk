@@ -750,4 +750,19 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn net_listening(&self) -> CanisterClientResult<bool> {
         self.client.query("net_listening", ()).await
     }
+
+    /// Returns the max batch requests. This is the maximum amount of requests allowed in a batch
+    pub async fn get_max_batch_requests(&self) -> CanisterClientResult<u32> {
+        self.client.query("get_max_batch_requests", ()).await
+    }
+
+    /// Sets the max batch requests. This is the maximum amount of requests allowed in a batch
+    pub async fn admin_set_max_batch_requests(
+        &self,
+        size: u32,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_max_batch_requests", (size,))
+            .await
+    }
 }
