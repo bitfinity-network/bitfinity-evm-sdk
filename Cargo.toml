@@ -72,4 +72,4 @@ yup-oauth2 = "8.3.2"
 zip = "0.6"
 
 [profile.dev]
-debug = false
+debug = true

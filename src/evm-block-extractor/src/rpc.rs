@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
-use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256, U256, U64};
+use ethers_core::types::{Block, BlockNumber, TransactionReceipt, H256, U256, U64};
 use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
+use jsonrpsee::types::ErrorObject;
 
 use crate::database::DatabaseClient;
 
@@ -27,7 +28,7 @@ pub trait Eth {
         &self,
         block_number: U256,
         full_transactions: bool,
-    ) -> RpcResult<Block<Transaction>>;
+    ) -> RpcResult<serde_json::Value>;
 
     #[method(name = "getTransactionReceipt")]
     /// Get a transaction receipt
@@ -106,8 +107,8 @@ impl EthServer for EthImpl {
     async fn get_block_by_number(
         &self,
         block_number: U256,
-        _full_transaction: bool,
-    ) -> RpcResult<Block<Transaction>> {
+        full: bool,
+    ) -> RpcResult<serde_json::Value> {
         let block_number = block_number.as_u64();
 
         let block = self
@@ -119,7 +120,16 @@ impl EthServer for EthImpl {
                 jsonrpsee::types::error::ErrorCode::InternalError
             })?;
 
-        Ok(block)
+        if full {
+            serde_json::to_value(block)
+        } else {
+            let converted_block: Block<H256> = block.into();
+            serde_json::to_value(converted_block)
+        }
+        .map_err(|e| {
+            log::error!("Error serializing block: {:?}", e);
+            ErrorObject::from(jsonrpsee::types::error::ErrorCode::InternalError)
+        })
     }
 
     async fn get_transaction_receipt(&self, tx_hash: H256) -> RpcResult<TransactionReceipt> {

@@ -15,25 +15,24 @@ path = "src/bin/server.rs"
 
 [dependencies]
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 clap = { workspace = true }
+did = { path = "../did" }
 env_logger = { workspace = true }
+ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = ["reqwest"] }
 ethers-core = { workspace = true }
+futures = { workspace = true }
+gcp-bigquery-client = { workspace = true }
 itertools = { workspace = true }
+jsonrpsee = { workspace = true }
 log = { workspace = true }
-ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = [
-  "reqwest",
-] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["postgres"] }
 tokio = { workspace = true }
-zip = { workspace = true }
-gcp-bigquery-client = { workspace = true }
-async-trait = { workspace = true }
-jsonrpsee = { workspace = true }
 yup-oauth2 = { workspace = true }
-did = { path = "../did" }
-futures = { workspace = true }
+zip = { workspace = true }
+
 [dev-dependencies]
 rand = { workspace = true }
 tempfile = { workspace = true }
