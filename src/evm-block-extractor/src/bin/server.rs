@@ -1,6 +1,6 @@
 use clap::{arg, Parser};
 use evm_block_extractor::config::Database;
-use evm_block_extractor::rpc::{EthImpl, EthServer};
+use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
 use jsonrpsee::server::Server;
 use jsonrpsee::RpcModule;
 
@@ -34,7 +34,8 @@ async fn main() -> anyhow::Result<()> {
 
     let mut module = RpcModule::new(());
 
-    module.merge(EthServer::into_rpc(eth))?;
+    module.merge(EthServer::into_rpc(eth.clone()))?;
+    module.merge(ICServer::into_rpc(eth))?;
 
     log::info!("Server started on {}", server.local_addr()?);
 

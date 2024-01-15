@@ -43,12 +43,12 @@ pub trait Eth {
 #[rpc(server, namespace = "ic")]
 pub trait IC {
     #[method(name = "getBlocksRLP")]
-    async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<Vec<u8>>;
+    async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<String>;
 }
 
 #[async_trait::async_trait]
 impl ICServer for EthImpl {
-    async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<Vec<u8>> {
+    async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<String> {
         let db = &self.blockchain;
         let from = match from {
             BlockNumber::Latest => db
@@ -64,8 +64,8 @@ impl ICServer for EthImpl {
                 jsonrpsee::types::error::ErrorCode::InternalError
             })?,
             BlockNumber::Number(num) => num.as_u64(),
-            BlockNumber::Pending => return Ok(EMPTY_LIST_RLP.into()),
-            _ => return Ok(EMPTY_LIST_RLP.into()),
+            BlockNumber::Pending => return Ok(hex::encode(&EMPTY_LIST_RLP)),
+            _ => return Ok(hex::encode(&EMPTY_LIST_RLP)),
         };
 
         let block_count = db
@@ -81,7 +81,7 @@ impl ICServer for EthImpl {
         let end_block = std::cmp::min(from + std::cmp::min(10, max_number.as_u64()), block_count);
 
         if end_block <= from {
-            return Ok(EMPTY_LIST_RLP.into());
+            return Ok(hex::encode(&EMPTY_LIST_RLP));
         }
 
         let mut rlp = RlpStream::new_list(Into::<u64>::into(end_block - from).try_into().unwrap());
@@ -98,7 +98,7 @@ impl ICServer for EthImpl {
             rlp.append(&block);
         }
 
-        Ok(rlp.out().to_vec())
+        Ok(hex::encode(rlp.out()))
     }
 }
 
