@@ -29,7 +29,8 @@ jobs:
           username: _json_key
           password: ${{ secrets.GCP_DOCKER_KEY }}
 
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Building CloudRun image
         uses: docker/build-push-action@v4
@@ -38,4 +39,4 @@ jobs:
           context: .
           file: ./src/evm-block-extractor/Dockerfile
           tags: |
-            us-east4-docker.pkg.dev/bitfinity-evm/evm-block-extractor-repo/evm-block-extractor:latest
+            us-central1-docker.pkg.dev/dfx-server/evm-block-extractor/evm-block-extractor-server:latest
