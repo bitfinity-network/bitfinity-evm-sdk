@@ -24,7 +24,7 @@ struct Args {
     #[arg(long, default_value = "60")]
     request_time_out_secs: u64,
 
-    #[arg(long, default_value = "50")]
+    #[arg(long, default_value = "10")]
     rpc_batch_size: usize,
 
     /// Log level (default: info, options: trace, debug, info, warn, error)
