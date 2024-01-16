@@ -18,6 +18,7 @@ FROM debian:bookworm-slim AS runtime
 # GCP BigQuery Environment Variables
 ENV DATASET=testnet
 ENV PROJECT_ID=bitfinity-evm
+ENV GCP_BLOCK_EXTRACTOR_SA_KEY=key
 
 WORKDIR /app
 RUN apt-get update -y \
@@ -34,4 +35,4 @@ EXPOSE 8080
 
 ENTRYPOINT ["./evm-block-extractor-server"]
 
-CMD ["-s", "0.0.0.0:8080", "--", "bigquery", "-d", ${DATASET}, "-p", ${PROJECT_ID}]
+CMD ["-s", "0.0.0.0:8080", "--", "bigquery", "-d", ${DATASET}, "-p", ${PROJECT_ID}, "-k", ${GCP_BLOCK_EXTRACTOR_SA_KEY}]
