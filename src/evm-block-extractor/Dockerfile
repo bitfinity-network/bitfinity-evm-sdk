@@ -15,8 +15,9 @@ RUN cargo build --release --bin evm-block-extractor-server
 
 FROM debian:bookworm-slim AS runtime
 
+# GCP BigQuery Environment Variables
 ENV DATASET=testnet
-ENV DATABASE=bigquery
+ENV PROJECT_ID=bitfinity-evm
 
 WORKDIR /app
 RUN apt-get update -y \
@@ -33,4 +34,4 @@ EXPOSE 8080
 
 ENTRYPOINT ["./evm-block-extractor-server"]
 
-CMD ["-s", "0.0.0.0:8080", "--", ${DATABASE}, "-d", ${DATASET}]
+CMD ["-s", "0.0.0.0:8080", "--", "bigquery", "-d", ${DATASET}, "-p", ${PROJECT_ID}]
