@@ -36,15 +36,15 @@ jobs:
         run: |
           if [ "${{ matrix.network }}" = "mainnet" ]; then
               echo "RPC_URL=mainnet.bitfinity.network" >> $GITHUB_ENV
-              echo "BIGQUERY_DATASET=BIGQUERY_DATASET_${{ matrix.network }}" >> $GITHUB_ENV
           elif [ "${{ matrix.network }}" = "testnet" ]; then
               echo "RPC_URL=testnet.bitfinity.network" >> $GITHUB_ENV
-              echo "BIGQUERY_DATASET=BIGQUERY_DATASET_${{ matrix.network }}" >> $GITHUB_ENV
           fi
 
       - name: Run evm-block-extractor for BigQuery
         if: matrix.database == 'bigquery'
         run: |
+          echo "BIGQUERY_DATASET=BIGQUERY_DATASET_${{ matrix.network }}" >> $GITHUB_ENV
+
           ./evm-block-extractor \
               --rpc-url ${{ env.RPC_URL }} \
               --max-number-of-requests 100 \
