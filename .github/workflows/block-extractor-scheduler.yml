@@ -4,9 +4,12 @@ on:
   schedule:
     - cron: '0 */3 * * *'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   RUST_LOG: info
-  GCP_BLOCK_EXTRACTOR_SA_KEY: ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }}
 
 jobs:
   backup-blocks:
@@ -29,31 +32,32 @@ jobs:
       - name: Make binary executable
         run: chmod +x evm-block-extractor
 
-      - name: Set RPC URL and Database Config
+      - name: Set Up Environment Variables
         run: |
           if [ "${{ matrix.network }}" = "mainnet" ]; then
-              echo "rpc_url=mainnet.bitfinity.network" >> $GITHUB_ENV
+              echo "RPC_URL=mainnet.bitfinity.network" >> $GITHUB_ENV
+              echo "BIGQUERY_DATASET=BIGQUERY_DATASET_${{ matrix.network }}" >> $GITHUB_ENV
           elif [ "${{ matrix.network }}" = "testnet" ]; then
-              echo "rpc_url=testnet.bitfinity.network" >> $GITHUB_ENV
+              echo "RPC_URL=testnet.bitfinity.network" >> $GITHUB_ENV
+              echo "BIGQUERY_DATASET=BIGQUERY_DATASET_${{ matrix.network }}" >> $GITHUB_ENV
           fi
 
       - name: Run evm-block-extractor for BigQuery
         if: matrix.database == 'bigquery'
         run: |
           ./evm-block-extractor \
-              --rpc-url ${{ env.rpc_url }} \
+              --rpc-url ${{ env.RPC_URL }} \
               --max-number-of-requests 100 \
               --database bigquery \
-              --network ${{ matrix.network }} \
               --project-id ${{ secrets.BIGQUERY_PROJECT_ID }} \
-              --dataset-id ${{ secrets.BIGQUERY_DATASET_ID }} \
-              --sa-key ${{ env.GCP_BLOCK_EXTRACTOR_SA_KEY }}
+              --dataset-id ${{ env.BIGQUERY_DATASET }} \
+              --sa-key ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }}
 
       - name: Run evm-block-extractor for Postgres
         if: matrix.database == 'postgres' && matrix.network == 'mainnet'
         run: |
           ./evm-block-extractor \
-              --rpc-url ${{ env.rpc_url }} \
+              --rpc-url ${{ env.RPC_URL }} \
               --max-number-of-requests 100 \
               --database postgres \
               --network ${{ matrix.network }} \
