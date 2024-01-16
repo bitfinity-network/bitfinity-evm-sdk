@@ -43,7 +43,7 @@ jobs:
         with:
           push: true
           context: .
-          file: ./src/evm-block-extractor/Dockerfile.bigquery
+          file: ./src/evm-block-extractor/Dockerfile
           tags: |
             us-east4-docker.pkg.dev/dfx-server/evm-block-extractor/evm-block-extractor-server:${{ matrix.network }}-latest
           build-args: |
