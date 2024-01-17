@@ -26,20 +26,22 @@ pub enum TransactionSignerError {
     EcdsaError(#[from] ecdsa::Error),
 }
 
+pub type TransactionSignerResult<T> = std::result::Result<T, TransactionSignerError>;
+
 /// A trait that abstracts out the transaction signing component
 #[async_trait(?Send)]
 pub trait TransactionSigner {
     /// Returns the `sender` address for the given identity
-    async fn get_address(&self) -> Result<H160, TransactionSignerError>;
+    async fn get_address(&self) -> TransactionSignerResult<H160>;
 
     /// Sign the created transaction
     async fn sign_transaction(
         &self,
         transaction: &TypedTransaction,
-    ) -> Result<Signature, TransactionSignerError>;
+    ) -> TransactionSignerResult<Signature>;
 
     /// Sign the given digest
-    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature, TransactionSignerError>;
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature>;
 }
 
 /// Signing strategy for signing EVM transactions
@@ -56,7 +58,7 @@ pub enum SigningStrategy {
 
 impl SigningStrategy {
     /// Create signing object from the current strategy
-    pub fn make_signer(self, chain_id: u64) -> Result<TxSigner, TransactionSignerError> {
+    pub fn make_signer(self, chain_id: u64) -> TransactionSignerResult<TxSigner> {
         match self {
             SigningStrategy::Local { private_key } => {
                 let signer = SigningKey::from_slice(&private_key)?;
@@ -114,7 +116,7 @@ impl SlicedStorable for TxSigner {
 
 #[async_trait(?Send)]
 impl TransactionSigner for TxSigner {
-    async fn get_address(&self) -> Result<H160, TransactionSignerError> {
+    async fn get_address(&self) -> TransactionSignerResult<H160> {
         match self {
             Self::Local(signer) => signer.get_address().await,
             #[cfg(feature = "ic_sign")]
@@ -125,7 +127,7 @@ impl TransactionSigner for TxSigner {
     async fn sign_transaction(
         &self,
         transaction: &TypedTransaction,
-    ) -> Result<Signature, TransactionSignerError> {
+    ) -> TransactionSignerResult<Signature> {
         match self {
             Self::Local(signer) => signer.sign_transaction(transaction).await,
             #[cfg(feature = "ic_sign")]
@@ -133,7 +135,7 @@ impl TransactionSigner for TxSigner {
         }
     }
 
-    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature, TransactionSignerError> {
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature> {
         match self {
             Self::Local(signer) => signer.sign_digest(digest).await,
             #[cfg(feature = "ic_sign")]
@@ -156,14 +158,14 @@ impl LocalTxSigner {
 
 #[async_trait(?Send)]
 impl TransactionSigner for LocalTxSigner {
-    async fn get_address(&self) -> Result<H160, TransactionSignerError> {
+    async fn get_address(&self) -> TransactionSignerResult<H160> {
         Ok(self.wallet.address().into())
     }
 
     async fn sign_transaction(
         &self,
         transaction: &TypedTransaction,
-    ) -> Result<Signature, TransactionSignerError> {
+    ) -> TransactionSignerResult<Signature> {
         self.wallet
             .sign_transaction(transaction)
             .await
@@ -171,7 +173,7 @@ impl TransactionSigner for LocalTxSigner {
             .map(Into::into)
     }
 
-    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature, TransactionSignerError> {
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature> {
         self.wallet
             .sign_hash(ethereum_types::H256(digest))
             .map_err(TransactionSignerError::WalletError)
