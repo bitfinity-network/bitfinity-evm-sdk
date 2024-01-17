@@ -1,0 +1,25 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "type": "0x2",
+    "blockHash": "0x373fc30660108b2517ddfacaa1737c14ab4c7cf55be0a87720fa2733ebf15d9e",
+    "blockNumber": "0x1224ccb",
+    "from": "0x7c082584088353655fc74720bfc65abd50ab0af1",
+    "gas": "0xb56f",
+    "hash": "0x976e9b5e95b78ebafd6f76149b4452d2bf55d9a785966a2e3b35db00b41f7bec",
+    "input": "0x095ea7b3000000000000000000000000000000000022d473030f116ddee9f6b43ac78ba3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "nonce": "0x107",
+    "to": "0x5b7533812759b45c2b44c19e320ba2cd2681b542",
+    "transactionIndex": "0x81",
+    "value": "0x0",
+    "v": "0x0",
+    "r": "0xa816800d8beeef6e42889650490817beefaeb50fb377f9665197d86567e8a3df",
+    "s": "0xe9da882e55997da02afce1c551632edc8ad900a22bc6caf46a14964eaba99a4",
+    "gasPrice": "0x7d4e49e15",
+    "maxFeePerGas": "0xa337c322d",
+    "maxPriorityFeePerGas": "0x5f5e100",
+    "chainId": "0x1",
+    "accessList": []
+  },
+  "id": 1
+}

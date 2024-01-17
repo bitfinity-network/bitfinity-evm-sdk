@@ -1,0 +1,201 @@
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "baseFeePerGas": "0x7fd026b9d",
+    "difficulty": "0x0",
+    "extraData": "0x626f62612d6275696c6465722e636f6d",
+    "gasLimit": "0x1c9c380",
+    "gasUsed": "0x96a944",
+    "hash": "0x643db49e24088fbb8cf70aea04a53d1e32e447836a6372fab86eaee89b4ea642",
+    "logsBloom": "0x01210a8454855713804345808092a082910820084841440c8089c1201109002801148488000101104a99c101808645400231e038c821220220800320413b47002010041945c8a939e8b0606a80020071a501a03114445860050c154a816401c81a0614207ae030580018690850004845700d4121e4000600537840904118024308008144c865822284421b110020412004100011958f01080400a1406a588408664005d44c086c00211249c088018d511421098060c701d828c24d16014a02051818446204e2c8140028810244918b8807842013104180180101240202c6a042105034018400200124ce8488480080651490101000402458c1cc805825204408",
+    "miner": "0x3b64216ad1a58f61538b4fa1b27327675ab7ed67",
+    "mixHash": "0x9691840dd1f2753f35faa28e91dca45b641428e28e93127a3e16433e68abda12",
+    "nonce": "0x0000000000000000",
+    "number": "0x1224a29",
+    "parentHash": "0x956e843d80574003d8bf262a41bbd4d3fd5bb4c24256cb8d8f71aaeadcb61186",
+    "receiptsRoot": "0xec0d47355f2f0acdd9dd8030f642395e8dacf02c3199e278ab079df857ed071e",
+    "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+    "size": "0x105f4",
+    "stateRoot": "0xd3a778dfe2594f14a70ba5159d824a8b3709a0cb66eb98dcd1dbe42c2ddb9be3",
+    "timestamp": "0x65a7610f",
+    "totalDifficulty": "0xc70d815d562d3cfa955",
+    "transactions": [
+      "0x64388370bf6dcfee55b729945424c7b85903eda90a1432000a2c1688b8c69810",
+      "0x475495159e36d3f0891c4db6194ff112721e0a56321842f0c0d6e012630a95f8",
+      "0x326ece3df379a67f123793d215f0e29d069a49107d2b34f8c14515f8dfbcf3a2",
+      "0xfe8394620c40b76853e6ae5ce547cf7315dfba4713b6b474badf04bf63248706",
+      "0xefbdd2e147756eecac7be8cf2a1539991c4d503332580123a422cab681c32220",
+      "0xacedfacab1656134fab4e64e742696b1a2b01f2d9ea80f3b3dd173375bfb2de2",
+      "0xb0fb7b125d197d5f2e279f5b45d732756db304cdd531f4efbc5d1c264a110946",
+      "0xd88997891282b913b401790ed6229c52089be5a029ea9730719b334a9e40fbd8",
+      "0x41256942a36734be3c12fbf4466321ee8c5eda71348088fcc6defaa89cbf16d3",
+      "0x01d4409321a6989b94aba1f28c231e556390f1b7ad965cde77310359bc2d062d",
+      "0x87a302023be8066d0d8fd41a5f76b09fe7f2d3f318e78bd8ebe5b1be45c71393",
+      "0x7f16a69dcc9e637773aaf80aeaa285475a980152882dd5b34189ff1339808a28",
+      "0xda4c731fce6e0c851e5cd56dabffbc86dbce2ba89a7aee0c5584f2f034739e0c",
+      "0x95e28ab7de90af3d4774a4a4347e667055493c854e65f05b7aa6de477291429f",
+      "0xc263410e3bf4542a3c398390b4e5ec119d01c9b066addda1ac0d6ed660183dba",
+      "0xbec7642b6f168f52cda812ec322c79c27890025aabc3c89b74fd150a5e65aafd",
+      "0x7897bb6a44ff35c8f7a67fa0ecb206c0fbf8552fe5157719f4e021dd222d305e",
+      "0xb6345a648e45b7e36c8d52cb1ee3d6620894a5d9353f54a74ea3e2a8495b9cb1",
+      "0x30ffa04151b0cd0d4dfac51c747151ce1d9533e866d125b4f25b478500538611",
+      "0xa3eacdf83190fdc109f306302ae7ef5e3973d92b2c4b91cc0d2bde0fefb09de6",
+      "0x2e598f0f9510e104292c9458cd73692fb4daa4d4396bf1446d13ace371982b5f",
+      "0x5169c37ab4bf496ebbe3b7151a9395d6d755bf08d357c6c5cb98790af3f6abb9",
+      "0x33ec0580d0f222af0a3c4c07c4d7d9ea254d10cfe97bde0537ce6d62b6fd221f",
+      "0x294d832a0b47ca9a34c3db2e872307a393d862451f456123f1e9537a72d81986",
+      "0x204afa21c63336d94326c742a37e1f7f20af3ea376b847b1002e671464db99f6",
+      "0x79c505e8a745eabcc6f1affbb81f00edf186012c7432a6bd5f94e591d016a2e8",
+      "0x85237b55f67803b5e4e79c9f0f5b339af80d2984aadf3772ae6112e781f9cad9",
+      "0x2c7b8e0d32589ea002df0dfb0263d0dcef114ba20a85ec1d548d5e84993059bf",
+      "0x32d4430f0335df653ccd433cedd3f5677b884c2dbade4c1f1604df59c09ad935",
+      "0x832d79299cd62a65fa0e8eb1d5ace4f35213261fc368c88d8f20b69d23acb2f6",
+      "0x89d12d2d4e1c49ebe9843072e34fce3b749b5e7cb8729e2ad321d060d0981730",
+      "0x4be14c4b3e48e0c20a62737deeaaabe2159aa42b79dd4b8837b9598c35a86e08",
+      "0x862e2a75515983f045d4be95a239e8babab298354446691fca3f226ffc39abc9",
+      "0xf5e428b87604d6240ab925bb0a9ad55220271c94ce6c4367b8a7af2c49b5decb",
+      "0xce38747bcb2fbcf37cb4d84c42e3610c557dad5cc429986d71f0b6f20fbc1e4a",
+      "0xc7e31780552052e2af49a41383b35e66e2466af8d62f04beb12fe00d47dd1f0e",
+      "0xfb2937e9da98f9f895ad2f5b257e2037fad791a70783f381c29ca65e9a55c28d",
+      "0xf23f5a622c40f05b4711be74037e1e680d683db4ca257a252d2081145642335d",
+      "0x9f77bc684bb5a714798e23011e41fb4142c20d533d2fc8e12524f102ec4ee759",
+      "0x97739d538ea8687e09a2335e0cca16b88d965a829308b27f67b015cd1457f767",
+      "0x758df0f3cf4f4ba44d71f2f9f2f2e9e4f78d5ad03f388eebcbf99a95b1b7936a",
+      "0x7e620a141f9494cd12903c15be87758d641ee7b5587ca85412e94942b859ae16",
+      "0x56a990ff7f180348bea5255c77eb15ce9c6b09c6295271eefdc5fb615236ffc4",
+      "0x398995d336502fb8c0c25e5b6df3a1af0de492380ed3f2f6383ed894665569a4",
+      "0x7f393d09e60c7b4762cfd4e82a061f2cb87077049d9a3d9f1d78e61c8f8aca1d",
+      "0xdf90515de40492e1265e2083a3b5b910a3d11d29f472c841218fd0bf53acbdff",
+      "0x7660f51a10634cad71ffd6c4928e3c83a8a0b27828a34ad5f1e916b368efe6d8",
+      "0x6313465ab6dd7ad69ba821e49490859ac1b48ff34281065fb5c6f2c83725bb9c",
+      "0x64d54aee6f1238a964c89d1df54c28cb30bfd380a48271cbda9ae2812ba2bf12",
+      "0x484ab77f3dc4735a74cfe3618f327b335f855c4778636f03f2832b8e54828618",
+      "0x0000000799333d152f873855c1506c02370f257d479132b83a941074aa9d9929",
+      "0x904af693794ca08f29a9ab229c5ac0a7dacce4553ed8786e03980ab873bc88a5",
+      "0x6f50225f74c1c9a05d63fdd167d0ca9318492e4cbba3850e63815cd1685386ab",
+      "0x47f92f6eec0e3ed585db705adef7a286edfa4e68d7bc199d8c0a67cfa3a1cf58",
+      "0x60b02bf2a56f916160ce14a21abd24ba3e1d3a66241621c79f505e06897acb9f",
+      "0x1780782fbe82ba0d2c55d1ac186a38d43a7b9422e64d5d5e7b5fce8155147606",
+      "0x2d343503907beaafed5dd67e7088337525925c1faaf4ffd03b18cb311c24358a",
+      "0x86b7898c3879e727178ea614627a760d1b5999f233261f05995a7507a04bbf14",
+      "0xec0b1d1628ee9ce170e01fc2443222d5546df419b7f0d305ccface08b4bfe792",
+      "0x431de863c2f37d14377cf5f8301afe48c83b7a215721b56b4d319e0f47ce7ed9",
+      "0x2e14c8c8f5b4f5fca2f4a8be2f410636d33ff2c28673d989b92b2e06d9697dcb",
+      "0x58933ae8e90943ee3c41f82dd4616c838daa9664e0aec82497751cc327dfbb37",
+      "0x0e7a9beffd8f329e30a50bba1e2bf490dabfee6660a8740a45274df04c485e76",
+      "0x42fd1f91be8da52beaaf54d2a12866c19a8927cdc72c4485675703a875d4da64",
+      "0x6215a022a5c64d288833615bfb0331fcbc3fc8762e9ffd9151e296c3dac04a45",
+      "0x7ed2ed6d5910d40fdf5d0c9233bbdd9b5f570a5463d9a27f514f0464d491484f",
+      "0xfe139b6a75b9c4f715d98eec931882a8eb4764ce694002f0c8253140aa0e61be",
+      "0x03d4a32b0df55b518e3d80f2d232e7542c959b3a15ad2d96f792ba59d3a839e3",
+      "0x75fa4cc34ba1941c6b7d4a0f98ec03d2176cae54d325f7c13ec4f8b3bf1c60a6",
+      "0x77232bef5a3d816a1ab7b2e56040669e1c16b4f4c7c1998f53d5fc05fc92c453",
+      "0xa8f4bbbcf61904f1925859c4f943dea754517502ca9e922d58922b2f806ef0e6",
+      "0x066e64ddcdf8575c9301200e9923f9c2f339f0061395a51bcf63a2d20a7c1645",
+      "0xcee250beda059af614bc3a767e4bb9833977775b3a7d7b809846ac95c072dd03",
+      "0xe6b430d7809e81f92b9205cce69ce195d1405e54cc2da8b4a48b7a12f20537d5"
+    ],
+    "transactionsRoot": "0x81f1fb3b71555c36134c114f1979cdd898df103f57205dddd1519f05ab5c2866",
+    "uncles": [],
+    "withdrawals": [
+      {
+        "index": "0x1e5b586",
+        "validatorIndex": "0x44bf8",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10f1c61"
+      },
+      {
+        "index": "0x1e5b587",
+        "validatorIndex": "0x44bfa",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10e8b78"
+      },
+      {
+        "index": "0x1e5b588",
+        "validatorIndex": "0x44bfc",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10f3739"
+      },
+      {
+        "index": "0x1e5b589",
+        "validatorIndex": "0x44bfe",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10f1337"
+      },
+      {
+        "index": "0x1e5b58a",
+        "validatorIndex": "0x44bff",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10fa60c"
+      },
+      {
+        "index": "0x1e5b58b",
+        "validatorIndex": "0x44c00",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10dac09"
+      },
+      {
+        "index": "0x1e5b58c",
+        "validatorIndex": "0x44c01",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10e92bc"
+      },
+      {
+        "index": "0x1e5b58d",
+        "validatorIndex": "0x44c02",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10eec18"
+      },
+      {
+        "index": "0x1e5b58e",
+        "validatorIndex": "0x44c03",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10fab61"
+      },
+      {
+        "index": "0x1e5b58f",
+        "validatorIndex": "0x44c04",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10f08f7"
+      },
+      {
+        "index": "0x1e5b590",
+        "validatorIndex": "0x44c05",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10f98ab"
+      },
+      {
+        "index": "0x1e5b591",
+        "validatorIndex": "0x44c06",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x38cc11c"
+      },
+      {
+        "index": "0x1e5b592",
+        "validatorIndex": "0x44c08",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x39361f1"
+      },
+      {
+        "index": "0x1e5b593",
+        "validatorIndex": "0x44c09",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10f0852"
+      },
+      {
+        "index": "0x1e5b594",
+        "validatorIndex": "0x44c0b",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10ef54d"
+      },
+      {
+        "index": "0x1e5b595",
+        "validatorIndex": "0x44c0e",
+        "address": "0x4776cccd6eb4e9b03aa7831d2cacc5ac35bf8d53",
+        "amount": "0x10e9646"
+      }
+    ],
+    "withdrawalsRoot": "0x6497f49e9a209380d4c1b51826ec7c09fc0fa54dd9a66e331a8506f062482a18"
+  },
+  "id": 1
+}

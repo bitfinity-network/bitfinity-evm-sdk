@@ -37,6 +37,12 @@ thiserror = { workspace = true }
 ic-log = { workspace = true }
 
 [dev-dependencies]
+criterion = { workspace = true }
 eth-signer = { path = "../eth-signer" }
+flate2 = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }
+
+[[bench]]
+name = "serialization"
+harness = false
