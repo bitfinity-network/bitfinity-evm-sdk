@@ -1,5 +1,4 @@
 pub mod big_query_db_client;
-pub mod in_memory_db_client;
 pub mod postgres_db_client;
 
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
