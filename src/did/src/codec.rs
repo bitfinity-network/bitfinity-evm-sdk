@@ -1,3 +1,5 @@
+use std::io::{Write, Read};
+
 use candid::{CandidType, Decode, Deserialize, Encode};
 
 pub fn encode<T: CandidType>(item: &T) -> Vec<u8> {
@@ -15,6 +17,19 @@ pub fn bincode_encode<T: serde::Serialize>(item: &T) -> Vec<u8> {
 pub fn bincode_decode<'a, T: serde::Deserialize<'a>>(bytes: &'a [u8]) -> T {
     bincode::deserialize(bytes).expect("failed to deserialize item with bincode")
 }
+
+pub fn gzip_encode(bytes: &[u8]) -> Vec<u8> {
+    let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    encoder.write_all(bytes).expect("failed to serialize item with gzip");
+    encoder.finish().expect("failed to serialize item with gzip")
+}
+
+pub fn gzip_decode(bytes: &[u8]) -> Vec<u8> {
+    let mut result = Vec::new();
+    flate2::read::GzDecoder::new(bytes)
+    .read_to_end(&mut result).expect("failed to deserialize item with gzip");
+    result
+}   
 
 /// A reader for byte data
 pub struct ByteChunkReader<'a> {

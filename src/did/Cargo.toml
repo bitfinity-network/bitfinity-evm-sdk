@@ -21,6 +21,7 @@ candid = { workspace = true }
 derive_more = { workspace = true }
 ethereum-types = { workspace = true }
 ethers-core = { workspace = true }
+flate2 = { workspace = true }
 hex = { workspace = true }
 ic-stable-structures = { workspace = true }
 jsonrpc-core = { workspace = true }
@@ -39,7 +40,6 @@ ic-log = { workspace = true }
 [dev-dependencies]
 criterion = { workspace = true }
 eth-signer = { path = "../eth-signer" }
-flate2 = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }
 

@@ -361,11 +361,11 @@ impl Storable for Transaction {
     const BOUND: Bound = Bound::Unbounded;
 
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        codec::encode(self).into()
+        codec::gzip_encode(&codec::encode(self)).into()
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        codec::decode(&bytes)
+        codec::decode(&codec::gzip_decode(&bytes))
     }
 }
 
@@ -626,12 +626,12 @@ pub struct StorableExecutionResult {
 impl Storable for StorableExecutionResult {
     const BOUND: Bound = Bound::Unbounded;
 
-    fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
-        codec::encode(self).into()
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        codec::gzip_encode(&codec::encode(self)).into()
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        codec::decode(&bytes)
+        codec::decode(&codec::gzip_decode(&bytes))
     }
 }
 
