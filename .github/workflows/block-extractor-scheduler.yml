@@ -58,6 +58,6 @@ jobs:
               --postgres \
               --username ${{ secrets.POSTGRES_USERNAME }} \
               --password ${{ secrets.POSTGRES_PASSWORD }}
-              --database_name ${{ secrets.POSTGRES_DATABASE_NAME  }} \
-              --database_url ${{ secrets.POSTGRES_DATABASE_URL }} \
-              --database_port ${{ secrets.POSTGRES_DATABASE_PORT }}
+              --database-name ${{ secrets.POSTGRES_DATABASE_NAME  }} \
+              --database-url ${{ secrets.POSTGRES_DATABASE_URL }} \
+              --database-port ${{ secrets.POSTGRES_DATABASE_PORT }}
