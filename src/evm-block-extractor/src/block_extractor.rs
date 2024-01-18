@@ -52,8 +52,7 @@ impl BlockExtractor {
         for blocks_batch in &(from_block_inclusive..=to_block_inclusive).chunks(batch_size) {
             let block_numbers = blocks_batch
                 .into_iter()
-                .map(|block| BlockNumber::Number(block.into()))
-                .collect::<Vec<_>>();
+                .map(|block| BlockNumber::Number(block.into()));
 
             let evm_blocks = tokio::time::timeout(
                 Duration::from_secs(request_time_out_secs),
@@ -62,6 +61,18 @@ impl BlockExtractor {
             .await??;
 
             let mut receipts_tasks = vec![];
+
+            let blocks = evm_blocks
+                .iter()
+                .map(|block| block.clone().into())
+                .collect::<Vec<_>>();
+
+            let all_transactions = evm_blocks
+                .iter()
+                .flat_map(|block| &block.transactions)
+                .cloned()
+                .collect::<Vec<_>>();
+
             for block in &evm_blocks {
                 let tx_hashes = block
                     .transactions
@@ -93,7 +104,7 @@ impl BlockExtractor {
             }
 
             self.blockchain
-                .insert_blocks_and_receipts(&evm_blocks, &all_evm_receipts)
+                .insert_block_data(&blocks, &all_evm_receipts, &all_transactions)
                 .await?;
         }
 
@@ -103,6 +114,8 @@ impl BlockExtractor {
 
 #[cfg(test)]
 mod tests {
+    use ethers_core::types::{Block, Transaction};
+
     use super::*;
     use crate::database::in_memory_db_client::InMemoryDbClient;
 
@@ -135,12 +148,13 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let latest_block_num = blockchain
-            .get_block_by_number(end_block)
-            .await
-            .unwrap()
-            .number
-            .unwrap();
-        assert_eq!(end_block, latest_block_num.as_u64());
+        let latest_block_num: Block<Transaction> = serde_json::from_value(
+            blockchain
+                .get_block_by_number(end_block, true)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(end_block, latest_block_num.number.unwrap().as_u64());
     }
 }

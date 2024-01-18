@@ -11,13 +11,18 @@ pub trait DatabaseClient: Send + Sync {
     async fn init(&self) -> anyhow::Result<()>;
 
     /// Get a block from the database
-    async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>>;
-
-    /// Insert blocks and receipts into the database
-    async fn insert_blocks_and_receipts(
+    async fn get_block_by_number(
         &self,
-        blocks: &[Block<Transaction>],
+        block: u64,
+        include_transactions: bool,
+    ) -> anyhow::Result<serde_json::Value>;
+
+    /// Insert block data; these include receipts, transactions and the blocks
+    async fn insert_block_data(
+        &self,
+        blocks: &[Block<H256>],
         receipts: &[TransactionReceipt],
+        transactions: &[Transaction],
     ) -> anyhow::Result<()>;
 
     /// Get a transaction receipt from the database

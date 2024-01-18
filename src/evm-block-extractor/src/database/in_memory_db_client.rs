@@ -8,8 +8,9 @@ use super::DatabaseClient;
 
 #[derive(Clone, Default)]
 pub struct InMemoryDbClient {
-    pub blocks: Arc<Mutex<HashMap<u64, Block<Transaction>>>>,
+    pub blocks: Arc<Mutex<HashMap<u64, Block<H256>>>>,
     pub receipts: Arc<Mutex<HashMap<H256, TransactionReceipt>>>,
+    pub transactions: Arc<Mutex<HashMap<H256, Transaction>>>,
 }
 
 #[async_trait::async_trait]
@@ -18,17 +19,39 @@ impl DatabaseClient for InMemoryDbClient {
         Ok(())
     }
 
-    async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
+    async fn get_block_by_number(
+        &self,
+        block: u64,
+        include_transactions: bool,
+    ) -> anyhow::Result<serde_json::Value> {
         match self.blocks.lock().await.get(&block) {
-            Some(block) => Ok(block.clone()),
+            Some(block) => {
+                if include_transactions {
+                    let mut transactions = Vec::new();
+                    for transaction in self.transactions.lock().await.values() {
+                        if transaction.block_number.expect("should be there").as_u64()
+                            == block.number.expect("should be there").as_u64()
+                        {
+                            transactions.push(transaction.clone());
+                        }
+                    }
+
+                    let full_block = block.clone().into_full_block(transactions);
+
+                    Ok(serde_json::to_value(full_block)?)
+                } else {
+                    Ok(serde_json::to_value(block)?)
+                }
+            }
             None => Err(anyhow::anyhow!("Block not found")),
         }
     }
 
-    async fn insert_blocks_and_receipts(
+    async fn insert_block_data(
         &self,
-        block: &[Block<Transaction>],
+        block: &[Block<H256>],
         receipts: &[TransactionReceipt],
+        transactions: &[Transaction],
     ) -> anyhow::Result<()> {
         let mut receipts_map = self.receipts.lock().await;
         for receipt in receipts {
@@ -38,6 +61,12 @@ impl DatabaseClient for InMemoryDbClient {
         let mut blocks_map = self.blocks.lock().await;
         for block in block {
             blocks_map.insert(block.number.unwrap().as_u64(), block.clone());
+        }
+
+        let mut transactions_map = self.transactions.lock().await;
+
+        for txn in transactions {
+            transactions_map.insert(txn.hash, txn.clone());
         }
 
         Ok(())
