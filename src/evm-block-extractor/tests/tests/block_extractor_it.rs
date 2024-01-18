@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
+use ethers_core::types::{Block, H256};
 use evm_block_extractor::block_extractor::BlockExtractor;
 
 use crate::test_with_clients;
@@ -36,14 +37,15 @@ async fn test_extractor_collect_blocks() {
         assert_eq!(result.0, start_block);
         assert_eq!(result.1, end_block);
 
-        let latest_block_num = db_client
-            .get_block_by_number(end_block)
-            .await
-            .unwrap()
-            .number
-            .unwrap();
+        let latest_block_num: Block<H256> = serde_json::from_value(
+            db_client
+                .get_block_by_number(end_block, false)
+                .await
+                .unwrap(),
+        )
+        .unwrap();
 
-        assert_eq!(end_block, latest_block_num.as_u64());
+        assert_eq!(end_block, latest_block_num.number.unwrap().as_u64());
     })
     .await;
 }

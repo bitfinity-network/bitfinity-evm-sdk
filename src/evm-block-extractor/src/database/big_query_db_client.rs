@@ -231,11 +231,13 @@ impl DatabaseClient for BigQueryDbClient {
                 .await?;
 
             while res.next_row() {
-                let result_str = res
+                let res = res
                     .get_string(0)?
-                    .ok_or(anyhow::anyhow!("Expected result not found in the response"))?;
+                    .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
+                    .trim_matches('"')
+                    .replace("\\\"", "\"");
 
-                let result: Transaction = serde_json::from_str(&result_str)?;
+                let result: Transaction = serde_json::from_str(&res)?;
 
                 transactions.push(result);
             }

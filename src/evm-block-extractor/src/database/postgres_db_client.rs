@@ -50,7 +50,7 @@ impl DatabaseClient for PostgresDbClient {
             .map_err(|e| {
                 anyhow::anyhow!("Error getting transactions for block {:?}: {:?}", block, e)
             })
-            .and_then(|row| from_rows_value(&row, 1))?;
+            .and_then(|row| from_rows_value(&row, 0))?;
 
             let full_block = block.into_full_block(transactions);
             Ok(serde_json::to_value(full_block)?)
@@ -93,9 +93,10 @@ impl DatabaseClient for PostgresDbClient {
 
         for txn in transactions {
             let hex_tx_hash = did::H256::from(txn.hash).to_hex_str();
-            sqlx::query("INSERT INTO EVM_TRANSACTION (id, data) VALUES ($1, $2)")
+            sqlx::query("INSERT INTO EVM_TRANSACTION (id, data,block_number) VALUES ($1, $2,$3)")
                 .bind(&hex_tx_hash)
                 .bind(serde_json::to_value(txn)?)
+                .bind(txn.block_number.expect("Block number not found").as_u64() as i64)
                 .execute(&mut *tx)
                 .await?;
         }
