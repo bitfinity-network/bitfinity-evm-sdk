@@ -13,7 +13,24 @@ on:
       - '**/README.md'
 
 jobs:
+
   build-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+     
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: test
+        run: |
+          export RUST_BACKTRACE="full"
+          cargo install ic-wasm
+          ./scripts/build.sh
+          ./scripts/test.sh
+
+  build-dfx-test:
     if: ${{github.ref_type != 'tag'}}
     name: 'Build and Test'
     uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
@@ -27,7 +44,6 @@ jobs:
       enable-target-cache: true
       test-script: |
         export RUST_BACKTRACE="full"
-        ./scripts/test.sh
         ./scripts/build.sh
         ./scripts/dfx_test.sh
 
