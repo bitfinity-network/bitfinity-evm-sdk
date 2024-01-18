@@ -15,7 +15,7 @@ async fn test_extractor_collect_blocks() {
         let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));
 
         let request_time_out_secs = 10;
-        let rpc_batch_size = 50;
+        let rpc_batch_size = 10;
         let mut extractor = BlockExtractor::new(
             evm_client.clone(),
             request_time_out_secs,

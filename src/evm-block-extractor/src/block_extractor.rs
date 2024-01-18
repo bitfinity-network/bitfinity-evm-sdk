@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
-use ethers_core::types::BlockNumber;
+use ethers_core::types::{BlockNumber, Block, H256};
 use itertools::Itertools;
 use tokio::time::Duration;
 
@@ -62,24 +62,19 @@ impl BlockExtractor {
 
             let mut receipts_tasks = vec![];
 
-            let blocks = evm_blocks
-                .iter()
-                .map(|block| block.clone().into())
-                .collect::<Vec<_>>();
-
             let all_transactions = evm_blocks
                 .iter()
                 .flat_map(|block| &block.transactions)
                 .cloned()
                 .collect::<Vec<_>>();
 
-            for block in &evm_blocks {
-                let tx_hashes = block
-                    .transactions
-                    .iter()
-                    .map(|tx| tx.hash)
-                    .collect::<Vec<_>>();
+            let blocks = evm_blocks
+                .into_iter()
+                .map(|block| block.into())
+                .collect::<Vec<Block<H256>>>();
 
+            for block in &blocks {
+                let tx_hashes = block.transactions.clone();
                 let client = client.clone();
                 let receipts_task = tokio::spawn(async move {
                     client.get_receipts_by_hash(tx_hashes, batch_size).await
