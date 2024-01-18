@@ -2,10 +2,9 @@ use std::borrow::Cow;
 
 use async_trait::async_trait;
 use candid::CandidType;
-use did::error::{EvmError, Result};
 use did::transaction::Signature;
 use did::{codec, H160};
-use ethers_core::k256::ecdsa::SigningKey;
+use ethers_core::k256::ecdsa::{self, SigningKey};
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::utils;
 #[cfg(feature = "ic_sign")]
@@ -15,17 +14,34 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Signer, Wallet};
 
+#[derive(thiserror::Error, Debug)]
+pub enum TransactionSignerError {
+    #[error("wallet error: {0}")]
+    WalletError(#[from] crate::WalletError),
+
+    #[error("ic sign error: {0}")]
+    IcSignError(#[from] crate::ic_sign::IcSignerError),
+
+    #[error("ecdsa error: {0}")]
+    EcdsaError(#[from] ecdsa::Error),
+}
+
+pub type TransactionSignerResult<T> = std::result::Result<T, TransactionSignerError>;
+
 /// A trait that abstracts out the transaction signing component
 #[async_trait(?Send)]
 pub trait TransactionSigner {
     /// Returns the `sender` address for the given identity
-    async fn get_address(&self) -> Result<H160>;
+    async fn get_address(&self) -> TransactionSignerResult<H160>;
 
     /// Sign the created transaction
-    async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature>;
+    async fn sign_transaction(
+        &self,
+        transaction: &TypedTransaction,
+    ) -> TransactionSignerResult<Signature>;
 
     /// Sign the given digest
-    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature>;
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature>;
 }
 
 /// Signing strategy for signing EVM transactions
@@ -42,12 +58,10 @@ pub enum SigningStrategy {
 
 impl SigningStrategy {
     /// Create signing object from the current strategy
-    pub fn make_signer(self, chain_id: u64) -> Result<TxSigner> {
+    pub fn make_signer(self, chain_id: u64) -> TransactionSignerResult<TxSigner> {
         match self {
             SigningStrategy::Local { private_key } => {
-                let signer = SigningKey::from_slice(&private_key).map_err(|e| {
-                    EvmError::from(format!("failed to deserialize signing key: {e}"))
-                })?;
+                let signer = SigningKey::from_slice(&private_key)?;
                 let address = utils::secret_key_to_address(&signer);
                 let wallet = Wallet::new_with_signer(Cow::Owned(signer), address, chain_id);
                 Ok(TxSigner::Local(LocalTxSigner::new(wallet)))
@@ -102,7 +116,7 @@ impl SlicedStorable for TxSigner {
 
 #[async_trait(?Send)]
 impl TransactionSigner for TxSigner {
-    async fn get_address(&self) -> Result<H160> {
+    async fn get_address(&self) -> TransactionSignerResult<H160> {
         match self {
             Self::Local(signer) => signer.get_address().await,
             #[cfg(feature = "ic_sign")]
@@ -110,7 +124,10 @@ impl TransactionSigner for TxSigner {
         }
     }
 
-    async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature> {
+    async fn sign_transaction(
+        &self,
+        transaction: &TypedTransaction,
+    ) -> TransactionSignerResult<Signature> {
         match self {
             Self::Local(signer) => signer.sign_transaction(transaction).await,
             #[cfg(feature = "ic_sign")]
@@ -118,7 +135,7 @@ impl TransactionSigner for TxSigner {
         }
     }
 
-    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature> {
         match self {
             Self::Local(signer) => signer.sign_digest(digest).await,
             #[cfg(feature = "ic_sign")]
@@ -141,22 +158,25 @@ impl LocalTxSigner {
 
 #[async_trait(?Send)]
 impl TransactionSigner for LocalTxSigner {
-    async fn get_address(&self) -> Result<H160> {
+    async fn get_address(&self) -> TransactionSignerResult<H160> {
         Ok(self.wallet.address().into())
     }
 
-    async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature> {
+    async fn sign_transaction(
+        &self,
+        transaction: &TypedTransaction,
+    ) -> TransactionSignerResult<Signature> {
         self.wallet
             .sign_transaction(transaction)
             .await
-            .map_err(|e| EvmError::from(format!("failed to sign hash: {e}")))
+            .map_err(TransactionSignerError::WalletError)
             .map(Into::into)
     }
 
-    async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature> {
         self.wallet
             .sign_hash(ethereum_types::H256(digest))
-            .map_err(|e| EvmError::from(format!("failed to sign hash: {e}")))
+            .map_err(TransactionSignerError::WalletError)
             .map(Into::into)
     }
 }
@@ -233,35 +253,32 @@ mod ic_sign {
 
     #[async_trait(?Send)]
     impl TransactionSigner for ManagementCanisterSigner {
-        async fn get_address(&self) -> Result<H160> {
+        async fn get_address(&self) -> Result<H160, TransactionSignerError> {
             if let Some(address) = &*self.cached_address.borrow() {
                 return Ok(address.clone());
             }
 
             let pubkey = IcSigner {}
                 .public_key(self.key_id, self.derivation_path.clone())
-                .await
-                .map_err(|e| EvmError::from(format!("failed to get address: {e}")))?;
-            let address: H160 = IcSigner
-                .pubkey_to_address(&pubkey)
-                .map_err(|e| {
-                    EvmError::Internal(format!("failed to convert public key to address: {e}"))
-                })?
-                .into();
+                .await?;
+            let address: H160 = IcSigner.pubkey_to_address(&pubkey)?.into();
             *self.cached_address.borrow_mut() = Some(address.clone());
 
             Ok(address)
         }
 
-        async fn sign_transaction(&self, transaction: &TypedTransaction) -> Result<Signature> {
+        async fn sign_transaction(
+            &self,
+            transaction: &TypedTransaction,
+        ) -> Result<Signature, TransactionSignerError> {
             IcSigner {}
                 .sign_transaction(transaction, self.key_id, self.derivation_path.clone())
                 .await
-                .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
+                .map_err(TransactionSignerError::IcSignError)
                 .map(Into::into)
         }
 
-        async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature> {
+        async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature, TransactionSignerError> {
             let address = self.get_address().await?;
             IcSigner {}
                 .sign_digest(
@@ -271,7 +288,7 @@ mod ic_sign {
                     self.derivation_path.clone(),
                 )
                 .await
-                .map_err(|e| EvmError::from(format!("failed to get message signature: {e}")))
+                .map_err(TransactionSignerError::IcSignError)
                 .map(Into::into)
         }
     }
