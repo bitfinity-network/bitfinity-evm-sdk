@@ -22,7 +22,10 @@ jobs:
      
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
-
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
+          
       - name: test
         run: |
           export RUST_BACKTRACE="full"
