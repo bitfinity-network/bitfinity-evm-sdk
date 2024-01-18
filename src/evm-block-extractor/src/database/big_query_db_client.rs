@@ -175,8 +175,7 @@ impl DatabaseClient for BigQueryDbClient {
     async fn get_block_by_number(
         &self,
         block_number: u64,
-        include_transactions: bool,
-    ) -> anyhow::Result<serde_json::Value> {
+    ) -> anyhow::Result<Block<H256>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {
                 name: Some("id".to_string()),
@@ -198,56 +197,58 @@ impl DatabaseClient for BigQueryDbClient {
             ..Default::default()
         };
 
-        let block: Block<H256> = self.execute_query(query_request).await?;
+        self.execute_query(query_request).await
+    }
 
-        if include_transactions {
-            let query_request = QueryRequest {
-                query_parameters: Some(vec![QueryParameter {
-                    name: Some("block_number".to_string()),
-                    parameter_type: Some(QueryParameterType {
-                        r#type: "INTEGER".to_string(),
-                        ..Default::default()
-                    }),
-                    parameter_value: Some(QueryParameterValue {
-                        value: Some(block_number.to_string()),
-                        ..Default::default()
-                    }),
-                }]),
-                query: format!(
-                    "SELECT transaction FROM `{project_id}.{dataset_id}.{table_id}` WHERE block_number = @block_number",
-                    project_id = self.project_id,
-                    dataset_id = self.dataset_id,
-                    table_id = TRANSACTIONS_TABLE_ID,
-                ),
-                ..Default::default()
-            };
+    async fn get_full_block_by_number(
+        &self,
+        block_number: u64,
+    ) -> anyhow::Result<Block<Transaction>> {
+        let block = self.get_block_by_number(block_number).await?;
 
-            let mut transactions = vec![];
+        let query_request = QueryRequest {
+            query_parameters: Some(vec![QueryParameter {
+                name: Some("block_number".to_string()),
+                parameter_type: Some(QueryParameterType {
+                    r#type: "INTEGER".to_string(),
+                    ..Default::default()
+                }),
+                parameter_value: Some(QueryParameterValue {
+                    value: Some(block_number.to_string()),
+                    ..Default::default()
+                }),
+            }]),
+            query: format!(
+                "SELECT transaction FROM `{project_id}.{dataset_id}.{table_id}` WHERE block_number = @block_number",
+                project_id = self.project_id,
+                dataset_id = self.dataset_id,
+                table_id = TRANSACTIONS_TABLE_ID,
+            ),
+            ..Default::default()
+        };
 
-            let mut res = self
-                .client
-                .job()
-                .query(&self.project_id, query_request)
-                .await?;
+        let mut transactions = vec![];
 
-            while res.next_row() {
-                let res = res
-                    .get_string(0)?
-                    .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
-                    .trim_matches('"')
-                    .replace("\\\"", "\"");
+        let mut res = self
+            .client
+            .job()
+            .query(&self.project_id, query_request)
+            .await?;
 
-                let result: Transaction = serde_json::from_str(&res)?;
+        while res.next_row() {
+            let res = res
+                .get_string(0)?
+                .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
+                .trim_matches('"')
+                .replace("\\\"", "\"");
 
-                transactions.push(result);
-            }
+            let result: Transaction = serde_json::from_str(&res)?;
 
-            let full_block = block.into_full_block(transactions);
-
-            Ok(serde_json::to_value(full_block)?)
-        } else {
-            Ok(serde_json::to_value(block)?)
+            transactions.push(result);
         }
+
+        Ok(block.into_full_block(transactions))
+
     }
 
     async fn insert_block_data(

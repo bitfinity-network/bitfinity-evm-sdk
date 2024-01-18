@@ -114,7 +114,6 @@ impl BlockExtractor {
 
 #[cfg(test)]
 mod tests {
-    use ethers_core::types::{Block, Transaction};
 
     use super::*;
     use crate::database::in_memory_db_client::InMemoryDbClient;
@@ -148,13 +147,10 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let latest_block_num: Block<Transaction> = serde_json::from_value(
-            blockchain
-                .get_block_by_number(end_block, true)
+        let latest_block_num = blockchain
+                .get_block_by_number(end_block)
                 .await
-                .unwrap(),
-        )
-        .unwrap();
+                .unwrap();
         assert_eq!(end_block, latest_block_num.number.unwrap().as_u64());
     }
 }

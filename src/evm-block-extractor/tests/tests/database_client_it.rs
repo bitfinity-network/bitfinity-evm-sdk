@@ -49,8 +49,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
             .await
             .unwrap();
 
-        let block: Block<Transaction> =
-            serde_json::from_value(db_client.get_block_by_number(1, true).await.unwrap()).unwrap();
+        let block = db_client.get_full_block_by_number(1).await.unwrap();
 
         // Check the transactions
         assert_eq!(block.transactions.len(), 1);
@@ -65,8 +64,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
 
         assert_eq!(receipt.transaction_hash, receipts[0].transaction_hash);
 
-        let block: Block<Transaction> =
-            serde_json::from_value(db_client.get_block_by_number(10, true).await.unwrap()).unwrap();
+        let block = db_client.get_full_block_by_number(10).await.unwrap();
 
         assert_eq!(block.number.unwrap().as_u64(), 10);
 
@@ -143,8 +141,7 @@ async fn test_init_idempotency() {
         assert!(db_client.init().await.is_ok());
 
         // Retrieve the block
-        let block: Block<Transaction> =
-            serde_json::from_value(db_client.get_block_by_number(1, false).await.unwrap()).unwrap();
+        let block = db_client.get_block_by_number(1).await.unwrap();
 
         assert_eq!(block.number.unwrap().as_u64(), 1);
     })
@@ -185,16 +182,14 @@ async fn test_retrieval_of_transactions_with_blocks() {
             .await
             .unwrap();
 
-        let block: Block<Transaction> =
-            serde_json::from_value(db_client.get_block_by_number(1, true).await.unwrap()).unwrap();
+        let block = db_client.get_block_by_number(1).await.unwrap();
 
         // Check the transactions
         assert_eq!(block.transactions.len(), 0);
 
         assert_eq!(block.number.unwrap().as_u64(), 1);
 
-        let block: Block<Transaction> =
-            serde_json::from_value(db_client.get_block_by_number(5, true).await.unwrap()).unwrap();
+        let block = db_client.get_full_block_by_number(5).await.unwrap();
 
         assert_eq!(block.hash.unwrap(), blocks[4].hash.unwrap());
 

@@ -86,7 +86,7 @@ impl ICServer for EthImpl {
         let mut rlp = RlpStream::new_list((end_block - from) as usize);
         for block_index in from..end_block {
             let block = db
-                .get_block_by_number(block_index, true)
+                .get_full_block_by_number(block_index)
                 .await
                 .map_err(|e| {
                     log::error!("Error getting block: {:?}", e);
@@ -114,16 +114,40 @@ impl EthServer for EthImpl {
     ) -> RpcResult<serde_json::Value> {
         let block_number = block_number.as_u64();
 
-        let block = self
-            .blockchain
-            .get_block_by_number(block_number, include_transactions)
-            .await
-            .map_err(|e| {
-                log::error!("Error getting block: {:?}", e);
+        if include_transactions {
+            let block = self
+                .blockchain
+                .get_full_block_by_number(block_number)
+                .await
+                .map_err(|e| {
+                    log::error!("Error getting block: {:?}", e);
+                    jsonrpsee::types::error::ErrorCode::InternalError
+                })?;
+
+            let block = serde_json::to_value(&block).map_err(|e| {
+                log::error!("Error serializing block: {:?}", e);
                 jsonrpsee::types::error::ErrorCode::InternalError
             })?;
 
-        Ok(block)
+            Ok(block)
+        } else {
+            let block = self
+                .blockchain
+                .get_block_by_number(block_number)
+                .await
+                .map_err(|e| {
+                    log::error!("Error getting block: {:?}", e);
+                    jsonrpsee::types::error::ErrorCode::InternalError
+                })?;
+
+            let block = serde_json::to_value(&block).map_err(|e| {
+                log::error!("Error serializing block: {:?}", e);
+                jsonrpsee::types::error::ErrorCode::InternalError
+            })?;
+
+            Ok(block)
+        }
+
     }
 
     async fn get_transaction_receipt(&self, tx_hash: H256) -> RpcResult<TransactionReceipt> {

@@ -37,13 +37,10 @@ async fn test_extractor_collect_blocks() {
         assert_eq!(result.0, start_block);
         assert_eq!(result.1, end_block);
 
-        let latest_block_num: Block<H256> = serde_json::from_value(
-            db_client
-                .get_block_by_number(end_block, false)
+        let latest_block_num: Block<H256> = db_client
+                .get_block_by_number(end_block)
                 .await
-                .unwrap(),
-        )
-        .unwrap();
+                .unwrap();
 
         assert_eq!(end_block, latest_block_num.number.unwrap().as_u64());
     })

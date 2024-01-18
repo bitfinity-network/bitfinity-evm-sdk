@@ -21,30 +21,31 @@ impl DatabaseClient for InMemoryDbClient {
 
     async fn get_block_by_number(
         &self,
-        block: u64,
-        include_transactions: bool,
-    ) -> anyhow::Result<serde_json::Value> {
-        match self.blocks.lock().await.get(&block) {
+        block_number: u64,
+    ) -> anyhow::Result<Block<H256>> {
+        match self.blocks.lock().await.get(&block_number) {
             Some(block) => {
-                if include_transactions {
-                    let mut transactions = Vec::new();
-                    for transaction in self.transactions.lock().await.values() {
-                        if transaction.block_number.expect("should be there").as_u64()
-                            == block.number.expect("should be there").as_u64()
-                        {
-                            transactions.push(transaction.clone());
-                        }
-                    }
-
-                    let full_block = block.clone().into_full_block(transactions);
-
-                    Ok(serde_json::to_value(full_block)?)
-                } else {
-                    Ok(serde_json::to_value(block)?)
-                }
+                Ok(block.clone())
             }
             None => Err(anyhow::anyhow!("Block not found")),
         }
+    }
+
+    async fn get_full_block_by_number(
+        &self,
+        block_number: u64,
+    ) -> anyhow::Result<Block<Transaction>> {
+        let block = self.get_block_by_number(block_number).await?;
+        let mut transactions = Vec::new();
+        let transactions_map = self.transactions.lock().await;
+
+        for transaction in &block.transactions {
+            if let Some(transaction) = transactions_map.get(transaction) {
+                transactions.push(transaction.clone());
+            }
+        }
+
+        Ok(block.into_full_block(transactions))
     }
 
     async fn insert_block_data(

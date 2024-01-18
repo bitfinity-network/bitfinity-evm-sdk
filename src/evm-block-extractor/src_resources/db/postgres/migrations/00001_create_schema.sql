@@ -24,7 +24,7 @@ create table EVM_TRANSACTION_RECEIPT (
 
 
 -----------------------------------------
--- Begin - EVM_TRANSACTION-
+-- Begin - EVM_TRANSACTION -
 -----------------------------------------
 
 create table EVM_TRANSACTION (
