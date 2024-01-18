@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use clap::Subcommand;
-use sqlx::postgres::PgConnectOptions;
+use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::PgPool;
 
 use crate::database::big_query_db_client::BigQueryDbClient;
@@ -86,7 +86,8 @@ impl Database {
                     .password(&password)
                     .database(&database)
                     .host(&host)
-                    .port(port);
+                    .port(port)
+                    .ssl_mode(PgSslMode::Require);
 
                 let pool = PgPool::connect_with(options).await?;
                 Ok(Arc::new(PostgresDbClient::new(pool)))
