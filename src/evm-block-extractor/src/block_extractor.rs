@@ -111,7 +111,7 @@ mod tests {
         let blockchain = Arc::<InMemoryDbClient>::default();
         let rpc_url = "https://testnet.bitfinity.network".to_string();
         let request_time_out_secs = 10;
-        let rpc_batch_size = 50;
+        let rpc_batch_size = 10;
 
         let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));
 
