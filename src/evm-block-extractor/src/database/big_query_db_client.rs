@@ -106,8 +106,31 @@ impl BigQueryDbClient {
 
 #[async_trait::async_trait]
 impl DatabaseClient for BigQueryDbClient {
-    async fn init(&self) -> anyhow::Result<()> {
+    async fn init(&self, block_hash: Option<H256>) -> anyhow::Result<()> {
+        // If the genesis block hash is provided, check if the genesis block hash in the database is the same as the provided one and delete the tables if they are different.
+        if let Some(genesis_hash) = block_hash {
+            let block_in_db = self
+                .get_block_by_number(0)
+                .await
+                .map(|b| b.hash.unwrap_or_default())
+                .unwrap_or_default();
+
+            let delete_table = |table_id: String| async move {
+                self.client
+                    .table()
+                    .delete(&self.project_id, &self.dataset_id, &table_id)
+                    .await
+            };
+
+            if self.dataset_id != "mainnet" && genesis_hash != block_in_db && !block_in_db.is_zero()
+            {
+                delete_table(BLOCKS_TABLE_ID.to_owned()).await?;
+                delete_table(RECEIPTS_TABLE_ID.to_owned()).await?;
+            }
+        };
+
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
+
         // Make sure the dataset exists
         if self
             .client

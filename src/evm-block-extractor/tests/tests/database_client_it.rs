@@ -1,11 +1,12 @@
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use testcontainers::testcontainers::clients::Cli;
 
 use crate::test_with_clients;
 
 #[tokio::test]
 async fn test_batch_insertion_of_blocks_and_receipts_retrieval() {
     test_with_clients(|db_client| async move {
-        db_client.init().await.unwrap();
+        db_client.init(None).await.unwrap();
 
         let mut blocks = Vec::new();
 
@@ -64,7 +65,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_retrieval() {
 #[tokio::test]
 async fn test_retrieval_of_latest_and_oldest_block_number() {
     test_with_clients(|db_client| async move {
-        db_client.init().await.unwrap();
+        db_client.init(None).await.unwrap();
 
         let latest_block_number = db_client.get_latest_block_number().await.unwrap();
         assert!(latest_block_number.is_none());
@@ -107,7 +108,7 @@ async fn test_init_idempotency() {
             .is_err());
 
         // First initialization - creates tables
-        db_client.init().await.unwrap();
+        db_client.init(None).await.unwrap();
 
         // Add a block
         let dummy_block: Block<Transaction> = ethers_core::types::Block {
@@ -121,7 +122,7 @@ async fn test_init_idempotency() {
             .await
             .is_ok());
 
-        assert!(db_client.init().await.is_ok());
+        assert!(db_client.init(None).await.is_ok());
 
         // Retrieve the block
         let block = db_client.get_block_by_number(1).await.unwrap();
@@ -129,4 +130,59 @@ async fn test_init_idempotency() {
         assert_eq!(block.number.unwrap().as_u64(), 1);
     })
     .await;
+}
+
+#[tokio::test]
+async fn test_deletion_and_creation_of_table_when_genesis_hashes_are_different() {
+    let docker = Cli::default();
+    let (bigquery_client, _node, _temp_file, _auth) =
+        crate::client::new_bigquery_client(&docker).await;
+
+    let genesis1: Block<Transaction> = ethers_core::types::Block {
+        number: Some(ethers_core::types::U64::from(0)),
+        hash: Some(H256::random()),
+        ..Default::default()
+    };
+
+    let genesis2: Block<Transaction> = ethers_core::types::Block {
+        number: Some(ethers_core::types::U64::from(0)),
+        hash: Some(H256::random()),
+        ..Default::default()
+    };
+
+    bigquery_client.init(None).await.unwrap();
+
+    assert!(bigquery_client
+        .insert_blocks_and_receipts(&[genesis1.clone()], &[])
+        .await
+        .is_ok());
+
+    let block = bigquery_client.get_block_by_number(0).await.unwrap();
+
+    assert_eq!(block.number.unwrap().as_u64(), 0);
+    assert_eq!(block.hash.unwrap(), genesis1.hash.unwrap());
+
+    // Init with genesis2
+    bigquery_client
+        .init(Some(genesis2.hash.unwrap()))
+        .await
+        .unwrap();
+
+    // check the database is empty
+    let latest_block_number = bigquery_client.get_latest_block_number().await.unwrap();
+
+    assert!(latest_block_number.is_none());
+
+    // Add a block
+    assert!(bigquery_client
+        .insert_blocks_and_receipts(&[genesis2.clone()], &[])
+        .await
+        .is_ok());
+
+    // Retrieve the block
+    let block = bigquery_client.get_block_by_number(0).await.unwrap();
+
+    assert_eq!(block.number.unwrap().as_u64(), 0);
+    // hash should be genesis2
+    assert_eq!(block.hash.unwrap(), genesis2.hash.unwrap());
 }

@@ -14,7 +14,7 @@ pub struct InMemoryDbClient {
 
 #[async_trait::async_trait]
 impl DatabaseClient for InMemoryDbClient {
-    async fn init(&self) -> anyhow::Result<()> {
+    async fn init(&self, _block_hash: Option<H256>) -> anyhow::Result<()> {
         Ok(())
     }
 

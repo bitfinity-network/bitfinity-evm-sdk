@@ -3,6 +3,7 @@ use std::sync::Arc;
 use clap::Parser;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
+use ethers_core::types::BlockNumber;
 use evm_block_extractor::block_extractor::BlockExtractor;
 use evm_block_extractor::config::Database;
 
@@ -48,14 +49,15 @@ async fn main() -> anyhow::Result<()> {
     log::info!("- request_time_out_secs: {}", args.request_time_out_secs);
     log::info!("----------------------");
 
-    log::info!("initializing blocks-writer...");
+    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(args.rpc_url)));
 
-    log::info!("blocks-writer initialized");
+    let genesis_block_hash = evm_client
+        .get_block_by_number(BlockNumber::Number(0.into()))
+        .await?
+        .hash;
 
     let db_client = args.command.build_client().await?;
-    db_client.init().await?;
-
-    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(args.rpc_url)));
+    db_client.init(genesis_block_hash).await?;
 
     let mut extractor = BlockExtractor::new(
         evm_client.clone(),

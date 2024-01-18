@@ -28,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
     let server = Server::builder().build(args.server_address).await?;
 
     let db_client = args.command.build_client().await?;
-    db_client.init().await?;
+    db_client.init(None).await?;
 
     let eth = EthImpl::new(db_client);
 
