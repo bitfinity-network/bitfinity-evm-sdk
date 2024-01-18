@@ -25,7 +25,7 @@ jobs:
         with:
           components: clippy, rustfmt
           targets: wasm32-unknown-unknown
-          
+
       - name: test
         run: |
           export RUST_BACKTRACE="full"
@@ -35,7 +35,7 @@ jobs:
 
   build-dfx-test:
     if: ${{github.ref_type != 'tag'}}
-    name: 'Build and Test'
+    name: 'Build and Test with dfx'
     uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
     with:
       runs-on: ubuntu-latest
