@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        database: [postgres, bigquery]
-        network: [mainnet, testnet]
+        database: [postgres, bigquery] # This matrix is used to run the workflow for both postgres and bigquery
+        network: [mainnet, testnet] # This matrix is used to run the workflow for both mainnet and testnet
 
     steps:
       - name: Checkout
@@ -40,6 +40,7 @@ jobs:
               echo "RPC_URL=testnet.bitfinity.network" >> $GITHUB_ENV
           fi
 
+      # Only run the following steps if the database is BigQuery and the network is mainnet or testnet
       - name: Run evm-block-extractor for BigQuery
         if: matrix.database == 'bigquery'
         run: |
@@ -50,6 +51,7 @@ jobs:
               --dataset-id ${{ matrix.network }} \
               --sa-key ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }}
 
+      # Only run the following steps if the network is mainnet and the database is postgres
       - name: Run evm-block-extractor for Postgres
         if: matrix.database == 'postgres' && matrix.network == 'mainnet'
         run: |
