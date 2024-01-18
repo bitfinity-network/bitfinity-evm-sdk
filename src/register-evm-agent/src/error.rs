@@ -19,7 +19,7 @@ pub enum Error {
     #[error("EVM error: {0}")]
     Evm(EvmError),
     #[error("canister client error: {0}")]
-    CanisterClientError(CanisterClientError),
+    CanisterClient(CanisterClientError),
     #[error("parse error: {0}")]
     Parse(candid::Error),
     #[error("wallet error: {0}")]
@@ -57,6 +57,6 @@ impl From<EvmError> for Error {
 
 impl From<CanisterClientError> for Error {
     fn from(err: CanisterClientError) -> Self {
-        Self::CanisterClientError(err)
+        Self::CanisterClient(err)
     }
 }
