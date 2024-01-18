@@ -35,9 +35,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up environment variables
-        run: echo "BIGQUERY_DATASET=BIGQUERY_DATASET_${{ matrix.network }}" >> $GITHUB_ENV
-
       - name: Building CloudRun image for BigQuery
         uses: docker/build-push-action@v5
         with:
@@ -45,8 +42,8 @@ jobs:
           context: .
           file: ./src/evm-block-extractor/Dockerfile
           tags: |
-            us-east4-docker.pkg.dev/dfx-server/evm-block-extractor/evm-block-extractor-server:${{ matrix.network }}-latest
+            us-east4-docker.pkg.dev/extractor-410310/block-extractor-repo/evm-block-extractor-server:${{ matrix.network }}-latest
           build-args: |
             PROJECT_ID=${{ secrets.BIGQUERY_PROJECT_ID }}
-            DATASET=${{ env.BIGQUERY_DATASET }}
+            DATASET=${{ matrix.network }}
             GCP_BLOCK_EXTRACTOR_SA_KEY=${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }}

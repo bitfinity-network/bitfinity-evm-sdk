@@ -48,10 +48,6 @@ async fn main() -> anyhow::Result<()> {
     log::info!("- request_time_out_secs: {}", args.request_time_out_secs);
     log::info!("----------------------");
 
-    log::info!("initializing blocks-writer...");
-
-    log::info!("blocks-writer initialized");
-
     let db_client = args.command.build_client().await?;
     db_client.init().await?;
 

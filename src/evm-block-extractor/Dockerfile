@@ -16,9 +16,9 @@ RUN cargo build --release --bin evm-block-extractor-server
 FROM debian:bookworm-slim AS runtime
 
 # GCP BigQuery Environment Variables
-ENV DATASET=testnet
-ENV PROJECT_ID=bitfinity-evm
-ENV GCP_BLOCK_EXTRACTOR_SA_KEY=key
+ENV DATASET=
+ENV PROJECT_ID=
+ENV GCP_BLOCK_EXTRACTOR_SA_KEY=
 
 WORKDIR /app
 RUN apt-get update -y \

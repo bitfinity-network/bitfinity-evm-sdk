@@ -2,7 +2,7 @@ name: Block Extractor Workflow
 
 on:
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '*/10 * * * *' # every 10 minutes
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,13 +43,11 @@ jobs:
       - name: Run evm-block-extractor for BigQuery
         if: matrix.database == 'bigquery'
         run: |
-          echo "BIGQUERY_DATASET=BIGQUERY_DATASET_${{ matrix.network }}" >> $GITHUB_ENV
-
           ./evm-block-extractor \
               --rpc-url ${{ env.RPC_URL }} \
-              --database bigquery \
+              --bigquery \
               --project-id ${{ secrets.BIGQUERY_PROJECT_ID }} \
-              --dataset-id ${{ env.BIGQUERY_DATASET }} \
+              --dataset-id ${{ matrix.network }} \
               --sa-key ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }}
 
       - name: Run evm-block-extractor for Postgres
@@ -57,10 +55,9 @@ jobs:
         run: |
           ./evm-block-extractor \
               --rpc-url ${{ env.RPC_URL }} \
-              --database postgres \
-              --network ${{ matrix.network }} \
+              --postgres \
               --username ${{ secrets.POSTGRES_USERNAME }} \
               --password ${{ secrets.POSTGRES_PASSWORD }}
-              --database-name ${{ secrets.POSTGRES_DATABASE_NAME  }} \
-              --database-url ${{ secrets.POSTGRES_DATABASE_URL }} \
-              --database-port ${{ secrets.POSTGRES_DATABASE_PORT }}
+              --database_name ${{ secrets.POSTGRES_DATABASE_NAME  }} \
+              --database_url ${{ secrets.POSTGRES_DATABASE_URL }} \
+              --database_port ${{ secrets.POSTGRES_DATABASE_PORT }}
