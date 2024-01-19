@@ -39,6 +39,7 @@ async fn new_postgres_db_client(
         database_name: "postgres".to_string(),
         database_url: "127.0.0.1".to_owned(),
         database_port: node.get_host_port_ipv4(5432),
+        require_ssl: false,
     };
 
     (db.build_client().await.unwrap(), node)
