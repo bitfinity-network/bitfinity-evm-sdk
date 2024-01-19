@@ -496,10 +496,6 @@ impl ExeResult {
     }
 }
 
-// impl From<ethers_core::types::Exe> for Block<T> {
-
-// }
-
 impl Storable for ExeResult {
     const BOUND: Bound = Bound::Unbounded;
 

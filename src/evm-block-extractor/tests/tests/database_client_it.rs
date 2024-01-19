@@ -158,7 +158,7 @@ async fn test_retrieval_of_transactions_with_blocks() {
 
         for i in 1..=10 {
             let dummy_block: Block<H256> = Block {
-                number: ethers_core::types::U64::from(1).into(),
+                number: ethers_core::types::U64::from(i).into(),
                 hash: ethers_core::types::H256::random().into(),
                 ..Default::default()
             };
