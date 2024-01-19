@@ -45,7 +45,7 @@ pub enum Database {
         #[arg(long)]
         database_port: u16,
         /// Demand SSL connection
-        #[arg(long, default_value = "true")]
+        #[arg(long)]
         require_ssl: bool,
     },
 }
