@@ -43,9 +43,9 @@ async fn test_extractor_collect_blocks() {
 
             // Check blocks
             {
-                assert_eq!(block_num, full_block.number.unwrap().as_u64());
-                assert_eq!(block_num, block.number.unwrap().as_u64());
-                assert_eq!(block.hash.unwrap(), full_block.hash.unwrap());
+                assert_eq!(block_num, full_block.number.0.as_u64());
+                assert_eq!(block_num, block.number.0.as_u64());
+                assert_eq!(block.hash, full_block.hash);
             }
 
             // Check transactions
@@ -62,11 +62,11 @@ async fn test_extractor_collect_blocks() {
             // Check receipts
             {
                 for tx in &full_block.transactions {
-                    let receipt = db_client.get_transaction_receipt(tx.hash).await.unwrap();
+                    let receipt = db_client.get_transaction_receipt(tx.hash.clone()).await.unwrap();
 
-                    assert_eq!(tx.hash, receipt.transaction_hash);
-                    assert_eq!(tx.block_number, receipt.block_number);
-                    assert_eq!(tx.block_hash, receipt.block_hash);
+                    assert_eq!(tx.hash.0, receipt.transaction_hash);
+                    assert_eq!(tx.block_number.unwrap().0, receipt.block_number.unwrap());
+                    assert_eq!(tx.block_hash.clone().unwrap().0, receipt.block_hash.unwrap());
                 }
             }
         }

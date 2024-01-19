@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
-use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use did::{Block, Transaction, H256};
+use ethers_core::types::TransactionReceipt;
 use gcp_bigquery_client::model::dataset::Dataset;
 use gcp_bigquery_client::model::field_type::serialize_json_as_string;
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
@@ -276,14 +277,7 @@ impl DatabaseClient for BigQueryDbClient {
             .map(|b| {
                 let block_id = b
                     .number
-                    .ok_or(anyhow::anyhow!("Block number not found"))
-                    .expect("Block number not found")
-                    .as_u64();
-
-                let block_hash = b
-                    .hash
-                    .ok_or(anyhow::anyhow!("Block hash not found"))
-                    .expect("Block hash not found");
+                    .0.as_u64();
 
                 let block_row = BlockRow {
                     id: block_id,
@@ -291,7 +285,7 @@ impl DatabaseClient for BigQueryDbClient {
                 };
 
                 TableDataInsertAllRequestRows {
-                    insert_id: Some(format!("0x{:x}", block_hash)),
+                    insert_id: Some(b.hash.to_hex_str()),
                     json: serde_json::to_value(block_row).expect("Failed to serialize block"),
                 }
             })
@@ -303,13 +297,13 @@ impl DatabaseClient for BigQueryDbClient {
         let transactions = transactions
             .iter()
             .map(|txn| {
-                let tx_hash = txn.hash;
+                let tx_hash = &txn.hash;
 
                 let txn = TransactionRow {
                     tx_hash: format!("0x{:x}", tx_hash),
                     transaction: serde_json::to_value(txn)
                         .expect("Failed to serialize transaction"),
-                    block_number: txn.block_number.expect("Block number not found").as_u64(),
+                    block_number: txn.block_number.expect("Block number not found").0.as_u64(),
                 };
 
                 TableDataInsertAllRequestRows {

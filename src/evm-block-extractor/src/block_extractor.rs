@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
-use ethers_core::types::{Block, BlockNumber, H256};
 use itertools::Itertools;
 use tokio::time::Duration;
 
@@ -52,7 +51,7 @@ impl BlockExtractor {
         for blocks_batch in &(from_block_inclusive..=to_block_inclusive).chunks(batch_size) {
             let block_numbers = blocks_batch
                 .into_iter()
-                .map(|block| BlockNumber::Number(block.into()));
+                .map(|block| ethers_core::types::BlockNumber::Number(block.into()));
 
             let evm_blocks = tokio::time::timeout(
                 Duration::from_secs(request_time_out_secs),
@@ -71,7 +70,7 @@ impl BlockExtractor {
             let blocks = evm_blocks
                 .into_iter()
                 .map(|block| block.into())
-                .collect::<Vec<Block<H256>>>();
+                .collect::<Vec<ethers_core::types::Block<ethers_core::types::H256>>>();
 
             for block in &blocks {
                 let tx_hashes = block.transactions.clone();
@@ -97,6 +96,16 @@ impl BlockExtractor {
                     }
                 }
             }
+
+            let blocks = blocks
+                .into_iter()
+                .map(|block| block.into())
+                .collect::<Vec<did::Block<did::H256>>>();
+
+            let all_transactions = all_transactions
+                .into_iter()
+                .map(|tx| tx.into())
+                .collect::<Vec<did::Transaction>>();
 
             self.blockchain
                 .insert_block_data(&blocks, &all_evm_receipts, &all_transactions)

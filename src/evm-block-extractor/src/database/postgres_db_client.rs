@@ -1,6 +1,7 @@
 use ::sqlx::migrate::Migrator;
 use ::sqlx::*;
-use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use did::{Block, Transaction, H256};
+use ethers_core::types::TransactionReceipt;
 use serde::de::DeserializeOwned;
 use sqlx::postgres::PgRow;
 
@@ -66,9 +67,7 @@ impl DatabaseClient for PostgresDbClient {
 
         for block in blocks {
             let block_id = block
-                .number
-                .ok_or(anyhow::anyhow!("Block number not found"))?
-                .as_u64();
+                .number.0.as_u64();
 
             sqlx::query("INSERT INTO EVM_BLOCK (id, data) VALUES ($1, $2)")
                 .bind(block_id as i64)
@@ -89,11 +88,11 @@ impl DatabaseClient for PostgresDbClient {
         }
 
         for txn in transactions {
-            let hex_tx_hash = did::H256::from(txn.hash).to_hex_str();
+            let hex_tx_hash = txn.hash.to_hex_str();
             sqlx::query("INSERT INTO EVM_TRANSACTION (id, data,block_number) VALUES ($1, $2,$3)")
                 .bind(&hex_tx_hash)
                 .bind(serde_json::to_value(txn)?)
-                .bind(txn.block_number.expect("Block number not found").as_u64() as i64)
+                .bind(txn.block_number.expect("Block number not found").0.as_u64() as i64)
                 .execute(&mut *tx)
                 .await?;
         }
