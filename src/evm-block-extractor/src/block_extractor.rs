@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
-use ethers_core::types::BlockNumber;
+use ethers_core::types::{Block, BlockNumber, H256};
 use itertools::Itertools;
 use tokio::time::Duration;
 
@@ -52,8 +52,7 @@ impl BlockExtractor {
         for blocks_batch in &(from_block_inclusive..=to_block_inclusive).chunks(batch_size) {
             let block_numbers = blocks_batch
                 .into_iter()
-                .map(|block| BlockNumber::Number(block.into()))
-                .collect::<Vec<_>>();
+                .map(|block| BlockNumber::Number(block.into()));
 
             let evm_blocks = tokio::time::timeout(
                 Duration::from_secs(request_time_out_secs),
@@ -62,13 +61,20 @@ impl BlockExtractor {
             .await??;
 
             let mut receipts_tasks = vec![];
-            for block in &evm_blocks {
-                let tx_hashes = block
-                    .transactions
-                    .iter()
-                    .map(|tx| tx.hash)
-                    .collect::<Vec<_>>();
 
+            let all_transactions = evm_blocks
+                .iter()
+                .flat_map(|block| &block.transactions)
+                .cloned()
+                .collect::<Vec<_>>();
+
+            let blocks = evm_blocks
+                .into_iter()
+                .map(|block| block.into())
+                .collect::<Vec<Block<H256>>>();
+
+            for block in &blocks {
+                let tx_hashes = block.transactions.clone();
                 let client = client.clone();
                 let receipts_task = tokio::spawn(async move {
                     client.get_receipts_by_hash(tx_hashes, batch_size).await
@@ -93,54 +99,10 @@ impl BlockExtractor {
             }
 
             self.blockchain
-                .insert_blocks_and_receipts(&evm_blocks, &all_evm_receipts)
+                .insert_block_data(&blocks, &all_evm_receipts, &all_transactions)
                 .await?;
         }
 
         Ok((from_block_inclusive, to_block_inclusive))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::database::in_memory_db_client::InMemoryDbClient;
-
-    #[tokio::test]
-    async fn test_collect_blocks() {
-        let blockchain = Arc::<InMemoryDbClient>::default();
-        let rpc_url = "https://testnet.bitfinity.network".to_string();
-        let request_time_out_secs = 10;
-        let rpc_batch_size = 10;
-
-        let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));
-
-        let mut extractor = BlockExtractor::new(
-            evm_client.clone(),
-            request_time_out_secs,
-            rpc_batch_size,
-            blockchain.clone(),
-        );
-
-        let end_block = evm_client.get_block_number().await.unwrap();
-        let start_block = end_block - 10;
-
-        println!("Getting blocks from {:?} to {}", start_block, end_block);
-
-        let result = extractor.collect_blocks(start_block, end_block).await;
-
-        if let Err(e) = &result {
-            println!("Error: {:?}", e);
-        }
-
-        assert!(result.is_ok());
-
-        let latest_block_num = blockchain
-            .get_block_by_number(end_block)
-            .await
-            .unwrap()
-            .number
-            .unwrap();
-        assert_eq!(end_block, latest_block_num.as_u64());
     }
 }

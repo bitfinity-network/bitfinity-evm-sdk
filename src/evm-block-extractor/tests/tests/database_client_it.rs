@@ -1,17 +1,16 @@
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
-use testcontainers::testcontainers::clients::Cli;
 
 use crate::test_with_clients;
 
 #[tokio::test]
-async fn test_batch_insertion_of_blocks_and_receipts_retrieval() {
+async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
     test_with_clients(|db_client| async move {
-        db_client.init(None).await.unwrap();
+        db_client.init().await.unwrap();
 
         let mut blocks = Vec::new();
 
         for i in 1..=10 {
-            let dummy_block: Block<Transaction> = ethers_core::types::Block {
+            let dummy_block: Block<H256> = ethers_core::types::Block {
                 number: Some(ethers_core::types::U64::from(i)),
                 hash: Some(H256::random()),
                 ..Default::default()
@@ -32,12 +31,29 @@ async fn test_batch_insertion_of_blocks_and_receipts_retrieval() {
             receipts.push(dummy_receipt);
         }
 
+        let mut txn = vec![];
+        for i in 0..10 {
+            let tx_hash = receipts[i].transaction_hash;
+            let block_number = blocks[i].number.unwrap().as_u64();
+            let dummy_txn: Transaction = ethers_core::types::Transaction {
+                hash: tx_hash,
+                block_number: Some(ethers_core::types::U64::from(block_number)),
+                ..Default::default()
+            };
+
+            txn.push(dummy_txn);
+        }
+
         db_client
-            .insert_blocks_and_receipts(&blocks, &receipts)
+            .insert_block_data(&blocks, &receipts, &txn)
             .await
             .unwrap();
 
-        let block = db_client.get_block_by_number(1).await.unwrap();
+        let block = db_client.get_full_block_by_number(1).await.unwrap();
+
+        // Check the transactions
+        assert_eq!(block.transactions.len(), 1);
+        assert_eq!(block.transactions[0].hash, receipts[0].transaction_hash);
 
         assert_eq!(block.number.unwrap().as_u64(), 1);
 
@@ -48,7 +64,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_retrieval() {
 
         assert_eq!(receipt.transaction_hash, receipts[0].transaction_hash);
 
-        let block = db_client.get_block_by_number(10).await.unwrap();
+        let block = db_client.get_full_block_by_number(10).await.unwrap();
 
         assert_eq!(block.number.unwrap().as_u64(), 10);
 
@@ -65,20 +81,20 @@ async fn test_batch_insertion_of_blocks_and_receipts_retrieval() {
 #[tokio::test]
 async fn test_retrieval_of_latest_and_oldest_block_number() {
     test_with_clients(|db_client| async move {
-        db_client.init(None).await.unwrap();
+        db_client.init().await.unwrap();
 
         let latest_block_number = db_client.get_latest_block_number().await.unwrap();
         assert!(latest_block_number.is_none());
 
         for i in 1..=10 {
-            let dummy_block: Block<Transaction> = ethers_core::types::Block {
+            let dummy_block: Block<H256> = ethers_core::types::Block {
                 number: Some(ethers_core::types::U64::from(i)),
                 hash: Some(H256::random()),
                 ..Default::default()
             };
 
             db_client
-                .insert_blocks_and_receipts(&[dummy_block], &[])
+                .insert_block_data(&[dummy_block], &[], &[])
                 .await
                 .unwrap();
         }
@@ -96,33 +112,33 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
 async fn test_init_idempotency() {
     test_with_clients(|db_client| async move {
         // Add a block
-        let dummy_block: Block<Transaction> = ethers_core::types::Block {
+        let dummy_block: Block<H256> = ethers_core::types::Block {
             number: Some(ethers_core::types::U64::from(1)),
             hash: Some(H256::random()),
             ..Default::default()
         };
 
         assert!(db_client
-            .insert_blocks_and_receipts(&[dummy_block], &[])
+            .insert_block_data(&[dummy_block], &[], &[])
             .await
             .is_err());
 
         // First initialization - creates tables
-        db_client.init(None).await.unwrap();
+        db_client.init().await.unwrap();
 
         // Add a block
-        let dummy_block: Block<Transaction> = ethers_core::types::Block {
+        let dummy_block: Block<H256> = ethers_core::types::Block {
             number: Some(ethers_core::types::U64::from(1)),
             hash: Some(H256::random()),
             ..Default::default()
         };
 
         assert!(db_client
-            .insert_blocks_and_receipts(&[dummy_block], &[])
+            .insert_block_data(&[dummy_block], &[], &[])
             .await
             .is_ok());
 
-        assert!(db_client.init(None).await.is_ok());
+        assert!(db_client.init().await.is_ok());
 
         // Retrieve the block
         let block = db_client.get_block_by_number(1).await.unwrap();
@@ -133,56 +149,57 @@ async fn test_init_idempotency() {
 }
 
 #[tokio::test]
-async fn test_deletion_and_creation_of_table_when_earliest_block_are_different() {
-    let docker = Cli::default();
-    let (bigquery_client, _node, _temp_file, _auth) =
-        crate::client::new_bigquery_client(&docker).await;
+async fn test_retrieval_of_transactions_with_blocks() {
+    test_with_clients(|db_client| async move {
+        db_client.init().await.unwrap();
 
-    let genesis1: Block<Transaction> = ethers_core::types::Block {
-        number: Some(ethers_core::types::U64::from(0)),
-        hash: Some(H256::random()),
-        ..Default::default()
-    };
+        let mut blocks = Vec::new();
 
-    let genesis2: Block<Transaction> = ethers_core::types::Block {
-        number: Some(ethers_core::types::U64::from(0)),
-        hash: Some(H256::random()),
-        ..Default::default()
-    };
+        for i in 1..=10 {
+            let dummy_block: Block<H256> = ethers_core::types::Block {
+                number: Some(ethers_core::types::U64::from(i)),
+                hash: Some(H256::random()),
+                ..Default::default()
+            };
 
-    bigquery_client.init(None).await.unwrap();
+            blocks.push(dummy_block);
+        }
 
-    assert!(bigquery_client
-        .insert_blocks_and_receipts(&[genesis1.clone()], &[])
-        .await
-        .is_ok());
+        let mut txn = vec![];
+        for _ in 0..10 {
+            let dummy_txn: Transaction = ethers_core::types::Transaction {
+                hash: H256::random(),
+                block_number: Some(5_u64.into()),
+                block_hash: Some(blocks[4].hash.unwrap()),
+                ..Default::default()
+            };
 
-    let block = bigquery_client.get_block_by_number(0).await.unwrap();
+            txn.push(dummy_txn);
+        }
 
-    assert_eq!(block.number.unwrap().as_u64(), 0);
-    assert_eq!(block.hash.unwrap(), genesis1.hash.unwrap());
+        db_client
+            .insert_block_data(&blocks, &[], &txn)
+            .await
+            .unwrap();
 
-    // Init with genesis2
-    bigquery_client
-        .init(Some(genesis2.clone().into()))
-        .await
-        .unwrap();
+        let block = db_client.get_block_by_number(1).await.unwrap();
 
-    // check the database is empty
-    let latest_block_number = bigquery_client.get_latest_block_number().await.unwrap();
+        // Check the transactions
+        assert_eq!(block.transactions.len(), 0);
 
-    assert!(latest_block_number.is_none());
+        assert_eq!(block.number.unwrap().as_u64(), 1);
 
-    // Add a block
-    assert!(bigquery_client
-        .insert_blocks_and_receipts(&[genesis2.clone()], &[])
-        .await
-        .is_ok());
+        let block = db_client.get_full_block_by_number(5).await.unwrap();
 
-    // Retrieve the block
-    let block = bigquery_client.get_block_by_number(0).await.unwrap();
+        assert_eq!(block.hash.unwrap(), blocks[4].hash.unwrap());
 
-    assert_eq!(block.number.unwrap().as_u64(), 0);
-    // hash should be genesis2
-    assert_eq!(block.hash.unwrap(), genesis2.hash.unwrap());
+        assert_eq!(block.number.unwrap().as_u64(), 5);
+        assert_eq!(block.transactions.len(), 10);
+
+        for txn in block.transactions {
+            assert_eq!(txn.block_number.unwrap().as_u64(), 5);
+            assert_eq!(txn.block_hash.unwrap(), block.hash.unwrap());
+        }
+    })
+    .await;
 }

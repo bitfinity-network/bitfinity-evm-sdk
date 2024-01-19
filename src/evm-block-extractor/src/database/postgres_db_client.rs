@@ -28,7 +28,7 @@ impl DatabaseClient for PostgresDbClient {
         Ok(())
     }
 
-    async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>> {
+    async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<H256>> {
         sqlx::query("SELECT data FROM EVM_BLOCK WHERE EVM_BLOCK.id = $1")
             .bind(block as i64)
             .fetch_one(&self.pool)
@@ -37,10 +37,30 @@ impl DatabaseClient for PostgresDbClient {
             .and_then(|row| from_row_value(&row, 0))
     }
 
-    async fn insert_blocks_and_receipts(
+    async fn get_full_block_by_number(
         &self,
-        blocks: &[Block<Transaction>],
+        block_number: u64,
+    ) -> anyhow::Result<Block<Transaction>> {
+        let block = self.get_block_by_number(block_number).await?;
+
+        let transactions: Vec<Transaction> =
+            sqlx::query("SELECT data FROM EVM_TRANSACTION WHERE EVM_TRANSACTION.block_number = $1")
+                .bind(block_number as i64)
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| {
+                    anyhow::anyhow!("Error getting transactions for block {:?}: {:?}", block, e)
+                })
+                .and_then(|row| from_rows_value(&row, 0))?;
+
+        Ok(block.into_full_block(transactions))
+    }
+
+    async fn insert_block_data(
+        &self,
+        blocks: &[Block<H256>],
         receipts: &[TransactionReceipt],
+        transactions: &[Transaction],
     ) -> anyhow::Result<()> {
         let mut tx = self.pool.begin().await?;
 
@@ -64,6 +84,16 @@ impl DatabaseClient for PostgresDbClient {
             sqlx::query("INSERT INTO EVM_TRANSACTION_RECEIPT (id, data) VALUES ($1, $2)")
                 .bind(&hex_tx_hash)
                 .bind(serde_json::to_value(receipt)?)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        for txn in transactions {
+            let hex_tx_hash = did::H256::from(txn.hash).to_hex_str();
+            sqlx::query("INSERT INTO EVM_TRANSACTION (id, data,block_number) VALUES ($1, $2,$3)")
+                .bind(&hex_tx_hash)
+                .bind(serde_json::to_value(txn)?)
+                .bind(txn.block_number.expect("Block number not found").as_u64() as i64)
                 .execute(&mut *tx)
                 .await?;
         }
@@ -111,5 +141,13 @@ impl DatabaseClient for PostgresDbClient {
 
 fn from_row_value<T: DeserializeOwned>(row: &PgRow, index: usize) -> anyhow::Result<T> {
     let res = serde_json::from_value(row.try_get::<serde_json::Value, _>(index)?)?;
+    Ok(res)
+}
+
+fn from_rows_value<T: DeserializeOwned>(rows: &[PgRow], index: usize) -> anyhow::Result<Vec<T>> {
+    let mut res = Vec::with_capacity(rows.len());
+    for row in rows {
+        res.push(from_row_value(row, index)?);
+    }
     Ok(res)
 }

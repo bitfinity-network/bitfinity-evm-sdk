@@ -15,7 +15,7 @@ async fn test_extractor_collect_blocks() {
         let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));
 
         let request_time_out_secs = 10;
-        let rpc_batch_size = 50;
+        let rpc_batch_size = 10;
         let mut extractor = BlockExtractor::new(
             evm_client.clone(),
             request_time_out_secs,
@@ -36,14 +36,40 @@ async fn test_extractor_collect_blocks() {
         assert_eq!(result.0, start_block);
         assert_eq!(result.1, end_block);
 
-        let latest_block_num = db_client
-            .get_block_by_number(end_block)
-            .await
-            .unwrap()
-            .number
-            .unwrap();
+        for block_num in start_block..=end_block {
+            let block = db_client.get_block_by_number(block_num).await.unwrap();
 
-        assert_eq!(end_block, latest_block_num.as_u64());
+            let full_block = db_client.get_full_block_by_number(block_num).await.unwrap();
+
+            // Check blocks
+            {
+                assert_eq!(block_num, full_block.number.unwrap().as_u64());
+                assert_eq!(block_num, block.number.unwrap().as_u64());
+                assert_eq!(block.hash.unwrap(), full_block.hash.unwrap());
+            }
+
+            // Check transactions
+            {
+                assert_eq!(block.transactions.len(), full_block.transactions.len());
+
+                for tx in &full_block.transactions {
+                    assert!(block.transactions.contains(&tx.hash));
+                    assert_eq!(tx.block_number, tx.block_number);
+                    assert_eq!(tx.block_hash, tx.block_hash);
+                }
+            }
+
+            // Check receipts
+            {
+                for tx in &full_block.transactions {
+                    let receipt = db_client.get_transaction_receipt(tx.hash).await.unwrap();
+
+                    assert_eq!(tx.hash, receipt.transaction_hash);
+                    assert_eq!(tx.block_number, receipt.block_number);
+                    assert_eq!(tx.block_hash, receipt.block_hash);
+                }
+            }
+        }
     })
     .await;
 }
