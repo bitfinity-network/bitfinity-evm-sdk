@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
-use ethers_core::types::{BlockNumber, Block, H256};
+use ethers_core::types::{Block, BlockNumber, H256};
 use itertools::Itertools;
 use tokio::time::Duration;
 

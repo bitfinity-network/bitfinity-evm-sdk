@@ -28,10 +28,7 @@ impl DatabaseClient for PostgresDbClient {
         Ok(())
     }
 
-    async fn get_block_by_number(
-        &self,
-        block: u64,
-    ) -> anyhow::Result<Block<H256>> {
+    async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<H256>> {
         sqlx::query("SELECT data FROM EVM_BLOCK WHERE EVM_BLOCK.id = $1")
             .bind(block as i64)
             .fetch_one(&self.pool)
@@ -46,19 +43,17 @@ impl DatabaseClient for PostgresDbClient {
     ) -> anyhow::Result<Block<Transaction>> {
         let block = self.get_block_by_number(block_number).await?;
 
-        let transactions: Vec<Transaction> = sqlx::query(
-            "SELECT data FROM EVM_TRANSACTION WHERE EVM_TRANSACTION.block_number = $1",
-        )
-        .bind(block_number as i64)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| {
-            anyhow::anyhow!("Error getting transactions for block {:?}: {:?}", block, e)
-        })
-        .and_then(|row| from_rows_value(&row, 0))?;
+        let transactions: Vec<Transaction> =
+            sqlx::query("SELECT data FROM EVM_TRANSACTION WHERE EVM_TRANSACTION.block_number = $1")
+                .bind(block_number as i64)
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| {
+                    anyhow::anyhow!("Error getting transactions for block {:?}: {:?}", block, e)
+                })
+                .and_then(|row| from_rows_value(&row, 0))?;
 
         Ok(block.into_full_block(transactions))
-
     }
 
     async fn insert_block_data(

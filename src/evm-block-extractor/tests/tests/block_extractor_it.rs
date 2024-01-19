@@ -37,26 +37,21 @@ async fn test_extractor_collect_blocks() {
         assert_eq!(result.1, end_block);
 
         for block_num in start_block..=end_block {
-            let block = db_client
-                .get_block_by_number(block_num)
-                .await
-                .unwrap();
+            let block = db_client.get_block_by_number(block_num).await.unwrap();
 
-            let full_block = db_client
-                .get_full_block_by_number(block_num)
-                .await
-                .unwrap();
+            let full_block = db_client.get_full_block_by_number(block_num).await.unwrap();
 
             // Check blocks
             {
                 assert_eq!(block_num, full_block.number.unwrap().as_u64());
                 assert_eq!(block_num, block.number.unwrap().as_u64());
-                assert_eq!(block.hash.unwrap(), full_block.hash.unwrap());            }
+                assert_eq!(block.hash.unwrap(), full_block.hash.unwrap());
+            }
 
             // Check transactions
             {
                 assert_eq!(block.transactions.len(), full_block.transactions.len());
-    
+
                 for tx in &full_block.transactions {
                     assert!(block.transactions.contains(&tx.hash));
                     assert_eq!(tx.block_number, tx.block_number);
@@ -67,18 +62,14 @@ async fn test_extractor_collect_blocks() {
             // Check receipts
             {
                 for tx in &full_block.transactions {
-                    let receipt = db_client
-                    .get_transaction_receipt(tx.hash)
-                    .await
-                    .unwrap();
-                
+                    let receipt = db_client.get_transaction_receipt(tx.hash).await.unwrap();
+
                     assert_eq!(tx.hash, receipt.transaction_hash);
                     assert_eq!(tx.block_number, receipt.block_number);
                     assert_eq!(tx.block_hash, receipt.block_hash);
                 }
             }
         }
-
     })
     .await;
 }

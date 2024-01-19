@@ -147,7 +147,6 @@ impl EthServer for EthImpl {
 
             Ok(block)
         }
-
     }
 
     async fn get_transaction_receipt(&self, tx_hash: H256) -> RpcResult<TransactionReceipt> {

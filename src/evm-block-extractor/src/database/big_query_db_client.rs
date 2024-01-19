@@ -172,10 +172,7 @@ impl DatabaseClient for BigQueryDbClient {
         Ok(())
     }
 
-    async fn get_block_by_number(
-        &self,
-        block_number: u64,
-    ) -> anyhow::Result<Block<H256>> {
+    async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {
                 name: Some("id".to_string()),
@@ -248,7 +245,6 @@ impl DatabaseClient for BigQueryDbClient {
         }
 
         Ok(block.into_full_block(transactions))
-
     }
 
     async fn insert_block_data(

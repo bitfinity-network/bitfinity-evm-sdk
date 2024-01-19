@@ -10,10 +10,7 @@ pub trait DatabaseClient: Send + Sync {
     async fn init(&self) -> anyhow::Result<()>;
 
     /// Get a block from the database
-    async fn get_block_by_number(
-        &self,
-        block_number: u64,
-    ) -> anyhow::Result<Block<H256>>;
+    async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>>;
 
     /// Get a block from the database
     async fn get_full_block_by_number(
