@@ -25,15 +25,6 @@ impl PostgresDbClient {
 impl DatabaseClient for PostgresDbClient {
     async fn init(&self) -> anyhow::Result<()> {
         MIGRATOR.run(&self.pool).await?;
-
-        let user = std::env::var("POSTGRES_USER").unwrap_or_else(|_| "postgres".to_string());
-
-        let sql = format!(
-            "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {}",
-            user
-        );
-        sqlx::query(&sql).execute(&self.pool).await?;
-
         Ok(())
     }
 
