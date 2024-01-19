@@ -21,3 +21,18 @@ create table EVM_TRANSACTION_RECEIPT (
 );
 
 -- End - EVM_TRANSACTION_RECEIPT -
+
+
+-----------------------------------------
+-- Begin - EVM_TRANSACTION -
+-----------------------------------------
+
+create table EVM_TRANSACTION (
+    ID char(66) primary key, -- 64 is the length of a H256 in hex, plus 0x
+    DATA JSONB,
+    BLOCK_NUMBER bigint
+);
+
+CREATE INDEX EVM_TRANSACTION_INDEX_BLOCK_NUMBER ON EVM_TRANSACTION( BLOCK_NUMBER );
+
+-- End - EVM_TRANSACTION -

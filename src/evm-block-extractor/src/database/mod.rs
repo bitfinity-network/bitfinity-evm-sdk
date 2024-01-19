@@ -1,5 +1,4 @@
 pub mod big_query_db_client;
-pub mod in_memory_db_client;
 pub mod postgres_db_client;
 
 use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
@@ -11,13 +10,20 @@ pub trait DatabaseClient: Send + Sync {
     async fn init(&self) -> anyhow::Result<()>;
 
     /// Get a block from the database
-    async fn get_block_by_number(&self, block: u64) -> anyhow::Result<Block<Transaction>>;
+    async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>>;
 
-    /// Insert blocks and receipts into the database
-    async fn insert_blocks_and_receipts(
+    /// Get a block from the database
+    async fn get_full_block_by_number(
         &self,
-        blocks: &[Block<Transaction>],
+        block_number: u64,
+    ) -> anyhow::Result<Block<Transaction>>;
+
+    /// Insert block data; these include receipts, transactions and the blocks
+    async fn insert_block_data(
+        &self,
+        blocks: &[Block<H256>],
         receipts: &[TransactionReceipt],
+        transactions: &[Transaction],
     ) -> anyhow::Result<()>;
 
     /// Get a transaction receipt from the database
