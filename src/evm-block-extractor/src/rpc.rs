@@ -84,16 +84,20 @@ impl ICServer for EthImpl {
             return Ok(hex::encode(&EMPTY_LIST_RLP));
         }
 
-        let mut rlp = RlpStream::new_list(Into::<u64>::into(end_block - from).try_into().unwrap());
+        let mut rlp = RlpStream::new_list((end_block - from) as usize);
         for block_index in from..end_block {
-            let block: did::Block<did::Transaction> = db
-                .get_block_by_number(block_index)
+            let block = db
+                .get_full_block_by_number(block_index)
                 .await
                 .map_err(|e| {
                     log::error!("Error getting block: {:?}", e);
                     jsonrpsee::types::error::ErrorCode::InternalError
-                })?
-                .into();
+                })?;
+
+            let block = serde_json::to_vec(&block).map_err(|e| {
+                log::error!("Error serializing block: {:?}", e);
+                jsonrpsee::types::error::ErrorCode::InternalError
+            })?;
 
             rlp.append(&block);
         }
@@ -107,29 +111,43 @@ impl EthServer for EthImpl {
     async fn get_block_by_number(
         &self,
         block_number: U256,
-        full: bool,
+        include_transactions: bool,
     ) -> RpcResult<serde_json::Value> {
         let block_number = block_number.as_u64();
 
-        let block = self
-            .blockchain
-            .get_block_by_number(block_number)
-            .await
-            .map_err(|e| {
-                log::error!("Error getting block: {:?}", e);
+        if include_transactions {
+            let block = self
+                .blockchain
+                .get_full_block_by_number(block_number)
+                .await
+                .map_err(|e| {
+                    log::error!("Error getting block: {:?}", e);
+                    jsonrpsee::types::error::ErrorCode::InternalError
+                })?;
+
+            let block = serde_json::to_value(&block).map_err(|e| {
+                log::error!("Error serializing block: {:?}", e);
                 jsonrpsee::types::error::ErrorCode::InternalError
             })?;
 
-        if full {
-            serde_json::to_value(block)
+            Ok(block)
         } else {
-            let converted_block: Block<H256> = block.into();
-            serde_json::to_value(converted_block)
+            let block = self
+                .blockchain
+                .get_block_by_number(block_number)
+                .await
+                .map_err(|e| {
+                    log::error!("Error getting block: {:?}", e);
+                    jsonrpsee::types::error::ErrorCode::InternalError
+                })?;
+
+            let block = serde_json::to_value(&block).map_err(|e| {
+                log::error!("Error serializing block: {:?}", e);
+                jsonrpsee::types::error::ErrorCode::InternalError
+            })?;
+
+            Ok(block)
         }
-        .map_err(|e| {
-            log::error!("Error serializing block: {:?}", e);
-            ErrorObject::from(jsonrpsee::types::error::ErrorCode::InternalError)
-        })
     }
 
     async fn get_transaction_receipt(&self, tx_hash: H256) -> RpcResult<TransactionReceipt> {
