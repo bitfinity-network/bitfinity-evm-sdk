@@ -111,9 +111,12 @@ impl DatabaseClient for BigQueryDbClient {
         if let Some(block) = block {
             let block_in_db = self
                 .get_block_by_number(block.number.expect("Block number not found").as_u64())
-                .await
-                .map(|b| b.hash.unwrap_or_default())
-                .unwrap_or_default();
+                .await;
+            let Ok(block_in_db) = block_in_db else {
+                panic!("Block not found in the database, The Database cannot be rebuilt")
+            };
+
+            let block_hash = block_in_db.hash.expect("Block hash not found");
 
             let delete_table = |table_id: String| async move {
                 self.client
@@ -123,8 +126,8 @@ impl DatabaseClient for BigQueryDbClient {
             };
 
             if self.dataset_id != "mainnet"
-                && block.hash.expect("should be present") != block_in_db
-                && !block_in_db.is_zero()
+                && block.hash.expect("should be present") != block_hash
+                && !block_hash.is_zero()
             {
                 delete_table(BLOCKS_TABLE_ID.to_owned()).await?;
                 delete_table(RECEIPTS_TABLE_ID.to_owned()).await?;
