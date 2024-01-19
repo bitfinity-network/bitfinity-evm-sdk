@@ -106,11 +106,11 @@ impl BigQueryDbClient {
 
 #[async_trait::async_trait]
 impl DatabaseClient for BigQueryDbClient {
-    async fn init(&self, block_hash: Option<H256>) -> anyhow::Result<()> {
+    async fn init(&self, block: Option<Block<H256>>) -> anyhow::Result<()> {
         // If the genesis block hash is provided, check if the genesis block hash in the database is the same as the provided one and delete the tables if they are different.
-        if let Some(genesis_hash) = block_hash {
+        if let Some(block) = block {
             let block_in_db = self
-                .get_block_by_number(0)
+                .get_block_by_number(block.number.expect("Block number not found").as_u64())
                 .await
                 .map(|b| b.hash.unwrap_or_default())
                 .unwrap_or_default();
@@ -122,7 +122,9 @@ impl DatabaseClient for BigQueryDbClient {
                     .await
             };
 
-            if self.dataset_id != "mainnet" && genesis_hash != block_in_db && !block_in_db.is_zero()
+            if self.dataset_id != "mainnet"
+                && block.hash.expect("should be present") != block_in_db
+                && !block_in_db.is_zero()
             {
                 delete_table(BLOCKS_TABLE_ID.to_owned()).await?;
                 delete_table(RECEIPTS_TABLE_ID.to_owned()).await?;

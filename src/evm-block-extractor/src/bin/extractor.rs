@@ -51,13 +51,12 @@ async fn main() -> anyhow::Result<()> {
 
     let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(args.rpc_url)));
 
-    let genesis_block_hash = evm_client
-        .get_block_by_number(BlockNumber::Number(0.into()))
-        .await?
-        .hash;
+    let earliest_block = evm_client
+        .get_block_by_number(BlockNumber::Earliest)
+        .await?;
 
     let db_client = args.command.build_client().await?;
-    db_client.init(genesis_block_hash).await?;
+    db_client.init(Some(earliest_block)).await?;
 
     let mut extractor = BlockExtractor::new(
         evm_client.clone(),

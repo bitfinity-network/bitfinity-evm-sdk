@@ -133,7 +133,7 @@ async fn test_init_idempotency() {
 }
 
 #[tokio::test]
-async fn test_deletion_and_creation_of_table_when_genesis_hashes_are_different() {
+async fn test_deletion_and_creation_of_table_when_earliest_block_are_different() {
     let docker = Cli::default();
     let (bigquery_client, _node, _temp_file, _auth) =
         crate::client::new_bigquery_client(&docker).await;
@@ -164,7 +164,7 @@ async fn test_deletion_and_creation_of_table_when_genesis_hashes_are_different()
 
     // Init with genesis2
     bigquery_client
-        .init(Some(genesis2.hash.unwrap()))
+        .init(Some(genesis2.clone().into()))
         .await
         .unwrap();
 
