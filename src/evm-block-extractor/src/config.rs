@@ -4,6 +4,7 @@ use clap::Subcommand;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::PgPool;
 
+use crate::constants::{MAINNET_PREFIX, TESTNET_PREFIX};
 use crate::database::big_query_db_client::BigQueryDbClient;
 use crate::database::postgres_db_client::PostgresDbClient;
 use crate::database::DatabaseClient;
@@ -60,9 +61,11 @@ impl Database {
                 log::info!("- project-id: {}", project_id);
                 log::info!("- dataset-id: {}", dataset_id);
 
-                if dataset_id != "testnet" && dataset_id != "mainnet" {
+                if !dataset_id.contains(TESTNET_PREFIX) && !dataset_id.contains(MAINNET_PREFIX) {
                     return Err(anyhow::anyhow!(
-                        "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
+                        "Invalid dataset ID. The dataset ID must be prefixed with {} or {}",
+                        TESTNET_PREFIX,
+                        MAINNET_PREFIX
                     ));
                 }
                 let client = BigQueryDbClient::new(project_id, dataset_id, sa_key).await?;
@@ -89,7 +92,7 @@ impl Database {
                     .port(port);
 
                 let pool = PgPool::connect_with(options).await?;
-                Ok(Arc::new(PostgresDbClient::new(pool)))
+                Ok(Arc::new(PostgresDbClient::new(pool, database)))
             }
         }
     }

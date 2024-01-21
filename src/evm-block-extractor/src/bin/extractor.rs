@@ -34,6 +34,10 @@ struct Args {
 
     #[command(subcommand)]
     command: Database,
+
+    /// Reset the database on blockchain change
+    #[arg(long, default_value = "false")]
+    reset_database: bool,
 }
 
 #[tokio::main]
@@ -56,7 +60,9 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     let db_client = args.command.build_client().await?;
-    db_client.init(Some(earliest_block)).await?;
+    db_client
+        .init(Some(earliest_block), args.reset_database)
+        .await?;
 
     let mut extractor = BlockExtractor::new(
         evm_client.clone(),

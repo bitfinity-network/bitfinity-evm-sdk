@@ -18,7 +18,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use super::DatabaseClient;
-use crate::constants::{BLOCKS_TABLE_ID, RECEIPTS_TABLE_ID, TRANSACTIONS_TABLE_ID};
+use crate::constants::{BQ_BLOCKS_TABLE_ID, BQ_RECEIPTS_TABLE_ID, BQ_TRANSACTIONS_TABLE_ID};
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
@@ -106,33 +106,8 @@ impl BigQueryDbClient {
 
 #[async_trait::async_trait]
 impl DatabaseClient for BigQueryDbClient {
-    async fn init(&self, block: Option<Block<H256>>) -> anyhow::Result<()> {
-        // If the genesis block hash is provided, check if the genesis block hash in the database is the same as the provided one and delete the tables if they are different.
-        if let Some(block) = block {
-            let block_in_db = self
-                .get_block_by_number(block.number.expect("Block number not found").as_u64())
-                .await;
-            let Ok(block_in_db) = block_in_db else {
-                panic!("Block not found in the database, The Database cannot be rebuilt")
-            };
-
-            let block_hash = block_in_db.hash.expect("Block hash not found");
-
-            let delete_table = |table_id: String| async move {
-                self.client
-                    .table()
-                    .delete(&self.project_id, &self.dataset_id, &table_id)
-                    .await
-            };
-
-            if self.dataset_id != "mainnet"
-                && block.hash.expect("should be present") != block_hash
-                && !block_hash.is_zero()
-            {
-                delete_table(BLOCKS_TABLE_ID.to_owned()).await?;
-                delete_table(RECEIPTS_TABLE_ID.to_owned()).await?;
-            }
-        };
+    async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
+        super::reset_database_if_needed(self, &self.dataset_id, block, reset_database).await?;
 
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
 
@@ -150,21 +125,21 @@ impl DatabaseClient for BigQueryDbClient {
         // Define tables with their respective schemas
         let tables = [
             (
-                BLOCKS_TABLE_ID,
+                BQ_BLOCKS_TABLE_ID,
                 vec![
                     TableFieldSchema::integer("id"),
                     TableFieldSchema::json("body"),
                 ],
             ),
             (
-                RECEIPTS_TABLE_ID,
+                BQ_RECEIPTS_TABLE_ID,
                 vec![
                     TableFieldSchema::string("tx_hash"),
                     TableFieldSchema::json("receipt"),
                 ],
             ),
             (
-                TRANSACTIONS_TABLE_ID,
+                BQ_TRANSACTIONS_TABLE_ID,
                 vec![
                     TableFieldSchema::string("tx_hash"),
                     TableFieldSchema::json("transaction"),
@@ -200,6 +175,21 @@ impl DatabaseClient for BigQueryDbClient {
         Ok(())
     }
 
+    async fn clear(&self) -> anyhow::Result<()> {
+        let delete_table = |table_id: String| async move {
+            self.client
+                .table()
+                .delete(&self.project_id, &self.dataset_id, &table_id)
+                .await
+        };
+
+        delete_table(BQ_BLOCKS_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_RECEIPTS_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
+
+        Ok(())
+    }
+
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {
@@ -217,7 +207,7 @@ impl DatabaseClient for BigQueryDbClient {
                 "SELECT body FROM `{project_id}.{dataset_id}.{table_id}` WHERE id = @id",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
-                table_id = BLOCKS_TABLE_ID,
+                table_id = BQ_BLOCKS_TABLE_ID,
             ),
             ..Default::default()
         };
@@ -247,7 +237,7 @@ impl DatabaseClient for BigQueryDbClient {
                 "SELECT transaction FROM `{project_id}.{dataset_id}.{table_id}` WHERE block_number = @block_number",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
-                table_id = TRANSACTIONS_TABLE_ID,
+                table_id = BQ_TRANSACTIONS_TABLE_ID,
             ),
             ..Default::default()
         };
@@ -297,7 +287,8 @@ impl DatabaseClient for BigQueryDbClient {
             })
             .collect::<Vec<_>>();
 
-        self.insert_batch_data(RECEIPTS_TABLE_ID, receipts).await?;
+        self.insert_batch_data(BQ_RECEIPTS_TABLE_ID, receipts)
+            .await?;
 
         let blocks = block
             .iter()
@@ -325,7 +316,7 @@ impl DatabaseClient for BigQueryDbClient {
             })
             .collect::<Vec<_>>();
 
-        self.insert_batch_data(BLOCKS_TABLE_ID, blocks).await?;
+        self.insert_batch_data(BQ_BLOCKS_TABLE_ID, blocks).await?;
 
         // Insert transactions
         let transactions = transactions
@@ -347,7 +338,7 @@ impl DatabaseClient for BigQueryDbClient {
             })
             .collect::<Vec<_>>();
 
-        self.insert_batch_data(TRANSACTIONS_TABLE_ID, transactions)
+        self.insert_batch_data(BQ_TRANSACTIONS_TABLE_ID, transactions)
             .await?;
 
         Ok(())
@@ -372,7 +363,7 @@ impl DatabaseClient for BigQueryDbClient {
                 "SELECT receipt FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = @tx_hash",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
-                table_id = RECEIPTS_TABLE_ID,
+                table_id = BQ_RECEIPTS_TABLE_ID,
             ),
             ..Default::default()
         };
@@ -385,7 +376,7 @@ impl DatabaseClient for BigQueryDbClient {
             "SELECT MAX(id) as max_id FROM `{project_id}.{dataset_id}.{table_id}`",
             project_id = self.project_id,
             dataset_id = self.dataset_id,
-            table_id = BLOCKS_TABLE_ID,
+            table_id = BQ_BLOCKS_TABLE_ID,
         );
         let mut response = self
             .client
@@ -409,7 +400,7 @@ impl DatabaseClient for BigQueryDbClient {
             "SELECT MIN(id) as min_id FROM `{project_id}.{dataset_id}.{table_id}`",
             project_id = self.project_id,
             dataset_id = self.dataset_id,
-            table_id = BLOCKS_TABLE_ID,
+            table_id = BQ_BLOCKS_TABLE_ID,
         );
         let mut response = self
             .client

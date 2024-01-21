@@ -9,7 +9,7 @@ use crate::test_with_clients;
 #[tokio::test]
 async fn test_extractor_collect_blocks() {
     test_with_clients(|db_client| async move {
-        db_client.init(None).await.unwrap();
+        db_client.init(None, false).await.unwrap();
 
         let rpc_url = "https://testnet.bitfinity.network".to_string();
         let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));

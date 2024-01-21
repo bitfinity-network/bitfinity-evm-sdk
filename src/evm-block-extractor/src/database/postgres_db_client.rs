@@ -12,19 +12,34 @@ static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migratio
 #[derive(Clone)]
 pub struct PostgresDbClient {
     pool: PgPool,
+    database_name: String,
 }
 
 impl PostgresDbClient {
     /// Create a new Postgres blockchain client
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, database_name: String) -> Self {
+        Self {
+            pool,
+            database_name,
+        }
     }
 }
 
 #[async_trait::async_trait]
 impl DatabaseClient for PostgresDbClient {
-    async fn init(&self, _block: Option<Block<H256>>) -> anyhow::Result<()> {
+    async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
+        super::reset_database_if_needed(self, &self.database_name, block, reset_database).await?;
+
         MIGRATOR.run(&self.pool).await?;
+
+        Ok(())
+    }
+
+    async fn clear(&self) -> anyhow::Result<()> {
+        sqlx::query("TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_TRANSACTION_RECEIPT")
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 
