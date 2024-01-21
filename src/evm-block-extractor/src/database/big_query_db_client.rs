@@ -18,7 +18,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use super::DatabaseClient;
-use crate::constants::{BLOCKS_TABLE_ID, RECEIPTS_TABLE_ID};
+use crate::constants::{BLOCKS_TABLE_ID, RECEIPTS_TABLE_ID, TRANSACTIONS_TABLE_ID};
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
@@ -97,7 +97,7 @@ impl BigQueryDbClient {
             .await?;
 
         if res.insert_errors.is_some() {
-            println!("error inserting data: {:?}", res.insert_errors);
+            log::error!("error inserting data: {:?}", res.insert_errors);
         }
 
         Ok(())
@@ -135,6 +135,14 @@ impl DatabaseClient for BigQueryDbClient {
                     TableFieldSchema::json("receipt"),
                 ],
             ),
+            (
+                TRANSACTIONS_TABLE_ID,
+                vec![
+                    TableFieldSchema::string("tx_hash"),
+                    TableFieldSchema::json("transaction"),
+                    TableFieldSchema::integer("block_number"),
+                ],
+            ),
         ];
 
         // Check each table and create if it does not exist
@@ -164,7 +172,7 @@ impl DatabaseClient for BigQueryDbClient {
         Ok(())
     }
 
-    async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<Transaction>> {
+    async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {
                 name: Some("id".to_string()),
@@ -189,10 +197,61 @@ impl DatabaseClient for BigQueryDbClient {
         self.execute_query(query_request).await
     }
 
-    async fn insert_blocks_and_receipts(
+    async fn get_full_block_by_number(
         &self,
-        block: &[Block<Transaction>],
+        block_number: u64,
+    ) -> anyhow::Result<Block<Transaction>> {
+        let block = self.get_block_by_number(block_number).await?;
+
+        let query_request = QueryRequest {
+            query_parameters: Some(vec![QueryParameter {
+                name: Some("block_number".to_string()),
+                parameter_type: Some(QueryParameterType {
+                    r#type: "INTEGER".to_string(),
+                    ..Default::default()
+                }),
+                parameter_value: Some(QueryParameterValue {
+                    value: Some(block_number.to_string()),
+                    ..Default::default()
+                }),
+            }]),
+            query: format!(
+                "SELECT transaction FROM `{project_id}.{dataset_id}.{table_id}` WHERE block_number = @block_number",
+                project_id = self.project_id,
+                dataset_id = self.dataset_id,
+                table_id = TRANSACTIONS_TABLE_ID,
+            ),
+            ..Default::default()
+        };
+
+        let mut transactions = vec![];
+
+        let mut res = self
+            .client
+            .job()
+            .query(&self.project_id, query_request)
+            .await?;
+
+        while res.next_row() {
+            let res = res
+                .get_string(0)?
+                .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
+                .trim_matches('"')
+                .replace("\\\"", "\"");
+
+            let result: Transaction = serde_json::from_str(&res)?;
+
+            transactions.push(result);
+        }
+
+        Ok(block.into_full_block(transactions))
+    }
+
+    async fn insert_block_data(
+        &self,
+        block: &[Block<H256>],
         receipts: &[TransactionReceipt],
+        transactions: &[Transaction],
     ) -> anyhow::Result<()> {
         let receipts = receipts
             .iter()
@@ -239,6 +298,29 @@ impl DatabaseClient for BigQueryDbClient {
             .collect::<Vec<_>>();
 
         self.insert_batch_data(BLOCKS_TABLE_ID, blocks).await?;
+
+        // Insert transactions
+        let transactions = transactions
+            .iter()
+            .map(|txn| {
+                let tx_hash = txn.hash;
+
+                let txn = TransactionRow {
+                    tx_hash: format!("0x{:x}", tx_hash),
+                    transaction: serde_json::to_value(txn)
+                        .expect("Failed to serialize transaction"),
+                    block_number: txn.block_number.expect("Block number not found").as_u64(),
+                };
+
+                TableDataInsertAllRequestRows {
+                    insert_id: Some(format!("0x{:x}", tx_hash)),
+                    json: serde_json::to_value(txn).expect("Failed to serialize transaction"),
+                }
+            })
+            .collect::<Vec<_>>();
+
+        self.insert_batch_data(TRANSACTIONS_TABLE_ID, transactions)
+            .await?;
 
         Ok(())
     }
@@ -336,4 +418,12 @@ pub struct ReceiptRow {
     tx_hash: String,
     #[serde(serialize_with = "serialize_json_as_string")]
     receipt: Value,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct TransactionRow {
+    tx_hash: String,
+    #[serde(serialize_with = "serialize_json_as_string")]
+    transaction: Value,
+    block_number: u64,
 }
