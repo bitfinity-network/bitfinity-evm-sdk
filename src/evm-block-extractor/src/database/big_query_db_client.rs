@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
-use did::{Block, Transaction, H256, TransactionReceipt, transaction::StorableExecutionResult};
+use did::transaction::StorableExecutionResult;
+use did::{Block, Transaction, TransactionReceipt, H256};
 use gcp_bigquery_client::model::dataset::Dataset;
 use gcp_bigquery_client::model::field_type::serialize_json_as_string;
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
@@ -274,9 +275,7 @@ impl DatabaseClient for BigQueryDbClient {
         let blocks = block
             .iter()
             .map(|b| {
-                let block_id = b
-                    .number
-                    .0.as_u64();
+                let block_id = b.number.0.as_u64();
 
                 let block_row = BlockRow {
                     id: block_id,

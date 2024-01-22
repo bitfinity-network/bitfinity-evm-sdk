@@ -110,34 +110,33 @@ impl Block<H256> {
         }
     }
 
-        /// Converts this block that only holds transaction hashes into a full block with `Transaction`
-        pub fn into_full_block(self, transactions: Vec<Transaction>) -> Block<Transaction> {
-                Block {
-                    hash: self.hash,
-                    parent_hash: self.parent_hash,
-                    uncles_hash: self.uncles_hash,
-                    author: self.author,
-                    state_root: self.state_root,
-                    transactions_root: self.transactions_root,
-                    receipts_root: self.receipts_root,
-                    number: self.number,
-                    gas_used: self.gas_used,
-                    gas_limit: self.gas_limit,
-                    extra_data: self.extra_data,
-                    logs_bloom: self.logs_bloom,
-                    timestamp: self.timestamp,
-                    difficulty: self.difficulty,
-                    total_difficulty: self.total_difficulty,
-                    seal_fields: self.seal_fields,
-                    uncles: self.uncles,
-                    size: self.size,
-                    mix_hash: self.mix_hash,
-                    nonce: self.nonce,
-                    base_fee_per_gas: self.base_fee_per_gas,
-                    transactions,
-                }
-            }
-    
+    /// Converts this block that only holds transaction hashes into a full block with `Transaction`
+    pub fn into_full_block(self, transactions: Vec<Transaction>) -> Block<Transaction> {
+        Block {
+            hash: self.hash,
+            parent_hash: self.parent_hash,
+            uncles_hash: self.uncles_hash,
+            author: self.author,
+            state_root: self.state_root,
+            transactions_root: self.transactions_root,
+            receipts_root: self.receipts_root,
+            number: self.number,
+            gas_used: self.gas_used,
+            gas_limit: self.gas_limit,
+            extra_data: self.extra_data,
+            logs_bloom: self.logs_bloom,
+            timestamp: self.timestamp,
+            difficulty: self.difficulty,
+            total_difficulty: self.total_difficulty,
+            seal_fields: self.seal_fields,
+            uncles: self.uncles,
+            size: self.size,
+            mix_hash: self.mix_hash,
+            nonce: self.nonce,
+            base_fee_per_gas: self.base_fee_per_gas,
+            transactions,
+        }
+    }
 }
 
 impl Default for Block<H256> {
@@ -835,23 +834,16 @@ mod test {
 
     #[test]
     fn test_block_into_full_block() {
-
         let transactions = vec![
-            create_transaction(
-                Some(U256::from(rand::random::<u64>())),
-                1,
-            ),
-            create_transaction(
-                Some(U256::from(rand::random::<u64>())),
-                2,
-            ),
-            create_transaction(
-                Some(U256::from(rand::random::<u64>())),
-                3,
-            )
+            create_transaction(Some(U256::from(rand::random::<u64>())), 1),
+            create_transaction(Some(U256::from(rand::random::<u64>())), 2),
+            create_transaction(Some(U256::from(rand::random::<u64>())), 3),
         ];
 
-        let tx_hashes = transactions.iter().map(|tx| tx.hash.clone()).collect::<Vec<_>>();
+        let tx_hashes = transactions
+            .iter()
+            .map(|tx| tx.hash.clone())
+            .collect::<Vec<_>>();
 
         let block = Block::<H256> {
             author: ethereum_types::H160::random().into(),
@@ -883,7 +875,5 @@ mod test {
 
         let block_from_full_block: Block<H256> = full_block.into();
         assert_eq!(block_from_full_block, block);
-
     }
-
 }

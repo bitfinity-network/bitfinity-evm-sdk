@@ -62,7 +62,10 @@ async fn test_extractor_collect_blocks() {
             // Check receipts
             {
                 for tx in &full_block.transactions {
-                    let receipt = db_client.get_transaction_receipt(tx.hash.clone()).await.unwrap();
+                    let receipt = db_client
+                        .get_transaction_receipt(tx.hash.clone())
+                        .await
+                        .unwrap();
 
                     assert_eq!(tx.hash, receipt.transaction_hash);
                     assert_eq!(tx.block_number, Some(receipt.block_number));

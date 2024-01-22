@@ -1,7 +1,8 @@
 pub mod big_query_db_client;
 pub mod postgres_db_client;
 
-use did::{Block, Transaction, H256, TransactionReceipt, transaction::StorableExecutionResult};
+use did::transaction::StorableExecutionResult;
+use did::{Block, Transaction, TransactionReceipt, H256};
 
 /// A trait for interacting with a blockchain database
 #[async_trait::async_trait]

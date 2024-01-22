@@ -1,6 +1,7 @@
 use ::sqlx::migrate::Migrator;
 use ::sqlx::*;
-use did::{Block, Transaction, H256, TransactionReceipt, transaction::StorableExecutionResult};
+use did::transaction::StorableExecutionResult;
+use did::{Block, Transaction, TransactionReceipt, H256};
 use serde::de::DeserializeOwned;
 use sqlx::postgres::PgRow;
 
@@ -65,8 +66,7 @@ impl DatabaseClient for PostgresDbClient {
         let mut tx = self.pool.begin().await?;
 
         for block in blocks {
-            let block_id = block
-                .number.0.as_u64();
+            let block_id = block.number.0.as_u64();
 
             sqlx::query("INSERT INTO EVM_BLOCK (id, data) VALUES ($1, $2)")
                 .bind(block_id as i64)
