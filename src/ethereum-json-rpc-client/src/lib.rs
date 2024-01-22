@@ -25,7 +25,7 @@ const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
-const ETH_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "getExeResultByHash";
+const ETH_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
