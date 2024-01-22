@@ -152,7 +152,7 @@ impl EthServer for EthImpl {
     async fn get_transaction_receipt(&self, tx_hash: H256) -> RpcResult<TransactionReceipt> {
         let tx = self
             .blockchain
-            .get_transaction_receipt(tx_hash)
+            .get_transaction_receipt(tx_hash.into())
             .await
             .map_err(|e| {
                 log::error!("Error getting transaction receipt: {:?}", e);
