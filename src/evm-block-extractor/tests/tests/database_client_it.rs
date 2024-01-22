@@ -25,7 +25,11 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
 
         for i in 1..=10 {
             let tx_hash = ethers_core::types::H256::random();
-            let dummy_exe_result = new_storable_execution_result(tx_hash.into(), blocks[i - 1].hash.clone(), U64::from(i));
+            let dummy_exe_result = new_storable_execution_result(
+                tx_hash.into(),
+                blocks[i - 1].hash.clone(),
+                U64::from(i),
+            );
             exe_results.push(dummy_exe_result);
         }
 
@@ -212,13 +216,15 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
             number: ethers_core::types::U64::from(0).into(),
             hash: ethers_core::types::H256::random().into(),
             ..Default::default()
-        }.into_full_block(vec![]);
+        }
+        .into_full_block(vec![]);
 
         let block_two: Block<Transaction> = Block::<H256> {
             number: ethers_core::types::U64::from(0).into(),
             hash: ethers_core::types::H256::random().into(),
             ..Default::default()
-        }.into_full_block(vec![]);
+        }
+        .into_full_block(vec![]);
 
         db_client.init(None, false).await.unwrap();
 
@@ -270,13 +276,19 @@ async fn test_deletion_and_clearing_of_database() {
                     number: Some(ethers_core::types::U64::zero()),
                     hash: Some(ethers_core::types::H256::random()),
                     ..Default::default()
-                }.into()],
-                &[new_storable_execution_result(H256::zero(), H256::zero(), 0_u64.into())],
+                }
+                .into()],
+                &[new_storable_execution_result(
+                    H256::zero(),
+                    H256::zero(),
+                    0_u64.into(),
+                )],
                 &[ethers_core::types::Transaction {
                     block_number: Some(ethers_core::types::U64::zero()),
                     hash: ethers_core::types::H256::random(),
                     ..Default::default()
-                }.into()],
+                }
+                .into()],
             )
             .await
             .unwrap();
@@ -292,15 +304,15 @@ async fn test_deletion_and_clearing_of_database() {
     .await;
 }
 
-fn new_storable_execution_result(transaction_hash: H256, block_hash: H256, block_number: U64) -> StorableExecutionResult {
+fn new_storable_execution_result(
+    transaction_hash: H256,
+    block_hash: H256,
+    block_number: U64,
+) -> StorableExecutionResult {
     StorableExecutionResult {
         transaction_hash,
         block_hash,
-        exe_result: ExeResult::success(
-            U256::max_value(),
-            did::block::TransactOut::None,
-            vec![],
-        ),
+        exe_result: ExeResult::success(U256::max_value(), did::block::TransactOut::None, vec![]),
         transaction_index: Default::default(),
         block_number,
         from: Default::default(),
