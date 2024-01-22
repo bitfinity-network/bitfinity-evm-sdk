@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
-use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use did::transaction::StorableExecutionResult;
+use did::{Block, Transaction, TransactionReceipt, H256};
 use gcp_bigquery_client::model::dataset::Dataset;
 use gcp_bigquery_client::model::field_type::serialize_json_as_string;
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
@@ -268,13 +269,13 @@ impl DatabaseClient for BigQueryDbClient {
     async fn insert_block_data(
         &self,
         block: &[Block<H256>],
-        receipts: &[TransactionReceipt],
+        receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
         let receipts = receipts
             .iter()
             .map(|r| {
-                let tx_hash = r.transaction_hash;
+                let tx_hash = &r.transaction_hash;
                 let receipt = ReceiptRow {
                     tx_hash: format!("0x{:x}", tx_hash),
                     receipt: serde_json::to_value(r).expect("Failed to serialize receipt"),
@@ -293,16 +294,7 @@ impl DatabaseClient for BigQueryDbClient {
         let blocks = block
             .iter()
             .map(|b| {
-                let block_id = b
-                    .number
-                    .ok_or(anyhow::anyhow!("Block number not found"))
-                    .expect("Block number not found")
-                    .as_u64();
-
-                let block_hash = b
-                    .hash
-                    .ok_or(anyhow::anyhow!("Block hash not found"))
-                    .expect("Block hash not found");
+                let block_id = b.number.0.as_u64();
 
                 let block_row = BlockRow {
                     id: block_id,
@@ -310,7 +302,7 @@ impl DatabaseClient for BigQueryDbClient {
                 };
 
                 TableDataInsertAllRequestRows {
-                    insert_id: Some(format!("0x{:x}", block_hash)),
+                    insert_id: Some(b.hash.to_hex_str()),
                     json: serde_json::to_value(block_row).expect("Failed to serialize block"),
                 }
             })
@@ -322,13 +314,13 @@ impl DatabaseClient for BigQueryDbClient {
         let transactions = transactions
             .iter()
             .map(|txn| {
-                let tx_hash = txn.hash;
+                let tx_hash = &txn.hash;
 
                 let txn = TransactionRow {
                     tx_hash: format!("0x{:x}", tx_hash),
                     transaction: serde_json::to_value(txn)
                         .expect("Failed to serialize transaction"),
-                    block_number: txn.block_number.expect("Block number not found").as_u64(),
+                    block_number: txn.block_number.expect("Block number not found").0.as_u64(),
                 };
 
                 TableDataInsertAllRequestRows {
@@ -368,7 +360,9 @@ impl DatabaseClient for BigQueryDbClient {
             ..Default::default()
         };
 
-        self.execute_query(query_request).await
+        let exe_result: StorableExecutionResult = self.execute_query(query_request).await?;
+
+        Ok(TransactionReceipt::from(exe_result))
     }
 
     async fn get_latest_block_number(&self) -> anyhow::Result<Option<u64>> {

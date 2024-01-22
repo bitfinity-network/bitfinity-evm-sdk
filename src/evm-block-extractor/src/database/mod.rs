@@ -1,7 +1,8 @@
 pub mod big_query_db_client;
 pub mod postgres_db_client;
 
-use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use did::transaction::StorableExecutionResult;
+use did::{Block, Transaction, TransactionReceipt, H256};
 
 use crate::constants::{MAINNET_PREFIX, TESTNET_PREFIX};
 
@@ -27,7 +28,7 @@ pub trait DatabaseClient: Send + Sync {
     async fn insert_block_data(
         &self,
         blocks: &[Block<H256>],
-        receipts: &[TransactionReceipt],
+        receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()>;
 

@@ -1,4 +1,6 @@
-use ethers_core::types::{Block, Transaction, TransactionReceipt, H256, U64};
+use did::block::ExeResult;
+use did::transaction::StorableExecutionResult;
+use did::{Block, Transaction, TransactionReceipt, H256, U256, U64};
 
 use crate::test_with_clients;
 
@@ -10,34 +12,48 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
         let mut blocks = Vec::new();
 
         for i in 1..=10 {
-            let dummy_block: Block<H256> = ethers_core::types::Block {
-                number: Some(ethers_core::types::U64::from(i)),
-                hash: Some(H256::random()),
+            let dummy_block: Block<H256> = Block {
+                number: ethers_core::types::U64::from(i).into(),
+                hash: ethers_core::types::H256::random().into(),
                 ..Default::default()
             };
 
             blocks.push(dummy_block);
         }
 
-        let mut receipts = Vec::new();
+        let mut exe_results = Vec::new();
 
-        for _ in 1..=10 {
-            let tx_hash = H256::random();
-            let dummy_receipt: TransactionReceipt = ethers_core::types::TransactionReceipt {
-                transaction_hash: tx_hash,
-                ..Default::default()
+        for i in 1..=10 {
+            let tx_hash = ethers_core::types::H256::random();
+            let dummy_exe_result: StorableExecutionResult = StorableExecutionResult {
+                transaction_hash: tx_hash.into(),
+                block_hash: blocks[i - 1].hash.clone(),
+                exe_result: ExeResult::success(
+                    U256::max_value(),
+                    did::block::TransactOut::None,
+                    vec![],
+                ),
+                transaction_index: Default::default(),
+                block_number: U64::from(i),
+                from: Default::default(),
+                to: Default::default(),
+                transaction_type: Default::default(),
+                cumulative_gas_used: Default::default(),
+                max_fee_per_gas: Default::default(),
+                gas_price: Default::default(),
+                max_priority_fee_per_gas: Default::default(),
             };
 
-            receipts.push(dummy_receipt);
+            exe_results.push(dummy_exe_result);
         }
 
         let mut txn = vec![];
         for i in 0..10 {
-            let tx_hash = receipts[i].transaction_hash;
-            let block_number = blocks[i].number.unwrap().as_u64();
-            let dummy_txn: Transaction = ethers_core::types::Transaction {
-                hash: tx_hash,
-                block_number: Some(ethers_core::types::U64::from(block_number)),
+            let tx_hash = &exe_results[i].transaction_hash;
+            let block_number = blocks[i].number.0.as_u64();
+            let dummy_txn = Transaction {
+                hash: tx_hash.clone(),
+                block_number: Some(U64::from(block_number)),
                 ..Default::default()
             };
 
@@ -45,7 +61,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
         }
 
         db_client
-            .insert_block_data(&blocks, &receipts, &txn)
+            .insert_block_data(&blocks, &exe_results, &txn)
             .await
             .unwrap();
 
@@ -53,27 +69,30 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
 
         // Check the transactions
         assert_eq!(block.transactions.len(), 1);
-        assert_eq!(block.transactions[0].hash, receipts[0].transaction_hash);
+        assert_eq!(block.transactions[0].hash, exe_results[0].transaction_hash);
 
-        assert_eq!(block.number.unwrap().as_u64(), 1);
+        assert_eq!(block.number.0.as_u64(), 1);
 
         let receipt = db_client
-            .get_transaction_receipt(receipts[0].transaction_hash)
+            .get_transaction_receipt(exe_results[0].transaction_hash.clone())
             .await
             .unwrap();
 
-        assert_eq!(receipt.transaction_hash, receipts[0].transaction_hash);
+        assert_eq!(
+            receipt.transaction_hash,
+            exe_results[0].transaction_hash.clone()
+        );
 
         let block = db_client.get_full_block_by_number(10).await.unwrap();
 
-        assert_eq!(block.number.unwrap().as_u64(), 10);
+        assert_eq!(block.number.0.as_u64(), 10);
 
         let receipt = db_client
-            .get_transaction_receipt(receipts[9].transaction_hash)
+            .get_transaction_receipt(exe_results[9].transaction_hash.clone())
             .await
             .unwrap();
 
-        assert_eq!(receipt.transaction_hash, receipts[9].transaction_hash);
+        assert_eq!(receipt.transaction_hash, exe_results[9].transaction_hash);
     })
     .await;
 }
@@ -87,9 +106,9 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
         assert!(latest_block_number.is_none());
 
         for i in 1..=10 {
-            let dummy_block: Block<H256> = ethers_core::types::Block {
-                number: Some(ethers_core::types::U64::from(i)),
-                hash: Some(H256::random()),
+            let dummy_block: Block<H256> = Block {
+                number: ethers_core::types::U64::from(i).into(),
+                hash: ethers_core::types::H256::random().into(),
                 ..Default::default()
             };
 
@@ -112,9 +131,9 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
 async fn test_init_idempotency() {
     test_with_clients(|db_client| async move {
         // Add a block
-        let dummy_block: Block<H256> = ethers_core::types::Block {
-            number: Some(ethers_core::types::U64::from(1)),
-            hash: Some(H256::random()),
+        let dummy_block: Block<H256> = Block {
+            number: ethers_core::types::U64::from(1).into(),
+            hash: ethers_core::types::H256::random().into(),
             ..Default::default()
         };
 
@@ -127,9 +146,9 @@ async fn test_init_idempotency() {
         db_client.init(None, false).await.unwrap();
 
         // Add a block
-        let dummy_block: Block<H256> = ethers_core::types::Block {
-            number: Some(ethers_core::types::U64::from(1)),
-            hash: Some(H256::random()),
+        let dummy_block: Block<H256> = Block {
+            number: ethers_core::types::U64::from(1).into(),
+            hash: ethers_core::types::H256::random().into(),
             ..Default::default()
         };
 
@@ -143,7 +162,7 @@ async fn test_init_idempotency() {
         // Retrieve the block
         let block = db_client.get_block_by_number(1).await.unwrap();
 
-        assert_eq!(block.number.unwrap().as_u64(), 1);
+        assert_eq!(block.number.0.as_u64(), 1);
     })
     .await;
 }
@@ -156,9 +175,9 @@ async fn test_retrieval_of_transactions_with_blocks() {
         let mut blocks = Vec::new();
 
         for i in 1..=10 {
-            let dummy_block: Block<H256> = ethers_core::types::Block {
-                number: Some(ethers_core::types::U64::from(i)),
-                hash: Some(H256::random()),
+            let dummy_block: Block<H256> = Block {
+                number: ethers_core::types::U64::from(i).into(),
+                hash: ethers_core::types::H256::random().into(),
                 ..Default::default()
             };
 
@@ -167,10 +186,10 @@ async fn test_retrieval_of_transactions_with_blocks() {
 
         let mut txn = vec![];
         for _ in 0..10 {
-            let dummy_txn: Transaction = ethers_core::types::Transaction {
-                hash: H256::random(),
+            let dummy_txn = Transaction {
+                hash: ethers_core::types::H256::random().into(),
                 block_number: Some(5_u64.into()),
-                block_hash: Some(blocks[4].hash.unwrap()),
+                block_hash: Some(blocks[4].hash.clone()),
                 ..Default::default()
             };
 
@@ -187,18 +206,18 @@ async fn test_retrieval_of_transactions_with_blocks() {
         // Check the transactions
         assert_eq!(block.transactions.len(), 0);
 
-        assert_eq!(block.number.unwrap().as_u64(), 1);
+        assert_eq!(block.number.0.as_u64(), 1);
 
         let block = db_client.get_full_block_by_number(5).await.unwrap();
 
-        assert_eq!(block.hash.unwrap(), blocks[4].hash.unwrap());
+        assert_eq!(block.hash, blocks[4].hash);
 
-        assert_eq!(block.number.unwrap().as_u64(), 5);
+        assert_eq!(block.number.0.as_u64(), 5);
         assert_eq!(block.transactions.len(), 10);
 
         for txn in block.transactions {
-            assert_eq!(txn.block_number.unwrap().as_u64(), 5);
-            assert_eq!(txn.block_hash.unwrap(), block.hash.unwrap());
+            assert_eq!(txn.block_number.unwrap().0.as_u64(), 5);
+            assert_eq!(txn.block_hash.unwrap(), block.hash);
         }
     })
     .await;
