@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
-use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use did::transaction::{StorableExecutionResult, TransactionReceipt};
+use ethers_core::types::{Block, Transaction, H256};
 use gcp_bigquery_client::model::dataset::Dataset;
 use gcp_bigquery_client::model::field_type::serialize_json_as_string;
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
@@ -250,13 +251,13 @@ impl DatabaseClient for BigQueryDbClient {
     async fn insert_block_data(
         &self,
         block: &[Block<H256>],
-        receipts: &[TransactionReceipt],
+        receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
         let receipts = receipts
             .iter()
             .map(|r| {
-                let tx_hash = r.transaction_hash;
+                let tx_hash = &r.transaction_hash;
                 let receipt = ReceiptRow {
                     tx_hash: format!("0x{:x}", tx_hash),
                     receipt: serde_json::to_value(r).expect("Failed to serialize receipt"),
@@ -349,7 +350,9 @@ impl DatabaseClient for BigQueryDbClient {
             ..Default::default()
         };
 
-        self.execute_query(query_request).await
+        let exe_result: StorableExecutionResult = self.execute_query(query_request).await?;
+
+        Ok(TransactionReceipt::from(exe_result))
     }
 
     async fn get_latest_block_number(&self) -> anyhow::Result<Option<u64>> {

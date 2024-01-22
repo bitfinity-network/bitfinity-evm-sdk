@@ -1,9 +1,9 @@
-use std::sync::Arc;
-
-use ethers_core::types::{BlockNumber, TransactionReceipt, H256, U256, U64};
+use did::TransactionReceipt;
+use ethers_core::types::{BlockNumber, H256, U256, U64};
 use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
+use std::sync::Arc;
 
 use crate::database::DatabaseClient;
 

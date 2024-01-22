@@ -77,7 +77,9 @@ impl BlockExtractor {
                 let tx_hashes = block.transactions.clone();
                 let client = client.clone();
                 let receipts_task = tokio::spawn(async move {
-                    client.get_receipts_by_hash(tx_hashes, batch_size).await
+                    client
+                        .get_tx_execution_results_by_hash(tx_hashes, batch_size)
+                        .await
                 });
 
                 receipts_tasks.push(receipts_task);

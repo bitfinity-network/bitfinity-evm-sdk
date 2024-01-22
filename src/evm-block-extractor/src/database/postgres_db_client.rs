@@ -1,6 +1,7 @@
 use ::sqlx::migrate::Migrator;
 use ::sqlx::*;
-use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use did::transaction::{StorableExecutionResult, TransactionReceipt};
+use ethers_core::types::{Block, Transaction, H256};
 use serde::de::DeserializeOwned;
 use sqlx::postgres::PgRow;
 
@@ -59,7 +60,7 @@ impl DatabaseClient for PostgresDbClient {
     async fn insert_block_data(
         &self,
         blocks: &[Block<H256>],
-        receipts: &[TransactionReceipt],
+        receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
         let mut tx = self.pool.begin().await?;
@@ -80,8 +81,8 @@ impl DatabaseClient for PostgresDbClient {
         }
 
         for receipt in receipts {
-            let hex_tx_hash = did::H256::from(receipt.transaction_hash).to_hex_str();
-            sqlx::query("INSERT INTO EVM_TRANSACTION_RECEIPT (id, data) VALUES ($1, $2)")
+            let hex_tx_hash = did::H256::from(receipt.transaction_hash.clone()).to_hex_str();
+            sqlx::query("INSERT INTO EVM_TRANSACTION_EXE_RESULT (id, data) VALUES ($1, $2)")
                 .bind(&hex_tx_hash)
                 .bind(serde_json::to_value(receipt)?)
                 .execute(&mut *tx)
@@ -106,14 +107,16 @@ impl DatabaseClient for PostgresDbClient {
     /// Get a transaction receipt from the database
     async fn get_transaction_receipt(&self, tx_hash: H256) -> anyhow::Result<TransactionReceipt> {
         let hex_tx_hash = did::H256::from(tx_hash).to_hex_str();
-        sqlx::query(
-            "SELECT data FROM EVM_TRANSACTION_RECEIPT WHERE EVM_TRANSACTION_RECEIPT.id = $1",
+        let exe_result: StorableExecutionResult = sqlx::query(
+            "SELECT data FROM EVM_TRANSACTION_EXE_RESULT WHERE EVM_TRANSACTION_EXE_RESULT.id = $1",
         )
         .bind(&hex_tx_hash)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| anyhow::anyhow!("Error getting transaction receipt {}: {:?}", hex_tx_hash, e))
-        .and_then(|row| from_row_value(&row, 0))
+        .and_then(|row| from_row_value(&row, 0))?;
+
+        Ok(TransactionReceipt::from(exe_result))
     }
 
     /// Get the latest block number
