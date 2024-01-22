@@ -56,21 +56,21 @@ async fn reset_database_if_needed(
         if database_type.contains(MAINNET_PREFIX) {
             panic!("Cannot reset the mainnet database");
         }
-        if block.is_none() {
+        let Some(block) = block else {
             panic!("Cannot reset the database without earliest block");
-        }
+        };
 
-        if let Some(block) = block {
-            let block_number = block.number.expect("Block number not found").as_u64();
-            let block_in_db = db
-                .get_block_by_number(block_number)
-                .await
-                .expect("Block not found in the database, The Database cannot be rebuilt");
+        let block_number = block.number.expect("Block number not found").as_u64();
 
-            let block_hash = block_in_db.hash.expect("Block hash not found");
-            if block.hash.expect("should be present") != block_hash && !block_hash.is_zero() {
-                db.clear().await?;
-            }
+        let block_in_db = db
+            .get_block_by_number(block_number)
+            .await
+            .expect("Block not found in the database, The Database cannot be rebuilt");
+
+        let block_hash = block_in_db.hash.expect("Block hash not found");
+
+        if block.hash.expect("should be present") != block_hash && !block_hash.is_zero() {
+            db.clear().await?;
         }
     }
 
