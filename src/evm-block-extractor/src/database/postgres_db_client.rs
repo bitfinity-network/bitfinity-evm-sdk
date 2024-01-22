@@ -37,7 +37,7 @@ impl DatabaseClient for PostgresDbClient {
     }
 
     async fn clear(&self) -> anyhow::Result<()> {
-        sqlx::query("TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_TRANSACTION_RECEIPT")
+        sqlx::query("TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_TRANSACTION_EXE_RESULT")
             .execute(&self.pool)
             .await?;
 

@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
 
     let db_client = args.command.build_client().await?;
     db_client
-        .init(Some(earliest_block), args.reset_database)
+        .init(Some(earliest_block.into()), args.reset_database)
         .await?;
 
     let mut extractor = BlockExtractor::new(

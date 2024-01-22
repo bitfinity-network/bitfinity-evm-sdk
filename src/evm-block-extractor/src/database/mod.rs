@@ -61,16 +61,16 @@ async fn reset_database_if_needed(
             panic!("Cannot reset the database without earliest block");
         };
 
-        let block_number = block.number.expect("Block number not found").as_u64();
+        let block_number = block.number.0.as_u64();
 
         let block_in_db = db
             .get_block_by_number(block_number)
             .await
             .expect("Block not found in the database, The Database cannot be rebuilt");
 
-        let block_hash = block_in_db.hash.expect("Block hash not found");
+        let block_hash = block_in_db.hash.0;
 
-        if block.hash.expect("should be present") != block_hash && !block_hash.is_zero() {
+        if block.hash.0 != block_hash && !block_hash.is_zero() {
             db.clear().await?;
         }
     }

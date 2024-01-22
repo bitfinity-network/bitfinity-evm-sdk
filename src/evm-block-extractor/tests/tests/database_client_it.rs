@@ -1,6 +1,6 @@
 use did::block::ExeResult;
 use did::transaction::StorableExecutionResult;
-use did::{Block, Transaction, TransactionReceipt, H256, U256, U64};
+use did::{Block, Transaction, H256, U256, U64};
 
 use crate::test_with_clients;
 
@@ -25,25 +25,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
 
         for i in 1..=10 {
             let tx_hash = ethers_core::types::H256::random();
-            let dummy_exe_result: StorableExecutionResult = StorableExecutionResult {
-                transaction_hash: tx_hash.into(),
-                block_hash: blocks[i - 1].hash.clone(),
-                exe_result: ExeResult::success(
-                    U256::max_value(),
-                    did::block::TransactOut::None,
-                    vec![],
-                ),
-                transaction_index: Default::default(),
-                block_number: U64::from(i),
-                from: Default::default(),
-                to: Default::default(),
-                transaction_type: Default::default(),
-                cumulative_gas_used: Default::default(),
-                max_fee_per_gas: Default::default(),
-                gas_price: Default::default(),
-                max_priority_fee_per_gas: Default::default(),
-            };
-
+            let dummy_exe_result = new_storable_execution_result(tx_hash.into(), blocks[i - 1].hash.clone(), U64::from(i));
             exe_results.push(dummy_exe_result);
         }
 
@@ -226,17 +208,17 @@ async fn test_retrieval_of_transactions_with_blocks() {
 #[tokio::test]
 async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different() {
     test_with_clients(|db_client| async move {
-        let block_one: Block<Transaction> = ethers_core::types::Block {
-            number: Some(ethers_core::types::U64::from(0)),
-            hash: Some(H256::random()),
+        let block_one: Block<Transaction> = Block::<H256> {
+            number: ethers_core::types::U64::from(0).into(),
+            hash: ethers_core::types::H256::random().into(),
             ..Default::default()
-        };
+        }.into_full_block(vec![]);
 
-        let block_two: Block<Transaction> = ethers_core::types::Block {
-            number: Some(ethers_core::types::U64::from(0)),
-            hash: Some(H256::random()),
+        let block_two: Block<Transaction> = Block::<H256> {
+            number: ethers_core::types::U64::from(0).into(),
+            hash: ethers_core::types::H256::random().into(),
             ..Default::default()
-        };
+        }.into_full_block(vec![]);
 
         db_client.init(None, false).await.unwrap();
 
@@ -247,8 +229,8 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
 
         let block = db_client.get_block_by_number(0).await.unwrap();
 
-        assert_eq!(block.number.unwrap().as_u64(), 0);
-        assert_eq!(block.hash.unwrap(), block_one.hash.unwrap());
+        assert_eq!(block.number.0.as_u64(), 0);
+        assert_eq!(block.hash, block_one.hash);
 
         // Init with genesis2
         db_client
@@ -270,9 +252,9 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
         // Retrieve the block
         let block = db_client.get_block_by_number(0).await.unwrap();
 
-        assert_eq!(block.number.unwrap().as_u64(), 0);
+        assert_eq!(block.number.0.as_u64(), 0);
         // hash should be genesis2
-        assert_eq!(block.hash.unwrap(), block_two.hash.unwrap());
+        assert_eq!(block.hash, block_two.hash);
     })
     .await;
 }
@@ -284,23 +266,23 @@ async fn test_deletion_and_clearing_of_database() {
 
         db_client
             .insert_block_data(
-                &[Block {
-                    number: Some(U64::zero()),
-                    hash: Some(H256::random()),
+                &[ethers_core::types::Block::<H256> {
+                    number: Some(ethers_core::types::U64::zero()),
+                    hash: Some(ethers_core::types::H256::random()),
                     ..Default::default()
-                }],
-                &[TransactionReceipt::default()],
-                &[Transaction {
-                    block_number: Some(U64::zero()),
-                    hash: H256::random(),
+                }.into()],
+                &[new_storable_execution_result(H256::zero(), H256::zero(), 0_u64.into())],
+                &[ethers_core::types::Transaction {
+                    block_number: Some(ethers_core::types::U64::zero()),
+                    hash: ethers_core::types::H256::random(),
                     ..Default::default()
-                }],
+                }.into()],
             )
             .await
             .unwrap();
 
         let block = db_client.get_block_by_number(0).await.unwrap();
-        assert_eq!(block.number.unwrap().as_u64(), 0);
+        assert_eq!(block.number.0.as_u64(), 0);
 
         db_client.clear().await.unwrap();
 
@@ -308,4 +290,25 @@ async fn test_deletion_and_clearing_of_database() {
         assert!(block.is_err());
     })
     .await;
+}
+
+fn new_storable_execution_result(transaction_hash: H256, block_hash: H256, block_number: U64) -> StorableExecutionResult {
+    StorableExecutionResult {
+        transaction_hash,
+        block_hash,
+        exe_result: ExeResult::success(
+            U256::max_value(),
+            did::block::TransactOut::None,
+            vec![],
+        ),
+        transaction_index: Default::default(),
+        block_number,
+        from: Default::default(),
+        to: Default::default(),
+        transaction_type: Default::default(),
+        cumulative_gas_used: Default::default(),
+        max_fee_per_gas: Default::default(),
+        gas_price: Default::default(),
+        max_priority_fee_per_gas: Default::default(),
+    }
 }
