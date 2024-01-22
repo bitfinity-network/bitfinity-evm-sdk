@@ -35,9 +35,10 @@ struct Args {
     #[command(subcommand)]
     command: Database,
 
-    /// Reset the database on blockchain change
+    /// Whether to reset the database when the blockchain state changes.
+    /// This is useful for testing environments, but should not be used in production.
     #[arg(long, default_value = "false")]
-    reset_database: bool,
+    reset_db_on_state_change: bool,
 }
 
 #[tokio::main]
@@ -51,6 +52,7 @@ async fn main() -> anyhow::Result<()> {
     log::info!("----------------------");
     log::info!("- rpc-url: {}", args.rpc_url);
     log::info!("- request_time_out_secs: {}", args.request_time_out_secs);
+    log::info!("- reset_db_on_state_change: {}", args.reset_db_on_state_change);
     log::info!("----------------------");
 
     let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(args.rpc_url)));
@@ -61,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
 
     let db_client = args.command.build_client().await?;
     db_client
-        .init(Some(earliest_block.into()), args.reset_database)
+        .init(Some(earliest_block.into()), args.reset_db_on_state_change)
         .await?;
 
     let mut extractor = BlockExtractor::new(

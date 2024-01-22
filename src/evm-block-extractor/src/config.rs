@@ -92,7 +92,7 @@ impl Database {
                     .port(port);
 
                 let pool = PgPool::connect_with(options).await?;
-                Ok(Arc::new(PostgresDbClient::new(pool, database)))
+                Ok(Arc::new(PostgresDbClient::new(pool)))
             }
         }
     }
