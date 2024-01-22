@@ -52,7 +52,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
             let tx_hash = &exe_results[i].transaction_hash;
             let block_number = blocks[i].number.0.as_u64();
             let dummy_txn = Transaction {
-                hash: tx_hash.clone().into(),
+                hash: tx_hash.clone(),
                 block_number: Some(U64::from(block_number)),
                 ..Default::default()
             };
