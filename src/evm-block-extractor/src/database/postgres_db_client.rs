@@ -27,14 +27,22 @@ impl DatabaseClient for PostgresDbClient {
     async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
         MIGRATOR.run(&self.pool).await?;
 
-        if let Some(block) = block {
-            if !self.check_if_same_block_hash(block).await? {
-                if reset_database {
-                    self.clear().await?;
-                } else {
-                    return Err(anyhow::anyhow!(
-                        "The block hash in the database is different from the one in the block"
-                    ));
+        // Check if there single block in the database
+        let block_count: i64 = sqlx::query("SELECT COUNT(*) FROM EVM_BLOCK")
+            .fetch_one(&self.pool)
+            .await?
+            .try_get(0)?;
+
+        if block_count > 1 {
+            if let Some(block) = block {
+                if !self.check_if_same_block_hash(block).await? {
+                    if reset_database {
+                        self.clear().await?;
+                    } else {
+                        return Err(anyhow::anyhow!(
+                            "The block hash in the database is different from the one in the block"
+                        ));
+                    }
                 }
             }
         }
