@@ -16,6 +16,7 @@ pub mod reqwest;
 #[cfg(feature = "ic-canister-client")]
 pub mod canister_client;
 
+#[cfg(feature = "http-outcall")]
 pub mod http_outcall;
 
 const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
