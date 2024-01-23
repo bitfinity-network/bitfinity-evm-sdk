@@ -84,12 +84,12 @@ impl BlockExtractor {
                 receipts_tasks.push(receipts_task);
             }
 
-            let evm_receipts = futures::future::join_all(receipts_tasks).await;
+            let exe_results = futures::future::join_all(receipts_tasks).await;
 
-            let mut all_evm_receipts = vec![];
-            for receipts in evm_receipts {
-                match receipts {
-                    Ok(Ok(mut receipts)) => all_evm_receipts.append(&mut receipts),
+            let mut all_exe_results = vec![];
+            for exe_results in exe_results {
+                match exe_results {
+                    Ok(Ok(mut exe_results)) => all_exe_results.append(&mut exe_results),
                     Ok(Err(e)) => {
                         log::warn!("Error getting receipts: {:?}. The process will not be stopped but there will be missing receipts in the DB", e);
                     }
@@ -110,7 +110,7 @@ impl BlockExtractor {
                 .collect::<Vec<did::Transaction>>();
 
             self.blockchain
-                .insert_block_data(&blocks, &all_evm_receipts, &all_transactions)
+                .insert_block_data(&blocks, &all_exe_results, &all_transactions)
                 .await?;
         }
 

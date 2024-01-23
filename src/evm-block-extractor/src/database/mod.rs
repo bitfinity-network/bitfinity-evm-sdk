@@ -14,15 +14,10 @@ pub trait DatabaseClient: Send + Sync {
     async fn clear(&self) -> anyhow::Result<()>;
 
     /// Returns whether the block hash corresponds to the one in the db
-    async fn check_if_same_block_hash(
-        &self,
-        block: Block<H256>,
-    ) -> anyhow::Result<bool> {
-            let block_number = block.number.0.as_u64();
-            let block_in_db = self
-                .get_block_by_number(block_number)
-                .await?;
-            Ok(block.hash == block_in_db.hash)
+    async fn check_if_same_block_hash(&self, block: Block<H256>) -> anyhow::Result<bool> {
+        let block_number = block.number.0.as_u64();
+        let block_in_db = self.get_block_by_number(block_number).await?;
+        Ok(block.hash == block_in_db.hash)
     }
 
     /// Get a block from the database
@@ -50,5 +45,4 @@ pub trait DatabaseClient: Send + Sync {
 
     /// Get earliest block number
     async fn get_earliest_block_number(&self) -> anyhow::Result<u64>;
-
 }

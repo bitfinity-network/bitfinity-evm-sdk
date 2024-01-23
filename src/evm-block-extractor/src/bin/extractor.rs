@@ -52,7 +52,10 @@ async fn main() -> anyhow::Result<()> {
     log::info!("----------------------");
     log::info!("- rpc-url: {}", args.rpc_url);
     log::info!("- request_time_out_secs: {}", args.request_time_out_secs);
-    log::info!("- reset_db_on_state_change: {}", args.reset_db_on_state_change);
+    log::info!(
+        "- reset_db_on_state_change: {}",
+        args.reset_db_on_state_change
+    );
     log::info!("----------------------");
 
     let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(args.rpc_url)));

@@ -18,16 +18,13 @@ pub struct PostgresDbClient {
 impl PostgresDbClient {
     /// Create a new Postgres blockchain client
     pub fn new(pool: PgPool) -> Self {
-        Self {
-            pool,
-        }
+        Self { pool }
     }
 }
 
 #[async_trait::async_trait]
 impl DatabaseClient for PostgresDbClient {
     async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
-        
         MIGRATOR.run(&self.pool).await?;
 
         if let Some(block) = block {

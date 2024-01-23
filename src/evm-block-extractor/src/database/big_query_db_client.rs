@@ -108,7 +108,6 @@ impl BigQueryDbClient {
 #[async_trait::async_trait]
 impl DatabaseClient for BigQueryDbClient {
     async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
-
         if let Some(block) = block {
             if !self.check_if_same_block_hash(block).await? {
                 if reset_database {
@@ -201,6 +200,31 @@ impl DatabaseClient for BigQueryDbClient {
 
         Ok(())
     }
+
+    // async fn is_empty(&self) -> anyhow::Result<bool> {
+    //     let query = format!(
+    //         "SELECT COUNT(*) as count FROM `{project_id}.{dataset_id}.{table_id}`",
+    //         project_id = self.project_id,
+    //         dataset_id = self.dataset_id,
+    //         table_id = BQ_BLOCKS_TABLE_ID,
+    //     );
+
+    //     let mut response = self
+    //         .client
+    //         .job()
+    //         .query(&self.project_id, QueryRequest::new(query))
+    //         .await?;
+
+    //     if response.next_row() {
+    //         let count = response
+    //             .get_i64(0)?
+    //             .ok_or(anyhow::anyhow!("Expected result not found in the response"))?;
+
+    //         Ok(count == 0)
+    //     } else {
+    //         Err(anyhow::anyhow!("No data found for the query"))
+    //     }
+    // }
 
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>> {
         let query_request = QueryRequest {
