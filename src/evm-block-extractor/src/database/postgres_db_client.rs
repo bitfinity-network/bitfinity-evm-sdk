@@ -45,6 +45,7 @@ impl DatabaseClient for PostgresDbClient {
     }
 
     async fn clear(&self) -> anyhow::Result<()> {
+        log::warn!("Postgres tables are being cleared");
         sqlx::query("TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_TRANSACTION_EXE_RESULT")
             .execute(&self.pool)
             .await?;
@@ -86,6 +87,14 @@ impl DatabaseClient for PostgresDbClient {
         receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
+        if !blocks.is_empty() {
+            log::info!(
+                "Insert block data for blocks in range {} to {}",
+                blocks[0].number,
+                blocks[blocks.len() - 1].number
+            );
+        };
+
         let mut tx = self.pool.begin().await?;
 
         for block in blocks {

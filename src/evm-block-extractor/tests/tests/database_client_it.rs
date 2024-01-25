@@ -307,7 +307,6 @@ async fn test_deletion_and_clearing_of_database() {
 #[tokio::test]
 async fn test_database_reset_on_empty_db() {
     test_with_clients(|db_client| async move {
-
         // the first time init is called the DB has no tables
         db_client.init(None, true).await.unwrap();
         assert!(db_client.get_block_by_number(0).await.is_err());
@@ -315,7 +314,6 @@ async fn test_database_reset_on_empty_db() {
         // the second time init is called the DB has empty tables
         db_client.init(None, true).await.unwrap();
         assert!(db_client.get_block_by_number(0).await.is_err());
-
     })
     .await;
 }

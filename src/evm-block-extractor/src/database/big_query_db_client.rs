@@ -178,7 +178,6 @@ impl BigQueryDbClient {
 #[async_trait::async_trait]
 impl DatabaseClient for BigQueryDbClient {
     async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
-
         self.create_tables_if_not_present().await?;
 
         if let Some(_latest_block_number) = self.get_latest_block_number().await? {
@@ -196,10 +195,11 @@ impl DatabaseClient for BigQueryDbClient {
             }
         }
 
-    Ok(())
+        Ok(())
     }
 
     async fn clear(&self) -> anyhow::Result<()> {
+        log::warn!("BigQuery tables are being deleted");
         let delete_table = |table_id: String| async move {
             self.client
                 .table()
@@ -291,10 +291,18 @@ impl DatabaseClient for BigQueryDbClient {
 
     async fn insert_block_data(
         &self,
-        block: &[Block<H256>],
+        blocks: &[Block<H256>],
         receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
+        if !blocks.is_empty() {
+            log::info!(
+                "Insert block data for blocks in range {} to {}",
+                blocks[0].number,
+                blocks[blocks.len() - 1].number
+            );
+        };
+
         let receipts = receipts
             .iter()
             .map(|r| {
@@ -314,7 +322,7 @@ impl DatabaseClient for BigQueryDbClient {
         self.insert_batch_data(BQ_RECEIPTS_TABLE_ID, receipts)
             .await?;
 
-        let blocks = block
+        let blocks = blocks
             .iter()
             .map(|b| {
                 let block_id = b.number.0.as_u64();
