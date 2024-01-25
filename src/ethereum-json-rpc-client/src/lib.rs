@@ -326,7 +326,8 @@ impl<C: Client> EthJsonRcpClient<C> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EthGetLogsParams {
     /// Addresses of contracts to filter logs for.
-    pub address: Vec<H160>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<Vec<H160>>,
 
     /// Start search logs from this block number.
     #[serde(rename = "fromBlock")]
@@ -337,7 +338,8 @@ pub struct EthGetLogsParams {
     pub to_block: BlockNumber,
 
     /// Filter logs by topics.
-    pub topics: Vec<H256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub topics: Option<Vec<H256>>,
 }
 
 pub trait Client: Clone + Send + Sync {
@@ -356,12 +358,12 @@ mod tests {
     #[test]
     fn test_eth_get_logs_params_serialization() {
         let get_logs_params = EthGetLogsParams {
-            address: vec!["0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907"
+            address: Some(vec!["0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907"
                 .parse()
-                .unwrap()],
+                .unwrap()]),
             from_block: BlockNumber::Number(42u64.into()),
             to_block: BlockNumber::Latest,
-            topics: vec![
+            topics: Some(vec![
                 "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
                     .parse()
                     .unwrap(),
@@ -371,7 +373,7 @@ mod tests {
                 "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078"
                     .parse()
                     .unwrap(),
-            ],
+            ]),
         };
 
         let json = serde_json::to_string(&get_logs_params).unwrap();
