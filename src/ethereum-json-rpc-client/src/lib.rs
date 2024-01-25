@@ -339,7 +339,7 @@ pub struct EthGetLogsParams {
 
     /// Filter logs by topics.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub topics: Option<Vec<H256>>,
+    pub topics: Option<Vec<Vec<H256>>>,
 }
 
 pub trait Client: Clone + Send + Sync {
@@ -364,15 +364,21 @@ mod tests {
             from_block: BlockNumber::Number(42u64.into()),
             to_block: BlockNumber::Latest,
             topics: Some(vec![
-                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-                    .parse()
-                    .unwrap(),
-                "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75"
-                    .parse()
-                    .unwrap(),
-                "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078"
-                    .parse()
-                    .unwrap(),
+                vec![
+                    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+                        .parse()
+                        .unwrap(),
+                ],
+                vec![
+                    "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75"
+                        .parse()
+                        .unwrap(),
+                ],
+                vec![
+                    "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078"
+                        .parse()
+                        .unwrap(),
+                ],
             ]),
         };
 
