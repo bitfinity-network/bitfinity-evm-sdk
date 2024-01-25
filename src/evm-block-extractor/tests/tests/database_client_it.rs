@@ -246,7 +246,6 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
 
         // check the database is empty
         let latest_block_number = db_client.get_latest_block_number().await.unwrap();
-
         assert!(latest_block_number.is_none());
 
         // Add a block
@@ -306,6 +305,22 @@ async fn test_deletion_and_clearing_of_database() {
 }
 
 #[tokio::test]
+async fn test_database_reset_on_empty_db() {
+    test_with_clients(|db_client| async move {
+
+        // the first time init is called the DB has no tables
+        db_client.init(None, true).await.unwrap();
+        assert!(db_client.get_block_by_number(0).await.is_err());
+
+        // the second time init is called the DB has empty tables
+        db_client.init(None, true).await.unwrap();
+        assert!(db_client.get_block_by_number(0).await.is_err());
+
+    })
+    .await;
+}
+
+#[tokio::test]
 async fn test_check_if_same_block_hash() {
     test_with_clients(|db_client| async move {
         db_client.init(None, false).await.unwrap();
@@ -322,7 +337,7 @@ async fn test_check_if_same_block_hash() {
             .unwrap();
 
         let same_block = db_client
-            .check_if_same_block_hash(dummy_block.clone())
+            .check_if_same_block_hash(&dummy_block)
             .await
             .unwrap();
 
@@ -335,7 +350,7 @@ async fn test_check_if_same_block_hash() {
         };
 
         let same_block = db_client
-            .check_if_same_block_hash(dummy_block.clone())
+            .check_if_same_block_hash(&dummy_block)
             .await
             .unwrap();
 

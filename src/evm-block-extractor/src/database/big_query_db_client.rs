@@ -19,7 +19,10 @@ use serde::Serialize;
 use serde_json::Value;
 
 use super::DatabaseClient;
-use crate::constants::{BQ_BLOCKS_TABLE_ID, BQ_RECEIPTS_TABLE_ID, BQ_TRANSACTIONS_TABLE_ID};
+
+const BQ_RECEIPTS_TABLE_ID: &str = "receipts";
+const BQ_BLOCKS_TABLE_ID: &str = "blocks";
+const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
@@ -103,32 +106,8 @@ impl BigQueryDbClient {
 
         Ok(())
     }
-}
 
-#[async_trait::async_trait]
-impl DatabaseClient for BigQueryDbClient {
-    async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
-        let block_table_exists = self
-            .client
-            .table()
-            .get(&self.project_id, &self.dataset_id, BQ_BLOCKS_TABLE_ID, None)
-            .await
-            .is_ok();
-
-        if block_table_exists {
-            if let Some(block) = block {
-                if !self.check_if_same_block_hash(block).await? {
-                    if reset_database {
-                        self.clear().await?;
-                    } else {
-                        return Err(anyhow::anyhow!(
-                            "The block hash in the database is different from the one in the block"
-                        ));
-                    }
-                }
-            }
-        }
-
+    async fn create_tables_if_not_present(&self) -> anyhow::Result<()> {
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
 
         // Make sure the dataset exists
@@ -193,6 +172,34 @@ impl DatabaseClient for BigQueryDbClient {
         }
 
         Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl DatabaseClient for BigQueryDbClient {
+    async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
+        let block_table_exists = self
+            .client
+            .table()
+            .get(&self.project_id, &self.dataset_id, BQ_BLOCKS_TABLE_ID, None)
+            .await
+            .is_ok();
+
+        if block_table_exists {
+            if let Some(block) = block {
+                if !self.check_if_same_block_hash(&block).await? {
+                    if reset_database {
+                        self.clear().await?;
+                    } else {
+                        return Err(anyhow::anyhow!(
+                            "The block hash in the database is different from the one in the block"
+                        ));
+                    }
+                }
+            }
+        }
+
+        self.create_tables_if_not_present().await
     }
 
     async fn clear(&self) -> anyhow::Result<()> {

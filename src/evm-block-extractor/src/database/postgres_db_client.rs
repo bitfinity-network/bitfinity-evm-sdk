@@ -33,9 +33,9 @@ impl DatabaseClient for PostgresDbClient {
             .await?
             .try_get(0)?;
 
-        if block_count > 1 {
+        if block_count > 0 {
             if let Some(block) = block {
-                if !self.check_if_same_block_hash(block).await? {
+                if !self.check_if_same_block_hash(&block).await? {
                     if reset_database {
                         self.clear().await?;
                     } else {
