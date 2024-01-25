@@ -40,7 +40,7 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
             } else {
                 client.query("http_request", (args,)).await
             }
-            .context("failed to send RPC request");
+            .map_err(anyhow::Error::from);
 
             let http_response = match http_response {
                 Ok(response) => response,
