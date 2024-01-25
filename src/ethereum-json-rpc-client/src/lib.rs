@@ -2,6 +2,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
+use did::transaction::StorableExecutionResult;
 use ethers_core::types::{
     Block, BlockNumber, Log, Transaction, TransactionReceipt, H160, H256, U64,
 };
@@ -25,6 +26,7 @@ const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
+const ETH_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
@@ -166,6 +168,49 @@ impl<C: Client> EthJsonRcpClient<C> {
             Id::Str("ETH_GET_LOGS_METHOD".to_string()),
         )
         .await
+    }
+
+    /// Returns the transaction execution result by hash
+    pub async fn get_tx_execution_result_by_hash(
+        &self,
+        hash: H256,
+    ) -> anyhow::Result<StorableExecutionResult> {
+        let transaction = self
+            .single_request::<Option<StorableExecutionResult>>(
+                ETH_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD.to_string(),
+                make_params_array!(hash),
+                Id::Str(hash.to_string()),
+            )
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Transaction not found"))?;
+
+        Ok(transaction)
+    }
+
+    /// Returns the transaction execution result by hash in batch
+    pub async fn get_tx_execution_results_by_hash(
+        &self,
+        hashes: impl IntoIterator<Item = H256>,
+        max_batch_size: usize,
+    ) -> anyhow::Result<Vec<StorableExecutionResult>> {
+        let params = hashes
+            .into_iter()
+            .enumerate()
+            .map(|(index, hash)| -> anyhow::Result<(Params, Id)> {
+                Ok((make_params_array!(hash), Id::Num(index as _)))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+
+        Ok(self
+            .batch_request::<Option<StorableExecutionResult>>(
+                ETH_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD.to_string(),
+                params,
+                max_batch_size,
+            )
+            .await?
+            .into_iter()
+            .flatten()
+            .collect())
     }
 
     /// Performs a request.

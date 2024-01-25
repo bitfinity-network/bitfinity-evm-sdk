@@ -20,6 +20,7 @@ http-outcall = ["dep:url"]
 [dependencies]
 anyhow = { workspace = true }
 candid = { workspace = true }
+did = { path = "../did" }
 hex = { workspace = true }
 ic-exports = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }

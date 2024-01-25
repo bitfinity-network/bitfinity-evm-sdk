@@ -3,6 +3,7 @@ use did::block::{BlockResult, ExeResult};
 use did::error::Result;
 use did::permission::{Permission, PermissionList};
 use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
+use did::transaction::StorableExecutionResult;
 use did::{
     Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256,
     U256, U64,
@@ -763,6 +764,16 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ) -> CanisterClientResult<Result<()>> {
         self.client
             .update("admin_set_max_batch_requests", (size,))
+            .await
+    }
+
+    /// Returns the execution result of a transaction by transaction hash.
+    pub async fn get_tx_execution_result_by_hash(
+        &self,
+        hash: H256,
+    ) -> CanisterClientResult<Option<StorableExecutionResult>> {
+        self.client
+            .query("get_tx_execution_result_by_hash", (hash,))
             .await
     }
 }
