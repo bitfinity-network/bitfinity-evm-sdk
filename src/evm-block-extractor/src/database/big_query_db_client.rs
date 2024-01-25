@@ -178,18 +178,15 @@ impl BigQueryDbClient {
 #[async_trait::async_trait]
 impl DatabaseClient for BigQueryDbClient {
     async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
-        let block_table_exists = self
-            .client
-            .table()
-            .get(&self.project_id, &self.dataset_id, BQ_BLOCKS_TABLE_ID, None)
-            .await
-            .is_ok();
 
-        if block_table_exists {
+        self.create_tables_if_not_present().await?;
+
+        if let Some(_latest_block_number) = self.get_latest_block_number().await? {
             if let Some(block) = block {
                 if !self.check_if_same_block_hash(&block).await? {
                     if reset_database {
                         self.clear().await?;
+                        self.create_tables_if_not_present().await?;
                     } else {
                         return Err(anyhow::anyhow!(
                             "The block hash in the database is different from the one in the block"
@@ -199,7 +196,7 @@ impl DatabaseClient for BigQueryDbClient {
             }
         }
 
-        self.create_tables_if_not_present().await
+    Ok(())
     }
 
     async fn clear(&self) -> anyhow::Result<()> {

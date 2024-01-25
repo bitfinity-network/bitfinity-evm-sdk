@@ -27,13 +27,7 @@ impl DatabaseClient for PostgresDbClient {
     async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
         MIGRATOR.run(&self.pool).await?;
 
-        // Check if there single block in the database
-        let block_count: i64 = sqlx::query("SELECT COUNT(*) FROM EVM_BLOCK")
-            .fetch_one(&self.pool)
-            .await?
-            .try_get(0)?;
-
-        if block_count > 0 {
+        if let Some(_latest_block_number) = self.get_latest_block_number().await? {
             if let Some(block) = block {
                 if !self.check_if_same_block_hash(&block).await? {
                     if reset_database {
