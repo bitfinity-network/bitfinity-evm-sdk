@@ -28,14 +28,12 @@ jobs:
 
       - name: test
         run: |
-          export RUST_BACKTRACE="full"
           cargo install ic-wasm
           ./scripts/build.sh
           ./scripts/test.sh
       - name: test i686-unknown-linux-gnu
         run: |
           sudo apt install gcc-multilib
-          export RUST_BACKTRACE="full"
           ./scripts/test.sh --target i686-unknown-linux-gnu
 
   build-dfx-test:
