@@ -34,7 +34,7 @@ jobs:
           ./scripts/test.sh
       - name: test i686-unknown-linux-gnu
         run: |
-          apt install gcc-multilib
+          sudo apt install gcc-multilib
           export RUST_BACKTRACE="full"
           ./scripts/test.sh --target i686-unknown-linux-gnu
 
