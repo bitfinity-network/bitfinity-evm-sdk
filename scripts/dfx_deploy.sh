@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -x #echo on
 
 export WASM_DIR=./target/artifact
 
