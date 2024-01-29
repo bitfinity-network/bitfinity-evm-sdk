@@ -1,5 +1,5 @@
-pub const RECEIPTS_TABLE_ID: &str = "receipts";
+/// The prefix for the mainnet
+pub const MAINNET_PREFIX: &str = "mainnet";
 
-pub const BLOCKS_TABLE_ID: &str = "blocks";
-
-pub const TRANSACTIONS_TABLE_ID: &str = "transactions";
+/// The prefix for the testnet
+pub const TESTNET_PREFIX: &str = "testnet";

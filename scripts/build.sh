@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+set -x #echo on
+
 export RUST_BACKTRACE=full
 export WASM_DIR=./target/artifact
 
