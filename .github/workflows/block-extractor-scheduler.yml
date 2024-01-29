@@ -48,6 +48,7 @@ jobs:
         run: |
           ./evm-block-extractor \
               --rpc-url ${{ env.RPC_URL }} \
+              --log-level debug \
               ${{ matrix.network == 'testnet' && '--reset-db-on-state-change' || '' }} \
               --bigquery \
               --project-id ${{ secrets.BIGQUERY_PROJECT_ID }} \
@@ -58,6 +59,7 @@ jobs:
         run: |
           ./evm-block-extractor \
               --rpc-url ${{ env.RPC_URL }} \
+              --log-level debug \
               --postgres \
               --username ${{ secrets.POSTGRES_USERNAME }} \
               --password ${{ secrets.POSTGRES_PASSWORD }} \

@@ -57,7 +57,15 @@ impl BlockExtractor {
                 Duration::from_secs(request_time_out_secs),
                 client.get_full_blocks_by_number(block_numbers, batch_size),
             )
-            .await??;
+            .await?;
+
+            let evm_blocks = match evm_blocks {
+                Ok(evm_blocks) => evm_blocks,
+                Err(e) => {
+                    log::warn!("Error getting blocks: {:?}. The process will not be stopped but there will be missing blocks in the DB", e);
+                    continue;
+                }
+            };
 
             let mut receipts_tasks = vec![];
 
