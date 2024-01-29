@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct BuildData {
     pub cargo_target_triple: String,
+    pub cargo_features: String,
     pub pkg_name: String,
     pub pkg_version: String,
     pub rustc_semver: String,
