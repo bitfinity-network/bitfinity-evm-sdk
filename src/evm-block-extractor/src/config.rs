@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use clap::Subcommand;
-use sqlx::postgres::PgConnectOptions;
+use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::PgPool;
 
 use crate::constants::{MAINNET_PREFIX, TESTNET_PREFIX};
@@ -45,6 +45,9 @@ pub enum Database {
         /// The port of the Postgres database
         #[arg(long)]
         database_port: u16,
+        /// Demand SSL connection
+        #[arg(long)]
+        require_ssl: bool,
     },
 }
 
@@ -77,19 +80,28 @@ impl Database {
                 database_name: database,
                 database_url: host,
                 database_port: port,
+                require_ssl,
             } => {
                 log::info!("Use Postgres database");
                 log::info!("- username: {}", username);
                 log::info!("- database: {}", database);
                 log::info!("- host: {}", host);
                 log::info!("- port: {}", port);
+                log::info!("- require-ssl: {}", require_ssl);
+
+                let ssl_mode = if require_ssl {
+                    PgSslMode::Require
+                } else {
+                    PgSslMode::Prefer
+                };
 
                 let options = PgConnectOptions::new()
                     .username(&username)
                     .password(&password)
                     .database(&database)
                     .host(&host)
-                    .port(port);
+                    .port(port)
+                    .ssl_mode(ssl_mode);
 
                 let pool = PgPool::connect_with(options).await?;
                 Ok(Arc::new(PostgresDbClient::new(pool)))

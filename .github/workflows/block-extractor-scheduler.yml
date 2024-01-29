@@ -1,0 +1,66 @@
+name: Block Extractor Workflow
+
+on:
+  schedule:
+    - cron: '*/10 * * * *' # every 10 minutes
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_LOG: info
+
+jobs:
+  backup-blocks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [postgres, bigquery] # This matrix is used to run the workflow for both postgres and bigquery
+        network: [mainnet, testnet] # This matrix is used to run the workflow for both mainnet and testnet
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Compile evm-block-extractor
+        run: cargo build --release -p evm-block-extractor --bin evm-block-extractor
+
+      - name: Move binary to root
+        run: mv target/release/evm-block-extractor evm-block-extractor
+
+      - name: Make binary executable
+        run: chmod +x evm-block-extractor
+
+      - name: Set Up Environment Variables
+        run: |
+          if [ "${{ matrix.network }}" = "mainnet" ]; then
+              echo "RPC_URL=mainnet.bitfinity.network" >> $GITHUB_ENV
+          elif [ "${{ matrix.network }}" = "testnet" ]; then
+              echo "RPC_URL=testnet.bitfinity.network" >> $GITHUB_ENV
+          fi
+
+      # Only run the following steps if the database is BigQuery and the network is mainnet or testnet
+      - name: Run evm-block-extractor for BigQuery
+        if: matrix.database == 'bigquery'
+        run: |
+          ./evm-block-extractor \
+              --rpc-url ${{ env.RPC_URL }} \
+              --bigquery \
+              --project-id ${{ secrets.BIGQUERY_PROJECT_ID }} \
+              --dataset-id ${{ matrix.network }} \
+              --sa-key ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }} \
+              ${{ matrix.network == 'testnet' && '--reset_db_on_state_change' || '' }}
+
+      # Only run the following steps if the network is mainnet and the database is postgres
+      - name: Run evm-block-extractor for Postgres
+        if: matrix.database == 'postgres' && matrix.network == 'mainnet'
+        run: |
+          ./evm-block-extractor \
+              --rpc-url ${{ env.RPC_URL }} \
+              --postgres \
+              --username ${{ secrets.POSTGRES_USERNAME }} \
+              --password ${{ secrets.POSTGRES_PASSWORD }}
+              --database-name ${{ secrets.POSTGRES_DATABASE_NAME  }} \
+              --database-url ${{ secrets.POSTGRES_DATABASE_URL }} \
+              --database-port ${{ secrets.POSTGRES_DATABASE_PORT }}
