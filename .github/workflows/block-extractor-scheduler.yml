@@ -1,6 +1,7 @@
 name: Block Extractor Workflow
 
 on:
+  workflow_dispatch: {}
   schedule:
     - cron: '*/10 * * * *' # every 10 minutes
 
@@ -10,6 +11,7 @@ concurrency:
 
 env:
   RUST_LOG: info
+  GCP_BLOCK_EXTRACTOR_SA_KEY: ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }}
 
 jobs:
   backup-blocks:
@@ -49,7 +51,6 @@ jobs:
               --bigquery \
               --project-id ${{ secrets.BIGQUERY_PROJECT_ID }} \
               --dataset-id ${{ matrix.network }} \
-              --sa-key ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }} \
               ${{ matrix.network == 'testnet' && '--reset_db_on_state_change' || '' }}
 
       # Only run the following steps if the network is mainnet and the database is postgres
@@ -64,3 +65,18 @@ jobs:
               --database-name ${{ secrets.POSTGRES_DATABASE_NAME  }} \
               --database-url ${{ secrets.POSTGRES_DATABASE_URL }} \
               --database-port ${{ secrets.POSTGRES_DATABASE_PORT }}
+
+  notify-slack:
+    runs-on: ubuntu-22.04
+    needs: [backup-blocks]
+    if: needs.backup-blocks.result == 'failure'
+    steps:
+      - name: Slack Notification
+        id: slack
+        uses: slackapi/slack-github-action@v1.17.0
+        with:
+          channel-id: 'alerts-block-extractor'
+          slack-message: 'EVM extractor failed to backup the blocks. Check the CI action here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
