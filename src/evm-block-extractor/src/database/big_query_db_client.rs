@@ -20,7 +20,7 @@ use serde_json::Value;
 
 use super::DatabaseClient;
 
-const BQ_RECEIPTS_TABLE_ID: &str = "receipts";
+const BQ_EXE_RESULTS_TABLE_ID: &str = "exe_results";
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";
 const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
 
@@ -131,10 +131,10 @@ impl BigQueryDbClient {
                 ],
             ),
             (
-                BQ_RECEIPTS_TABLE_ID,
+                BQ_EXE_RESULTS_TABLE_ID,
                 vec![
                     TableFieldSchema::string("tx_hash"),
-                    TableFieldSchema::json("receipt"),
+                    TableFieldSchema::json("exe_result"),
                 ],
             ),
             (
@@ -208,7 +208,7 @@ impl DatabaseClient for BigQueryDbClient {
         };
 
         delete_table(BQ_BLOCKS_TABLE_ID.to_owned()).await?;
-        delete_table(BQ_RECEIPTS_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_EXE_RESULTS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
 
         Ok(())
@@ -328,7 +328,7 @@ impl DatabaseClient for BigQueryDbClient {
 
             log::debug!("Inserting {} receipts", receipts.len());
 
-            self.insert_batch_data(BQ_RECEIPTS_TABLE_ID, receipts)
+            self.insert_batch_data(BQ_EXE_RESULTS_TABLE_ID, receipts)
                 .await?;
         }
 
@@ -400,10 +400,10 @@ impl DatabaseClient for BigQueryDbClient {
                 },
             ]),
             query:format!(
-                "SELECT receipt FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = @tx_hash",
+                "SELECT exe_result FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = @tx_hash",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
-                table_id = BQ_RECEIPTS_TABLE_ID,
+                table_id = BQ_EXE_RESULTS_TABLE_ID,
             ),
             ..Default::default()
         };
