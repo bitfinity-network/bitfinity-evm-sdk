@@ -64,3 +64,18 @@ jobs:
               --database-name ${{ secrets.POSTGRES_DATABASE_NAME  }} \
               --database-url ${{ secrets.POSTGRES_DATABASE_URL }} \
               --database-port ${{ secrets.POSTGRES_DATABASE_PORT }}
+
+  notify-slack:
+    runs-on: ubuntu-22.04
+    needs: [backup-blocks]
+    if: needs.backup-blocks.result == 'failure'
+    steps:
+      - name: Slack Notification
+        id: slack
+        uses: slackapi/slack-github-action@v1.17.0
+        with:
+          channel-id: 'alerts-block-extractor'
+          slack-message: 'EVM extractor failed to backup the blocks. Check the CI action here: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
