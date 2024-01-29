@@ -87,6 +87,12 @@ impl DatabaseClient for PostgresDbClient {
         receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
+        if blocks.is_empty() && receipts.is_empty() && transactions.is_empty() {
+            log::info!("No block data to insert");
+
+            return Ok(());
+        }
+
         if !blocks.is_empty() {
             log::info!(
                 "Insert block data for blocks in range {} to {}",
@@ -97,35 +103,43 @@ impl DatabaseClient for PostgresDbClient {
 
         let mut tx = self.pool.begin().await?;
 
-        for block in blocks {
-            let block_id = block.number.0.as_u64();
+        if !blocks.is_empty() {
+            for block in blocks {
+                let block_id = block.number.0.as_u64();
 
-            sqlx::query("INSERT INTO EVM_BLOCK (id, data) VALUES ($1, $2)")
-                .bind(block_id as i64)
-                .bind(serde_json::to_value(block)?)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| anyhow::anyhow!("Error inserting block {}: {:?}", block_id, e))
-                .map(|_| ())?;
+                sqlx::query("INSERT INTO EVM_BLOCK (id, data) VALUES ($1, $2)")
+                    .bind(block_id as i64)
+                    .bind(serde_json::to_value(block)?)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| anyhow::anyhow!("Error inserting block {}: {:?}", block_id, e))
+                    .map(|_| ())?;
+            }
         }
 
-        for receipt in receipts {
-            let hex_tx_hash = did::H256::from(receipt.transaction_hash.clone()).to_hex_str();
-            sqlx::query("INSERT INTO EVM_TRANSACTION_EXE_RESULT (id, data) VALUES ($1, $2)")
-                .bind(&hex_tx_hash)
-                .bind(serde_json::to_value(receipt)?)
-                .execute(&mut *tx)
-                .await?;
+        if !receipts.is_empty() {
+            for receipt in receipts {
+                let hex_tx_hash = did::H256::from(receipt.transaction_hash.clone()).to_hex_str();
+                sqlx::query("INSERT INTO EVM_TRANSACTION_EXE_RESULT (id, data) VALUES ($1, $2)")
+                    .bind(&hex_tx_hash)
+                    .bind(serde_json::to_value(receipt)?)
+                    .execute(&mut *tx)
+                    .await?;
+            }
         }
 
-        for txn in transactions {
-            let hex_tx_hash = txn.hash.to_hex_str();
-            sqlx::query("INSERT INTO EVM_TRANSACTION (id, data,block_number) VALUES ($1, $2,$3)")
+        if !transactions.is_empty() {
+            for txn in transactions {
+                let hex_tx_hash = txn.hash.to_hex_str();
+                sqlx::query(
+                    "INSERT INTO EVM_TRANSACTION (id, data,block_number) VALUES ($1, $2,$3)",
+                )
                 .bind(&hex_tx_hash)
                 .bind(serde_json::to_value(txn)?)
                 .bind(txn.block_number.expect("Block number not found").0.as_u64() as i64)
                 .execute(&mut *tx)
                 .await?;
+            }
         }
 
         tx.commit().await?;

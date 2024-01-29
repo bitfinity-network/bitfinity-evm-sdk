@@ -51,7 +51,7 @@ jobs:
               --bigquery \
               --project-id ${{ secrets.BIGQUERY_PROJECT_ID }} \
               --dataset-id ${{ matrix.network }} \
-              ${{ matrix.network == 'testnet' && '--reset_db_on_state_change' || '' }}
+              ${{ matrix.network == 'testnet' && '--reset-db-on-state-change' || '' }}
 
       # Only run the following steps if the network is mainnet and the database is postgres
       - name: Run evm-block-extractor for Postgres
