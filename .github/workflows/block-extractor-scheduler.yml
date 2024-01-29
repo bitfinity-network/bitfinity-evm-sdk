@@ -60,7 +60,7 @@ jobs:
               --rpc-url ${{ env.RPC_URL }} \
               --postgres \
               --username ${{ secrets.POSTGRES_USERNAME }} \
-              --password ${{ secrets.POSTGRES_PASSWORD }}
+              --password ${{ secrets.POSTGRES_PASSWORD }} \
               --database-name ${{ secrets.POSTGRES_DATABASE_NAME  }} \
               --database-url ${{ secrets.POSTGRES_DATABASE_URL }} \
               --database-port ${{ secrets.POSTGRES_DATABASE_PORT }}
