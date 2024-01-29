@@ -1,8 +1,10 @@
-use ethereum_json_rpc_client::{
-    reqwest::{self, ReqwestClient},
-    Client, EthJsonRcpClient,
+use did::{
+    block::{ExeResult, TransactOut},
+    transaction::{Bloom, StorableExecutionResult},
+    H160,
 };
-use ethers_core::types::{Block, BlockNumber, Transaction, TransactionReceipt, H256};
+use ethereum_json_rpc_client::{reqwest::ReqwestClient, Client, EthJsonRcpClient};
+use ethers_core::types::{BlockNumber, Transaction, H256};
 use evm_block_extractor::{
     database::DatabaseClient,
     rpc::{EthImpl, EthServer, ICServer},
@@ -21,38 +23,48 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
     func: Func,
 ) {
     test_with_clients(|db_client| async {
-        db_client.init().await.unwrap();
-
-        let mut blocks = Vec::new();
-        let mut receipts = Vec::new();
+        db_client.init(None, false).await.unwrap();
 
         for i in 0..BLOCK_COUNT {
             let tx_hash = H256::random();
-            let dummy_block: Block<Transaction> = ethers_core::types::Block {
+            let dummy_transaction: did::Transaction = Transaction {
+                hash: tx_hash,
+                block_number: Some(i.into()),
+                ..Default::default()
+            }
+            .into();
+            let dummy_block: did::Block<did::H256> = ethers_core::types::Block::<H256> {
                 number: Some(ethers_core::types::U64::from(i)),
                 hash: Some(H256::random()),
-                transactions: vec![Transaction {
-                    hash: tx_hash.clone(),
-                    ..Default::default()
-                }],
+                transactions: vec![tx_hash],
                 ..Default::default()
-            };
-            let dummy_receipt: TransactionReceipt = ethers_core::types::TransactionReceipt {
-                transaction_hash: tx_hash,
-                block_number: Some(i.into()),
+            }
+            .into();
+            let dummy_receipt = StorableExecutionResult {
+                transaction_hash: tx_hash.into(),
+                block_number: i.into(),
                 block_hash: dummy_block.hash.clone(),
-                ..Default::default()
+                exe_result: ExeResult::Success {
+                    gas_used: (i * 1000).into(),
+                    logs: vec![],
+                    logs_bloom: Box::new(Bloom::zeros()),
+                    output: TransactOut::None,
+                },
+                transaction_index: 0u64.into(),
+                from: H160::default(),
+                to: None,
+                transaction_type: None,
+                cumulative_gas_used: (i * 1000).into(),
+                max_fee_per_gas: None,
+                gas_price: None,
+                max_priority_fee_per_gas: None,
             };
 
-            blocks.push(dummy_block);
-
-            receipts.push(dummy_receipt);
+            db_client
+                .insert_block_data(&[dummy_block], &[dummy_receipt], &[dummy_transaction])
+                .await
+                .unwrap();
         }
-
-        db_client
-            .insert_blocks_and_receipts(&blocks, &receipts)
-            .await
-            .unwrap();
 
         func(db_client).await
     })
@@ -162,6 +174,62 @@ async fn test_get_blocks_rlp() {
         assert_eq!(blocks.len(), 2);
         assert_eq!(blocks[0].number, 8u64.into());
         assert_eq!(blocks[1].number, 9u64.into());
+
+        {
+            handle.stop().unwrap();
+            handle.stopped().await;
+        }
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_batched_request() {
+    with_filled_db(|db_client| async {
+        let eth = EthImpl::new(db_client);
+        let mut module = RpcModule::new(());
+        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
+        module.merge(ICServer::into_rpc(eth)).unwrap();
+
+        let server = Server::builder().build("0.0.0.0:9002").await.unwrap();
+        let handle = server.start(module);
+
+        let http_client = ReqwestClient::new("http://127.0.0.2:9002".to_string());
+
+        let request = Request::Batch(vec![
+            Call::MethodCall(MethodCall {
+                jsonrpc: Some(Version::V2),
+                method: "ic_getBlocksRLP".to_string(),
+                params: Params::Array(vec![json!("0x0"), json!("0x5")]),
+                id: Id::Str("ic_getBlocksRLP".to_string()),
+            }),
+            Call::MethodCall(MethodCall {
+                jsonrpc: Some(Version::V2),
+                method: "eth_blockNumber".to_string(),
+                params: Params::Array(vec![]),
+                id: Id::Str("eth_blockNumber".to_string()),
+            }),
+        ]);
+
+        let Response::Batch(results) = http_client.send_rpc_request(request).await.unwrap() else {
+            panic!("unexpected return type")
+        };
+
+        match &results[..] {
+            [Output::Success(result_1), Output::Success(result_2)] => {
+                assert_eq!(result_1.id, Id::Str("ic_getBlocksRLP".to_string()));
+                let data: String = serde_json::from_value(result_1.result.clone()).unwrap();
+                let blocks: Vec<did::Block<did::Transaction>> =
+                    ethers_core::utils::rlp::decode_list(&hex::decode(data).unwrap());
+                assert_eq!(blocks.len(), 5);
+
+                assert_eq!(result_2.id, Id::Str("eth_blockNumber".to_string()));
+                let data: String = serde_json::from_value(result_2.result.clone()).unwrap();
+                let result = u64::from_str_radix(data.trim_start_matches("0x"), 16).unwrap();
+                assert_eq!(result, BLOCK_COUNT - 1);
+            }
+            _ => panic!("unexpected results"),
+        }
 
         {
             handle.stop().unwrap();

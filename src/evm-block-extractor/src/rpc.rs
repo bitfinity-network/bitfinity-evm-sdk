@@ -64,8 +64,8 @@ impl ICServer for EthImpl {
                 jsonrpsee::types::error::ErrorCode::InternalError
             })?,
             BlockNumber::Number(num) => num.as_u64(),
-            BlockNumber::Pending => return Ok(hex::encode(&EMPTY_LIST_RLP)),
-            _ => return Ok(hex::encode(&EMPTY_LIST_RLP)),
+            BlockNumber::Pending => return Ok(hex::encode(EMPTY_LIST_RLP)),
+            _ => return Ok(hex::encode(EMPTY_LIST_RLP)),
         };
 
         let block_count = db
@@ -81,7 +81,7 @@ impl ICServer for EthImpl {
         let end_block = std::cmp::min(from + std::cmp::min(10, max_number.as_u64()), block_count);
 
         if end_block <= from {
-            return Ok(hex::encode(&EMPTY_LIST_RLP));
+            return Ok(hex::encode(EMPTY_LIST_RLP));
         }
 
         let mut rlp = RlpStream::new_list((end_block - from) as usize);
@@ -93,11 +93,6 @@ impl ICServer for EthImpl {
                     log::error!("Error getting block: {:?}", e);
                     jsonrpsee::types::error::ErrorCode::InternalError
                 })?;
-
-            let block = serde_json::to_vec(&block).map_err(|e| {
-                log::error!("Error serializing block: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
-            })?;
 
             rlp.append(&block);
         }
