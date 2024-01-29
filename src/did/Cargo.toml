@@ -40,3 +40,6 @@ ic-log = { workspace = true }
 eth-signer = { path = "../eth-signer" }
 rand = { workspace = true }
 tokio = { workspace = true }
+
+[build-dependencies]
+vergen = { workspace = true }

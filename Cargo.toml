@@ -74,6 +74,13 @@ testcontainers = { package = "testcontainers-modules", version = "0.3", features
 ] }
 thiserror = "1.0"
 tokio = { version = "1.24", features = ["macros", "rt", "signal"] }
+vergen = { version = "8.3", default-features = false, features = [
+    "build",
+    "cargo",
+    "git", 
+    "gitcl",
+    "rustc",
+] }
 wiremock = "0.5"
 yup-oauth2 = "8.3.2"
 zip = "0.6"
