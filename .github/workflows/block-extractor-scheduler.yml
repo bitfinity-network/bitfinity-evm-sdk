@@ -35,9 +35,9 @@ jobs:
       - name: Set Up Environment Variables
         run: |
           if [ "${{ matrix.network }}" = "mainnet" ]; then
-              echo "RPC_URL=mainnet.bitfinity.network" >> $GITHUB_ENV
+              echo "RPC_URL=https://mainnet.bitfinity.network" >> $GITHUB_ENV
           elif [ "${{ matrix.network }}" = "testnet" ]; then
-              echo "RPC_URL=testnet.bitfinity.network" >> $GITHUB_ENV
+              echo "RPC_URL=https://testnet.bitfinity.network" >> $GITHUB_ENV
           fi
 
       # Only run the following steps if the database is BigQuery and the network is mainnet or testnet
