@@ -1,4 +1,5 @@
 use candid::{Nat, Principal};
+use did::build::BuildData;
 use did::H160;
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 use minter_did::error::Result as McResult;
@@ -164,5 +165,10 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
                 (operation_id, address, icrc2_token, recipient, amount),
             )
             .await
+    }
+
+    /// Returns the build data of the canister.
+    pub async fn get_canister_build_data(&self) -> CanisterClientResult<BuildData> {
+        self.client.query("get_canister_build_data", ()).await
     }
 }
