@@ -49,7 +49,8 @@ jobs:
               --bigquery \
               --project-id ${{ secrets.BIGQUERY_PROJECT_ID }} \
               --dataset-id ${{ matrix.network }} \
-              --sa-key ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }}
+              --sa-key ${{ secrets.GCP_BLOCK_EXTRACTOR_SA_KEY }} \
+              ${{ matrix.network == 'testnet' && '--reset_db_on_state_change' || '' }}
 
       # Only run the following steps if the network is mainnet and the database is postgres
       - name: Run evm-block-extractor for Postgres
