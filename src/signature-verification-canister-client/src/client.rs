@@ -69,11 +69,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     }
 
     /// Returns the build data of the canister.
-    pub async fn get_canister_build_data(
-        &self,
-    ) -> CanisterClientResult<BuildData> {
-        self.client
-            .query("get_canister_build_data", ())
-            .await
+    pub async fn get_canister_build_data(&self) -> CanisterClientResult<BuildData> {
+        self.client.query("get_canister_build_data", ()).await
     }
 }
