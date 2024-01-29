@@ -1,4 +1,5 @@
 use candid::Principal;
+use did::build::BuildData;
 use did::error::SignatureVerificationError;
 use did::{Transaction, H160};
 use ic_canister_client::{CanisterClient, CanisterClientResult};
@@ -65,5 +66,14 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     /// Get the access control list
     pub async fn get_access_list(&self) -> CanisterClientResult<Vec<Principal>> {
         self.client.query("get_access_list", ()).await
+    }
+
+    /// Returns the build data of the canister.
+    pub async fn get_canister_build_data(
+        &self,
+    ) -> CanisterClientResult<BuildData> {
+        self.client
+            .query("get_canister_build_data", ())
+            .await
     }
 }
