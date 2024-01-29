@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use ethers_core::types::{BlockNumber, TransactionReceipt, H256, U256, U64};
+use did::TransactionReceipt;
+use ethers_core::types::{BlockNumber, H256, U256, U64};
 use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
@@ -152,7 +153,7 @@ impl EthServer for EthImpl {
     async fn get_transaction_receipt(&self, tx_hash: H256) -> RpcResult<TransactionReceipt> {
         let tx = self
             .blockchain
-            .get_transaction_receipt(tx_hash)
+            .get_transaction_receipt(tx_hash.into())
             .await
             .map_err(|e| {
                 log::error!("Error getting transaction receipt: {:?}", e);

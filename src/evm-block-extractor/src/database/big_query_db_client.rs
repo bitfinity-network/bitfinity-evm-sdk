@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
-use ethers_core::types::{Block, Transaction, TransactionReceipt, H256};
+use did::transaction::StorableExecutionResult;
+use did::{Block, Transaction, TransactionReceipt, H256};
 use gcp_bigquery_client::model::dataset::Dataset;
 use gcp_bigquery_client::model::field_type::serialize_json_as_string;
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
@@ -18,7 +19,10 @@ use serde::Serialize;
 use serde_json::Value;
 
 use super::DatabaseClient;
-use crate::constants::{BLOCKS_TABLE_ID, RECEIPTS_TABLE_ID, TRANSACTIONS_TABLE_ID};
+
+const BQ_RECEIPTS_TABLE_ID: &str = "receipts";
+const BQ_BLOCKS_TABLE_ID: &str = "blocks";
+const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
@@ -102,12 +106,10 @@ impl BigQueryDbClient {
 
         Ok(())
     }
-}
 
-#[async_trait::async_trait]
-impl DatabaseClient for BigQueryDbClient {
-    async fn init(&self) -> anyhow::Result<()> {
+    async fn create_tables_if_not_present(&self) -> anyhow::Result<()> {
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
+
         // Make sure the dataset exists
         if self
             .client
@@ -122,21 +124,21 @@ impl DatabaseClient for BigQueryDbClient {
         // Define tables with their respective schemas
         let tables = [
             (
-                BLOCKS_TABLE_ID,
+                BQ_BLOCKS_TABLE_ID,
                 vec![
                     TableFieldSchema::integer("id"),
                     TableFieldSchema::json("body"),
                 ],
             ),
             (
-                RECEIPTS_TABLE_ID,
+                BQ_RECEIPTS_TABLE_ID,
                 vec![
                     TableFieldSchema::string("tx_hash"),
                     TableFieldSchema::json("receipt"),
                 ],
             ),
             (
-                TRANSACTIONS_TABLE_ID,
+                BQ_TRANSACTIONS_TABLE_ID,
                 vec![
                     TableFieldSchema::string("tx_hash"),
                     TableFieldSchema::json("transaction"),
@@ -171,6 +173,46 @@ impl DatabaseClient for BigQueryDbClient {
 
         Ok(())
     }
+}
+
+#[async_trait::async_trait]
+impl DatabaseClient for BigQueryDbClient {
+    async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
+        self.create_tables_if_not_present().await?;
+
+        if let Some(_latest_block_number) = self.get_latest_block_number().await? {
+            if let Some(block) = block {
+                if !self.check_if_same_block_hash(&block).await? {
+                    if reset_database {
+                        self.clear().await?;
+                        self.create_tables_if_not_present().await?;
+                    } else {
+                        return Err(anyhow::anyhow!(
+                            "The block hash in the database is different from the one in the block"
+                        ));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn clear(&self) -> anyhow::Result<()> {
+        log::warn!("BigQuery tables are being deleted");
+        let delete_table = |table_id: String| async move {
+            self.client
+                .table()
+                .delete(&self.project_id, &self.dataset_id, &table_id)
+                .await
+        };
+
+        delete_table(BQ_BLOCKS_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_RECEIPTS_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
+
+        Ok(())
+    }
 
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>> {
         let query_request = QueryRequest {
@@ -189,7 +231,7 @@ impl DatabaseClient for BigQueryDbClient {
                 "SELECT body FROM `{project_id}.{dataset_id}.{table_id}` WHERE id = @id",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
-                table_id = BLOCKS_TABLE_ID,
+                table_id = BQ_BLOCKS_TABLE_ID,
             ),
             ..Default::default()
         };
@@ -219,7 +261,7 @@ impl DatabaseClient for BigQueryDbClient {
                 "SELECT transaction FROM `{project_id}.{dataset_id}.{table_id}` WHERE block_number = @block_number",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
-                table_id = TRANSACTIONS_TABLE_ID,
+                table_id = BQ_TRANSACTIONS_TABLE_ID,
             ),
             ..Default::default()
         };
@@ -249,14 +291,22 @@ impl DatabaseClient for BigQueryDbClient {
 
     async fn insert_block_data(
         &self,
-        block: &[Block<H256>],
-        receipts: &[TransactionReceipt],
+        blocks: &[Block<H256>],
+        receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
+        if !blocks.is_empty() {
+            log::info!(
+                "Insert block data for blocks in range {} to {}",
+                blocks[0].number,
+                blocks[blocks.len() - 1].number
+            );
+        };
+
         let receipts = receipts
             .iter()
             .map(|r| {
-                let tx_hash = r.transaction_hash;
+                let tx_hash = &r.transaction_hash;
                 let receipt = ReceiptRow {
                     tx_hash: format!("0x{:x}", tx_hash),
                     receipt: serde_json::to_value(r).expect("Failed to serialize receipt"),
@@ -269,21 +319,13 @@ impl DatabaseClient for BigQueryDbClient {
             })
             .collect::<Vec<_>>();
 
-        self.insert_batch_data(RECEIPTS_TABLE_ID, receipts).await?;
+        self.insert_batch_data(BQ_RECEIPTS_TABLE_ID, receipts)
+            .await?;
 
-        let blocks = block
+        let blocks = blocks
             .iter()
             .map(|b| {
-                let block_id = b
-                    .number
-                    .ok_or(anyhow::anyhow!("Block number not found"))
-                    .expect("Block number not found")
-                    .as_u64();
-
-                let block_hash = b
-                    .hash
-                    .ok_or(anyhow::anyhow!("Block hash not found"))
-                    .expect("Block hash not found");
+                let block_id = b.number.0.as_u64();
 
                 let block_row = BlockRow {
                     id: block_id,
@@ -291,25 +333,25 @@ impl DatabaseClient for BigQueryDbClient {
                 };
 
                 TableDataInsertAllRequestRows {
-                    insert_id: Some(format!("0x{:x}", block_hash)),
+                    insert_id: Some(b.hash.to_hex_str()),
                     json: serde_json::to_value(block_row).expect("Failed to serialize block"),
                 }
             })
             .collect::<Vec<_>>();
 
-        self.insert_batch_data(BLOCKS_TABLE_ID, blocks).await?;
+        self.insert_batch_data(BQ_BLOCKS_TABLE_ID, blocks).await?;
 
         // Insert transactions
         let transactions = transactions
             .iter()
             .map(|txn| {
-                let tx_hash = txn.hash;
+                let tx_hash = &txn.hash;
 
                 let txn = TransactionRow {
                     tx_hash: format!("0x{:x}", tx_hash),
                     transaction: serde_json::to_value(txn)
                         .expect("Failed to serialize transaction"),
-                    block_number: txn.block_number.expect("Block number not found").as_u64(),
+                    block_number: txn.block_number.expect("Block number not found").0.as_u64(),
                 };
 
                 TableDataInsertAllRequestRows {
@@ -319,7 +361,7 @@ impl DatabaseClient for BigQueryDbClient {
             })
             .collect::<Vec<_>>();
 
-        self.insert_batch_data(TRANSACTIONS_TABLE_ID, transactions)
+        self.insert_batch_data(BQ_TRANSACTIONS_TABLE_ID, transactions)
             .await?;
 
         Ok(())
@@ -344,12 +386,14 @@ impl DatabaseClient for BigQueryDbClient {
                 "SELECT receipt FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = @tx_hash",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
-                table_id = RECEIPTS_TABLE_ID,
+                table_id = BQ_RECEIPTS_TABLE_ID,
             ),
             ..Default::default()
         };
 
-        self.execute_query(query_request).await
+        let exe_result: StorableExecutionResult = self.execute_query(query_request).await?;
+
+        Ok(TransactionReceipt::from(exe_result))
     }
 
     async fn get_latest_block_number(&self) -> anyhow::Result<Option<u64>> {
@@ -357,7 +401,7 @@ impl DatabaseClient for BigQueryDbClient {
             "SELECT MAX(id) as max_id FROM `{project_id}.{dataset_id}.{table_id}`",
             project_id = self.project_id,
             dataset_id = self.dataset_id,
-            table_id = BLOCKS_TABLE_ID,
+            table_id = BQ_BLOCKS_TABLE_ID,
         );
         let mut response = self
             .client
@@ -381,7 +425,7 @@ impl DatabaseClient for BigQueryDbClient {
             "SELECT MIN(id) as min_id FROM `{project_id}.{dataset_id}.{table_id}`",
             project_id = self.project_id,
             dataset_id = self.dataset_id,
-            table_id = BLOCKS_TABLE_ID,
+            table_id = BQ_BLOCKS_TABLE_ID,
         );
         let mut response = self
             .client

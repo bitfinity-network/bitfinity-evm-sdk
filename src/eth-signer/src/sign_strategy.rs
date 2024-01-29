@@ -19,6 +19,7 @@ pub enum TransactionSignerError {
     #[error("wallet error: {0}")]
     WalletError(#[from] crate::WalletError),
 
+    #[cfg(feature = "ic_sign")]
     #[error("ic sign error: {0}")]
     IcSignError(#[from] crate::ic_sign::IcSignerError),
 

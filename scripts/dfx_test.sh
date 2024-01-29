@@ -1,5 +1,7 @@
 #!/bin/bash
 set -e
+set -x #echo on
+
 export RUST_BACKTRACE=full
 
 test_ic_sign_test_canister() {
