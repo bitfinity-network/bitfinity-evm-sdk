@@ -87,12 +87,6 @@ impl DatabaseClient for PostgresDbClient {
         receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
-        if blocks.is_empty() && receipts.is_empty() && transactions.is_empty() {
-            log::info!("No block data to insert");
-
-            return Ok(());
-        }
-
         if !blocks.is_empty() {
             log::info!(
                 "Insert block data for blocks in range {} to {}",

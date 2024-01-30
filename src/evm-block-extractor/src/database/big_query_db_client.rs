@@ -295,12 +295,6 @@ impl DatabaseClient for BigQueryDbClient {
         receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
-        if blocks.is_empty() && receipts.is_empty() && transactions.is_empty() {
-            log::debug!("No block data, receipts, or transactions to insert. Skipping.");
-
-            return Ok(());
-        }
-
         if !blocks.is_empty() {
             log::info!(
                 "Insert block data for blocks in range {} to {}",

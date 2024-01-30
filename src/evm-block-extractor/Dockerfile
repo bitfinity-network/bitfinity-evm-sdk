@@ -37,15 +37,9 @@ RUN apt-get update -y \
 COPY --from=builder /app/target/release/evm-block-extractor-server /app/evm-block-extractor-server
 
 
-# Copy the entrypoint script into the container
-COPY src/evm-block-extractor/scripts/entrypoint.sh /app/entrypoint.sh
-
-# Make the entrypoint script executable
-RUN chmod +x /app/entrypoint.sh
-
-# Set the entrypoint script as the default way to start the container
-ENTRYPOINT ["/app/entrypoint.sh"]
 
 EXPOSE 8080
 
+
+CMD ./evm-block-extractor-server -s 0.0.0.0:8080 --bigquery -p $PROJECT_ID -d $DATASET
 
