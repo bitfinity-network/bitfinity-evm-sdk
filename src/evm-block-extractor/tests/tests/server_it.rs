@@ -79,11 +79,15 @@ async fn test_get_blocks_and_receipts() {
         module.merge(EthServer::into_rpc(eth.clone())).unwrap();
         module.merge(ICServer::into_rpc(eth)).unwrap();
 
-        let server = Server::builder().build("0.0.0.0:9001").await.unwrap();
+        let port = port_check::free_local_port().unwrap();
+        let server = Server::builder()
+            .build(format!("0.0.0.0:{port}"))
+            .await
+            .unwrap();
         let handle = server.start(module);
 
         let http_client =
-            EthJsonRcpClient::new(ReqwestClient::new("http://127.0.0.2:9001".to_string()));
+            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
 
         let block_count = http_client.get_block_number().await.unwrap();
         assert_eq!(block_count, BLOCK_COUNT - 1);
@@ -128,11 +132,14 @@ async fn test_get_blocks_rlp() {
         module.merge(EthServer::into_rpc(eth.clone())).unwrap();
         module.merge(ICServer::into_rpc(eth)).unwrap();
 
-        let server = Server::builder().build("0.0.0.0:9002").await.unwrap();
+        let port = port_check::free_local_port().unwrap();
+        let server = Server::builder()
+            .build(format!("0.0.0.0:{port}"))
+            .await
+            .unwrap();
         let handle = server.start(module);
 
-        let http_client = ReqwestClient::new("http://127.0.0.2:9002".to_string());
-
+        let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         // Test first five blocks
         let request = Request::Single(Call::MethodCall(MethodCall {
             jsonrpc: Some(Version::V2),
@@ -191,11 +198,14 @@ async fn test_batched_request() {
         module.merge(EthServer::into_rpc(eth.clone())).unwrap();
         module.merge(ICServer::into_rpc(eth)).unwrap();
 
-        let server = Server::builder().build("0.0.0.0:9002").await.unwrap();
+        let port = port_check::free_local_port().unwrap();
+        let server = Server::builder()
+            .build(format!("0.0.0.0:{port}"))
+            .await
+            .unwrap();
         let handle = server.start(module);
 
-        let http_client = ReqwestClient::new("http://127.0.0.2:9002".to_string());
-
+        let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = Request::Batch(vec![
             Call::MethodCall(MethodCall {
                 jsonrpc: Some(Version::V2),

@@ -36,6 +36,7 @@ zip = { workspace = true }
 
 [dev-dependencies]
 jsonrpc-core = { workspace = true }
+port_check = { workspace = true }
 rand = { workspace = true }
 tempfile = { workspace = true }
 testcontainers = { workspace = true }
