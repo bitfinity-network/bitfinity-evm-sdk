@@ -462,7 +462,7 @@ async fn test_insertion_of_txs_and_receipts_with_no_blocks() {
         };
 
         let dummy_receipt = new_storable_execution_result(
-            ethers_core::types::H256::random().into(),
+            dummy_txn.hash.clone(),
             ethers_core::types::H256::random().into(),
             1_u64.into(),
         );
