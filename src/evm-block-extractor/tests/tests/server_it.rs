@@ -79,7 +79,7 @@ async fn test_get_blocks_and_receipts() {
         module.merge(EthServer::into_rpc(eth.clone())).unwrap();
         module.merge(ICServer::into_rpc(eth)).unwrap();
 
-        let port = port_check::free_local_port().unwrap();
+        let port = port_check::free_local_port_in_range(9000, 9099).unwrap();
         let server = Server::builder()
             .build(format!("0.0.0.0:{port}"))
             .await
@@ -132,7 +132,7 @@ async fn test_get_blocks_rlp() {
         module.merge(EthServer::into_rpc(eth.clone())).unwrap();
         module.merge(ICServer::into_rpc(eth)).unwrap();
 
-        let port = port_check::free_local_port().unwrap();
+        let port = port_check::free_local_port_in_range(9100, 9199).unwrap();
         let server = Server::builder()
             .build(format!("0.0.0.0:{port}"))
             .await
@@ -198,7 +198,7 @@ async fn test_batched_request() {
         module.merge(EthServer::into_rpc(eth.clone())).unwrap();
         module.merge(ICServer::into_rpc(eth)).unwrap();
 
-        let port = port_check::free_local_port().unwrap();
+        let port = port_check::free_local_port_in_range(9200, 9299).unwrap();
         let server = Server::builder()
             .build(format!("0.0.0.0:{port}"))
             .await
