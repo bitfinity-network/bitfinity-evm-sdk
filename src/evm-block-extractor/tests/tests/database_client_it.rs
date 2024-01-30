@@ -297,9 +297,6 @@ async fn test_deletion_and_clearing_of_database() {
 
         // Clear the database
         db_client.clear().await.unwrap();
-
-        // Check the database is empty
-        // assert!(db_client.is_empty().await.unwrap());
     })
     .await;
 }
@@ -353,6 +350,138 @@ async fn test_check_if_same_block_hash() {
             .unwrap();
 
         assert!(!same_block);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_insertion_of_blocks_with_no_txs_and_no_receipts() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, false).await.unwrap();
+
+        let dummy_block: Block<H256> = Block {
+            number: ethers_core::types::U64::from(1).into(),
+            hash: ethers_core::types::H256::random().into(),
+            ..Default::default()
+        };
+
+        db_client
+            .insert_block_data(&[dummy_block.clone()], &[], &[])
+            .await
+            .unwrap();
+
+        let block = db_client.get_block_by_number(1).await.unwrap();
+
+        assert_eq!(block.number.0.as_u64(), 1);
+        assert_eq!(block.hash, dummy_block.hash);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_insertion_of_blocks_with_txs_and_no_receipts() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, false).await.unwrap();
+
+        let dummy_block: Block<H256> = Block {
+            number: ethers_core::types::U64::from(1).into(),
+            hash: ethers_core::types::H256::random().into(),
+            ..Default::default()
+        };
+
+        let dummy_txn = Transaction {
+            hash: ethers_core::types::H256::random().into(),
+            block_number: Some(1_u64.into()),
+            ..Default::default()
+        };
+
+        db_client
+            .insert_block_data(&[dummy_block.clone()], &[], &[dummy_txn.clone()])
+            .await
+            .unwrap();
+
+        let block = db_client.get_full_block_by_number(1).await.unwrap();
+
+        assert_eq!(block.number.0.as_u64(), 1);
+        assert_eq!(block.hash, dummy_block.hash);
+
+        assert_eq!(block.transactions.len(), 1);
+        assert_eq!(block.transactions[0].hash, dummy_txn.hash);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_insertion_of_blocks_with_no_txs_and_receipts() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, false).await.unwrap();
+
+        let dummy_block: Block<H256> = Block {
+            number: ethers_core::types::U64::from(1).into(),
+            hash: ethers_core::types::H256::random().into(),
+            ..Default::default()
+        };
+
+        let dummy_receipt = new_storable_execution_result(
+            ethers_core::types::H256::random().into(),
+            dummy_block.hash.clone(),
+            1_u64.into(),
+        );
+
+        db_client
+            .insert_block_data(&[dummy_block.clone()], &[dummy_receipt.clone()], &[])
+            .await
+            .unwrap();
+
+        let block = db_client.get_block_by_number(1).await.unwrap();
+
+        assert_eq!(block.number.0.as_u64(), 1);
+        assert_eq!(block.hash, dummy_block.hash);
+
+        assert_eq!(block.transactions.len(), 0);
+
+        let receipt = db_client
+            .get_transaction_receipt(dummy_receipt.transaction_hash.clone())
+            .await
+            .unwrap();
+
+        assert_eq!(receipt.transaction_hash, dummy_receipt.transaction_hash);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_insertion_of_txs_and_receipts_with_no_blocks() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, false).await.unwrap();
+
+        let dummy_txn = Transaction {
+            hash: ethers_core::types::H256::random().into(),
+            block_number: Some(1_u64.into()),
+            ..Default::default()
+        };
+
+        let dummy_receipt = new_storable_execution_result(
+            ethers_core::types::H256::random().into(),
+            ethers_core::types::H256::random().into(),
+            1_u64.into(),
+        );
+
+        db_client
+            .insert_block_data(&[], &[dummy_receipt], &[dummy_txn.clone()])
+            .await
+            .unwrap();
+
+        let receipt = db_client
+            .get_transaction_receipt(dummy_txn.hash.clone())
+            .await
+            .unwrap();
+
+        assert_eq!(receipt.transaction_hash, dummy_txn.hash);
+
+        let block = db_client.get_block_by_number(1).await;
+
+        assert!(block.is_err());
     })
     .await;
 }
