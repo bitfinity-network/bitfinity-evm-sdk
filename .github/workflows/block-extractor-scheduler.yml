@@ -48,11 +48,10 @@ jobs:
         run: |
           ./evm-block-extractor \
               --rpc-url ${{ env.RPC_URL }} \
+              ${{ matrix.network == 'testnet' && '--reset-db-on-state-change' || '' }} \
               --bigquery \
               --project-id ${{ secrets.BIGQUERY_PROJECT_ID }} \
-              --dataset-id ${{ matrix.network }} \
-              ${{ matrix.network == 'testnet' && '--reset_db_on_state_change' || '' }}
-
+              --dataset-id ${{ matrix.network }}
       # Only run the following steps if the network is mainnet and the database is postgres
       - name: Run evm-block-extractor for Postgres
         if: matrix.database == 'postgres' && matrix.network == 'mainnet'

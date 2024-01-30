@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.74.1 as chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.75 as chef
 WORKDIR /app
 
 FROM chef as planner
@@ -16,9 +16,14 @@ RUN cargo build --release --bin evm-block-extractor-server
 FROM debian:bookworm-slim AS runtime
 
 # GCP BigQuery Environment Variables
-ENV DATASET=
-ENV PROJECT_ID=
-ENV GCP_BLOCK_EXTRACTOR_SA_KEY=
+ARG DATASET
+ARG PROJECT_ID
+ARG GCP_BLOCK_EXTRACTOR_SA_KEY
+
+# Set environment variables
+ENV DATASET=$DATASET \
+    PROJECT_ID=$PROJECT_ID \
+    GCP_BLOCK_EXTRACTOR_SA_KEY=$GCP_BLOCK_EXTRACTOR_SA_KEY
 
 WORKDIR /app
 RUN apt-get update -y \
@@ -31,8 +36,10 @@ RUN apt-get update -y \
 
 COPY --from=builder /app/target/release/evm-block-extractor-server /app/evm-block-extractor-server
 
+
+
 EXPOSE 8080
 
-ENTRYPOINT ["./evm-block-extractor-server"]
 
-CMD ["-s", "0.0.0.0:8080", "--", "bigquery", "-d", ${DATASET}, "-p", ${PROJECT_ID}, "-k", ${GCP_BLOCK_EXTRACTOR_SA_KEY}]
+CMD ./evm-block-extractor-server -s 0.0.0.0:8080 --bigquery -p $PROJECT_ID -d $DATASET
+

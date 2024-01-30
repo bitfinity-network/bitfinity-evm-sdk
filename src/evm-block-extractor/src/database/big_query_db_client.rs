@@ -20,7 +20,7 @@ use serde_json::Value;
 
 use super::DatabaseClient;
 
-const BQ_RECEIPTS_TABLE_ID: &str = "receipts";
+const BQ_EXE_RESULTS_TABLE_ID: &str = "exe_results";
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";
 const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
 
@@ -131,10 +131,10 @@ impl BigQueryDbClient {
                 ],
             ),
             (
-                BQ_RECEIPTS_TABLE_ID,
+                BQ_EXE_RESULTS_TABLE_ID,
                 vec![
                     TableFieldSchema::string("tx_hash"),
-                    TableFieldSchema::json("receipt"),
+                    TableFieldSchema::json("exe_result"),
                 ],
             ),
             (
@@ -208,7 +208,7 @@ impl DatabaseClient for BigQueryDbClient {
         };
 
         delete_table(BQ_BLOCKS_TABLE_ID.to_owned()).await?;
-        delete_table(BQ_RECEIPTS_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_EXE_RESULTS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
 
         Ok(())
@@ -303,66 +303,77 @@ impl DatabaseClient for BigQueryDbClient {
             );
         };
 
-        let receipts = receipts
-            .iter()
-            .map(|r| {
-                let tx_hash = &r.transaction_hash;
-                let receipt = ReceiptRow {
-                    tx_hash: format!("0x{:x}", tx_hash),
-                    receipt: serde_json::to_value(r).expect("Failed to serialize receipt"),
-                };
+        if !receipts.is_empty() {
+            let receipts = receipts
+                .iter()
+                .map(|r| {
+                    let tx_hash = &r.transaction_hash;
+                    let receipt = ExeResultRow {
+                        tx_hash: format!("0x{:x}", tx_hash),
+                        exe_result: serde_json::to_value(r).expect("Failed to serialize receipt"),
+                    };
 
-                TableDataInsertAllRequestRows {
-                    insert_id: Some(format!("0x{:x}", tx_hash)),
-                    json: serde_json::to_value(receipt).expect("Failed to serialize receipt"),
-                }
-            })
-            .collect::<Vec<_>>();
+                    TableDataInsertAllRequestRows {
+                        insert_id: Some(format!("0x{:x}", tx_hash)),
+                        json: serde_json::to_value(receipt).expect("Failed to serialize receipt"),
+                    }
+                })
+                .collect::<Vec<_>>();
 
-        self.insert_batch_data(BQ_RECEIPTS_TABLE_ID, receipts)
-            .await?;
+            log::debug!("Inserting {} receipts", receipts.len());
 
-        let blocks = blocks
-            .iter()
-            .map(|b| {
-                let block_id = b.number.0.as_u64();
+            self.insert_batch_data(BQ_EXE_RESULTS_TABLE_ID, receipts)
+                .await?;
+        }
 
-                let block_row = BlockRow {
-                    id: block_id,
-                    body: serde_json::to_value(b).expect("Failed to serialize block"),
-                };
+        if !blocks.is_empty() {
+            let blocks = blocks
+                .iter()
+                .map(|b| {
+                    let block_id = b.number.0.as_u64();
 
-                TableDataInsertAllRequestRows {
-                    insert_id: Some(b.hash.to_hex_str()),
-                    json: serde_json::to_value(block_row).expect("Failed to serialize block"),
-                }
-            })
-            .collect::<Vec<_>>();
+                    let block_row = BlockRow {
+                        id: block_id,
+                        body: serde_json::to_value(b).expect("Failed to serialize block"),
+                    };
 
-        self.insert_batch_data(BQ_BLOCKS_TABLE_ID, blocks).await?;
+                    TableDataInsertAllRequestRows {
+                        insert_id: Some(b.hash.to_hex_str()),
+                        json: serde_json::to_value(block_row).expect("Failed to serialize block"),
+                    }
+                })
+                .collect::<Vec<_>>();
 
-        // Insert transactions
-        let transactions = transactions
-            .iter()
-            .map(|txn| {
-                let tx_hash = &txn.hash;
+            log::debug!("Inserting {} blocks", blocks.len());
 
-                let txn = TransactionRow {
-                    tx_hash: format!("0x{:x}", tx_hash),
-                    transaction: serde_json::to_value(txn)
-                        .expect("Failed to serialize transaction"),
-                    block_number: txn.block_number.expect("Block number not found").0.as_u64(),
-                };
+            self.insert_batch_data(BQ_BLOCKS_TABLE_ID, blocks).await?;
+        }
 
-                TableDataInsertAllRequestRows {
-                    insert_id: Some(format!("0x{:x}", tx_hash)),
-                    json: serde_json::to_value(txn).expect("Failed to serialize transaction"),
-                }
-            })
-            .collect::<Vec<_>>();
+        if !transactions.is_empty() {
+            let transactions = transactions
+                .iter()
+                .map(|txn| {
+                    let tx_hash = &txn.hash;
 
-        self.insert_batch_data(BQ_TRANSACTIONS_TABLE_ID, transactions)
-            .await?;
+                    let txn = TransactionRow {
+                        tx_hash: format!("0x{:x}", tx_hash),
+                        transaction: serde_json::to_value(txn)
+                            .expect("Failed to serialize transaction"),
+                        block_number: txn.block_number.expect("Block number not found").0.as_u64(),
+                    };
+
+                    TableDataInsertAllRequestRows {
+                        insert_id: Some(format!("0x{:x}", tx_hash)),
+                        json: serde_json::to_value(txn).expect("Failed to serialize transaction"),
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            log::debug!("Inserting {} transactions", transactions.len());
+
+            self.insert_batch_data(BQ_TRANSACTIONS_TABLE_ID, transactions)
+                .await?;
+        }
 
         Ok(())
     }
@@ -383,10 +394,10 @@ impl DatabaseClient for BigQueryDbClient {
                 },
             ]),
             query:format!(
-                "SELECT receipt FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = @tx_hash",
+                "SELECT exe_result FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = @tx_hash",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
-                table_id = BQ_RECEIPTS_TABLE_ID,
+                table_id = BQ_EXE_RESULTS_TABLE_ID,
             ),
             ..Default::default()
         };
@@ -458,10 +469,10 @@ pub struct BlockRow {
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub struct ReceiptRow {
+pub struct ExeResultRow {
     tx_hash: String,
     #[serde(serialize_with = "serialize_json_as_string")]
-    receipt: Value,
+    exe_result: Value,
 }
 
 #[derive(Debug, Serialize, Clone)]
