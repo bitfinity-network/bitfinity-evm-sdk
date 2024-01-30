@@ -1,5 +1,5 @@
 use std::future::Future;
-use std::sync::Arc;
+use std::sync::{Arc, Once};
 
 use evm_block_extractor::config::Database;
 use evm_block_extractor::database::DatabaseClient;
@@ -9,7 +9,11 @@ use testcontainers::testcontainers::Container;
 mod client;
 mod tests;
 
+static INIT_LOG: Once = Once::new();
+
 async fn test_with_clients<T: Fn(Arc<dyn DatabaseClient>) -> F, F: Future<Output = ()>>(test: T) {
+    INIT_LOG.call_once(env_logger::init);
+
     let docker = Cli::default();
 
     println!("----------------------------------");
