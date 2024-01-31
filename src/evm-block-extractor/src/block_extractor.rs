@@ -5,7 +5,7 @@ use ethereum_json_rpc_client::EthJsonRcpClient;
 use itertools::Itertools;
 use tokio::time::Duration;
 
-use crate::database::DatabaseClient;
+use crate::database::{AccountBalance, DatabaseClient};
 
 /// Extracts blocks from an EVMC and stores them in a database
 pub struct BlockExtractor {
@@ -32,6 +32,7 @@ impl BlockExtractor {
 
     /// Collects blocks from the EVMC and stores them in the database.
     /// Returns the inclusive range of blocks that were collected.
+    /// This collects also the genesis accounts if needed.
     pub async fn collect_blocks(
         &mut self,
         from_block_inclusive: u64,
@@ -43,6 +44,8 @@ impl BlockExtractor {
             to_block_inclusive
         );
 
+        self.collect_genesis_balances().await?;
+        
         let client = self.client.clone();
 
         let request_time_out_secs = self.request_time_out_secs;
@@ -115,5 +118,41 @@ impl BlockExtractor {
         }
 
         Ok((from_block_inclusive, to_block_inclusive))
+    }
+
+        /// Collects blocks from the EVMC and stores them in the database.
+    /// Returns the inclusive range of blocks that were collected.
+    /// This collects also the genesis accounts if needed.
+    async fn collect_genesis_balances(
+        &self,
+    ) -> anyhow::Result<()> {
+        
+        if self.blockchain.get_genesis_balances().await?.is_some() {
+            log::debug!("Genesis balances already present in the DB. Skipping");
+
+        } else {
+            log::info!("Genesis balances not present in the DB. Collecting them");
+
+            match self.client.get_genesis_balances().await {
+                Ok(genesis_balances) => {
+                    let genesis_balances = genesis_balances
+                        .into_iter()
+                        .map(|(address, balance)| AccountBalance{
+                            address: address.into(),
+                            balance: balance.into(),
+                        })
+                        .collect::<Vec<_>>();
+                    self.blockchain
+                        .insert_genesis_balances(&genesis_balances)
+                        .await?;
+                },
+                Err(e) => {
+                    log::error!("Error getting genesis balances: {:?}. The process will not be stopped but there will be missing genesis balances in the DB", e);
+                }
+            }
+
+        }
+
+        Ok(())
     }
 }

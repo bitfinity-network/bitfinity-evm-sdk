@@ -3,6 +3,7 @@ use std::sync::Arc;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
 use evm_block_extractor::block_extractor::BlockExtractor;
+use evm_block_extractor::database::AccountBalance;
 
 use crate::test_with_clients;
 
@@ -35,6 +36,24 @@ async fn test_extractor_collect_blocks() {
 
         assert_eq!(result.0, start_block);
         assert_eq!(result.1, end_block);
+
+        // Check genesis accounts
+        {
+            let evmc_genesis_balances = evm_client.get_genesis_balances().await.unwrap();
+            let db_genesis_balances = db_client.get_genesis_balances().await.unwrap().unwrap();
+
+            assert!(!evmc_genesis_balances.is_empty());
+
+            let evmc_genesis_balances = evmc_genesis_balances
+                .into_iter()
+                .map(|(address, balance)| AccountBalance {
+                    address: address.into(),
+                    balance: balance.into(),
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!( evmc_genesis_balances, db_genesis_balances);
+        }
 
         for block_num in start_block..=end_block {
             let block = db_client.get_block_by_number(block_num).await.unwrap();
