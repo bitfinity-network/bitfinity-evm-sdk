@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use did::TransactionReceipt;
-use ethers_core::types::{BlockNumber, H256, U256, U64};
+use ethers_core::types::{BlockNumber, H160, H256, U256, U64};
 use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
@@ -44,6 +44,9 @@ pub trait Eth {
 pub trait IC {
     #[method(name = "getBlocksRLP")]
     async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<String>;
+
+    #[method(name = "getGenesisBalances")]
+    async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>>;
 }
 
 #[async_trait::async_trait]
@@ -98,6 +101,19 @@ impl ICServer for EthImpl {
         }
 
         Ok(hex::encode(rlp.out()))
+    }
+
+    async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>> {
+        let tx = self
+        .blockchain
+        .get_genesis_balances()
+        .await
+        .map_err(|e| {
+            log::error!("Error getting transaction receipt: {:?}", e);
+            jsonrpsee::types::error::ErrorCode::InternalError
+        })?;
+
+        Ok(tx.unwrap_or_default().into_iter().map(|account| (account.address.into(), account.balance.into())).collect())
     }
 }
 

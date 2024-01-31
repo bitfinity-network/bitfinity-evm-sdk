@@ -35,7 +35,6 @@ yup-oauth2 = { workspace = true }
 zip = { workspace = true }
 
 [dev-dependencies]
-ethereum-types = { workspace = true }
 jsonrpc-core = { workspace = true }
 port_check = { workspace = true }
 rand = { workspace = true }

@@ -495,11 +495,11 @@ async fn test_insert_and_fetch_genesis_accounts() {
 
         let genesis_balances = vec![
             AccountBalance {
-                address: H160::from(ethereum_types::H160::random()),
+                address: H160::from(ethers_core::types::H160::random()),
                 balance: U256::from(100_u64),
             },
             AccountBalance {
-                address: H160::from(ethereum_types::H160::random()),
+                address: H160::from(ethers_core::types::H160::random()),
                 balance: U256::from(200_u64),
             },
         ];

@@ -3,9 +3,8 @@ use std::pin::Pin;
 
 use anyhow::Context;
 use did::transaction::StorableExecutionResult;
-use did::U256;
 use ethers_core::types::{
-    Block, BlockNumber, Log, Transaction, TransactionReceipt, H160, H256, U64,
+    Block, BlockNumber, Log, Transaction, TransactionReceipt, H160, H256, U64, U256
 };
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
