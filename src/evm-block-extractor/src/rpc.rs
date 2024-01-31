@@ -105,7 +105,7 @@ impl ICServer for EthImpl {
 
     async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>> {
         let tx = self.blockchain.get_genesis_balances().await.map_err(|e| {
-            log::error!("Error getting transaction receipt: {:?}", e);
+            log::error!("Error getting genesis balances: {:?}", e);
             jsonrpsee::types::error::ErrorCode::InternalError
         })?;
 
