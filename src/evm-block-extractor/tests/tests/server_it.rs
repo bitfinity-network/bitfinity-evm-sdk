@@ -8,7 +8,7 @@ use evm_block_extractor::{
     rpc::{EthImpl, EthServer, ICServer},
 };
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
-use jsonrpsee::{server::Server, RpcModule};
+use jsonrpsee::{server::{Server, ServerHandle}, RpcModule};
 use serde_json::json;
 use std::future::Future;
 use std::sync::Arc;
@@ -72,17 +72,7 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
 #[tokio::test]
 async fn test_get_blocks_and_receipts() {
     with_filled_db(|db_client| async {
-        let eth = EthImpl::new(db_client);
-        let mut module = RpcModule::new(());
-        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
-        module.merge(ICServer::into_rpc(eth)).unwrap();
-
-        let port = port_check::free_local_port_in_range(9000, 9099).unwrap();
-        let server = Server::builder()
-            .build(format!("0.0.0.0:{port}"))
-            .await
-            .unwrap();
-        let handle = server.start(module);
+        let (port, handle) = new_server(db_client).await;
 
         let http_client =
             EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
@@ -125,17 +115,7 @@ async fn test_get_blocks_and_receipts() {
 #[tokio::test]
 async fn test_get_blocks_rlp() {
     with_filled_db(|db_client| async {
-        let eth = EthImpl::new(db_client);
-        let mut module = RpcModule::new(());
-        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
-        module.merge(ICServer::into_rpc(eth)).unwrap();
-
-        let port = port_check::free_local_port_in_range(9100, 9199).unwrap();
-        let server = Server::builder()
-            .build(format!("0.0.0.0:{port}"))
-            .await
-            .unwrap();
-        let handle = server.start(module);
+        let (port, handle) = new_server(db_client).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         // Test first five blocks
@@ -191,17 +171,7 @@ async fn test_get_blocks_rlp() {
 #[tokio::test]
 async fn test_batched_request() {
     with_filled_db(|db_client| async {
-        let eth = EthImpl::new(db_client);
-        let mut module = RpcModule::new(());
-        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
-        module.merge(ICServer::into_rpc(eth)).unwrap();
-
-        let port = port_check::free_local_port_in_range(9200, 9299).unwrap();
-        let server = Server::builder()
-            .build(format!("0.0.0.0:{port}"))
-            .await
-            .unwrap();
-        let handle = server.start(module);
+        let (port, handle) = new_server(db_client).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = Request::Batch(vec![
@@ -253,17 +223,7 @@ async fn test_get_genesis_accounts() {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
-        let eth = EthImpl::new(db_client.clone());
-        let mut module = RpcModule::new(());
-        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
-        module.merge(ICServer::into_rpc(eth)).unwrap();
-
-        let port = port_check::free_local_port_in_range(9000, 9099).unwrap();
-        let server = Server::builder()
-            .build(format!("0.0.0.0:{port}"))
-            .await
-            .unwrap();
-        let handle = server.start(module);
+        let (port, handle) = new_server(db_client.clone()).await;
 
         let http_client =
             EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
@@ -317,4 +277,22 @@ async fn test_get_genesis_accounts() {
         }
     })
     .await
+}
+
+async fn new_server(db_client: Arc<dyn DatabaseClient>) -> (u16, ServerHandle) {
+    let eth = EthImpl::new(db_client);
+    let mut module = RpcModule::new(());
+    module.merge(EthServer::into_rpc(eth.clone())).unwrap();
+    module.merge(ICServer::into_rpc(eth)).unwrap();
+
+
+    loop {
+        let port = port_check::free_local_port().unwrap();
+        if let Ok(server) = Server::builder()
+        .build(format!("0.0.0.0:{port}"))
+        .await {
+            return (port, server.start(module))
+        }
+    }
+
 }
