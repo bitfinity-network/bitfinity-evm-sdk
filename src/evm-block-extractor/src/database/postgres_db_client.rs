@@ -1,9 +1,9 @@
-use serde::Serialize;
 use ::sqlx::migrate::Migrator;
 use ::sqlx::*;
 use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, TransactionReceipt, H256};
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use sqlx::postgres::PgRow;
 
 use super::{AccountBalance, DatabaseClient};
@@ -22,7 +22,10 @@ impl PostgresDbClient {
         Self { pool }
     }
 
-    async fn fetch_key_value_data<D: DeserializeOwned>(&self, key: &str) -> anyhow::Result<Option<D>> {
+    async fn fetch_key_value_data<D: DeserializeOwned>(
+        &self,
+        key: &str,
+    ) -> anyhow::Result<Option<D>> {
         let row = sqlx::query("SELECT data FROM EVM_KEY_VALUE_DATA WHERE KEY = $1")
             .bind(key)
             .fetch_optional(&self.pool)
@@ -31,7 +34,7 @@ impl PostgresDbClient {
 
         if let Some(row) = row {
             from_row_value(&row, 0).map(Some)
-        } else {    
+        } else {
             Ok(None)
         }
     }
@@ -45,7 +48,6 @@ impl PostgresDbClient {
             .map_err(|e| anyhow::anyhow!("Error inserting value data for key {}: {:?}", key, e))
             .map(|_| ())
     }
-
 }
 
 const GENESIS_BALANCES_KEY: &str = "genesis_balances";
@@ -210,8 +212,12 @@ impl DatabaseClient for PostgresDbClient {
         self.fetch_key_value_data(GENESIS_BALANCES_KEY).await
     }
 
-    async fn insert_genesis_balances(&self, genesis_balances: &[AccountBalance]) -> anyhow::Result<()> {
-        self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances).await
+    async fn insert_genesis_balances(
+        &self,
+        genesis_balances: &[AccountBalance],
+    ) -> anyhow::Result<()> {
+        self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances)
+            .await
     }
 }
 

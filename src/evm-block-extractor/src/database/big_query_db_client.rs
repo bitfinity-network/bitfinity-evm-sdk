@@ -71,10 +71,15 @@ impl BigQueryDbClient {
     }
 
     async fn query_one<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
-        self.query_one_optional(query).await?.ok_or(anyhow::anyhow!("No data found for the query"))
+        self.query_one_optional(query)
+            .await?
+            .ok_or(anyhow::anyhow!("No data found for the query"))
     }
 
-    async fn query_one_optional<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<Option<T>> {
+    async fn query_one_optional<T: DeserializeOwned>(
+        &self,
+        query: QueryRequest,
+    ) -> anyhow::Result<Option<T>> {
         let mut response = self.client.job().query(&self.project_id, query).await?;
 
         if response.next_row() {
@@ -90,7 +95,7 @@ impl BigQueryDbClient {
         } else {
             Ok(None)
         }
-    } 
+    }
     async fn insert_batch_data(
         &self,
         table_id: &str,
@@ -189,7 +194,10 @@ impl BigQueryDbClient {
         Ok(())
     }
 
-    async fn fetch_key_value_data<D: DeserializeOwned>(&self, key: &str) -> anyhow::Result<Option<D>> {
+    async fn fetch_key_value_data<D: DeserializeOwned>(
+        &self,
+        key: &str,
+    ) -> anyhow::Result<Option<D>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {
                 name: Some("key".to_string()),
@@ -226,11 +234,10 @@ impl BigQueryDbClient {
         };
 
         log::debug!("Inserting key value data with key [{}]", key);
-    
+
         self.insert_batch_data(BQ_KEY_VALUE_TABLE_ID, vec![key_value_row])
             .await
     }
-
 }
 
 #[async_trait::async_trait]
@@ -521,8 +528,12 @@ impl DatabaseClient for BigQueryDbClient {
         self.fetch_key_value_data(GENESIS_BALANCES_KEY).await
     }
 
-    async fn insert_genesis_balances(&self, genesis_balances: &[AccountBalance]) -> anyhow::Result<()> {
-        self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances).await
+    async fn insert_genesis_balances(
+        &self,
+        genesis_balances: &[AccountBalance],
+    ) -> anyhow::Result<()> {
+        self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances)
+            .await
     }
 }
 

@@ -1,17 +1,18 @@
-use did::{
-    block::{ExeResult, TransactOut}, transaction::{Bloom, StorableExecutionResult}, H160, U256
-};
-use ethereum_json_rpc_client::{reqwest::ReqwestClient, Client, EthJsonRcpClient};
-use ethers_core::types::{BlockNumber, Transaction, H256};
-use evm_block_extractor::{
-    database::{AccountBalance, DatabaseClient},
-    rpc::{EthImpl, EthServer, ICServer},
-};
-use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
-use jsonrpsee::{server::{Server, ServerHandle}, RpcModule};
-use serde_json::json;
 use std::future::Future;
 use std::sync::Arc;
+
+use did::block::{ExeResult, TransactOut};
+use did::transaction::{Bloom, StorableExecutionResult};
+use did::{H160, U256};
+use ethereum_json_rpc_client::reqwest::ReqwestClient;
+use ethereum_json_rpc_client::{Client, EthJsonRcpClient};
+use ethers_core::types::{BlockNumber, Transaction, H256};
+use evm_block_extractor::database::{AccountBalance, DatabaseClient};
+use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
+use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
+use jsonrpsee::server::{Server, ServerHandle};
+use jsonrpsee::RpcModule;
+use serde_json::json;
 
 use crate::test_with_clients;
 
@@ -258,18 +259,17 @@ async fn test_get_genesis_accounts() {
                 .unwrap();
 
             let genesis_accounts = http_client.get_genesis_balances().await.unwrap();
-            let genesis_accounts: Vec<AccountBalance> = genesis_accounts.into_iter().map(|account| {
-                AccountBalance {
+            let genesis_accounts: Vec<AccountBalance> = genesis_accounts
+                .into_iter()
+                .map(|account| AccountBalance {
                     address: account.0.into(),
                     balance: account.1.into(),
-                }
-            }).collect();
+                })
+                .collect();
 
             // Assert
             assert_eq!(genesis_accounts, genesis_balances);
-
         }
-
 
         {
             handle.stop().unwrap();
@@ -285,14 +285,10 @@ async fn new_server(db_client: Arc<dyn DatabaseClient>) -> (u16, ServerHandle) {
     module.merge(EthServer::into_rpc(eth.clone())).unwrap();
     module.merge(ICServer::into_rpc(eth)).unwrap();
 
-
     loop {
         let port = port_check::free_local_port().unwrap();
-        if let Ok(server) = Server::builder()
-        .build(format!("0.0.0.0:{port}"))
-        .await {
-            return (port, server.start(module))
+        if let Ok(server) = Server::builder().build(format!("0.0.0.0:{port}")).await {
+            return (port, server.start(module));
         }
     }
-
 }

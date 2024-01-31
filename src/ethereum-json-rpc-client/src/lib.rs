@@ -4,7 +4,7 @@ use std::pin::Pin;
 use anyhow::Context;
 use did::transaction::StorableExecutionResult;
 use ethers_core::types::{
-    Block, BlockNumber, Log, Transaction, TransactionReceipt, H160, H256, U64, U256
+    Block, BlockNumber, Log, Transaction, TransactionReceipt, H160, H256, U256, U64,
 };
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
@@ -27,7 +27,6 @@ const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 const IC_GET_GENESIS_BALANCES: &str = "ic_getGenesisBalances";
-
 
 /// A client for interacting with an Ethereum node over JSON-RPC.
 #[derive(Clone)]
@@ -215,16 +214,13 @@ impl<C: Client> EthJsonRcpClient<C> {
     }
 
     /// Returns the genesis accounts
-    pub async fn get_genesis_balances(
-        &self,
-    ) -> anyhow::Result<Vec<(H160, U256)>> {
-        self
-            .single_request(
-                IC_GET_GENESIS_BALANCES.to_string(),
-                make_params_array!(),
-                Id::Str(IC_GET_GENESIS_BALANCES.to_string()),
-            )
-            .await
+    pub async fn get_genesis_balances(&self) -> anyhow::Result<Vec<(H160, U256)>> {
+        self.single_request(
+            IC_GET_GENESIS_BALANCES.to_string(),
+            make_params_array!(),
+            Id::Str(IC_GET_GENESIS_BALANCES.to_string()),
+        )
+        .await
     }
 
     /// Performs a request.
