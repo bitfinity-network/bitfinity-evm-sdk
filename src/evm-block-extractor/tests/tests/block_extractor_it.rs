@@ -52,7 +52,7 @@ async fn test_extractor_collect_blocks() {
                 })
                 .collect::<Vec<_>>();
 
-            assert_eq!( evmc_genesis_balances, db_genesis_balances);
+            assert_eq!(evmc_genesis_balances, db_genesis_balances);
         }
 
         for block_num in start_block..=end_block {
