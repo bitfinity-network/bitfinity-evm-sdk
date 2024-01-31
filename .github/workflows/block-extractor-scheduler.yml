@@ -17,6 +17,7 @@ jobs:
   backup-blocks:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         database: [postgres, bigquery] # This matrix is used to run the workflow for both postgres and bigquery
         network: [mainnet, testnet] # This matrix is used to run the workflow for both mainnet and testnet
