@@ -36,3 +36,17 @@ create table EVM_TRANSACTION (
 CREATE INDEX EVM_TRANSACTION_INDEX_BLOCK_NUMBER ON EVM_TRANSACTION( BLOCK_NUMBER );
 
 -- End - EVM_TRANSACTION -
+
+
+-----------------------------------------
+-- Begin - EVM_KEY_VALUE_DATA -
+-----------------------------------------
+
+create table EVM_KEY_VALUE_DATA (
+    KEY TEXT primary key,
+    DATA JSONB,
+);
+
+CREATE INDEX EVM_KEY_VALUE_DATA_INDEX_KEY ON EVM_KEY_VALUE_DATA( KEY );
+
+-- End - EVM_KEY_VALUE_DATA -

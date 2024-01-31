@@ -248,3 +248,32 @@ async fn test_batched_request() {
     })
     .await
 }
+
+#[tokio::test]
+async fn test_get_genesis_accounts() {
+    with_filled_db(|db_client| async {
+        let eth = EthImpl::new(db_client);
+        let mut module = RpcModule::new(());
+        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
+        module.merge(ICServer::into_rpc(eth)).unwrap();
+
+        let port = port_check::free_local_port_in_range(9000, 9099).unwrap();
+        let server = Server::builder()
+            .build(format!("0.0.0.0:{port}"))
+            .await
+            .unwrap();
+        let handle = server.start(module);
+
+        let http_client =
+            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+
+        let genesis_accounts = http_client.get_genesis_balances().await.unwrap();
+        assert!(!genesis_accounts.is_empty());
+
+        {
+            handle.stop().unwrap();
+            handle.stopped().await;
+        }
+    })
+    .await
+}

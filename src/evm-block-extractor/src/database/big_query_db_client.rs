@@ -18,11 +18,14 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 
-use super::DatabaseClient;
+use super::{AccountBalance, DatabaseClient};
 
 const BQ_EXE_RESULTS_TABLE_ID: &str = "exe_results";
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";
 const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
+const BQ_KEY_VALUE_TABLE_ID: &str = "key_value_data";
+
+const GENESIS_BALANCES_KEY: &str = "genesis_balances";
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
@@ -145,6 +148,13 @@ impl BigQueryDbClient {
                     TableFieldSchema::integer("block_number"),
                 ],
             ),
+            (
+                BQ_KEY_VALUE_TABLE_ID,
+                vec![
+                    TableFieldSchema::string("key"),
+                    TableFieldSchema::json("data"),
+                ],
+            ),
         ];
 
         // Check each table and create if it does not exist
@@ -173,6 +183,44 @@ impl BigQueryDbClient {
 
         Ok(())
     }
+
+    async fn fetch_key_value_data<D: DeserializeOwned>(&self, key: &str) -> anyhow::Result<D> {
+        let query_request = QueryRequest {
+            query_parameters: Some(vec![QueryParameter {
+                name: Some("key".to_string()),
+                parameter_type: Some(QueryParameterType {
+                    r#type: "STRING".to_string(),
+                    ..Default::default()
+                }),
+                parameter_value: Some(QueryParameterValue {
+                    value: Some(key.to_string()),
+                    ..Default::default()
+                }),
+            }]),
+            query: format!(
+                "SELECT data FROM `{project_id}.{dataset_id}.{table_id}` WHERE key = @key",
+                project_id = self.project_id,
+                dataset_id = self.dataset_id,
+                table_id = BQ_KEY_VALUE_TABLE_ID,
+            ),
+            ..Default::default()
+        };
+
+        self.execute_query(query_request).await
+    }
+
+    async fn insert_key_value_data<D: Serialize>(&self, key: &str, data: D) -> anyhow::Result<()> {
+        let key_value_row = TableDataInsertAllRequestRows {
+            insert_id: Some(key.to_string()),
+            json: serde_json::to_value(data)?,
+        };
+
+        log::debug!("Inserting key value data with key [{}]", key);
+    
+        self.insert_batch_data(BQ_KEY_VALUE_TABLE_ID, vec![key_value_row])
+            .await
+    }
+
 }
 
 #[async_trait::async_trait]
@@ -210,6 +258,7 @@ impl DatabaseClient for BigQueryDbClient {
         delete_table(BQ_BLOCKS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_EXE_RESULTS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_KEY_VALUE_TABLE_ID.to_owned()).await?;
 
         Ok(())
     }
@@ -457,6 +506,14 @@ impl DatabaseClient for BigQueryDbClient {
                 0
             ))
         }
+    }
+
+    async fn get_genesis_balances(&self) -> anyhow::Result<Vec<AccountBalance>> {
+        self.fetch_key_value_data(GENESIS_BALANCES_KEY).await
+    }
+
+    async fn insert_genesis_balances(&self, genesis_balances: &[AccountBalance]) -> anyhow::Result<()> {
+        self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances).await
     }
 }
 
