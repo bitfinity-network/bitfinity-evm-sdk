@@ -3,9 +3,10 @@ use ::sqlx::*;
 use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, TransactionReceipt, H256};
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use sqlx::postgres::PgRow;
 
-use super::DatabaseClient;
+use super::{AccountBalance, DatabaseClient};
 
 static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migrations");
 
@@ -20,7 +21,36 @@ impl PostgresDbClient {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+
+    async fn fetch_key_value_data<D: DeserializeOwned>(
+        &self,
+        key: &str,
+    ) -> anyhow::Result<Option<D>> {
+        let row = sqlx::query("SELECT data FROM EVM_KEY_VALUE_DATA WHERE KEY = $1")
+            .bind(key)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Error getting value data for key {}: {:?}", key, e))?;
+
+        if let Some(row) = row {
+            from_row_value(&row, 0).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn insert_key_value_data<D: Serialize>(&self, key: &str, data: D) -> anyhow::Result<()> {
+        sqlx::query("INSERT INTO EVM_KEY_VALUE_DATA (key, data) VALUES ($1, $2)")
+            .bind(key)
+            .bind(serde_json::to_value(data)?)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Error inserting value data for key {}: {:?}", key, e))
+            .map(|_| ())
+    }
 }
+
+const GENESIS_BALANCES_KEY: &str = "genesis_balances";
 
 #[async_trait::async_trait]
 impl DatabaseClient for PostgresDbClient {
@@ -46,7 +76,7 @@ impl DatabaseClient for PostgresDbClient {
 
     async fn clear(&self) -> anyhow::Result<()> {
         log::warn!("Postgres tables are being cleared");
-        sqlx::query("TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_TRANSACTION_EXE_RESULT")
+        sqlx::query("TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_TRANSACTION_EXE_RESULT, EVM_KEY_VALUE_DATA")
             .execute(&self.pool)
             .await?;
 
@@ -176,6 +206,18 @@ impl DatabaseClient for PostgresDbClient {
             .await
             .and_then(|row| row.try_get::<i64, _>(0).map(|n| n as u64))
             .map_err(|e| anyhow::anyhow!("Error getting earliest block number: {:?}", e))
+    }
+
+    async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>> {
+        self.fetch_key_value_data(GENESIS_BALANCES_KEY).await
+    }
+
+    async fn insert_genesis_balances(
+        &self,
+        genesis_balances: &[AccountBalance],
+    ) -> anyhow::Result<()> {
+        self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances)
+            .await
     }
 }
 

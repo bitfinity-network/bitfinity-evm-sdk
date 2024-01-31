@@ -2,7 +2,15 @@ pub mod big_query_db_client;
 pub mod postgres_db_client;
 
 use did::transaction::StorableExecutionResult;
-use did::{Block, Transaction, TransactionReceipt, H256};
+use did::{Block, Transaction, TransactionReceipt, H160, H256, U256};
+use serde::{Deserialize, Serialize};
+
+/// Account balance
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AccountBalance {
+    pub address: H160,
+    pub balance: U256,
+}
 
 /// A trait for interacting with a blockchain database
 #[async_trait::async_trait]
@@ -35,6 +43,15 @@ pub trait DatabaseClient: Send + Sync {
         blocks: &[Block<H256>],
         receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
+    ) -> anyhow::Result<()>;
+
+    /// Get genesis balances
+    async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>>;
+
+    /// Insert genesis balances
+    async fn insert_genesis_balances(
+        &self,
+        genesis_balances: &[AccountBalance],
     ) -> anyhow::Result<()>;
 
     /// Get a transaction receipt from the database

@@ -1,19 +1,18 @@
-use did::{
-    block::{ExeResult, TransactOut},
-    transaction::{Bloom, StorableExecutionResult},
-    H160,
-};
-use ethereum_json_rpc_client::{reqwest::ReqwestClient, Client, EthJsonRcpClient};
-use ethers_core::types::{BlockNumber, Transaction, H256};
-use evm_block_extractor::{
-    database::DatabaseClient,
-    rpc::{EthImpl, EthServer, ICServer},
-};
-use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
-use jsonrpsee::{server::Server, RpcModule};
-use serde_json::json;
 use std::future::Future;
 use std::sync::Arc;
+
+use did::block::{ExeResult, TransactOut};
+use did::transaction::{Bloom, StorableExecutionResult};
+use did::{H160, U256};
+use ethereum_json_rpc_client::reqwest::ReqwestClient;
+use ethereum_json_rpc_client::{Client, EthJsonRcpClient};
+use ethers_core::types::{BlockNumber, Transaction, H256};
+use evm_block_extractor::database::{AccountBalance, DatabaseClient};
+use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
+use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
+use jsonrpsee::server::{Server, ServerHandle};
+use jsonrpsee::RpcModule;
+use serde_json::json;
 
 use crate::test_with_clients;
 
@@ -74,17 +73,7 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
 #[tokio::test]
 async fn test_get_blocks_and_receipts() {
     with_filled_db(|db_client| async {
-        let eth = EthImpl::new(db_client);
-        let mut module = RpcModule::new(());
-        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
-        module.merge(ICServer::into_rpc(eth)).unwrap();
-
-        let port = port_check::free_local_port_in_range(9000, 9099).unwrap();
-        let server = Server::builder()
-            .build(format!("0.0.0.0:{port}"))
-            .await
-            .unwrap();
-        let handle = server.start(module);
+        let (port, handle) = new_server(db_client).await;
 
         let http_client =
             EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
@@ -127,17 +116,7 @@ async fn test_get_blocks_and_receipts() {
 #[tokio::test]
 async fn test_get_blocks_rlp() {
     with_filled_db(|db_client| async {
-        let eth = EthImpl::new(db_client);
-        let mut module = RpcModule::new(());
-        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
-        module.merge(ICServer::into_rpc(eth)).unwrap();
-
-        let port = port_check::free_local_port_in_range(9100, 9199).unwrap();
-        let server = Server::builder()
-            .build(format!("0.0.0.0:{port}"))
-            .await
-            .unwrap();
-        let handle = server.start(module);
+        let (port, handle) = new_server(db_client).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         // Test first five blocks
@@ -193,17 +172,7 @@ async fn test_get_blocks_rlp() {
 #[tokio::test]
 async fn test_batched_request() {
     with_filled_db(|db_client| async {
-        let eth = EthImpl::new(db_client);
-        let mut module = RpcModule::new(());
-        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
-        module.merge(ICServer::into_rpc(eth)).unwrap();
-
-        let port = port_check::free_local_port_in_range(9200, 9299).unwrap();
-        let server = Server::builder()
-            .build(format!("0.0.0.0:{port}"))
-            .await
-            .unwrap();
-        let handle = server.start(module);
+        let (port, handle) = new_server(db_client).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = Request::Batch(vec![
@@ -247,4 +216,79 @@ async fn test_batched_request() {
         }
     })
     .await
+}
+
+#[tokio::test]
+async fn test_get_genesis_accounts() {
+    test_with_clients(|db_client| async move {
+        // Arrange
+        db_client.init(None, false).await.unwrap();
+
+        let (port, handle) = new_server(db_client.clone()).await;
+
+        let http_client =
+            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+
+        // Test on empty database
+        {
+            // Act
+            let genesis_accounts = http_client.get_genesis_balances().await.unwrap();
+
+            // Assert
+            assert!(genesis_accounts.is_empty());
+        }
+
+        // Test with existing genesis accounts
+        {
+            // Arrange
+            let genesis_balances = vec![
+                AccountBalance {
+                    address: H160::from(ethers_core::types::H160::random()),
+                    balance: U256::from(100_u64),
+                },
+                AccountBalance {
+                    address: H160::from(ethers_core::types::H160::random()),
+                    balance: U256::from(200_u64),
+                },
+            ];
+
+            // Act
+            db_client
+                .insert_genesis_balances(&genesis_balances)
+                .await
+                .unwrap();
+
+            let genesis_accounts = http_client.get_genesis_balances().await.unwrap();
+            let genesis_accounts: Vec<AccountBalance> = genesis_accounts
+                .into_iter()
+                .map(|account| AccountBalance {
+                    address: account.0.into(),
+                    balance: account.1.into(),
+                })
+                .collect();
+
+            // Assert
+            assert_eq!(genesis_accounts, genesis_balances);
+        }
+
+        {
+            handle.stop().unwrap();
+            handle.stopped().await;
+        }
+    })
+    .await
+}
+
+async fn new_server(db_client: Arc<dyn DatabaseClient>) -> (u16, ServerHandle) {
+    let eth = EthImpl::new(db_client);
+    let mut module = RpcModule::new(());
+    module.merge(EthServer::into_rpc(eth.clone())).unwrap();
+    module.merge(ICServer::into_rpc(eth)).unwrap();
+
+    loop {
+        let port = port_check::free_local_port().unwrap();
+        if let Ok(server) = Server::builder().build(format!("0.0.0.0:{port}")).await {
+            return (port, server.start(module));
+        }
+    }
 }

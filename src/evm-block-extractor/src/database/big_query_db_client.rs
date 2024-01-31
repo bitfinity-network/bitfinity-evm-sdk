@@ -18,11 +18,14 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 
-use super::DatabaseClient;
+use super::{AccountBalance, DatabaseClient};
 
 const BQ_EXE_RESULTS_TABLE_ID: &str = "exe_results";
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";
 const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
+const BQ_KEY_VALUE_TABLE_ID: &str = "key_value_data";
+
+const GENESIS_BALANCES_KEY: &str = "genesis_balances";
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
@@ -67,7 +70,16 @@ impl BigQueryDbClient {
         })
     }
 
-    async fn execute_query<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
+    async fn query_one<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
+        self.query_one_optional(query)
+            .await?
+            .ok_or(anyhow::anyhow!("No data found for the query"))
+    }
+
+    async fn query_one_optional<T: DeserializeOwned>(
+        &self,
+        query: QueryRequest,
+    ) -> anyhow::Result<Option<T>> {
         let mut response = self.client.job().query(&self.project_id, query).await?;
 
         if response.next_row() {
@@ -79,12 +91,11 @@ impl BigQueryDbClient {
 
             let result: T = serde_json::from_str(&result_str)?;
 
-            Ok(result)
+            Ok(Some(result))
         } else {
-            Err(anyhow::anyhow!("No data found for the query"))
+            Ok(None)
         }
     }
-
     async fn insert_batch_data(
         &self,
         table_id: &str,
@@ -109,6 +120,8 @@ impl BigQueryDbClient {
 
     async fn create_tables_if_not_present(&self) -> anyhow::Result<()> {
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
+
+        log::info!("Creating tables if not present");
 
         // Make sure the dataset exists
         if self
@@ -145,6 +158,13 @@ impl BigQueryDbClient {
                     TableFieldSchema::integer("block_number"),
                 ],
             ),
+            (
+                BQ_KEY_VALUE_TABLE_ID,
+                vec![
+                    TableFieldSchema::string("key"),
+                    TableFieldSchema::json("data"),
+                ],
+            ),
         ];
 
         // Check each table and create if it does not exist
@@ -173,6 +193,51 @@ impl BigQueryDbClient {
 
         Ok(())
     }
+
+    async fn fetch_key_value_data<D: DeserializeOwned>(
+        &self,
+        key: &str,
+    ) -> anyhow::Result<Option<D>> {
+        let query_request = QueryRequest {
+            query_parameters: Some(vec![QueryParameter {
+                name: Some("key".to_string()),
+                parameter_type: Some(QueryParameterType {
+                    r#type: "STRING".to_string(),
+                    ..Default::default()
+                }),
+                parameter_value: Some(QueryParameterValue {
+                    value: Some(key.to_string()),
+                    ..Default::default()
+                }),
+            }]),
+            query: format!(
+                "SELECT data FROM `{project_id}.{dataset_id}.{table_id}` WHERE key = @key",
+                project_id = self.project_id,
+                dataset_id = self.dataset_id,
+                table_id = BQ_KEY_VALUE_TABLE_ID,
+            ),
+            ..Default::default()
+        };
+
+        self.query_one_optional(query_request).await
+    }
+
+    async fn insert_key_value_data<D: Serialize>(&self, key: &str, data: D) -> anyhow::Result<()> {
+        let json = KeyValueDataRow {
+            key: key.to_string(),
+            data: serde_json::to_value(data).expect("Failed to serialize data"),
+        };
+
+        let key_value_row = TableDataInsertAllRequestRows {
+            insert_id: Some(key.to_string()),
+            json: serde_json::to_value(json)?,
+        };
+
+        log::debug!("Inserting key value data with key [{}]", key);
+
+        self.insert_batch_data(BQ_KEY_VALUE_TABLE_ID, vec![key_value_row])
+            .await
+    }
 }
 
 #[async_trait::async_trait]
@@ -185,7 +250,6 @@ impl DatabaseClient for BigQueryDbClient {
                 if !self.check_if_same_block_hash(&block).await? {
                     if reset_database {
                         self.clear().await?;
-                        self.create_tables_if_not_present().await?;
                     } else {
                         return Err(anyhow::anyhow!(
                             "The block hash in the database is different from the one in the block"
@@ -210,8 +274,9 @@ impl DatabaseClient for BigQueryDbClient {
         delete_table(BQ_BLOCKS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_EXE_RESULTS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_KEY_VALUE_TABLE_ID.to_owned()).await?;
 
-        Ok(())
+        self.create_tables_if_not_present().await
     }
 
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>> {
@@ -236,7 +301,7 @@ impl DatabaseClient for BigQueryDbClient {
             ..Default::default()
         };
 
-        self.execute_query(query_request).await
+        self.query_one(query_request).await
     }
 
     async fn get_full_block_by_number(
@@ -402,7 +467,7 @@ impl DatabaseClient for BigQueryDbClient {
             ..Default::default()
         };
 
-        let exe_result: StorableExecutionResult = self.execute_query(query_request).await?;
+        let exe_result: StorableExecutionResult = self.query_one(query_request).await?;
 
         Ok(TransactionReceipt::from(exe_result))
     }
@@ -458,6 +523,18 @@ impl DatabaseClient for BigQueryDbClient {
             ))
         }
     }
+
+    async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>> {
+        self.fetch_key_value_data(GENESIS_BALANCES_KEY).await
+    }
+
+    async fn insert_genesis_balances(
+        &self,
+        genesis_balances: &[AccountBalance],
+    ) -> anyhow::Result<()> {
+        self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances)
+            .await
+    }
 }
 
 /// A row in the BigQuery table
@@ -481,4 +558,12 @@ pub struct TransactionRow {
     #[serde(serialize_with = "serialize_json_as_string")]
     transaction: Value,
     block_number: u64,
+}
+
+/// A row in the BigQuery table
+#[derive(Debug, Serialize)]
+pub struct KeyValueDataRow {
+    key: String,
+    #[serde(serialize_with = "serialize_json_as_string")]
+    data: Value,
 }
