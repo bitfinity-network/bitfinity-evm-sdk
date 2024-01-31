@@ -6,7 +6,7 @@ use did::{Block, Transaction, TransactionReceipt, H160, H256, U256};
 use serde::{Deserialize, Serialize};
 
 /// Account balance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AccountBalance {
     pub address: H160, 
     pub balance: U256

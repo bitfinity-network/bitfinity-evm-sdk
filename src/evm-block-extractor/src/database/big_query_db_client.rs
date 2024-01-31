@@ -116,6 +116,8 @@ impl BigQueryDbClient {
     async fn create_tables_if_not_present(&self) -> anyhow::Result<()> {
         let dataset = Dataset::new(&self.project_id, &self.dataset_id);
 
+        log::info!("Creating tables if not present");
+
         // Make sure the dataset exists
         if self
             .client
@@ -213,9 +215,14 @@ impl BigQueryDbClient {
     }
 
     async fn insert_key_value_data<D: Serialize>(&self, key: &str, data: D) -> anyhow::Result<()> {
+        let json = KeyValueDataRow {
+            key: key.to_string(),
+            data: serde_json::to_value(data).expect("Failed to serialize data"),
+        };
+
         let key_value_row = TableDataInsertAllRequestRows {
             insert_id: Some(key.to_string()),
-            json: serde_json::to_value(data)?,
+            json: serde_json::to_value(json)?,
         };
 
         log::debug!("Inserting key value data with key [{}]", key);
@@ -236,7 +243,6 @@ impl DatabaseClient for BigQueryDbClient {
                 if !self.check_if_same_block_hash(&block).await? {
                     if reset_database {
                         self.clear().await?;
-                        self.create_tables_if_not_present().await?;
                     } else {
                         return Err(anyhow::anyhow!(
                             "The block hash in the database is different from the one in the block"
@@ -263,7 +269,7 @@ impl DatabaseClient for BigQueryDbClient {
         delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_KEY_VALUE_TABLE_ID.to_owned()).await?;
 
-        Ok(())
+        self.create_tables_if_not_present().await
     }
 
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>> {
@@ -541,4 +547,12 @@ pub struct TransactionRow {
     #[serde(serialize_with = "serialize_json_as_string")]
     transaction: Value,
     block_number: u64,
+}
+
+/// A row in the BigQuery table
+#[derive(Debug, Serialize)]
+pub struct KeyValueDataRow {
+    key: String,
+    #[serde(serialize_with = "serialize_json_as_string")]
+    data: Value,
 }

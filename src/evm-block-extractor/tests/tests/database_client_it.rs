@@ -504,9 +504,34 @@ async fn test_insert_and_fetch_genesis_accounts() {
             },
         ];
 
-        // There should be no genesis balances
+        // There should be no genesis balances when the database is empty
         {
             // Act
+            let balances = db_client.get_genesis_balances().await.unwrap();
+
+            // Assert
+            assert!(balances.is_none());
+        }
+
+        // Insert genesis balances
+        {
+            // Act
+            db_client
+                .insert_genesis_balances(&genesis_balances)
+                .await
+                .unwrap();
+
+            let balances = db_client.get_genesis_balances().await.unwrap();
+
+            // Assert
+            assert!(balances.is_some());
+            assert_eq!(balances.unwrap(), genesis_balances);
+        }
+
+        // There should be no genesis balances when the database is cleared
+        {
+            // Act
+            db_client.clear().await.unwrap();
             let balances = db_client.get_genesis_balances().await.unwrap();
 
             // Assert
