@@ -1,6 +1,7 @@
 use did::block::ExeResult;
 use did::transaction::StorableExecutionResult;
-use did::{Block, Transaction, H256, U256, U64};
+use did::{Block, Transaction, H160, H256, U256, U64};
+use evm_block_extractor::database::AccountBalance;
 
 use crate::test_with_clients;
 
@@ -482,6 +483,35 @@ async fn test_insertion_of_txs_and_receipts_with_no_blocks() {
         let block = db_client.get_block_by_number(1).await;
 
         assert!(block.is_err());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_insert_and_fetch_genesis_accounts() {
+    test_with_clients(|db_client| async move {
+        // Arrange
+        db_client.init(None, false).await.unwrap();
+
+        let genesis_balances = vec![
+            AccountBalance {
+                address: H160::from(ethereum_types::H160::random()),
+                balance: U256::from(100_u64),
+            },
+            AccountBalance {
+                address: H160::from(ethereum_types::H160::random()),
+                balance: U256::from(200_u64),
+            },
+        ];
+
+        // There should be no genesis balances
+        {
+            // Act
+            let balances = db_client.get_genesis_balances().await.unwrap();
+
+            // Assert
+            assert!(balances.is_none());
+        }
     })
     .await;
 }

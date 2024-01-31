@@ -70,7 +70,11 @@ impl BigQueryDbClient {
         })
     }
 
-    async fn execute_query<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
+    async fn query_one<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<T> {
+        self.query_one_optional(query).await?.ok_or(anyhow::anyhow!("No data found for the query"))
+    }
+
+    async fn query_one_optional<T: DeserializeOwned>(&self, query: QueryRequest) -> anyhow::Result<Option<T>> {
         let mut response = self.client.job().query(&self.project_id, query).await?;
 
         if response.next_row() {
@@ -82,12 +86,11 @@ impl BigQueryDbClient {
 
             let result: T = serde_json::from_str(&result_str)?;
 
-            Ok(result)
+            Ok(Some(result))
         } else {
-            Err(anyhow::anyhow!("No data found for the query"))
+            Ok(None)
         }
-    }
-
+    } 
     async fn insert_batch_data(
         &self,
         table_id: &str,
@@ -184,7 +187,7 @@ impl BigQueryDbClient {
         Ok(())
     }
 
-    async fn fetch_key_value_data<D: DeserializeOwned>(&self, key: &str) -> anyhow::Result<D> {
+    async fn fetch_key_value_data<D: DeserializeOwned>(&self, key: &str) -> anyhow::Result<Option<D>> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![QueryParameter {
                 name: Some("key".to_string()),
@@ -206,7 +209,7 @@ impl BigQueryDbClient {
             ..Default::default()
         };
 
-        self.execute_query(query_request).await
+        self.query_one_optional(query_request).await
     }
 
     async fn insert_key_value_data<D: Serialize>(&self, key: &str, data: D) -> anyhow::Result<()> {
@@ -285,7 +288,7 @@ impl DatabaseClient for BigQueryDbClient {
             ..Default::default()
         };
 
-        self.execute_query(query_request).await
+        self.query_one(query_request).await
     }
 
     async fn get_full_block_by_number(
@@ -451,7 +454,7 @@ impl DatabaseClient for BigQueryDbClient {
             ..Default::default()
         };
 
-        let exe_result: StorableExecutionResult = self.execute_query(query_request).await?;
+        let exe_result: StorableExecutionResult = self.query_one(query_request).await?;
 
         Ok(TransactionReceipt::from(exe_result))
     }
@@ -508,7 +511,7 @@ impl DatabaseClient for BigQueryDbClient {
         }
     }
 
-    async fn get_genesis_balances(&self) -> anyhow::Result<Vec<AccountBalance>> {
+    async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>> {
         self.fetch_key_value_data(GENESIS_BALANCES_KEY).await
     }
 

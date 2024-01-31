@@ -22,13 +22,18 @@ impl PostgresDbClient {
         Self { pool }
     }
 
-    async fn fetch_key_value_data<D: DeserializeOwned>(&self, key: &str) -> anyhow::Result<D> {
-        sqlx::query("SELECT data FROM EVM_KEY_VALUE_DATA WHERE KEY = $1")
+    async fn fetch_key_value_data<D: DeserializeOwned>(&self, key: &str) -> anyhow::Result<Option<D>> {
+        let row = sqlx::query("SELECT data FROM EVM_KEY_VALUE_DATA WHERE KEY = $1")
             .bind(key)
-            .fetch_one(&self.pool)
+            .fetch_optional(&self.pool)
             .await
-            .map_err(|e| anyhow::anyhow!("Error getting value data for key {}: {:?}", key, e))
-            .and_then(|row| from_row_value(&row, 0))
+            .map_err(|e| anyhow::anyhow!("Error getting value data for key {}: {:?}", key, e))?;
+
+        if let Some(row) = row {
+            from_row_value(&row, 0).map(Some)
+        } else {    
+            Ok(None)
+        }
     }
 
     async fn insert_key_value_data<D: Serialize>(&self, key: &str, data: D) -> anyhow::Result<()> {
@@ -201,7 +206,7 @@ impl DatabaseClient for PostgresDbClient {
             .map_err(|e| anyhow::anyhow!("Error getting earliest block number: {:?}", e))
     }
 
-    async fn get_genesis_balances(&self) -> anyhow::Result<Vec<AccountBalance>> {
+    async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>> {
         self.fetch_key_value_data(GENESIS_BALANCES_KEY).await
     }
 

@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 /// Account balance
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountBalance {
-    address: H160, 
-    balance: U256
+    pub address: H160, 
+    pub balance: U256
 }
 
 /// A trait for interacting with a blockchain database
@@ -46,7 +46,7 @@ pub trait DatabaseClient: Send + Sync {
     ) -> anyhow::Result<()>;
 
     /// Get genesis balances
-    async fn get_genesis_balances(&self) -> anyhow::Result<Vec<AccountBalance>>;    
+    async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>>;
 
     /// Insert genesis balances
     async fn insert_genesis_balances(&self, genesis_balances: &[AccountBalance]) -> anyhow::Result<()>;
