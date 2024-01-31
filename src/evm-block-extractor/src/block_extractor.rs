@@ -126,25 +126,26 @@ impl BlockExtractor {
     async fn collect_genesis_balances(&self) -> anyhow::Result<()> {
         if self.blockchain.get_genesis_balances().await?.is_some() {
             log::debug!("Genesis balances already present in the DB. Skipping");
-        } else {
-            log::info!("Genesis balances not present in the DB. Collecting them");
+            return Ok(());
+        }
 
-            match self.client.get_genesis_balances().await {
-                Ok(genesis_balances) => {
-                    let genesis_balances = genesis_balances
-                        .into_iter()
-                        .map(|(address, balance)| AccountBalance {
-                            address: address.into(),
-                            balance: balance.into(),
-                        })
-                        .collect::<Vec<_>>();
-                    self.blockchain
-                        .insert_genesis_balances(&genesis_balances)
-                        .await?;
-                }
-                Err(e) => {
-                    log::error!("Error getting genesis balances: {:?}. The process will not be stopped but there will be missing genesis balances in the DB", e);
-                }
+        log::info!("Genesis balances not present in the DB. Collecting them");
+
+        match self.client.get_genesis_balances().await {
+            Ok(genesis_balances) => {
+                let genesis_balances = genesis_balances
+                    .into_iter()
+                    .map(|(address, balance)| AccountBalance {
+                        address: address.into(),
+                        balance: balance.into(),
+                    })
+                    .collect::<Vec<_>>();
+                self.blockchain
+                    .insert_genesis_balances(&genesis_balances)
+                    .await?;
+            }
+            Err(e) => {
+                log::error!("Error getting genesis balances: {:?}. The process will not be stopped but there will be missing genesis balances in the DB", e);
             }
         }
 
