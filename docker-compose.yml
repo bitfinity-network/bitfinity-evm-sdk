@@ -1,0 +1,24 @@
+version: "3.3"
+
+#
+# This docker-compose file is used to start the services for local testing.
+#
+
+services:
+
+  db:
+    image: "postgres:11-alpine"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+
+
+  extractor:
+    image: "evm-blockchain-extractor:latest"
+    build: 
+      dockerfile: Dockerfile_evm_block_extractor
+    ports:
+      - '8080:8080'
+    command: --rpc-url https://testnet.bitfinity.network --postgres --username postgres --password postgres --database-name postgres --database-url db

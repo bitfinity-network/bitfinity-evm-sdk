@@ -1,16 +1,8 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.75 as chef
+FROM rust:1.75 as builder
 WORKDIR /app
 
-FROM chef as planner
-COPY ../../ .
+ADD . .
 
-RUN cargo chef prepare  --recipe-path recipe.json
-
-FROM chef as builder
-COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
-
-COPY . .
 RUN cargo build --release --bin evm-block-extractor
 
 FROM debian:bookworm-slim AS runtime
@@ -36,10 +28,7 @@ RUN apt-get update -y \
 
 COPY --from=builder /app/target/release/evm-block-extractor /app/evm-block-extractor
 
-
-
 EXPOSE 8080
 
-
-CMD ./evm-block-extractor -s 0.0.0.0:8080 --bigquery -p $PROJECT_ID -d $DATASET
+ENTRYPOINT ["./evm-block-extractor"]
 

@@ -19,7 +19,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 )]
 pub struct ExtractorArgs {
     /// The server address to bind to serve JSON RPC requests
-    #[arg(long = "server-address", short('s'), default_value = "127.0.0.1:8080")]
+    #[arg(long = "server-address", short('s'), default_value = "0.0.0.0:8080")]
     pub server_address: String,
 
     /// The JSON-RPC URL of the remote EVMC instance from which to extract blocks
@@ -86,10 +86,10 @@ pub enum Database {
         #[arg(long)]
         database_url: String,
         /// The port of the Postgres database
-        #[arg(long)]
+        #[arg(long, default_value = "5432")]
         database_port: u16,
         /// Demand SSL connection
-        #[arg(long)]
+        #[arg(long, default_value = "false")]
         require_ssl: bool,
     },
 }
