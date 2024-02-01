@@ -38,7 +38,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )));
     let db_client = config.command.clone().build_client().await?;
 
-    // Start the job executor
     let job_executor = JobExecutor::new_with_local_tz();
 
     // Configure and start the block extractor task
@@ -68,25 +67,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .await;
     }
 
-    // Subscribe to the termination signals
-    {
-        let job_executor = job_executor.clone();
-        tokio::spawn(async move {
-            if let Err(err) = tokio::signal::ctrl_c().await {
-                error!("unable to listen for shutdown signal: {err}");
-            }
-            if let Err(err) = job_executor.stop(true).await {
-                error!("failed to shutdown the job executor gracefully: {err}");
-            };
-        });
-    }
-
     // Start the job executor
     let job_executor_handle = job_executor.run().await?;
 
     // Start JSON RPC server
-    let server = server_start(&config.server_address, db_client).await?;
+    let server_handle = server_start(&config.server_address, db_client).await?;
 
+    // Subscribe to the termination signals
     match tokio::signal::ctrl_c().await {
         Ok(_) => {
             info!("Received shutdown signal");
@@ -94,11 +81,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Err(err) => error!("Failed to listen for shutdown signal: {err}"),
     }
 
-    job_executor_handle
-        .await
-        .expect("error when running job executor");
+    // Stop the world
+    {
+        job_executor_handle
+            .await
+            .expect("error when running job executor");
 
-    server_stop(server).await?;
+        server_stop(server_handle).await?;
+    }
 
     Ok(())
 }
