@@ -11,7 +11,7 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY . .
-RUN cargo build --release --bin evm-block-extractor-server
+RUN cargo build --release --bin evm-block-extractor
 
 FROM debian:bookworm-slim AS runtime
 
@@ -34,12 +34,12 @@ RUN apt-get update -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/target/release/evm-block-extractor-server /app/evm-block-extractor-server
+COPY --from=builder /app/target/release/evm-block-extractor /app/evm-block-extractor
 
 
 
 EXPOSE 8080
 
 
-CMD ./evm-block-extractor-server -s 0.0.0.0:8080 --bigquery -p $PROJECT_ID -d $DATASET
+CMD ./evm-block-extractor -s 0.0.0.0:8080 --bigquery -p $PROJECT_ID -d $DATASET
 
