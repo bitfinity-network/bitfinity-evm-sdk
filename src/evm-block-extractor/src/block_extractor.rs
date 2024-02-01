@@ -2,10 +2,42 @@ use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
-use itertools::Itertools;
+use ethers_core::types::BlockNumber;
+use log::*;
 use tokio::time::Duration;
 
-use crate::database::{AccountBalance, DatabaseClient};
+use crate::{config::ExtractorArgs, database::{AccountBalance, DatabaseClient}};
+
+/// Starts the block extractor process
+pub async fn start_extractor(config: ExtractorArgs, db_client: Arc<dyn DatabaseClient>, evm_client: Arc<EthJsonRcpClient<ReqwestClient>>) -> anyhow::Result<()> {
+
+    let earliest_block = evm_client
+        .get_block_by_number(BlockNumber::Earliest)
+        .await?;
+
+    db_client
+        .init(Some(earliest_block.into()), config.reset_db_on_state_change)
+        .await?;
+
+    let mut extractor = BlockExtractor::new(
+        evm_client.clone(),
+        config.request_time_out_secs,
+        config.rpc_batch_size,
+        db_client.clone(),
+    );
+
+    let end_block = evm_client.get_block_number().await?;
+    debug!("latest block number in evm: {}", end_block);
+
+    let start_block = db_client.get_latest_block_number().await?;
+    debug!("latest block number stored: {:?}", start_block);
+
+    extractor
+        .collect_blocks(start_block.map(|b| b + 1).unwrap_or_default(), end_block)
+        .await?;
+
+    Ok(())
+}
 
 /// Extracts blocks from an EVMC and stores them in a database
 pub struct BlockExtractor {
@@ -38,7 +70,7 @@ impl BlockExtractor {
         from_block_inclusive: u64,
         to_block_inclusive: u64,
     ) -> anyhow::Result<(u64, u64)> {
-        log::info!(
+        info!(
             "Getting blocks from {:?} to {}",
             from_block_inclusive,
             to_block_inclusive
@@ -51,7 +83,13 @@ impl BlockExtractor {
         let request_time_out_secs = self.request_time_out_secs;
         let batch_size = self.rpc_batch_size;
 
-        for blocks_batch in &(from_block_inclusive..=to_block_inclusive).chunks(batch_size) {
+        let mut next_from = from_block_inclusive;
+
+        while next_from <= to_block_inclusive {
+            let to = (to_block_inclusive + 1).min(next_from + batch_size as u64);
+            let blocks_batch = next_from..to;
+            next_from = to;
+
             let block_numbers = blocks_batch
                 .into_iter()
                 .map(|block| ethers_core::types::BlockNumber::Number(block.into()));
@@ -94,10 +132,10 @@ impl BlockExtractor {
                 match exe_results {
                     Ok(Ok(mut exe_results)) => all_exe_results.append(&mut exe_results),
                     Ok(Err(e)) => {
-                        log::warn!("Error getting receipts: {:?}. The process will not be stopped but there will be missing receipts in the DB", e);
+                        warn!("Error getting receipts: {:?}. The process will not be stopped but there will be missing receipts in the DB", e);
                     }
                     Err(e) => {
-                        log::warn!("Error getting receipts: {:?}. The process will not be stopped but there will be missing receipts in the DB", e);
+                        warn!("Error getting receipts: {:?}. The process will not be stopped but there will be missing receipts in the DB", e);
                     }
                 }
             }
@@ -125,11 +163,11 @@ impl BlockExtractor {
     /// This collects also the genesis accounts if needed.
     async fn collect_genesis_balances(&self) -> anyhow::Result<()> {
         if self.blockchain.get_genesis_balances().await?.is_some() {
-            log::debug!("Genesis balances already present in the DB. Skipping");
+            debug!("Genesis balances already present in the DB. Skipping");
             return Ok(());
         }
 
-        log::info!("Genesis balances not present in the DB. Collecting them");
+        info!("Genesis balances not present in the DB. Collecting them");
 
         match self.client.get_genesis_balances().await {
             Ok(genesis_balances) => {
@@ -145,7 +183,7 @@ impl BlockExtractor {
                     .await?;
             }
             Err(e) => {
-                log::error!("Error getting genesis balances: {:?}. The process will not be stopped but there will be missing genesis balances in the DB", e);
+                error!("Error getting genesis balances: {:?}. The process will not be stopped but there will be missing genesis balances in the DB", e);
             }
         }
 

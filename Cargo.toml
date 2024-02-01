@@ -50,6 +50,7 @@ ic-storage = { git = "https://github.com/bitfinity-network/canister-sdk", packag
 itertools = "0.12"
 jsonrpc-core = "18.0"
 jsonrpsee = { version = "0.21", features = ["server", "macros"] }
+lightspeed_scheduler = "0.55"
 log = "0.4"
 murmur3 = "0.5"
 num = "0.4"
