@@ -12,26 +12,32 @@ on:
     paths-ignore:
       - '**/README.md'
 
-jobs:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
   build-test:
     name: Build and Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-     
+
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-          targets: wasm32-unknown-unknown
+          targets: wasm32-unknown-unknown, i686-unknown-linux-gnu
 
       - name: test
         run: |
-          export RUST_BACKTRACE="full"
           cargo install ic-wasm
           ./scripts/build.sh
           ./scripts/test.sh
+      - name: test i686-unknown-linux-gnu
+        run: |
+          sudo apt install gcc-multilib
+          ./scripts/test.sh --target i686-unknown-linux-gnu
 
   build-dfx-test:
     if: ${{github.ref_type != 'tag'}}

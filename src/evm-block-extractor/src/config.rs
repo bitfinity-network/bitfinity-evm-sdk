@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use clap::Subcommand;
-use sqlx::postgres::PgConnectOptions;
+use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::PgPool;
 
+use crate::constants::{MAINNET_PREFIX, TESTNET_PREFIX};
 use crate::database::big_query_db_client::BigQueryDbClient;
 use crate::database::postgres_db_client::PostgresDbClient;
 use crate::database::DatabaseClient;
@@ -44,6 +45,9 @@ pub enum Database {
         /// The port of the Postgres database
         #[arg(long)]
         database_port: u16,
+        /// Demand SSL connection
+        #[arg(long)]
+        require_ssl: bool,
     },
 }
 
@@ -60,9 +64,11 @@ impl Database {
                 log::info!("- project-id: {}", project_id);
                 log::info!("- dataset-id: {}", dataset_id);
 
-                if dataset_id != "testnet" && dataset_id != "mainnet" {
+                if !dataset_id.contains(TESTNET_PREFIX) && !dataset_id.contains(MAINNET_PREFIX) {
                     return Err(anyhow::anyhow!(
-                        "Invalid dataset ID. The dataset ID can be one of the following: testnet, mainnet"
+                        "Invalid dataset ID. The dataset ID must be prefixed with {} or {}",
+                        TESTNET_PREFIX,
+                        MAINNET_PREFIX
                     ));
                 }
                 let client = BigQueryDbClient::new(project_id, dataset_id, sa_key).await?;
@@ -74,19 +80,28 @@ impl Database {
                 database_name: database,
                 database_url: host,
                 database_port: port,
+                require_ssl,
             } => {
                 log::info!("Use Postgres database");
                 log::info!("- username: {}", username);
                 log::info!("- database: {}", database);
                 log::info!("- host: {}", host);
                 log::info!("- port: {}", port);
+                log::info!("- require-ssl: {}", require_ssl);
+
+                let ssl_mode = if require_ssl {
+                    PgSslMode::Require
+                } else {
+                    PgSslMode::Prefer
+                };
 
                 let options = PgConnectOptions::new()
                     .username(&username)
                     .password(&password)
                     .database(&database)
                     .host(&host)
-                    .port(port);
+                    .port(port)
+                    .ssl_mode(ssl_mode);
 
                 let pool = PgPool::connect_with(options).await?;
                 Ok(Arc::new(PostgresDbClient::new(pool)))

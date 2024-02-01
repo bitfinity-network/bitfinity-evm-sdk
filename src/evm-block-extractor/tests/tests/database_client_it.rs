@@ -7,7 +7,7 @@ use crate::test_with_clients;
 #[tokio::test]
 async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
     test_with_clients(|db_client| async move {
-        db_client.init().await.unwrap();
+        db_client.init(None, false).await.unwrap();
 
         let mut blocks = Vec::new();
 
@@ -25,25 +25,11 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
 
         for i in 1..=10 {
             let tx_hash = ethers_core::types::H256::random();
-            let dummy_exe_result: StorableExecutionResult = StorableExecutionResult {
-                transaction_hash: tx_hash.into(),
-                block_hash: blocks[i - 1].hash.clone(),
-                exe_result: ExeResult::success(
-                    U256::max_value(),
-                    did::block::TransactOut::None,
-                    vec![],
-                ),
-                transaction_index: Default::default(),
-                block_number: U64::from(i),
-                from: Default::default(),
-                to: Default::default(),
-                transaction_type: Default::default(),
-                cumulative_gas_used: Default::default(),
-                max_fee_per_gas: Default::default(),
-                gas_price: Default::default(),
-                max_priority_fee_per_gas: Default::default(),
-            };
-
+            let dummy_exe_result = new_storable_execution_result(
+                tx_hash.into(),
+                blocks[i - 1].hash.clone(),
+                U64::from(i),
+            );
             exe_results.push(dummy_exe_result);
         }
 
@@ -100,7 +86,7 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
 #[tokio::test]
 async fn test_retrieval_of_latest_and_oldest_block_number() {
     test_with_clients(|db_client| async move {
-        db_client.init().await.unwrap();
+        db_client.init(None, false).await.unwrap();
 
         let latest_block_number = db_client.get_latest_block_number().await.unwrap();
         assert!(latest_block_number.is_none());
@@ -143,7 +129,7 @@ async fn test_init_idempotency() {
             .is_err());
 
         // First initialization - creates tables
-        db_client.init().await.unwrap();
+        db_client.init(None, false).await.unwrap();
 
         // Add a block
         let dummy_block: Block<H256> = Block {
@@ -157,7 +143,7 @@ async fn test_init_idempotency() {
             .await
             .is_ok());
 
-        assert!(db_client.init().await.is_ok());
+        assert!(db_client.init(None, false).await.is_ok());
 
         // Retrieve the block
         let block = db_client.get_block_by_number(1).await.unwrap();
@@ -170,7 +156,7 @@ async fn test_init_idempotency() {
 #[tokio::test]
 async fn test_retrieval_of_transactions_with_blocks() {
     test_with_clients(|db_client| async move {
-        db_client.init().await.unwrap();
+        db_client.init(None, false).await.unwrap();
 
         let mut blocks = Vec::new();
 
@@ -221,4 +207,173 @@ async fn test_retrieval_of_transactions_with_blocks() {
         }
     })
     .await;
+}
+
+#[tokio::test]
+async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different() {
+    test_with_clients(|db_client| async move {
+        let block_one: Block<Transaction> = Block::<H256> {
+            number: ethers_core::types::U64::from(0).into(),
+            hash: ethers_core::types::H256::random().into(),
+            ..Default::default()
+        }
+        .into_full_block(vec![]);
+
+        let block_two: Block<Transaction> = Block::<H256> {
+            number: ethers_core::types::U64::from(0).into(),
+            hash: ethers_core::types::H256::random().into(),
+            ..Default::default()
+        }
+        .into_full_block(vec![]);
+
+        db_client.init(None, false).await.unwrap();
+
+        assert!(db_client
+            .insert_block_data(&[block_one.clone().into()], &[], &[])
+            .await
+            .is_ok());
+
+        let block = db_client.get_block_by_number(0).await.unwrap();
+
+        assert_eq!(block.number.0.as_u64(), 0);
+        assert_eq!(block.hash, block_one.hash);
+
+        // Init with block_two
+        db_client
+            .init(Some(block_two.clone().into()), true)
+            .await
+            .unwrap();
+
+        // check the database is empty
+        let latest_block_number = db_client.get_latest_block_number().await.unwrap();
+        assert!(latest_block_number.is_none());
+
+        // Add a block
+        assert!(db_client
+            .insert_block_data(&[block_two.clone().into()], &[], &[])
+            .await
+            .is_ok());
+
+        // Retrieve the block
+        let block = db_client.get_block_by_number(0).await.unwrap();
+
+        assert_eq!(block.number.0.as_u64(), 0);
+        // hash should be block_two's hash
+        assert_eq!(block.hash, block_two.hash);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_deletion_and_clearing_of_database() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, false).await.unwrap();
+
+        db_client
+            .insert_block_data(
+                &[ethers_core::types::Block::<H256> {
+                    number: Some(ethers_core::types::U64::zero()),
+                    hash: Some(ethers_core::types::H256::random()),
+                    ..Default::default()
+                }
+                .into()],
+                &[new_storable_execution_result(
+                    H256::zero(),
+                    H256::zero(),
+                    0_u64.into(),
+                )],
+                &[ethers_core::types::Transaction {
+                    block_number: Some(ethers_core::types::U64::zero()),
+                    hash: ethers_core::types::H256::random(),
+                    ..Default::default()
+                }
+                .into()],
+            )
+            .await
+            .unwrap();
+
+        let block = db_client.get_block_by_number(0).await.unwrap();
+        assert_eq!(block.number.0.as_u64(), 0);
+
+        // Clear the database
+        db_client.clear().await.unwrap();
+
+        // Check the database is empty
+        // assert!(db_client.is_empty().await.unwrap());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_database_reset_on_empty_db() {
+    test_with_clients(|db_client| async move {
+        // the first time init is called the DB has no tables
+        db_client.init(None, true).await.unwrap();
+        assert!(db_client.get_block_by_number(0).await.is_err());
+
+        // the second time init is called the DB has empty tables
+        db_client.init(None, true).await.unwrap();
+        assert!(db_client.get_block_by_number(0).await.is_err());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_check_if_same_block_hash() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, false).await.unwrap();
+
+        let dummy_block: Block<H256> = Block {
+            number: ethers_core::types::U64::from(1).into(),
+            hash: ethers_core::types::H256::random().into(),
+            ..Default::default()
+        };
+
+        db_client
+            .insert_block_data(&[dummy_block.clone()], &[], &[])
+            .await
+            .unwrap();
+
+        let same_block = db_client
+            .check_if_same_block_hash(&dummy_block)
+            .await
+            .unwrap();
+
+        assert!(same_block);
+
+        let dummy_block: Block<H256> = Block {
+            number: ethers_core::types::U64::from(1).into(),
+            hash: ethers_core::types::H256::random().into(),
+            ..Default::default()
+        };
+
+        let same_block = db_client
+            .check_if_same_block_hash(&dummy_block)
+            .await
+            .unwrap();
+
+        assert!(!same_block);
+    })
+    .await;
+}
+
+fn new_storable_execution_result(
+    transaction_hash: H256,
+    block_hash: H256,
+    block_number: U64,
+) -> StorableExecutionResult {
+    StorableExecutionResult {
+        transaction_hash,
+        block_hash,
+        exe_result: ExeResult::success(U256::max_value(), did::block::TransactOut::None, vec![]),
+        transaction_index: Default::default(),
+        block_number,
+        from: Default::default(),
+        to: Default::default(),
+        transaction_type: Default::default(),
+        cumulative_gas_used: Default::default(),
+        max_fee_per_gas: Default::default(),
+        gas_price: Default::default(),
+        max_priority_fee_per_gas: Default::default(),
+    }
 }

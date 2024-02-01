@@ -1,5 +1,6 @@
 use candid::Principal;
 use did::block::{BlockResult, ExeResult};
+use did::build::BuildData;
 use did::error::Result;
 use did::permission::{Permission, PermissionList};
 use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
@@ -775,5 +776,10 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client
             .query("get_tx_execution_result_by_hash", (hash,))
             .await
+    }
+
+    /// Returns the build data of the canister.
+    pub async fn get_canister_build_data(&self) -> CanisterClientResult<BuildData> {
+        self.client.query("get_canister_build_data", ()).await
     }
 }

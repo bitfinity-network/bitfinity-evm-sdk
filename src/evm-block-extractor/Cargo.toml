@@ -25,7 +25,7 @@ ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = [
 ] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sqlx = { workspace = true, features = ["postgres"] }
+sqlx = { workspace = true, features = ["postgres", "tls-rustls"] }
 tokio = { workspace = true }
 zip = { workspace = true }
 gcp-bigquery-client = { workspace = true }
@@ -34,6 +34,7 @@ jsonrpsee = { workspace = true }
 yup-oauth2 = { workspace = true }
 did = { path = "../did" }
 futures = { workspace = true }
+
 [dev-dependencies]
 rand = { workspace = true }
 tempfile = { workspace = true }

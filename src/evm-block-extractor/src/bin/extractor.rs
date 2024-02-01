@@ -3,6 +3,7 @@ use std::sync::Arc;
 use clap::Parser;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
+use ethers_core::types::BlockNumber;
 use evm_block_extractor::block_extractor::BlockExtractor;
 use evm_block_extractor::config::Database;
 
@@ -33,6 +34,11 @@ struct Args {
 
     #[command(subcommand)]
     command: Database,
+
+    /// Whether to reset the database when the blockchain state changes.
+    /// This is useful for testing environments, but should not be used in production.
+    #[arg(long, default_value = "false")]
+    reset_db_on_state_change: bool,
 }
 
 #[tokio::main]
@@ -46,16 +52,22 @@ async fn main() -> anyhow::Result<()> {
     log::info!("----------------------");
     log::info!("- rpc-url: {}", args.rpc_url);
     log::info!("- request_time_out_secs: {}", args.request_time_out_secs);
+    log::info!(
+        "- reset_db_on_state_change: {}",
+        args.reset_db_on_state_change
+    );
     log::info!("----------------------");
 
-    log::info!("initializing blocks-writer...");
+    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(args.rpc_url)));
 
-    log::info!("blocks-writer initialized");
+    let earliest_block = evm_client
+        .get_block_by_number(BlockNumber::Earliest)
+        .await?;
 
     let db_client = args.command.build_client().await?;
-    db_client.init().await?;
-
-    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(args.rpc_url)));
+    db_client
+        .init(Some(earliest_block.into()), args.reset_db_on_state_change)
+        .await?;
 
     let mut extractor = BlockExtractor::new(
         evm_client.clone(),

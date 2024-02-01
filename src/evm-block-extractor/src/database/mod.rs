@@ -8,7 +8,17 @@ use did::{Block, Transaction, TransactionReceipt, H256};
 #[async_trait::async_trait]
 pub trait DatabaseClient: Send + Sync {
     /// Initialize the database
-    async fn init(&self) -> anyhow::Result<()>;
+    async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()>;
+
+    /// Delete/clear the tables
+    async fn clear(&self) -> anyhow::Result<()>;
+
+    /// Returns whether the block hash corresponds to the one in the db
+    async fn check_if_same_block_hash(&self, block: &Block<H256>) -> anyhow::Result<bool> {
+        let block_number = block.number.0.as_u64();
+        let block_in_db = self.get_block_by_number(block_number).await?;
+        Ok(block.hash == block_in_db.hash)
+    }
 
     /// Get a block from the database
     async fn get_block_by_number(&self, block_number: u64) -> anyhow::Result<Block<H256>>;
