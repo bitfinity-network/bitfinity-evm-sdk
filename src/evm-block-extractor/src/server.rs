@@ -8,8 +8,10 @@ use crate::database::DatabaseClient;
 use crate::rpc::{EthImpl, EthServer, ICServer};
 
 /// Start the RPC server
-pub async fn server_start(server_address: &str, db_client: Arc<dyn DatabaseClient>) -> anyhow::Result<ServerHandle> {
-
+pub async fn server_start(
+    server_address: &str,
+    db_client: Arc<dyn DatabaseClient>,
+) -> anyhow::Result<ServerHandle> {
     info!("Start server");
 
     let server = Server::builder().build(server_address).await?;
@@ -24,7 +26,6 @@ pub async fn server_start(server_address: &str, db_client: Arc<dyn DatabaseClien
     info!("Server started on {}", server.local_addr()?);
 
     Ok(server.start(module))
-
 }
 
 /// Stop the RPC server
@@ -34,4 +35,3 @@ pub async fn server_stop(server: ServerHandle) -> anyhow::Result<()> {
     server.stopped().await;
     Ok(())
 }
-

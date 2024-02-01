@@ -18,7 +18,6 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
     about = "A tool to extract EVM blocks and transactions and serve them through JSON RPC endpoints"
 )]
 pub struct ExtractorArgs {
-
     /// The server address to bind to serve JSON RPC requests
     #[arg(long = "server-address", short('s'), default_value = "127.0.0.1:8080")]
     pub server_address: String,
@@ -50,7 +49,7 @@ pub struct ExtractorArgs {
 
     /// The interval in seconds at which the block extractor job should run
     #[arg(long, default_value = "120")]
-    pub block_extractor_job_interval_seconds: u64
+    pub block_extractor_job_interval_seconds: u64,
 }
 
 #[derive(Subcommand, Debug, Clone)]

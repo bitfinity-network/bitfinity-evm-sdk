@@ -33,7 +33,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     info!("----------------------");
 
-    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(config.remote_rpc_url.clone())));
+    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
+        config.remote_rpc_url.clone(),
+    )));
     let db_client = config.command.clone().build_client().await?;
 
     // Start the job executor
@@ -44,7 +46,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let config = config.clone();
         let evm_client = evm_client.clone();
         let db_client = db_client.clone();
-        
+
         job_executor
             .add_job_with_scheduler(
                 Scheduler::Interval {
@@ -91,10 +93,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         Err(err) => error!("Failed to listen for shutdown signal: {err}"),
     }
-    
+
     job_executor_handle
-    .await
-    .expect("error when running job executor");
+        .await
+        .expect("error when running job executor");
 
     server_stop(server).await?;
 

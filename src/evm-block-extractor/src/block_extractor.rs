@@ -6,11 +6,15 @@ use ethers_core::types::BlockNumber;
 use log::*;
 use tokio::time::Duration;
 
-use crate::{config::ExtractorArgs, database::{AccountBalance, DatabaseClient}};
+use crate::config::ExtractorArgs;
+use crate::database::{AccountBalance, DatabaseClient};
 
 /// Starts the block extractor process
-pub async fn start_extractor(config: ExtractorArgs, db_client: Arc<dyn DatabaseClient>, evm_client: Arc<EthJsonRcpClient<ReqwestClient>>) -> anyhow::Result<()> {
-
+pub async fn start_extractor(
+    config: ExtractorArgs,
+    db_client: Arc<dyn DatabaseClient>,
+    evm_client: Arc<EthJsonRcpClient<ReqwestClient>>,
+) -> anyhow::Result<()> {
     let earliest_block = evm_client
         .get_block_by_number(BlockNumber::Earliest)
         .await?;
@@ -72,8 +76,7 @@ impl BlockExtractor {
     ) -> anyhow::Result<(u64, u64)> {
         info!(
             "Getting blocks from {:?} to {}",
-            from_block_inclusive,
-            to_block_inclusive
+            from_block_inclusive, to_block_inclusive
         );
 
         self.collect_genesis_balances().await?;
