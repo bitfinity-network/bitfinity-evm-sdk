@@ -389,9 +389,9 @@ mod tests {
             \"fromBlock\":\"0x2a\",\
             \"toBlock\":\"latest\",\
             \"topics\":[\
-                \"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef\",\
-                \"0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75\",\
-                \"0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078\"\
+                [\"0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef\"],\
+                [\"0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75\"],\
+                [\"0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078\"]\
         ]}";
         assert_eq!(json, expected_json);
     }
