@@ -2,6 +2,7 @@ version: "3.3"
 
 #
 # This docker-compose file is used to start the services for local testing.
+# It starts a evm-blockchain-extractor connected to a local postgres database.
 #
 
 services:
@@ -16,9 +17,9 @@ services:
 
 
   extractor:
-    image: "evm-blockchain-extractor:latest"
+    image: "evm-block-extractor:latest"
     build: 
-      dockerfile: Dockerfile_evm_block_extractor
+      dockerfile: ./src/evm-block-extractor/Dockerfile
     ports:
-      - '8080:8080'
+      - "8080:8080"
     command: --rpc-url https://testnet.bitfinity.network --postgres --username postgres --password postgres --database-name postgres --database-url db

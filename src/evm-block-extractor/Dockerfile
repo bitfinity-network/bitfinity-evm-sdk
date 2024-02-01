@@ -1,4 +1,8 @@
-FROM rust:1.75 as builder
+#
+# This dockerfile has to be called from the root folder of the project
+# > docker build -f src/evm-block-extractor/Dockerfile -t evm-block-extractor .
+#
+FROM rust:slim-bookworm as builder
 WORKDIR /app
 
 ADD . .
@@ -7,17 +11,8 @@ RUN cargo build --release --bin evm-block-extractor
 
 FROM debian:bookworm-slim AS runtime
 
-# GCP BigQuery Environment Variables
-ARG DATASET
-ARG PROJECT_ID
-ARG GCP_BLOCK_EXTRACTOR_SA_KEY
-
-# Set environment variables
-ENV DATASET=$DATASET \
-    PROJECT_ID=$PROJECT_ID \
-    GCP_BLOCK_EXTRACTOR_SA_KEY=$GCP_BLOCK_EXTRACTOR_SA_KEY
-
 WORKDIR /app
+
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends ca-certificates \
     && update-ca-certificates \

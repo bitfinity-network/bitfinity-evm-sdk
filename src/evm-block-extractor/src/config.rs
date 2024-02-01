@@ -37,7 +37,7 @@ pub struct ExtractorArgs {
     /// Valid values: trace, debug, info, warn, error
     /// Example of a valid filter: "warn,my_crate=info,my_crate::my_mod=debug,[my_span]=trace".
     #[arg(long, default_value = "info")]
-    pub log_level: String,
+    pub log_filter: String,
 
     #[command(subcommand)]
     pub command: Database,

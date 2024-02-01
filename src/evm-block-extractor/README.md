@@ -70,5 +70,14 @@ Th evm-block-extracor is also minimal version of the Ethereum JSON-RPC server wh
 ### Example
 
 ```sh
-curl -X POST --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://127.0.0.1:8080
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://127.0.0.1:8080
+```
+
+## Docker image
+
+The evm-block-extractor docker image is a debian slim based image that allows for simple installation of the service.
+The docker image accepts the same configuration arguments of the plain executor. 
+E.g.:
+```sh
+docker run evm-block-extractor:latest --rpc-url https://testnet.bitfinity.network --postgres --username postgres --password postgres --database-name postgres --database-url 127.0.0.1:5432
 ```

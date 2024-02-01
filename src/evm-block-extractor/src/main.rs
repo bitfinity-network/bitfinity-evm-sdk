@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = ExtractorArgs::parse();
 
     // Initialize logger
-    init_logger(&config.log_level)?;
+    init_logger(&config.log_filter)?;
 
     info!("Emvc Block Extractor");
     info!("----------------------");
