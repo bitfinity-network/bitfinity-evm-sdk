@@ -48,5 +48,5 @@ jobs:
           context: .
           file: ./src/evm-block-extractor/Dockerfile
           push: true
-          tags: latest
-          labels: ${{ steps.meta.outputs.labels }}
+          # tags: latest
+          # labels: ${{ steps.meta.outputs.labels }}
