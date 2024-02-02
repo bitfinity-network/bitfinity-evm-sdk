@@ -15,12 +15,12 @@ pub mod ic;
 pub mod init;
 pub mod integer;
 pub mod keccak;
+pub mod logs;
 pub mod mint_order_exemption;
 pub mod notify;
 pub mod permission;
 pub mod state;
 pub mod transaction;
-pub mod logs;
 
 pub mod fees;
 #[cfg(test)]
