@@ -17,7 +17,7 @@ services:
 
 
   extractor:
-    image: ghcr.io/bitfinity-network/evm-block-extractor:latest
+    image: ghcr.io/bitfinity-network/evm-block-extractor:main
     # image: "evm-block-extractor:latest"
     # build: 
     #   dockerfile: ./src/evm-block-extractor/Dockerfile

@@ -4,8 +4,9 @@ on:
   workflow_dispatch: {}
 
   push:
-    branches:
-      - 'evm_block_extractor_daemon'
+    branches: [main]
+    tags:
+      - 'v*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
