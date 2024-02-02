@@ -60,7 +60,7 @@ Where:
 
 ## Endpoints
 
-Th evm-block-extracor is also minimal version of the Ethereum JSON-RPC server which the following endpoints:
+Th evm-block-extracor is also a minimal version of the Ethereum JSON-RPC server which supports the following endpoints:
 
 - **eth_blockNumber**: Returns the number of most recent block.
 - **eth_getBlockByNumber**: Returns information about a block by block number.
