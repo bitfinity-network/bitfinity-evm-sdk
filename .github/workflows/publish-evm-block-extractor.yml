@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IMAGE_NAME: evm-block-extractor-server
+  IMAGE_NAME: evm-block-extractor
 
 jobs:
   deploy-to-github:
