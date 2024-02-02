@@ -79,5 +79,6 @@ The evm-block-extractor docker image is a debian slim based image that allows fo
 The docker image accepts the same configuration arguments of the plain executor. 
 E.g.:
 ```sh
-docker run evm-block-extractor:latest --rpc-url https://testnet.bitfinity.network --postgres --username postgres --password postgres --database-name postgres --database-url 127.0.0.1:5432
+docker run ghcr.io/bitfinity-network/evm-block-extractor:latest --rpc-url https://testnet.bitfinity.network --postgres --username postgres --password postgres --database-name postgres --database-url 127.0.0.1:5432
 ```
+
