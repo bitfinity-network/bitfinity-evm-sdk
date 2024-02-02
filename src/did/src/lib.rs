@@ -20,6 +20,7 @@ pub mod notify;
 pub mod permission;
 pub mod state;
 pub mod transaction;
+pub mod logs;
 
 pub mod fees;
 #[cfg(test)]
