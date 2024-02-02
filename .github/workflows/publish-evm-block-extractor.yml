@@ -55,7 +55,7 @@ jobs:
         with:
           registry: us-east4-docker.pkg.dev
           username: _json_key
-          password: ${{ secrets.GCP_DOCKER_KEY }}
+          password: ${{ secrets.EXTRACTOR_GCP_DOCKER_KEY }}
 
       - name: Build and push Docker image to GCP Registry
         uses: docker/build-push-action@v5
