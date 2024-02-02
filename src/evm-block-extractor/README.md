@@ -1,58 +1,66 @@
-# EVM Block Extractor And Server
+# EVM Block Extractor
 
-## EVM Block Extractor
+## Introduction
 
-### Introduction
+The EVM block extractor is an advanced tool used to collect EVM blocks and transactions, and send them to a specified data storage. 
+This version is enhanced to handle parallel requests efficiently and integrates with Google Cloud Platform's BigQuery service or Postgres.
 
-The EVM block extractor is an advanced tool used to collect EVM blocks and transactions, and send them to a specified BigQuery dataset endpoint. This version is enhanced to handle parallel requests efficiently and integrates with Google Cloud Platform's BigQuery service.
+## Configuration
 
-### Usage
+### Usage with BigQuery
 
 ```sh
 evm-block-extractor
+  --server-address <server-address>
   --rpc-url <evmc-rpc-url>
-  --dataset-id <bigquery-dataset-id>
   --max-number-of-requests <max-parallel-requests>
   --rpc-batch-size <rpc-batch-size>
+  --bigquery
+  --project-id <bigquery-project-id>
+  --dataset-id <bigquery-dataset-id>
   --sa-key <service-account-key>
 ```
 
 Where:
 
+- **server-address:** The address where the server will be hosted (default: 127.0.0.1:8080).
 - **rpc-url**: is the endpoint of the EVMC json-rpc url
-- **dataset-id**: is the BigQuery dataset id where the data will be sent
 - **max-number-of-requests**: is the maximum number of parallel requests to be sent to the EVMC json-rpc endpoint
 - **rpc-batch-size**: is the number of blocks to be requested in a single batch
+- **dataset-id**: is the BigQuery dataset id where the data will be sent
 - **sa-key**: the service account key in JSON format for GCP authentication.
 
-### Output
 
-The data is sent and stored in the specified BigQuery dataset. This allows for enhanced querying and analysis capabilities using BigQuery's features.
-
-## EVM Block Extractor Server
-
-### Introduction
-
-The EVM block extractor server is a JSON-RPC server for the EVM block extractor. It is integrated with BigQuery and allows for querying the data stored in the BigQuery dataset.
-
-### Usage
+### Usage with Postgres
 
 ```sh
-evm-block-extractor-server
-  --dataset-id <bigquery-dataset-id>
+evm-block-extractor
   --server-address <server-address>
-  --sa-key <service-account-key>
+  --rpc-url <evmc-rpc-url>
+  --max-number-of-requests <max-parallel-requests>
+  --rpc-batch-size <rpc-batch-size>
+  --postgres
+  --username <postgres-db-username>
+  --password <postgres-db-password>
+  --database_name <postgres-db-name>
+  --database_url <postgres-db-url>
+  --database_port <postgres-db-port>
+  --require_ssl <postgres-db-require-ssl>
 ```
 
 Where:
 
-- **dataset-id**: The dataset ID of the BigQuery table.
-- **server-address:** The address where the server will be hosted (default: 127.0.0.1:8080).
-- **sa-key**: The service account key in JSON format for GCP authentication.
+- **username**: Username for the database connection
+- **password**: Password for the database connection
+- **database_name**: database name
+- **database_url**: database IP or URL
+- **database_port**: database port
+- **require_ssl**: whether to use ssl (true/false)
 
-### Endpoints
 
-This is minimal version of the Ethereum JSON-RPC server. It supports the following endpoints:
+## Endpoints
+
+Th evm-block-extracor is also a minimal version of the Ethereum JSON-RPC server which supports the following endpoints:
 
 - **eth_blockNumber**: Returns the number of most recent block.
 - **eth_getBlockByNumber**: Returns information about a block by block number.
@@ -62,5 +70,15 @@ This is minimal version of the Ethereum JSON-RPC server. It supports the followi
 ### Example
 
 ```sh
-curl -X POST --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://127.0.0.1:8080
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://127.0.0.1:8080
 ```
+
+## Docker image
+
+The evm-block-extractor docker image is a debian slim based image that allows for simple installation of the service.
+The docker image accepts the same configuration arguments of the plain executor. 
+E.g.:
+```sh
+docker run ghcr.io/bitfinity-network/evm-block-extractor:main --rpc-url https://testnet.bitfinity.network --postgres --username postgres --password postgres --database-name postgres --database-url 127.0.0.1:5432
+```
+

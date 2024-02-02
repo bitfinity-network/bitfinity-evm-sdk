@@ -3,15 +3,6 @@ name = "evm-block-extractor"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[[bin]]
-name = "evm-block-extractor"
-path = "src/bin/extractor.rs"
-
-[[bin]]
-name = "evm-block-extractor-server"
-path = "src/bin/server.rs"
 
 [dependencies]
 anyhow = { workspace = true }
@@ -24,8 +15,8 @@ ethers-core = { workspace = true }
 futures = { workspace = true }
 gcp-bigquery-client = { workspace = true }
 hex = { workspace = true }
-itertools = { workspace = true }
 jsonrpsee = { workspace = true }
+lightspeed_scheduler = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -33,6 +24,7 @@ sqlx = { workspace = true, features = ["postgres", "tls-rustls"] }
 tokio = { workspace = true }
 yup-oauth2 = { workspace = true }
 zip = { workspace = true }
+
 
 [dev-dependencies]
 jsonrpc-core = { workspace = true }
