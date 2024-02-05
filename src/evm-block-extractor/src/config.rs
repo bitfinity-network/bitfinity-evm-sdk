@@ -11,7 +11,7 @@ use crate::database::DatabaseClient;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Simple CLI program for Benchmarking BitFinity Network
+/// Simple CLI parser for the EVM block extractor
 #[derive(Parser, Debug, Clone)]
 #[clap(
     version = VERSION,
