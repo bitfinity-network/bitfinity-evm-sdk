@@ -7,7 +7,6 @@ use ic_exports::ic_cdk::api::management_canister::http_request::{
     self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
 };
 use jsonrpc_core::Request;
-use reqwest::Url;
 
 use crate::Client;
 
@@ -56,12 +55,12 @@ impl Client for HttpOutcallClient {
         Box::pin(async move {
             log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
 
-            let real_url =
-                Url::parse(&url).map_err(|e| anyhow::format_err!("error parsing the url {e}"))?;
+            let parsed_url = url::Url::parse(&url)
+                .map_err(|e| anyhow::format_err!("failed to parse url `{url}`: {e}"))?;
 
-            let host = real_url
+            let host = parsed_url
                 .host_str()
-                .ok_or_else(|| anyhow::format_err!("empty host of url".to_string()))?;
+                .ok_or_else(|| anyhow::format_err!("no host in url `{parsed_url}`"))?;
 
             let headers = vec![
                 HttpHeader {
