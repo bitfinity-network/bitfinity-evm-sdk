@@ -41,12 +41,12 @@ futures = { version = "0.3", default-features = false }
 gcp-bigquery-client = "0.18"
 hash-db = "0.16"
 hex = "0.4"
-ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.12.x" }
-ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.12.x" }
-ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.12.x" }
-ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.12.x" }
-ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.12.x" }
-ic-storage = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-storage", tag = "v0.12.x" }
+ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", branch = "add_certification"}
+ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", branch = "add_certification"}
+ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", branch = "add_certification"}
+ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", branch = "add_certification"}
+ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", branch = "add_certification"}
+ic-storage = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-storage", branch = "add_certification"}
 itertools = "0.12"
 jsonrpc-core = "18.0"
 jsonrpsee = { version = "0.21", features = ["server", "macros"] }
