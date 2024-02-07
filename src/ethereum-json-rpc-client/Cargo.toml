@@ -15,6 +15,7 @@ pocket-ic-tests-client = [
   "ic-canister-client/pocket-ic-client",
 ]
 reqwest = ["dep:reqwest"]
+http-outcall = ["dep:url"]
 
 [dependencies]
 anyhow = { workspace = true }
@@ -23,6 +24,7 @@ did = { path = "../did" }
 hex = { workspace = true }
 ic-exports = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }
+url = { workspace = true, optional = true }
 itertools = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true, optional = true, features = [

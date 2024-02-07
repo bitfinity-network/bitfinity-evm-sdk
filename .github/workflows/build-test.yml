@@ -45,7 +45,7 @@ jobs:
     uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
     with:
       runs-on: ubuntu-latest
-      container-image: ghcr.io/bitfinity-network/ic-dev-base:rust1.73-dfx0.15
+      container-image: ghcr.io/bitfinity-network/ic-dev-base:rust1.75-dfx0.15
       git-fetch-depth: '0'
       skip-test: false
       audit-allow-warnings: true

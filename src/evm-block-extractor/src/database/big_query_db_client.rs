@@ -18,14 +18,12 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 
-use super::{AccountBalance, DatabaseClient};
+use super::{AccountBalance, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
 
 const BQ_EXE_RESULTS_TABLE_ID: &str = "exe_results";
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";
 const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
 const BQ_KEY_VALUE_TABLE_ID: &str = "key_value_data";
-
-const GENESIS_BALANCES_KEY: &str = "genesis_balances";
 
 #[derive(Clone)]
 /// A client for BigQuery that can be used to query and insert data
@@ -535,6 +533,16 @@ impl DatabaseClient for BigQueryDbClient {
         self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances)
             .await
     }
+
+    async fn get_chain_id(&self) -> anyhow::Result<Option<u64>> {
+        let data: Option<DataContainer<u64>> = self.fetch_key_value_data(CHAIN_ID_KEY).await?;
+        Ok(data.map(|d| d.data))
+    }
+
+    async fn insert_chain_id(&self, chain_id: u64) -> anyhow::Result<()> {
+        self.insert_key_value_data(CHAIN_ID_KEY, DataContainer::new(chain_id))
+            .await
+    }
 }
 
 /// A row in the BigQuery table
@@ -560,7 +568,7 @@ pub struct TransactionRow {
     block_number: u64,
 }
 
-/// A row in the BigQuery table
+/// A row in the BigQuery Key Value table
 #[derive(Debug, Serialize)]
 pub struct KeyValueDataRow {
     key: String,

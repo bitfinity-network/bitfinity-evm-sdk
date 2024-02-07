@@ -35,12 +35,20 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
 
             let args = HttpRequest::new(&request)?;
 
-            let http_response: HttpResponse = if is_update_call {
+            let http_response: Result<HttpResponse, _> = if is_update_call {
                 client.update("http_request_update", (args,)).await
             } else {
                 client.query("http_request", (args,)).await
             }
-            .context("failed to send RPC request")?;
+            .map_err(anyhow::Error::from);
+
+            let http_response = match http_response {
+                Ok(response) => response,
+                Err(e) => {
+                    log::warn!("failed to send RPC request: {e}");
+                    return Err(e);
+                }
+            };
 
             let response = serde_json::from_slice(&http_response.body)
                 .context("failed to deserialize RPC request")?;

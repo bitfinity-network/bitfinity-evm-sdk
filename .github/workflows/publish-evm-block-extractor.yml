@@ -1,4 +1,4 @@
-name: 'Deploy EVM Block Extractor docker image'
+name: 'Deploy EVM Block Extractor Docker Image'
 
 on:
   workflow_dispatch: {}
@@ -8,46 +8,72 @@ on:
     tags:
       - 'v*'
 
+# Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+permissions:
+  contents: read
+  packages: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{github.repository_owner}}/evm-block-extractor
+  IMAGE_NAME: evm-block-extractor
+  GCP_REGISTRY: us-east4-docker.pkg.dev
 
-# There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
-  build-and-push-image:
+  deploy-to-github:
     runs-on: ubuntu-latest
-    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
-    permissions:
-      contents: read
-      packages: write
-      # 
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Log in to the Container registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
-        id: meta
+        id: gh-meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image to GitHub Container Registry
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./src/evm-block-extractor/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          # labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.gh-meta.outputs.tags }}
+
+  deploy-to-gcp:
+    runs-on: ubuntu-latest
+    needs: deploy-to-github
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to GCP Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{env.GCP_REGISTRY}}
+          username: _json_key
+          password: ${{ secrets.EXTRACTOR_GCP_DOCKER_KEY }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: gcp-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{env.GCP_REGISTRY}}/extractor-410310/block-extractor-repo/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image to GCP Registry
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./src/evm-block-extractor/Dockerfile
+          push: true
+          tags: ${{ steps.gcp-meta.outputs.tags }}
