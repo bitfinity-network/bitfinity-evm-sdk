@@ -8,6 +8,7 @@ use tokio::time::Duration;
 
 use crate::config::ExtractorArgs;
 use crate::database::{AccountBalance, DatabaseClient};
+use crate::task::with_retry;
 
 /// Starts the block extractor process
 pub async fn start_extractor(
@@ -121,36 +122,17 @@ impl BlockExtractor {
                 let client = client.clone();
 
                 let receipts_task = tokio::spawn(async move {
-                    let attempts = 4;
-
-                    for i in 1..=attempts {
-                        let response = client
-                            .get_tx_execution_results_by_hash(tx_hashes.clone(), batch_size)
-                            .await;
-
-                        let last_attempt = i == attempts;
-                        let retry_delay = i;
-
-                        match response {
-                            Ok(response) => {
-                                return Ok(response);
-                            }
-                            Err(e) => {
-                                if !last_attempt {
-                                    warn!("Error getting receipts: {:?}. Retrying in {retry_delay} second(s)", e);
-                                } else {
-                                    warn!("Error getting receipts: {:?}. No more retries", e);
-                                    return Err(e);
-                                }
-                            }
-                        }
-
-                        if !last_attempt {
-                            tokio::time::sleep(Duration::from_secs(i)).await;
-                        }
-                    }
-
-                    Err(anyhow::anyhow!("Error getting receipts"))
+                    with_retry(
+                        "get exe results from evm",
+                        Duration::from_secs(1),
+                        4,
+                        || async {
+                            client
+                                .get_tx_execution_results_by_hash(tx_hashes.clone(), batch_size)
+                                .await
+                        },
+                    )
+                    .await
                 });
 
                 receipts_tasks.push(receipts_task);

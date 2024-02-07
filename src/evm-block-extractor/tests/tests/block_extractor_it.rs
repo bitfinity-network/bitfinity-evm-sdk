@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
-use evm_block_extractor::block_extractor::BlockExtractor;
 use evm_block_extractor::database::AccountBalance;
+use evm_block_extractor::task::block_extractor::BlockExtractor;
 
 use crate::test_with_clients;
 
