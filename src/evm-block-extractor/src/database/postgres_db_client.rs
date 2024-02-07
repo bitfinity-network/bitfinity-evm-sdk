@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sqlx::postgres::PgRow;
 
-use super::{AccountBalance, DatabaseClient};
+use super::{AccountBalance, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
 
 static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migrations");
 
@@ -48,9 +48,8 @@ impl PostgresDbClient {
             .map_err(|e| anyhow::anyhow!("Error inserting value data for key {}: {:?}", key, e))
             .map(|_| ())
     }
-}
 
-const GENESIS_BALANCES_KEY: &str = "genesis_balances";
+}
 
 #[async_trait::async_trait]
 impl DatabaseClient for PostgresDbClient {
@@ -219,6 +218,20 @@ impl DatabaseClient for PostgresDbClient {
         self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances)
             .await
     }
+    
+        async fn get_chain_id(&self) -> anyhow::Result<Option<u64>> {
+            let data: Option<DataContainer<u64>> = self.fetch_key_value_data(CHAIN_ID_KEY).await?;
+            Ok(data.map(|d| d.data))
+        }
+    
+        async fn insert_chain_id(
+            &self,
+            chain_id: u64,
+        ) -> anyhow::Result<()> {
+            self.insert_key_value_data(CHAIN_ID_KEY, DataContainer::new(chain_id))
+            .await
+        }
+
 }
 
 fn from_row_value<T: DeserializeOwned>(row: &PgRow, index: usize) -> anyhow::Result<T> {

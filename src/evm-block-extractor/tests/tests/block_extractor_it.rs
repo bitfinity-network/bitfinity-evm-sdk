@@ -55,6 +55,14 @@ async fn test_extractor_collect_blocks() {
             assert_eq!(evmc_genesis_balances, db_genesis_balances);
         }
 
+        // Check chain id
+        {
+            let evmc_chain_id = evm_client.get_chain_id().await.unwrap();
+            let db_chain_id = db_client.get_chain_id().await.unwrap().unwrap();
+
+            assert_eq!(evmc_chain_id, db_chain_id);
+        }
+
         for block_num in start_block..=end_block {
             let block = db_client.get_block_by_number(block_num).await.unwrap();
 

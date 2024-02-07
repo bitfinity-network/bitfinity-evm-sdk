@@ -12,6 +12,23 @@ pub struct AccountBalance {
     pub balance: U256,
 }
 
+/// Generic data container
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DataContainer<D> {
+    pub data: D,
+}
+
+impl <D> DataContainer<D> {
+    pub fn new(data: D) -> Self {
+        Self { data }
+    }
+}
+
+/// The genesis balances key in the key value store
+const GENESIS_BALANCES_KEY: &str = "genesis_balances";
+/// The chain id key in the key value store
+const CHAIN_ID_KEY: &str = "chain_id";
+
 /// A trait for interacting with a blockchain database
 #[async_trait::async_trait]
 pub trait DatabaseClient: Send + Sync {
@@ -54,6 +71,15 @@ pub trait DatabaseClient: Send + Sync {
         genesis_balances: &[AccountBalance],
     ) -> anyhow::Result<()>;
 
+    /// Get chain id
+    async fn get_chain_id(&self) -> anyhow::Result<Option<u64>>;
+
+    /// Insert chain_id
+    async fn insert_chain_id(
+        &self,
+        chain_id: u64,
+    ) -> anyhow::Result<()>;
+
     /// Get a transaction receipt from the database
     async fn get_transaction_receipt(&self, tx_hash: H256) -> anyhow::Result<TransactionReceipt>;
 
@@ -62,4 +88,5 @@ pub trait DatabaseClient: Send + Sync {
 
     /// Get earliest block number
     async fn get_earliest_block_number(&self) -> anyhow::Result<u64>;
+
 }

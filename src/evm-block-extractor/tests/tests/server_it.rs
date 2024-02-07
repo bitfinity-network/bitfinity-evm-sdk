@@ -12,6 +12,7 @@ use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use jsonrpsee::server::{Server, ServerHandle};
 use jsonrpsee::RpcModule;
+use rand::random;
 use serde_json::json;
 
 use crate::test_with_clients;
@@ -270,6 +271,34 @@ async fn test_get_genesis_accounts() {
             // Assert
             assert_eq!(genesis_accounts, genesis_balances);
         }
+
+        {
+            handle.stop().unwrap();
+            handle.stopped().await;
+        }
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_get_chain_id() {
+    test_with_clients(|db_client| async move {
+        // Arrange
+        db_client.init(None, false).await.unwrap();
+
+        let (port, handle) = new_server(db_client.clone()).await;
+
+        let http_client =
+            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+
+        let chain_id: u64 = random();
+        db_client.insert_chain_id(chain_id).await.unwrap();
+        
+        // Act
+        let chain_id = http_client.get_chain_id().await.unwrap();
+
+        // Assert
+        assert!(chain_id > 0);
 
         {
             handle.stop().unwrap();

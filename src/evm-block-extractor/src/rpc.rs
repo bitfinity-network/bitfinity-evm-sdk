@@ -22,6 +22,7 @@ impl EthImpl {
 /// eth_* RPC methods
 #[rpc(server, namespace = "eth")]
 pub trait Eth {
+
     #[method(name = "getBlockByNumber")]
     /// Get a block by number
     async fn get_block_by_number(
@@ -37,6 +38,10 @@ pub trait Eth {
     #[method(name = "blockNumber")]
     /// Get the latest block number
     async fn block_number(&self) -> RpcResult<U256>;
+
+    #[method(name = "chainId")]
+    /// Get the chain id
+    async fn get_chain_id(&self) -> RpcResult<U64>;
 }
 
 /// ic_* RPC methods
@@ -186,5 +191,14 @@ impl EthServer for EthImpl {
             .unwrap_or(0);
 
         Ok(block_number.into())
+    }
+
+    async fn get_chain_id(&self) -> RpcResult<U64> {
+        let chain_id = self.blockchain.get_chain_id().await.map_err(|e| {
+            log::error!("Error getting chain id: {:?}", e);
+            jsonrpsee::types::error::ErrorCode::InternalError
+        })?.ok_or(jsonrpsee::types::error::ErrorCode::InternalError)?;
+
+        Ok(chain_id.into())
     }
 }

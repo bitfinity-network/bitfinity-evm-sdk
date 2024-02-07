@@ -2,6 +2,7 @@ use did::block::ExeResult;
 use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, H160, H256, U256, U64};
 use evm_block_extractor::database::AccountBalance;
+use rand::random;
 
 use crate::test_with_clients;
 
@@ -536,6 +537,51 @@ async fn test_insert_and_fetch_genesis_accounts() {
 
             // Assert
             assert!(balances.is_none());
+        }
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_insert_and_fetch_chain_id() {
+    test_with_clients(|db_client| async move {
+        // Arrange
+        db_client.init(None, false).await.unwrap();
+
+        let chain_id: u64 = random();
+
+        // There should be no chain when the database is empty
+        {
+            // Act
+            let chain_id_from_db = db_client.get_chain_id().await.unwrap();
+
+            // Assert
+            assert!(chain_id_from_db.is_none());
+        }
+
+        // Insert chain id
+        {
+            // Act
+            db_client
+                .insert_chain_id(chain_id)
+                .await
+                .unwrap();
+
+            let chain_id_from_db = db_client.get_chain_id().await.unwrap();
+
+            // Assert
+            assert!(chain_id_from_db.is_some());
+            assert_eq!(chain_id_from_db.unwrap(), chain_id);
+        }
+
+        // There should be no chain id when the database is cleared
+        {
+            // Act
+            db_client.clear().await.unwrap();
+            let chain_id_from_db = db_client.get_chain_id().await.unwrap();
+
+            // Assert
+            assert!(chain_id_from_db.is_none());
         }
     })
     .await;
