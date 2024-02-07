@@ -18,7 +18,7 @@ pub struct DataContainer<D> {
     pub data: D,
 }
 
-impl <D> DataContainer<D> {
+impl<D> DataContainer<D> {
     pub fn new(data: D) -> Self {
         Self { data }
     }
@@ -75,10 +75,7 @@ pub trait DatabaseClient: Send + Sync {
     async fn get_chain_id(&self) -> anyhow::Result<Option<u64>>;
 
     /// Insert chain_id
-    async fn insert_chain_id(
-        &self,
-        chain_id: u64,
-    ) -> anyhow::Result<()>;
+    async fn insert_chain_id(&self, chain_id: u64) -> anyhow::Result<()>;
 
     /// Get a transaction receipt from the database
     async fn get_transaction_receipt(&self, tx_hash: H256) -> anyhow::Result<TransactionReceipt>;
@@ -88,5 +85,4 @@ pub trait DatabaseClient: Send + Sync {
 
     /// Get earliest block number
     async fn get_earliest_block_number(&self) -> anyhow::Result<u64>;
-
 }

@@ -562,10 +562,7 @@ async fn test_insert_and_fetch_chain_id() {
         // Insert chain id
         {
             // Act
-            db_client
-                .insert_chain_id(chain_id)
-                .await
-                .unwrap();
+            db_client.insert_chain_id(chain_id).await.unwrap();
 
             let chain_id_from_db = db_client.get_chain_id().await.unwrap();
 

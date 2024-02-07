@@ -293,7 +293,7 @@ async fn test_get_chain_id() {
 
         let chain_id: u64 = random();
         db_client.insert_chain_id(chain_id).await.unwrap();
-        
+
         // Act
         let chain_id = http_client.get_chain_id().await.unwrap();
 

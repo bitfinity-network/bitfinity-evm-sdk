@@ -236,7 +236,6 @@ impl BigQueryDbClient {
         self.insert_batch_data(BQ_KEY_VALUE_TABLE_ID, vec![key_value_row])
             .await
     }
-
 }
 
 #[async_trait::async_trait]
@@ -523,30 +522,27 @@ impl DatabaseClient for BigQueryDbClient {
         }
     }
 
-        async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>> {
-            self.fetch_key_value_data(GENESIS_BALANCES_KEY).await
-        }
-    
-        async fn insert_genesis_balances(
-            &self,
-            genesis_balances: &[AccountBalance],
-        ) -> anyhow::Result<()> {
-            self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances)
+    async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>> {
+        self.fetch_key_value_data(GENESIS_BALANCES_KEY).await
+    }
+
+    async fn insert_genesis_balances(
+        &self,
+        genesis_balances: &[AccountBalance],
+    ) -> anyhow::Result<()> {
+        self.insert_key_value_data(GENESIS_BALANCES_KEY, genesis_balances)
             .await
-        }
-    
-        async fn get_chain_id(&self) -> anyhow::Result<Option<u64>> {
-            let data: Option<DataContainer<u64>> = self.fetch_key_value_data(CHAIN_ID_KEY).await?;
-            Ok(data.map(|d| d.data))
-        }
-    
-        async fn insert_chain_id(
-            &self,
-            chain_id: u64,
-        ) -> anyhow::Result<()> {
-            self.insert_key_value_data(CHAIN_ID_KEY, DataContainer::new(chain_id))
+    }
+
+    async fn get_chain_id(&self) -> anyhow::Result<Option<u64>> {
+        let data: Option<DataContainer<u64>> = self.fetch_key_value_data(CHAIN_ID_KEY).await?;
+        Ok(data.map(|d| d.data))
+    }
+
+    async fn insert_chain_id(&self, chain_id: u64) -> anyhow::Result<()> {
+        self.insert_key_value_data(CHAIN_ID_KEY, DataContainer::new(chain_id))
             .await
-        }
+    }
 }
 
 /// A row in the BigQuery table
