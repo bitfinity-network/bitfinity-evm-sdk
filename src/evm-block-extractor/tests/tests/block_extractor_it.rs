@@ -77,6 +77,11 @@ async fn test_extractor_collect_blocks() {
 
             // Check transactions
             {
+                println!(
+                    "Found transactions for block {}: {}",
+                    block_num,
+                    block.transactions.len()
+                );
                 assert_eq!(block.transactions.len(), full_block.transactions.len());
 
                 for tx in &full_block.transactions {

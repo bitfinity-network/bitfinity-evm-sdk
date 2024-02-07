@@ -119,10 +119,38 @@ impl BlockExtractor {
             for block in &blocks {
                 let tx_hashes = block.transactions.clone();
                 let client = client.clone();
+
                 let receipts_task = tokio::spawn(async move {
-                    client
-                        .get_tx_execution_results_by_hash(tx_hashes, batch_size)
-                        .await
+                    let attempts = 4;
+
+                    for i in 1..=attempts {
+                        let response = client
+                            .get_tx_execution_results_by_hash(tx_hashes.clone(), batch_size)
+                            .await;
+
+                        let last_attempt = i == attempts;
+                        let retry_delay = i;
+
+                        match response {
+                            Ok(response) => {
+                                return Ok(response);
+                            }
+                            Err(e) => {
+                                if !last_attempt {
+                                    warn!("Error getting receipts: {:?}. Retrying in {retry_delay} second(s)", e);
+                                } else {
+                                    warn!("Error getting receipts: {:?}. No more retries", e);
+                                    return Err(e);
+                                }
+                            }
+                        }
+
+                        if !last_attempt {
+                            tokio::time::sleep(Duration::from_secs(i)).await;
+                        }
+                    }
+
+                    Err(anyhow::anyhow!("Error getting receipts"))
                 });
 
                 receipts_tasks.push(receipts_task);
