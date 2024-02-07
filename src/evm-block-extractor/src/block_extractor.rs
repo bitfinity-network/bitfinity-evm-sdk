@@ -74,13 +74,14 @@ impl BlockExtractor {
         from_block_inclusive: u64,
         to_block_inclusive: u64,
     ) -> anyhow::Result<(u64, u64)> {
+        
+        self.collect_chain_id().await?;
+        self.collect_genesis_balances().await?;
+        
         info!(
             "Getting blocks from {:?} to {}",
             from_block_inclusive, to_block_inclusive
         );
-
-        self.collect_genesis_balances().await?;
-
         let client = self.client.clone();
 
         let request_time_out_secs = self.request_time_out_secs;
@@ -161,9 +162,7 @@ impl BlockExtractor {
         Ok((from_block_inclusive, to_block_inclusive))
     }
 
-    /// Collects blocks from the EVMC and stores them in the database.
-    /// Returns the inclusive range of blocks that were collected.
-    /// This collects also the genesis accounts if needed.
+    /// Collects the genesis accounts if needed.
     async fn collect_genesis_balances(&self) -> anyhow::Result<()> {
         if self.blockchain.get_genesis_balances().await?.is_some() {
             debug!("Genesis balances already present in the DB. Skipping");
@@ -192,4 +191,27 @@ impl BlockExtractor {
 
         Ok(())
     }
+
+        /// Collects the chain_id if needed.
+        async fn collect_chain_id(&self) -> anyhow::Result<()> {
+            if self.blockchain.get_chain_id().await?.is_some() {
+                debug!("Chain id already present in the DB. Skipping");
+                return Ok(());
+            }
+    
+            info!("Chain id not present in the DB. Collecting it");
+    
+            match self.client.get_chain_id().await {
+                Ok(chain_id) => {
+                    self.blockchain
+                        .insert_chain_id(chain_id)
+                        .await?;
+                }
+                Err(e) => {
+                    error!("Error getting chain id: {:?}. The process will not be stopped but the chain id will be missing in the DB", e);
+                }
+            }
+    
+            Ok(())
+        }
 }
