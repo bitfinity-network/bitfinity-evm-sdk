@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 use candid::{CandidType, Deserialize};
 use ethers_core::types::Log as EthersLog;
@@ -11,6 +12,7 @@ use super::transaction::Bloom;
 use super::{H160, H256, U256};
 use crate::bytes::Bytes;
 use crate::constant::{EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR, EIP1559_ELASTICITY_MULTIPLIER};
+use crate::error::EvmError;
 use crate::hash::H64;
 use crate::integer::U64;
 use crate::keccak::{keccak_hash, KECCAK_EMPTY_LIST_RLP, KECCAK_NULL_RLP};
@@ -111,8 +113,24 @@ impl Block<H256> {
     }
 
     /// Converts this block that only holds transaction hashes into a full block with `Transaction`
-    pub fn into_full_block(self, transactions: Vec<Transaction>) -> Block<Transaction> {
-        Block {
+    pub fn into_full_block(
+        self,
+        transactions: Vec<Transaction>,
+    ) -> Result<Block<Transaction>, EvmError> {
+        let mut transactions_by_hash: HashMap<_, _> = transactions
+            .into_iter()
+            .map(|tx| (tx.hash.clone(), tx))
+            .collect();
+        let mut transactions = Vec::with_capacity(transactions_by_hash.len());
+        for tx_hash in self.transactions {
+            transactions.push(
+                transactions_by_hash
+                    .remove(&tx_hash)
+                    .ok_or_else(|| EvmError::from(format!("no transaction with hash {tx_hash}")))?,
+            );
+        }
+
+        Ok(Block {
             hash: self.hash,
             parent_hash: self.parent_hash,
             uncles_hash: self.uncles_hash,
@@ -135,7 +153,7 @@ impl Block<H256> {
             nonce: self.nonce,
             base_fee_per_gas: self.base_fee_per_gas,
             transactions,
-        }
+        })
     }
 }
 
@@ -870,7 +888,56 @@ mod test {
             base_fee_per_gas: Some(U256::from(rand::random::<u64>())),
         };
 
-        let full_block = block.clone().into_full_block(transactions.clone());
+        let full_block = block.clone().into_full_block(transactions.clone()).unwrap();
+        assert_eq!(full_block.transactions, transactions);
+
+        let block_from_full_block: Block<H256> = full_block.into();
+        assert_eq!(block_from_full_block, block);
+    }
+
+    #[test]
+    fn test_block_into_full_block_different_order() {
+        let transactions = vec![
+            create_transaction(Some(U256::from(rand::random::<u64>())), 1),
+            create_transaction(Some(U256::from(rand::random::<u64>())), 2),
+            create_transaction(Some(U256::from(rand::random::<u64>())), 3),
+        ];
+
+        let tx_hashes = transactions
+            .iter()
+            .map(|tx| tx.hash.clone())
+            .collect::<Vec<_>>();
+
+        let block = Block::<H256> {
+            author: ethereum_types::H160::random().into(),
+            number: U64::from(rand::random::<u64>()),
+            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
+            nonce: ethereum_types::H64::random().into(),
+            transactions: tx_hashes,
+            mix_hash: ethereum_types::H256::random().into(),
+            hash: Default::default(),
+            parent_hash: ethereum_types::H256::random().into(),
+            uncles_hash: ethereum_types::H256::random().into(),
+            state_root: ethereum_types::H256::random().into(),
+            transactions_root: ethereum_types::H256::random().into(),
+            receipts_root: ethereum_types::H256::random().into(),
+            gas_used: U256::from(rand::random::<u64>()),
+            gas_limit: U256::from(rand::random::<u64>()),
+            extra_data: Default::default(),
+            timestamp: U256::from(rand::random::<u64>()),
+            difficulty: U256::from(rand::random::<u64>()),
+            total_difficulty: Default::default(),
+            seal_fields: Vec::new(),
+            uncles: Vec::new(),
+            size: None,
+            base_fee_per_gas: Some(U256::from(rand::random::<u64>())),
+        };
+
+        // Check if we pass transactions in the wrong order we still get the order corresponding to hashes
+        let full_block = block
+            .clone()
+            .into_full_block(transactions.clone().into_iter().rev().collect())
+            .unwrap();
         assert_eq!(full_block.transactions, transactions);
 
         let block_from_full_block: Block<H256> = full_block.into();

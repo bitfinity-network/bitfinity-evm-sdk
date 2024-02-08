@@ -106,7 +106,7 @@ impl DatabaseClient for PostgresDbClient {
                 })
                 .and_then(|row| from_rows_value(&row, 0))?;
 
-        Ok(block.into_full_block(transactions))
+        Ok(block.into_full_block(transactions)?)
     }
 
     async fn insert_block_data(
