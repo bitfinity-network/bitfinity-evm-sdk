@@ -10,6 +10,16 @@ create table EVM_BLOCK (
 
 -- End - EVM_BLOCK -
 
+-----------------------------
+-- Begin - CERTIFIED_EVM_BLOCK -
+-----------------------------
+
+create table CERTIFIED_EVM_BLOCK (
+    ID bigint primary key,
+    CERTIFIED_RESPONSE JSONB
+);
+
+-- End - CERTIFIED_EVM_BLOCK -
 
 -----------------------------------------
 -- Begin - EVM_TRANSACTION_EXE_RESULT -

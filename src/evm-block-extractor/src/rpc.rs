@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use did::TransactionReceipt;
+use ethereum_json_rpc_client::http::HttpResponse;
 use ethers_core::types::{BlockNumber, H160, H256, U256, U64};
 use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
@@ -51,6 +52,9 @@ pub trait IC {
 
     #[method(name = "getGenesisBalances")]
     async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>>;
+
+    #[method(name = "getLastBlockCertifiedData")]
+    async fn get_last_block_certified_data(&self) -> RpcResult<HttpResponse>;
 }
 
 #[async_trait::async_trait]
@@ -118,6 +122,15 @@ impl ICServer for EthImpl {
             .into_iter()
             .map(|account| (account.address.into(), account.balance.into()))
             .collect())
+    }
+
+    async fn get_last_block_certified_data(&self) -> RpcResult<HttpResponse> {
+        let certified_data = self.blockchain.get_last_certified_block_data().await.map_err(|e| {
+            log::error!("Error getting last block certified data: {:?}", e);
+            jsonrpsee::types::error::ErrorCode::InternalError
+        })?;
+
+        Ok(certified_data)
     }
 }
 

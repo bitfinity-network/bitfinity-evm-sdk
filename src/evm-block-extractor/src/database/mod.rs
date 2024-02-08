@@ -3,6 +3,7 @@ pub mod postgres_db_client;
 
 use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, TransactionReceipt, H160, H256, U256};
+use ethereum_json_rpc_client::http::HttpResponse;
 use serde::{Deserialize, Serialize};
 
 /// Account balance
@@ -61,6 +62,15 @@ pub trait DatabaseClient: Send + Sync {
         receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()>;
+
+    /// Insert certified block data
+    async fn insert_certified_block_data(
+        &self,
+        response: HttpResponse,
+    ) -> anyhow::Result<()>;
+
+    /// Returns certified response for the last block
+    async fn get_last_certified_block_data(&self) -> anyhow::Result<HttpResponse>;
 
     /// Get genesis balances
     async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>>;

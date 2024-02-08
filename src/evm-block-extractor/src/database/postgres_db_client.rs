@@ -1,3 +1,5 @@
+use ethereum_json_rpc_client::http::HttpResponse;
+use jsonrpc_core::Success;
 use ::sqlx::migrate::Migrator;
 use ::sqlx::*;
 use did::transaction::StorableExecutionResult;
@@ -167,6 +169,38 @@ impl DatabaseClient for PostgresDbClient {
         tx.commit().await?;
 
         Ok(())
+    }
+
+    async fn insert_certified_block_data(
+        &self,
+        response: HttpResponse,
+    ) -> anyhow::Result<()> {
+        let block_id = match serde_json::from_slice::<Success>(&response.body) {
+            Ok(success) => {
+                serde_json::from_value::<Block<H256>>(success.result)?.number.0.as_u64()
+            },
+            Err(err) => anyhow::bail!("invalid response data: {err}"),
+        };
+
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("INSERT INTO CERTIFIED_EVM_BLOCK (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2")
+                    .bind(block_id as i64)
+                    .bind(serde_json::to_value(response)?)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| anyhow::anyhow!("Error inserting certified block {}: {:?}", block_id, e))
+                    .map(|_| ())?;
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn get_last_certified_block_data(&self) -> anyhow::Result<HttpResponse> {
+        sqlx::query("SELECT certified_data FROM CERTIFIED_EVM_BLOCK ORDER BY id DESC LIMIT 1")
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Error getting last certified block: {:?}", e))
+            .and_then(|row| from_row_value(&row, 0))
     }
 
     /// Get a transaction receipt from the database
