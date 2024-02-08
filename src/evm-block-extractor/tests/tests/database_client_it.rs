@@ -204,6 +204,8 @@ async fn test_retrieval_of_transactions_with_blocks() {
             txn.push(dummy_txn);
         }
 
+        blocks[4].transactions = txn.iter().map(|tx| tx.hash.clone().into()).collect();
+
         db_client
             .insert_block_data(&blocks, &[], &txn)
             .await
@@ -407,15 +409,16 @@ async fn test_insertion_of_blocks_with_txs_and_no_receipts() {
     test_with_clients(|db_client| async move {
         db_client.init(None, false).await.unwrap();
 
-        let dummy_block: Block<H256> = Block {
-            number: ethers_core::types::U64::from(1).into(),
-            hash: ethers_core::types::H256::random().into(),
-            ..Default::default()
-        };
-
         let dummy_txn = Transaction {
             hash: ethers_core::types::H256::random().into(),
             block_number: Some(1_u64.into()),
+            ..Default::default()
+        };
+
+        let dummy_block: Block<H256> = Block {
+            number: ethers_core::types::U64::from(1).into(),
+            hash: ethers_core::types::H256::random().into(),
+            transactions: vec![dummy_txn.hash.clone()],
             ..Default::default()
         };
 
