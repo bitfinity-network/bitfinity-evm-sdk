@@ -349,7 +349,7 @@ impl DatabaseClient for BigQueryDbClient {
             transactions.push(result);
         }
 
-        Ok(block.into_full_block(transactions))
+        Ok(block.into_full_block(transactions)?)
     }
 
     async fn insert_block_data(

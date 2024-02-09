@@ -23,29 +23,37 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
             blocks.push(dummy_block);
         }
 
+        const TRANSACTIONS_PER_BLOCK: u64 = 10;
+
         let mut exe_results = Vec::new();
 
         for i in 1..=10 {
-            let tx_hash = ethers_core::types::H256::random();
-            let dummy_exe_result = new_storable_execution_result(
-                tx_hash.into(),
-                blocks[i - 1].hash.clone(),
-                U64::from(i),
-            );
-            exe_results.push(dummy_exe_result);
+            for _ in 0..TRANSACTIONS_PER_BLOCK {
+                let tx_hash = ethers_core::types::H256::random();
+                blocks[i - 1].transactions.push(tx_hash.into());
+                let dummy_exe_result = new_storable_execution_result(
+                    tx_hash.into(),
+                    blocks[i - 1].hash.clone(),
+                    U64::from(i),
+                );
+                exe_results.push(dummy_exe_result);
+            }
         }
 
         let mut txn = vec![];
         for i in 0..10 {
-            let tx_hash = &exe_results[i].transaction_hash;
-            let block_number = blocks[i].number.0.as_u64();
-            let dummy_txn = Transaction {
-                hash: tx_hash.clone(),
-                block_number: Some(U64::from(block_number)),
-                ..Default::default()
-            };
+            for j in 0..TRANSACTIONS_PER_BLOCK {
+                let tx_hash =
+                    &exe_results[(i * TRANSACTIONS_PER_BLOCK + j) as usize].transaction_hash;
+                let block_number = blocks[i as usize].number.0.as_u64();
+                let dummy_txn = Transaction {
+                    hash: tx_hash.clone(),
+                    block_number: Some(U64::from(block_number)),
+                    ..Default::default()
+                };
 
-            txn.push(dummy_txn);
+                txn.push(dummy_txn);
+            }
         }
 
         db_client
@@ -56,8 +64,13 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
         let block = db_client.get_full_block_by_number(1).await.unwrap();
 
         // Check the transactions
-        assert_eq!(block.transactions.len(), 1);
-        assert_eq!(block.transactions[0].hash, exe_results[0].transaction_hash);
+        assert_eq!(block.transactions.len(), TRANSACTIONS_PER_BLOCK as usize);
+        for i in 0..TRANSACTIONS_PER_BLOCK {
+            assert_eq!(
+                block.transactions[i as usize].hash,
+                exe_results[i as usize].transaction_hash
+            );
+        }
 
         assert_eq!(block.number.0.as_u64(), 1);
 
@@ -76,11 +89,18 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
         assert_eq!(block.number.0.as_u64(), 10);
 
         let receipt = db_client
-            .get_transaction_receipt(exe_results[9].transaction_hash.clone())
+            .get_transaction_receipt(
+                exe_results[9 * TRANSACTIONS_PER_BLOCK as usize]
+                    .transaction_hash
+                    .clone(),
+            )
             .await
             .unwrap();
 
-        assert_eq!(receipt.transaction_hash, exe_results[9].transaction_hash);
+        assert_eq!(
+            receipt.transaction_hash,
+            exe_results[9 * TRANSACTIONS_PER_BLOCK as usize].transaction_hash
+        );
     })
     .await;
 }
@@ -184,6 +204,8 @@ async fn test_retrieval_of_transactions_with_blocks() {
             txn.push(dummy_txn);
         }
 
+        blocks[4].transactions = txn.iter().map(|tx| tx.hash.clone()).collect();
+
         db_client
             .insert_block_data(&blocks, &[], &txn)
             .await
@@ -219,14 +241,16 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
             hash: ethers_core::types::H256::random().into(),
             ..Default::default()
         }
-        .into_full_block(vec![]);
+        .into_full_block(vec![])
+        .unwrap();
 
         let block_two: Block<Transaction> = Block::<H256> {
             number: ethers_core::types::U64::from(0).into(),
             hash: ethers_core::types::H256::random().into(),
             ..Default::default()
         }
-        .into_full_block(vec![]);
+        .into_full_block(vec![])
+        .unwrap();
 
         db_client.init(None, false).await.unwrap();
 
@@ -385,15 +409,16 @@ async fn test_insertion_of_blocks_with_txs_and_no_receipts() {
     test_with_clients(|db_client| async move {
         db_client.init(None, false).await.unwrap();
 
-        let dummy_block: Block<H256> = Block {
-            number: ethers_core::types::U64::from(1).into(),
-            hash: ethers_core::types::H256::random().into(),
-            ..Default::default()
-        };
-
         let dummy_txn = Transaction {
             hash: ethers_core::types::H256::random().into(),
             block_number: Some(1_u64.into()),
+            ..Default::default()
+        };
+
+        let dummy_block: Block<H256> = Block {
+            number: ethers_core::types::U64::from(1).into(),
+            hash: ethers_core::types::H256::random().into(),
+            transactions: vec![dummy_txn.hash.clone()],
             ..Default::default()
         };
 
