@@ -90,6 +90,7 @@ impl BigQueryDbClient {
                 .trim_matches('"')
                 .replace("\\\"", "\"");
 
+            eprintln!("query_one_optional result_str = {result_str}");
             let result: T = serde_json::from_str(&result_str)?;
 
             Ok(Some(result))
