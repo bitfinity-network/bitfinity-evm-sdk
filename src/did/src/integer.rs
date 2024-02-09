@@ -468,7 +468,7 @@ mod tests {
 
     #[test]
     fn test_from_too_big_nat() {
-        let nat: Nat = Nat::from(&U256::max_value()) + 1;
+        let nat: Nat = Nat::from(&U256::max_value()) + 1u64;
         U256::try_from(&nat).unwrap_err();
     }
 
