@@ -90,7 +90,7 @@ impl BigQueryDbClient {
                 .trim_matches('"')
                 .replace("\\\"", "\"");
 
-            eprintln!("query_one_optional result_str = {result_str}");
+            log::info!("query_one_optional result_str = {result_str}");
             let result: T = serde_json::from_str(&result_str)?;
 
             Ok(Some(result))
@@ -588,7 +588,7 @@ impl DatabaseClient for BigQueryDbClient {
         };
 
         let res: anyhow::Result<String> = self.query_one(query_request.clone()).await;
-        eprintln!("get_last_certified_block_data result = {res:?}");
+        log::info!("get_last_certified_block_data result = {res:?}");
 
         self.query_one(query_request).await
     }
