@@ -125,10 +125,14 @@ impl ICServer for EthImpl {
     }
 
     async fn get_last_block_certified_data(&self) -> RpcResult<HttpResponse> {
-        let certified_data = self.blockchain.get_last_certified_block_data().await.map_err(|e| {
-            log::error!("Error getting last block certified data: {:?}", e);
-            jsonrpsee::types::error::ErrorCode::InternalError
-        })?;
+        let certified_data = self
+            .blockchain
+            .get_last_certified_block_data()
+            .await
+            .map_err(|e| {
+                log::error!("Error getting last block certified data: {:?}", e);
+                jsonrpsee::types::error::ErrorCode::InternalError
+            })?;
 
         Ok(certified_data)
     }

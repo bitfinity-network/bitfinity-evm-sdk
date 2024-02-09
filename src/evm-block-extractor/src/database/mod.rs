@@ -64,10 +64,7 @@ pub trait DatabaseClient: Send + Sync {
     ) -> anyhow::Result<()>;
 
     /// Insert certified block data
-    async fn insert_certified_block_data(
-        &self,
-        response: HttpResponse,
-    ) -> anyhow::Result<()>;
+    async fn insert_certified_block_data(&self, response: HttpResponse) -> anyhow::Result<()>;
 
     /// Returns certified response for the last block
     async fn get_last_certified_block_data(&self) -> anyhow::Result<HttpResponse>;

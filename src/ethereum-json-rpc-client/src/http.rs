@@ -5,7 +5,6 @@ use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 
-
 /// The important components of an HTTP request.
 #[derive(Clone, Debug, CandidType, Serialize, Deserialize)]
 pub struct HttpRequest<'a> {

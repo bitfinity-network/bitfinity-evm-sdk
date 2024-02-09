@@ -148,7 +148,7 @@ impl BigQueryDbClient {
                 BQ_CERTIFIED_BLOCKS_TABLE_ID,
                 vec![
                     TableFieldSchema::integer("id"),
-                    TableFieldSchema::json("certified_data"),
+                    TableFieldSchema::json("certified_response"),
                 ],
             ),
             (
@@ -554,14 +554,9 @@ impl DatabaseClient for BigQueryDbClient {
             .await
     }
 
-    async fn insert_certified_block_data(
-        &self,
-        response: HttpResponse,
-    ) -> anyhow::Result<()> {
+    async fn insert_certified_block_data(&self, response: HttpResponse) -> anyhow::Result<()> {
         let block = match serde_json::from_slice::<Success>(&response.body) {
-            Ok(success) => {
-                serde_json::from_value::<Block<H256>>(success.result)?
-            },
+            Ok(success) => serde_json::from_value::<Block<H256>>(success.result)?,
             Err(err) => anyhow::bail!("invalid response data: {err}"),
         };
 
@@ -575,14 +570,15 @@ impl DatabaseClient for BigQueryDbClient {
             json: serde_json::to_value(block_row).expect("Failed to serialize block"),
         };
 
-        self.insert_batch_data(BQ_CERTIFIED_BLOCKS_TABLE_ID, vec![rows]).await
+        self.insert_batch_data(BQ_CERTIFIED_BLOCKS_TABLE_ID, vec![rows])
+            .await
     }
 
     async fn get_last_certified_block_data(&self) -> anyhow::Result<HttpResponse> {
         let query_request = QueryRequest {
             query_parameters: None,
             query: format!(
-                "SELECT certified_data FROM `{project_id}.{dataset_id}.{table_id}` ORDER BY id DESC LIMIT 1",
+                "SELECT certified_response FROM `{project_id}.{dataset_id}.{table_id}` ORDER BY id DESC LIMIT 1",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
                 table_id = BQ_CERTIFIED_BLOCKS_TABLE_ID,
@@ -606,9 +602,8 @@ pub struct BlockRow {
 pub struct CertifiedBlockRow {
     id: u64,
     #[serde(serialize_with = "serialize_json_as_string")]
-    certified_data: Value,
+    certified_response: Value,
 }
-
 
 #[derive(Debug, Serialize, Clone)]
 pub struct ExeResultRow {

@@ -3,6 +3,7 @@ use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, H160, H256, U256, U64};
 use ethereum_json_rpc_client::http::HttpResponse;
 use evm_block_extractor::database::AccountBalance;
+use jsonrpc_core::{Output, Success};
 use rand::random;
 use serde_bytes::ByteBuf;
 
@@ -607,30 +608,60 @@ fn new_storable_execution_result(
     }
 }
 
-
 #[tokio::test]
 async fn test_insert_and_fetch_last_block_certified_data() {
     test_with_clients(|db_client| async move {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
-        let block_1 = Block::<H256>{
+        let block_1 = Block::<H256> {
             number: 1u64.into(),
             ..Default::default()
         };
-        let block_2 = Block::<H256>{
+        let block_2 = Block::<H256> {
             number: 2u64.into(),
             ..Default::default()
         };
 
-        let http_response_1 = HttpResponse { status_code: 201, headers: Default::default(), body: ByteBuf::from(serde_json::to_vec(&block_1).unwrap()) };
-        let http_response_2 = HttpResponse { status_code: 202, headers: Default::default(), body: ByteBuf::from(serde_json::to_vec(&block_2).unwrap()) };
+        let result_1 = Output::Success(Success {
+            jsonrpc: Some(jsonrpc_core::Version::V2),
+            result: serde_json::to_value(block_1).unwrap(),
+            id: jsonrpc_core::Id::Null,
+        });
+        let result_2 = Output::Success(Success {
+            jsonrpc: Some(jsonrpc_core::Version::V2),
+            result: serde_json::to_value(block_2).unwrap(),
+            id: jsonrpc_core::Id::Null,
+        });
 
-        db_client.insert_certified_block_data(http_response_1.clone()).await.unwrap();
-        assert_eq!(http_response_1, db_client.get_last_certified_block_data().await.unwrap());
+        let http_response_1 = HttpResponse {
+            status_code: 201,
+            headers: Default::default(),
+            body: ByteBuf::from(serde_json::to_vec(&result_1).unwrap()),
+        };
+        let http_response_2 = HttpResponse {
+            status_code: 202,
+            headers: Default::default(),
+            body: ByteBuf::from(serde_json::to_vec(&result_2).unwrap()),
+        };
 
-        db_client.insert_certified_block_data(http_response_2.clone()).await.unwrap();
-        assert_eq!(http_response_2, db_client.get_last_certified_block_data().await.unwrap());
+        db_client
+            .insert_certified_block_data(http_response_1.clone())
+            .await
+            .unwrap();
+        assert_eq!(
+            http_response_1,
+            db_client.get_last_certified_block_data().await.unwrap()
+        );
+
+        db_client
+            .insert_certified_block_data(http_response_2.clone())
+            .await
+            .unwrap();
+        assert_eq!(
+            http_response_2,
+            db_client.get_last_certified_block_data().await.unwrap()
+        );
     })
     .await;
 }

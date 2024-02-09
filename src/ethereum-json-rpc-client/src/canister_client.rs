@@ -5,7 +5,10 @@ use anyhow::Context;
 use ic_canister_client::CanisterClient;
 use jsonrpc_core::{Call, Request, Response};
 
-use crate::{http::{HttpRequest, HttpResponse}, Client, ETH_SEND_RAW_TRANSACTION_METHOD};
+use crate::{
+    http::{HttpRequest, HttpResponse},
+    Client, ETH_SEND_RAW_TRANSACTION_METHOD,
+};
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(
