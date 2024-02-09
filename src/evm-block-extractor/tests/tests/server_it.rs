@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use did::block::{ExeResult, TransactOut};
 use did::transaction::{Bloom, StorableExecutionResult};
-use did::{H160, U256};
+use did::{Block, H160, U256, U64};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{Client, EthJsonRcpClient};
 use ethers_core::types::{BlockNumber, Transaction, H256};
@@ -300,6 +300,65 @@ async fn test_get_chain_id() {
         // Assert
         assert!(chain_id > 0);
 
+        {
+            handle.stop().unwrap();
+            handle.stopped().await;
+        }
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_get_block_by_number_variants() {
+    with_filled_db(|db_client| async {
+        let (port, handle) = new_server(db_client).await;
+
+        let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
+        let request = Request::Batch(vec![
+            Call::MethodCall(MethodCall {
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBlockByNumber".to_string(),
+                params: Params::Array(vec![json!("latest"), json!(false)]),
+                id: Id::Str("eth_getBlockByNumber".to_string()),
+            }),
+            Call::MethodCall(MethodCall {
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBlockByNumber".to_string(),
+                params: Params::Array(vec![json!("earliest"), json!(false)]),
+                id: Id::Str("eth_getBlockByNumber".to_string()),
+            }),
+            Call::MethodCall(MethodCall {
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBlockByNumber".to_string(),
+                params: Params::Array(vec![json!("0x5"), json!(false)]),
+                id: Id::Str("eth_getBlockByNumber".to_string()),
+            }),
+
+        ]);
+
+        let Response::Batch(results) = http_client.send_rpc_request(request).await.unwrap() else {
+            panic!("unexpected return type")
+        };
+
+        match &results[..] {
+            [Output::Success(latest_block), Output::Success(earliest_block), Output::Success(number_block)] => {
+                assert_eq!(latest_block.id, Id::Str("eth_getBlockByNumber".to_string()));
+                let latest_block: Block<H256> =
+                    serde_json::from_value(latest_block.result.clone()).unwrap();
+                assert_eq!(latest_block.number, U64::from(BLOCK_COUNT - 1));
+
+                let earliest_block: Block<H256> =
+                    serde_json::from_value(earliest_block.result.clone()).unwrap();
+                assert_eq!(earliest_block.number, U64::zero());
+
+                let number_block: Block<H256> =
+                    serde_json::from_value(number_block.result.clone()).unwrap();
+                    assert_eq!(number_block.number, U64::from_hex_str("0x5").unwrap());
+            }
+            _ => panic!("unexpected results"),
+        }
+
+        // stop the server
         {
             handle.stop().unwrap();
             handle.stopped().await;

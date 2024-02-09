@@ -125,12 +125,12 @@ impl ICServer for EthImpl {
 impl EthServer for EthImpl {
     async fn get_block_by_number(
         &self,
-        block: BlockNumber,        
+        block: BlockNumber,
         include_transactions: bool,
     ) -> RpcResult<serde_json::Value> {
         let db = &self.blockchain;
-        
-        let block = match block {
+
+        let block_number = match block {
             BlockNumber::Latest => db
                 .get_latest_block_number()
                 .await
@@ -147,8 +147,6 @@ impl EthServer for EthImpl {
             BlockNumber::Pending => return Ok(serde_json::Value::Null),
             _ => return Ok(serde_json::Value::Null),
         };
-        
-        let block_number = block;
 
         if include_transactions {
             let block = self
