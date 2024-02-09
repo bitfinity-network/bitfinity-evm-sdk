@@ -586,6 +586,9 @@ impl DatabaseClient for BigQueryDbClient {
             ..Default::default()
         };
 
+        let res: anyhow::Result<String> = self.query_one(query_request.clone()).await;
+        eprintln!("get_last_certified_block_data result = {res:?}");
+
         self.query_one(query_request).await
     }
 }
