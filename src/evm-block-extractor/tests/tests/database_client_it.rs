@@ -204,7 +204,7 @@ async fn test_retrieval_of_transactions_with_blocks() {
             txn.push(dummy_txn);
         }
 
-        blocks[4].transactions = txn.iter().map(|tx| tx.hash.clone().into()).collect();
+        blocks[4].transactions = txn.iter().map(|tx| tx.hash.clone()).collect();
 
         db_client
             .insert_block_data(&blocks, &[], &txn)
