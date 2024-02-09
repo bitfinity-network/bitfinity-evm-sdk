@@ -83,4 +83,4 @@ zip = "0.6"
 url = "2.5"
 
 [profile.dev]
-debug = false
+debug = true
