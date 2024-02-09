@@ -8,6 +8,7 @@ use tokio::time::Duration;
 
 use crate::config::ExtractorArgs;
 use crate::database::{AccountBalance, DatabaseClient};
+use crate::task::with_retry;
 
 /// Starts the block extractor process
 pub async fn start_extractor(
@@ -119,10 +120,19 @@ impl BlockExtractor {
             for block in &blocks {
                 let tx_hashes = block.transactions.clone();
                 let client = client.clone();
+
                 let receipts_task = tokio::spawn(async move {
-                    client
-                        .get_tx_execution_results_by_hash(tx_hashes, batch_size)
-                        .await
+                    with_retry(
+                        "get exe results from evm",
+                        Duration::from_secs(1),
+                        4,
+                        || async {
+                            client
+                                .get_tx_execution_results_by_hash(tx_hashes.clone(), batch_size)
+                                .await
+                        },
+                    )
+                    .await
                 });
 
                 receipts_tasks.push(receipts_task);

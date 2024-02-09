@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRcpClient;
-use evm_block_extractor::block_extractor::BlockExtractor;
 use evm_block_extractor::database::AccountBalance;
+use evm_block_extractor::task::block_extractor::BlockExtractor;
 
 use crate::test_with_clients;
 
@@ -77,6 +77,11 @@ async fn test_extractor_collect_blocks() {
 
             // Check transactions
             {
+                println!(
+                    "Found transactions for block {}: {}",
+                    block_num,
+                    block.transactions.len()
+                );
                 assert_eq!(block.transactions.len(), full_block.transactions.len());
 
                 for tx in &full_block.transactions {

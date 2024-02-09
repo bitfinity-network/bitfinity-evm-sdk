@@ -27,7 +27,7 @@ pub trait Eth {
     /// Get a block by number
     async fn get_block_by_number(
         &self,
-        block_number: U256,
+        block: BlockNumber,
         full_transactions: bool,
     ) -> RpcResult<serde_json::Value>;
 
@@ -142,10 +142,28 @@ impl ICServer for EthImpl {
 impl EthServer for EthImpl {
     async fn get_block_by_number(
         &self,
-        block_number: U256,
+        block: BlockNumber,
         include_transactions: bool,
     ) -> RpcResult<serde_json::Value> {
-        let block_number = block_number.as_u64();
+        let db = &self.blockchain;
+
+        let block_number = match block {
+            BlockNumber::Latest => db
+                .get_latest_block_number()
+                .await
+                .map_err(|e| {
+                    log::error!("Error getting block number: {:?}", e);
+                    jsonrpsee::types::error::ErrorCode::InternalError
+                })?
+                .unwrap_or(0),
+            BlockNumber::Earliest => db.get_earliest_block_number().await.map_err(|e| {
+                log::error!("Error getting earliest block number: {:?}", e);
+                jsonrpsee::types::error::ErrorCode::InternalError
+            })?,
+            BlockNumber::Number(num) => num.as_u64(),
+            BlockNumber::Pending => return Ok(serde_json::Value::Null),
+            _ => return Ok(serde_json::Value::Null),
+        };
 
         if include_transactions {
             let block = self
