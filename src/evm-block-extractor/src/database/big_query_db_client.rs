@@ -109,6 +109,7 @@ impl BigQueryDbClient {
 
         insert_request.add_rows(rows)?;
 
+        log::info!("inserting request = {insert_request:?}");
         let res = self
             .client
             .tabledata()
