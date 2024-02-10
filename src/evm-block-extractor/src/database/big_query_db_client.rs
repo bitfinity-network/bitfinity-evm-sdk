@@ -81,6 +81,7 @@ impl BigQueryDbClient {
         &self,
         query: QueryRequest,
     ) -> anyhow::Result<Option<T>> {
+        log::info!("query_one_optional query = {query:?}");
         let mut response = self.client.job().query(&self.project_id, query).await?;
 
         if response.next_row() {
@@ -95,6 +96,7 @@ impl BigQueryDbClient {
 
             Ok(Some(result))
         } else {
+            log::info!("query_one_optional result = None");
             Ok(None)
         }
     }
