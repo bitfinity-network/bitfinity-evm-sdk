@@ -81,24 +81,19 @@ impl BigQueryDbClient {
         &self,
         query: QueryRequest,
     ) -> anyhow::Result<Option<T>> {
-        log::info!("query_one_optional query = {query:?}");
         let mut response = self.client.job().query(&self.project_id, query).await?;
 
-        log::info!("query_one_optional response = {response:?}");
         if response.next_row() {
-            log::info!("query_one_optional response = {response:?}");
             let result_str = response
                 .get_string(0)?
                 .ok_or(anyhow::anyhow!("Expected result not found in the response"))?
                 .trim_matches('"')
                 .replace("\\\"", "\"");
 
-            log::info!("query_one_optional result_str = {result_str}");
             let result: T = serde_json::from_str(&result_str)?;
 
             Ok(Some(result))
         } else {
-            log::info!("query_one_optional result = None");
             Ok(None)
         }
     }
@@ -111,7 +106,6 @@ impl BigQueryDbClient {
 
         insert_request.add_rows(rows)?;
 
-        log::info!("inserting request = {insert_request:?}");
         let res = self
             .client
             .tabledata()
@@ -591,9 +585,6 @@ impl DatabaseClient for BigQueryDbClient {
             ),
             ..Default::default()
         };
-
-        let res: anyhow::Result<String> = self.query_one(query_request.clone()).await;
-        log::info!("get_last_certified_block_data result = {res:?}");
 
         self.query_one(query_request).await
     }
