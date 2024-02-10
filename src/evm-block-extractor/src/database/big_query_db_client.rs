@@ -561,9 +561,9 @@ impl DatabaseClient for BigQueryDbClient {
             Err(err) => anyhow::bail!("invalid response data: {err}"),
         };
 
-        let block_row = BlockRow {
+        let block_row = CertifiedBlockRow {
             id: block.number.0.as_u64(),
-            body: serde_json::to_value(response).expect("Failed to serialize block"),
+            certified_response: serde_json::to_value(response).expect("Failed to serialize block"),
         };
 
         let rows = TableDataInsertAllRequestRows {
