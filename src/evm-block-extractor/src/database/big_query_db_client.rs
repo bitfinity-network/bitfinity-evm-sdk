@@ -24,7 +24,7 @@ use super::{AccountBalance, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS
 
 const BQ_EXE_RESULTS_TABLE_ID: &str = "exe_results";
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";
-const BQ_CERTIFIED_BLOCKS_TABLE_ID: &str = "blocks";
+const BQ_CERTIFIED_BLOCKS_TABLE_ID: &str = "certified_blocks";
 const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
 const BQ_KEY_VALUE_TABLE_ID: &str = "key_value_data";
 
