@@ -6,7 +6,10 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sqlx::postgres::PgRow;
 
-use super::{AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
+use super::{
+    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY,
+    GENESIS_BALANCES_KEY,
+};
 
 static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migrations");
 

@@ -18,7 +18,10 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 
-use super::{AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
+use super::{
+    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY,
+    GENESIS_BALANCES_KEY,
+};
 
 const BQ_EXE_RESULTS_TABLE_ID: &str = "exe_results";
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";

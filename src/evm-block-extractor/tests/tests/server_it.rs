@@ -378,7 +378,7 @@ async fn test_get_last_certified_block() {
             ..Default::default()
         };
 
-        let certified_block = CertifiedBlock{
+        let certified_block = CertifiedBlock {
             certificate: vec![1, 2, 3],
             witness: vec![5, 6, 7],
             data: block.clone(),
@@ -391,8 +391,7 @@ async fn test_get_last_certified_block() {
 
         let (port, handle) = new_server(db_client.clone()).await;
 
-        let http_client =
-            ReqwestClient::new(format!("http://127.0.0.1:{port}"));
+        let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
 
         // Act
         let request = Request::Single(Call::MethodCall(MethodCall {

@@ -645,12 +645,12 @@ async fn test_insert_and_fetch_last_block_certified_data() {
             ..Default::default()
         };
 
-        let result_1 = CertifiedBlock{
+        let result_1 = CertifiedBlock {
             certificate: vec![1, 2, 3],
             witness: vec![5, 6, 7],
             data: block_1,
         };
-        let result_2 = CertifiedBlock{
+        let result_2 = CertifiedBlock {
             certificate: vec![11, 12, 13],
             witness: vec![15, 16, 17],
             data: block_2,
