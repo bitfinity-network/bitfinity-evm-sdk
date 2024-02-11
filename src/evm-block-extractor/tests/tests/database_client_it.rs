@@ -1,11 +1,8 @@
 use did::block::ExeResult;
 use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, H160, H256, U256, U64};
-use ethereum_json_rpc_client::http::HttpResponse;
-use evm_block_extractor::database::AccountBalance;
-use jsonrpc_core::{Output, Success};
+use evm_block_extractor::database::{AccountBalance, CertifiedBlock};
 use rand::random;
-use serde_bytes::ByteBuf;
 
 use crate::test_with_clients;
 
@@ -648,43 +645,32 @@ async fn test_insert_and_fetch_last_block_certified_data() {
             ..Default::default()
         };
 
-        let result_1 = Output::Success(Success {
-            jsonrpc: Some(jsonrpc_core::Version::V2),
-            result: serde_json::to_value(block_1).unwrap(),
-            id: jsonrpc_core::Id::Null,
-        });
-        let result_2 = Output::Success(Success {
-            jsonrpc: Some(jsonrpc_core::Version::V2),
-            result: serde_json::to_value(block_2).unwrap(),
-            id: jsonrpc_core::Id::Null,
-        });
-
-        let http_response_1 = HttpResponse {
-            status_code: 201,
-            headers: Default::default(),
-            body: ByteBuf::from(serde_json::to_vec(&result_1).unwrap()),
+        let result_1 = CertifiedBlock{
+            certificate: vec![1, 2, 3],
+            witness: vec![5, 6, 7],
+            data: block_1,
         };
-        let http_response_2 = HttpResponse {
-            status_code: 202,
-            headers: Default::default(),
-            body: ByteBuf::from(serde_json::to_vec(&result_2).unwrap()),
+        let result_2 = CertifiedBlock{
+            certificate: vec![11, 12, 13],
+            witness: vec![15, 16, 17],
+            data: block_2,
         };
 
         db_client
-            .insert_certified_block_data(http_response_1.clone())
+            .insert_certified_block_data(result_1.clone())
             .await
             .unwrap();
         assert_eq!(
-            http_response_1,
+            result_1,
             db_client.get_last_certified_block_data().await.unwrap()
         );
 
         db_client
-            .insert_certified_block_data(http_response_2.clone())
+            .insert_certified_block_data(result_2.clone())
             .await
             .unwrap();
         assert_eq!(
-            http_response_2,
+            result_2,
             db_client.get_last_certified_block_data().await.unwrap()
         );
     })

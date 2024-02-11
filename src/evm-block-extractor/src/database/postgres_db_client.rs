@@ -2,13 +2,11 @@ use ::sqlx::migrate::Migrator;
 use ::sqlx::*;
 use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, TransactionReceipt, H256};
-use ethereum_json_rpc_client::http::HttpResponse;
-use jsonrpc_core::Success;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sqlx::postgres::PgRow;
 
-use super::{AccountBalance, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
+use super::{AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
 
 static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migrations");
 
@@ -171,14 +169,8 @@ impl DatabaseClient for PostgresDbClient {
         Ok(())
     }
 
-    async fn insert_certified_block_data(&self, response: HttpResponse) -> anyhow::Result<()> {
-        let block_id = match serde_json::from_slice::<Success>(&response.body) {
-            Ok(success) => serde_json::from_value::<Block<H256>>(success.result)?
-                .number
-                .0
-                .as_u64(),
-            Err(err) => anyhow::bail!("invalid response data: {err}"),
-        };
+    async fn insert_certified_block_data(&self, response: CertifiedBlock) -> anyhow::Result<()> {
+        let block_id = response.data.number.0.as_u64();
 
         let mut tx = self.pool.begin().await?;
         sqlx::query("INSERT INTO CERTIFIED_EVM_BLOCK (id, certified_response) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET certified_response = $2")
@@ -193,7 +185,7 @@ impl DatabaseClient for PostgresDbClient {
         Ok(())
     }
 
-    async fn get_last_certified_block_data(&self) -> anyhow::Result<HttpResponse> {
+    async fn get_last_certified_block_data(&self) -> anyhow::Result<CertifiedBlock> {
         sqlx::query("SELECT certified_response FROM CERTIFIED_EVM_BLOCK ORDER BY id DESC LIMIT 1")
             .fetch_one(&self.pool)
             .await

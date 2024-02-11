@@ -1,14 +1,15 @@
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
+use candid::{CandidType, Deserialize};
 use ic_canister_client::CanisterClient;
 use jsonrpc_core::{Call, Request, Response};
+use serde::Serialize;
+use serde_bytes::ByteBuf;
 
-use crate::{
-    http::{HttpRequest, HttpResponse},
-    Client, ETH_SEND_RAW_TRANSACTION_METHOD,
-};
+use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(
@@ -57,6 +58,44 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
             Ok(response)
         })
     }
+}
+
+/// The important components of an HTTP request.
+#[derive(Clone, Debug, CandidType)]
+struct HttpRequest {
+    /// The HTTP method string.
+    pub method: &'static str,
+    /// The URL method string.
+    pub url: &'static str,
+    /// The request headers.
+    pub headers: HashMap<&'static str, &'static str>,
+    /// The request body.
+    pub body: ByteBuf,
+}
+
+impl HttpRequest {
+    pub fn new<T: ?Sized + Serialize>(data: &T) -> anyhow::Result<Self> {
+        let mut headers = HashMap::new();
+        headers.insert("content-type", "application/json");
+        Ok(Self {
+            method: "POST",
+            headers,
+            url: "",
+            body: ByteBuf::from(
+                serde_json::to_vec(data).context("failed to serialize RPC request")?,
+            ),
+        })
+    }
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct HttpResponse {
+    /// The HTTP status code.
+    pub status_code: u16,
+    /// The response header map.
+    pub headers: HashMap<String, String>,
+    /// The response body.
+    pub body: ByteBuf,
 }
 
 #[inline]

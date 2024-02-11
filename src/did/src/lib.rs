@@ -6,6 +6,7 @@
 pub mod block;
 pub mod build;
 pub mod bytes;
+pub mod certified_result;
 pub mod codec;
 pub mod constant;
 pub mod error;

@@ -2,7 +2,6 @@ use std::fmt::Debug;
 
 use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, TransactionReceipt, H256};
-use ethereum_json_rpc_client::http::HttpResponse;
 use gcp_bigquery_client::model::dataset::Dataset;
 use gcp_bigquery_client::model::field_type::serialize_json_as_string;
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
@@ -15,12 +14,11 @@ use gcp_bigquery_client::model::table_data_insert_all_request_rows::TableDataIns
 use gcp_bigquery_client::model::table_field_schema::TableFieldSchema;
 use gcp_bigquery_client::model::table_schema::TableSchema;
 use gcp_bigquery_client::Client;
-use jsonrpc_core::Success;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 
-use super::{AccountBalance, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
+use super::{AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
 
 const BQ_EXE_RESULTS_TABLE_ID: &str = "exe_results";
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";
@@ -554,19 +552,15 @@ impl DatabaseClient for BigQueryDbClient {
             .await
     }
 
-    async fn insert_certified_block_data(&self, response: HttpResponse) -> anyhow::Result<()> {
-        let block = match serde_json::from_slice::<Success>(&response.body) {
-            Ok(success) => serde_json::from_value::<Block<H256>>(success.result)?,
-            Err(err) => anyhow::bail!("invalid response data: {err}"),
-        };
-
+    async fn insert_certified_block_data(&self, block: CertifiedBlock) -> anyhow::Result<()> {
+        let hash = block.data.hash.to_hex_str();
         let block_row = CertifiedBlockRow {
-            id: block.number.0.as_u64(),
-            certified_response: serde_json::to_value(response).expect("Failed to serialize block"),
+            id: block.data.number.0.as_u64(),
+            certified_response: serde_json::to_value(block).expect("Failed to serialize block"),
         };
 
         let rows = TableDataInsertAllRequestRows {
-            insert_id: Some(block.hash.to_hex_str()),
+            insert_id: Some(hash),
             json: serde_json::to_value(block_row).expect("Failed to serialize block"),
         };
 
@@ -574,7 +568,7 @@ impl DatabaseClient for BigQueryDbClient {
             .await
     }
 
-    async fn get_last_certified_block_data(&self) -> anyhow::Result<HttpResponse> {
+    async fn get_last_certified_block_data(&self) -> anyhow::Result<CertifiedBlock> {
         let query_request = QueryRequest {
             query_parameters: None,
             query: format!(
