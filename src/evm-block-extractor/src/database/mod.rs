@@ -1,7 +1,7 @@
 pub mod big_query_db_client;
 pub mod postgres_db_client;
 
-use did::certified_result::CertifiedResult;
+use did::certified::CertifiedResult;
 use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, TransactionReceipt, H160, H256, U256};
 use serde::{Deserialize, Serialize};

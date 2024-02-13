@@ -20,7 +20,6 @@ jsonrpsee = { workspace = true }
 lightspeed_scheduler = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
-serde_bytes = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "tls-rustls"] }
 tokio = { workspace = true }
