@@ -948,6 +948,14 @@ mod test {
         let block = BlockNumber::Pending;
         test_json_roundtrip(&block);
         test_candid_roundtrip(&block);
+
+        let block = BlockNumber::Safe;
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
+
+        let block = BlockNumber::Finalized;
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
     }
 
     #[test]
