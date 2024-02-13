@@ -23,6 +23,8 @@ pub enum BlockNumber {
     Latest,
     Earliest,
     Pending,
+    Safe,
+    Finalized,
     Number(U64),
 }
 
@@ -32,6 +34,8 @@ impl BlockNumber {
             "latest" => Self::Latest,
             "earliest" => Self::Earliest,
             "pending" => Self::Pending,
+            "safe" => Self::Safe,
+            "finalized" => Self::Finalized,
             n => BlockNumber::Number(U64::from_hex_str(n)?),
         })
     }
@@ -46,6 +50,8 @@ impl Serialize for BlockNumber {
             BlockNumber::Latest => serializer.serialize_str("latest"),
             BlockNumber::Earliest => serializer.serialize_str("earliest"),
             BlockNumber::Pending => serializer.serialize_str("pending"),
+            BlockNumber::Safe => serializer.serialize_str("safe"),
+            BlockNumber::Finalized => serializer.serialize_str("finalized"),
             BlockNumber::Number(ref n) => serializer.serialize_str(&n.to_hex_str()),
         }
     }
@@ -74,6 +80,8 @@ impl CandidType for BlockNumber {
             BlockNumber::Latest => serializer.serialize_text("latest"),
             BlockNumber::Earliest => serializer.serialize_text("earliest"),
             BlockNumber::Pending => serializer.serialize_text("pending"),
+            BlockNumber::Safe => serializer.serialize_text("safe"),
+            BlockNumber::Finalized => serializer.serialize_text("finalized"),
             BlockNumber::Number(ref n) => serializer.serialize_text(&format!("0x{n:x}")),
         }
     }
@@ -957,6 +965,14 @@ mod test {
         test_candid_roundtrip(&block);
 
         let block = BlockId::BlockNumber(BlockNumber::Pending);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
+
+        let block = BlockId::BlockNumber(BlockNumber::Safe);
+        test_json_roundtrip(&block);
+        test_candid_roundtrip(&block);
+
+        let block = BlockId::BlockNumber(BlockNumber::Finalized);
         test_json_roundtrip(&block);
         test_candid_roundtrip(&block);
 
