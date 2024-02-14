@@ -834,10 +834,10 @@ mod test {
     #[test]
     fn should_calc_base_fee_with_arithmetic_overflow() {
         let gas_used = U256::new(2000_u64.into());
-        let gas_limit = U256::new(100_u64.into());
+        let gas_limit = U256::new(2010_u64.into());
         let mut base_fee = U256::new(100_u64.into());
 
-        for _ in 0..100 {
+        for _ in 0..10000 {
             base_fee = calculate_next_block_base_fee(
                 &gas_used,
                 &gas_limit,
