@@ -36,8 +36,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
         let mut txn = vec![];
         for i in 0..10 {
             for j in 0..TRANSACTIONS_PER_BLOCK {
-                let tx_hash =
-                    &exe_results[(i * TRANSACTIONS_PER_BLOCK + j) as usize];
+                let tx_hash = &exe_results[(i * TRANSACTIONS_PER_BLOCK + j) as usize];
                 let block_number = blocks[i as usize].number.0.as_u64();
                 let dummy_txn = Transaction {
                     hash: tx_hash.clone(),
@@ -56,10 +55,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
         // Check the transactions
         assert_eq!(block.transactions.len(), TRANSACTIONS_PER_BLOCK as usize);
         for i in 0..TRANSACTIONS_PER_BLOCK {
-            assert_eq!(
-                block.transactions[i as usize].hash,
-                exe_results[i as usize]
-            );
+            assert_eq!(block.transactions[i as usize].hash, exe_results[i as usize]);
         }
 
         assert_eq!(block.number.0.as_u64(), 1);
@@ -76,17 +72,11 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
         assert_eq!(block.number.0.as_u64(), 10);
 
         let tx = db_client
-            .get_transaction(
-                exe_results[9 * TRANSACTIONS_PER_BLOCK as usize]
-                    .clone(),
-            )
+            .get_transaction(exe_results[9 * TRANSACTIONS_PER_BLOCK as usize].clone())
             .await
             .unwrap();
 
-        assert_eq!(
-            tx.hash,
-            exe_results[9 * TRANSACTIONS_PER_BLOCK as usize]
-        );
+        assert_eq!(tx.hash, exe_results[9 * TRANSACTIONS_PER_BLOCK as usize]);
     })
     .await;
 }
