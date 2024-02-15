@@ -260,7 +260,7 @@ mod ic_sign {
             }
 
             let pubkey = IcSigner {}
-                .public_key(self.key_id, self.derivation_path.clone())
+                .public_key(self.key_id.clone(), self.derivation_path.clone())
                 .await?;
             let address: H160 = IcSigner.pubkey_to_address(&pubkey)?.into();
             *self.cached_address.borrow_mut() = Some(address.clone());
@@ -273,7 +273,11 @@ mod ic_sign {
             transaction: &TypedTransaction,
         ) -> Result<Signature, TransactionSignerError> {
             IcSigner {}
-                .sign_transaction(transaction, self.key_id, self.derivation_path.clone())
+                .sign_transaction(
+                    transaction,
+                    self.key_id.clone(),
+                    self.derivation_path.clone(),
+                )
                 .await
                 .map_err(TransactionSignerError::IcSignError)
                 .map(Into::into)
@@ -285,7 +289,7 @@ mod ic_sign {
                 .sign_digest(
                     &address.into(),
                     digest,
-                    self.key_id,
+                    self.key_id.clone(),
                     self.derivation_path.clone(),
                 )
                 .await

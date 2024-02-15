@@ -33,7 +33,7 @@ pub enum IcSignerError {
 }
 
 /// Signing key which will be used by management canister.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, CandidType, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType, PartialEq, Eq)]
 pub enum SigningKeyId {
     /// A default key ID that is used in deploying to a local version of IC (via DFX).
     Dfx,
@@ -43,6 +43,12 @@ pub enum SigningKeyId {
 
     /// A master production key ID that is used on the mainnet.
     Production,
+
+    /// A key ID available in the Pocket IC server
+    PocketIc,
+
+    /// A key ID that is not defined in the enum
+    Custom(String),
 }
 
 /// There are three key options:
@@ -57,6 +63,10 @@ impl fmt::Display for SigningKeyId {
             SigningKeyId::Dfx => write!(f, "dfx_test_key"),
             SigningKeyId::Test => write!(f, "test_key_1"),
             SigningKeyId::Production => write!(f, "key_1"),
+            SigningKeyId::PocketIc => {
+                write!(f, "master_ecdsa_public_key_fscpm-uiaaa-aaaaa-aaaap-yai")
+            }
+            SigningKeyId::Custom(key) => write!(f, "{}", key),
         }
     }
 }
