@@ -1,5 +1,3 @@
-use did::block::ExeResult;
-use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, H160, H256, U256, U64};
 use evm_block_extractor::database::AccountBalance;
 use rand::random;
@@ -30,13 +28,8 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
         for i in 1..=10 {
             for _ in 0..TRANSACTIONS_PER_BLOCK {
                 let tx_hash = ethers_core::types::H256::random();
+                exe_results.push(did::H256::from(tx_hash));
                 blocks[i - 1].transactions.push(tx_hash.into());
-                let dummy_exe_result = new_storable_execution_result(
-                    tx_hash.into(),
-                    blocks[i - 1].hash.clone(),
-                    U64::from(i),
-                );
-                exe_results.push(dummy_exe_result);
             }
         }
 
@@ -44,7 +37,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
         for i in 0..10 {
             for j in 0..TRANSACTIONS_PER_BLOCK {
                 let tx_hash =
-                    &exe_results[(i * TRANSACTIONS_PER_BLOCK + j) as usize].transaction_hash;
+                    &exe_results[(i * TRANSACTIONS_PER_BLOCK + j) as usize];
                 let block_number = blocks[i as usize].number.0.as_u64();
                 let dummy_txn = Transaction {
                     hash: tx_hash.clone(),
@@ -65,18 +58,18 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
         for i in 0..TRANSACTIONS_PER_BLOCK {
             assert_eq!(
                 block.transactions[i as usize].hash,
-                exe_results[i as usize].transaction_hash
+                exe_results[i as usize]
             );
         }
 
         assert_eq!(block.number.0.as_u64(), 1);
 
         let tx = db_client
-            .get_transaction(exe_results[0].transaction_hash.clone())
+            .get_transaction(exe_results[0].clone())
             .await
             .unwrap();
 
-        assert_eq!(tx.hash, exe_results[0].transaction_hash.clone());
+        assert_eq!(tx.hash, exe_results[0].clone());
 
         let block = db_client.get_full_block_by_number(10).await.unwrap();
 
@@ -85,7 +78,6 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
         let tx = db_client
             .get_transaction(
                 exe_results[9 * TRANSACTIONS_PER_BLOCK as usize]
-                    .transaction_hash
                     .clone(),
             )
             .await
@@ -93,7 +85,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
 
         assert_eq!(
             tx.hash,
-            exe_results[9 * TRANSACTIONS_PER_BLOCK as usize].transaction_hash
+            exe_results[9 * TRANSACTIONS_PER_BLOCK as usize]
         );
     })
     .await;
@@ -550,25 +542,4 @@ async fn test_insert_and_fetch_chain_id() {
         }
     })
     .await;
-}
-
-fn new_storable_execution_result(
-    transaction_hash: H256,
-    block_hash: H256,
-    block_number: U64,
-) -> StorableExecutionResult {
-    StorableExecutionResult {
-        transaction_hash,
-        block_hash,
-        exe_result: ExeResult::success(U256::max_value(), did::block::TransactOut::None, vec![]),
-        transaction_index: Default::default(),
-        block_number,
-        from: Default::default(),
-        to: Default::default(),
-        transaction_type: Default::default(),
-        cumulative_gas_used: Default::default(),
-        max_fee_per_gas: Default::default(),
-        gas_price: Default::default(),
-        max_priority_fee_per_gas: Default::default(),
-    }
 }
