@@ -164,7 +164,7 @@ impl BlockExtractor {
                 .collect::<Vec<did::Transaction>>();
 
             self.blockchain
-                .insert_block_data(&blocks, &all_exe_results, &all_transactions)
+                .insert_block_data(&blocks, &all_transactions)
                 .await?;
         }
 

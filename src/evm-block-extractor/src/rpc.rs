@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use did::TransactionReceipt;
-use ethers_core::types::{BlockNumber, H160, H256, U256, U64};
+use ethers_core::types::{BlockNumber, H160, U256, U64};
 use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
@@ -29,10 +28,6 @@ pub trait Eth {
         block: BlockNumber,
         full_transactions: bool,
     ) -> RpcResult<serde_json::Value>;
-
-    #[method(name = "getTransactionReceipt")]
-    /// Get a transaction receipt
-    async fn get_transaction_receipt(&self, tx_hash: H256) -> RpcResult<TransactionReceipt>;
 
     #[method(name = "blockNumber")]
     /// Get the latest block number
@@ -181,19 +176,6 @@ impl EthServer for EthImpl {
 
             Ok(block)
         }
-    }
-
-    async fn get_transaction_receipt(&self, tx_hash: H256) -> RpcResult<TransactionReceipt> {
-        let tx = self
-            .blockchain
-            .get_transaction_receipt(tx_hash.into())
-            .await
-            .map_err(|e| {
-                log::error!("Error getting transaction receipt: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
-            })?;
-
-        Ok(tx)
     }
 
     async fn block_number(&self) -> RpcResult<U256> {
