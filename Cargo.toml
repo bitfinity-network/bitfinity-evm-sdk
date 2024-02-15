@@ -2,7 +2,7 @@
 members = [
     "src/did",
     "src/eth-signer",
-    "src/eth-signer/test_canister",
+    "src/eth-signer/tests/test_canister",
     "src/evm-block-extractor",
     "src/evm-canister-client",
     "src/minter-client",
