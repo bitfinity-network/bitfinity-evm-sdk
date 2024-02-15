@@ -23,11 +23,13 @@ path = "src/main.rs"
 anyhow = { workspace = true }
 candid = { workspace = true }
 clap = { workspace = true }
+did = { path = "../did" }
 env_logger = { workspace = true }
 eth-signer = { path = "../eth-signer" }
 ethers-core = { workspace = true }
-evm-canister-client = { path = "../evm-canister-client", features = ["ic-agent-client"] }
-did = { path = "../did" }
+evm-canister-client = { path = "../evm-canister-client", features = [
+    "ic-agent-client",
+] }
 hex = { workspace = true }
 ic-exports = { workspace = true }
 log = { workspace = true }

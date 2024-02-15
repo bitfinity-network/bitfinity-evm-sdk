@@ -22,6 +22,7 @@ derive_more = { workspace = true }
 ethereum-types = { workspace = true }
 ethers-core = { workspace = true }
 hex = { workspace = true }
+ic-log = { workspace = true }
 ic-stable-structures = { workspace = true }
 jsonrpc-core = { workspace = true }
 log = { workspace = true }
@@ -30,12 +31,11 @@ num = { workspace = true }
 once_cell = { workspace = true }
 rlp = { workspace = true }
 serde = { workspace = true }
-serde_with = { workspace = true }
 serde_json = { workspace = true }
+serde_with = { workspace = true }
 sha2 = { workspace = true }
 sha3 = { workspace = true }
 thiserror = { workspace = true }
-ic-log = { workspace = true }
 
 [dev-dependencies]
 eth-signer = { path = "../eth-signer" }
