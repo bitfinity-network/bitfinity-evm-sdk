@@ -56,10 +56,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
             }
         }
 
-        db_client
-            .insert_block_data(&blocks, &txn)
-            .await
-            .unwrap();
+        db_client.insert_block_data(&blocks, &txn).await.unwrap();
 
         let block = db_client.get_full_block_by_number(1).await.unwrap();
 
@@ -79,10 +76,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
             .await
             .unwrap();
 
-        assert_eq!(
-            tx.hash,
-            exe_results[0].transaction_hash.clone()
-        );
+        assert_eq!(tx.hash, exe_results[0].transaction_hash.clone());
 
         let block = db_client.get_full_block_by_number(10).await.unwrap();
 
@@ -206,10 +200,7 @@ async fn test_retrieval_of_transactions_with_blocks() {
 
         blocks[4].transactions = txn.iter().map(|tx| tx.hash.clone()).collect();
 
-        db_client
-            .insert_block_data(&blocks, &txn)
-            .await
-            .unwrap();
+        db_client.insert_block_data(&blocks, &txn).await.unwrap();
 
         let block = db_client.get_block_by_number(1).await.unwrap();
 
@@ -431,7 +422,6 @@ async fn test_insertion_of_blocks_with_no_txs() {
         assert_eq!(block.hash, dummy_block.hash);
 
         assert_eq!(block.transactions.len(), 0);
-
     })
     .await;
 }

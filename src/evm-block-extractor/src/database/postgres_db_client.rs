@@ -137,14 +137,12 @@ impl DatabaseClient for PostgresDbClient {
 
         for txn in transactions {
             let hex_tx_hash = txn.hash.to_hex_str();
-            sqlx::query(
-                "INSERT INTO EVM_TRANSACTION (id, data, block_number) VALUES ($1, $2,$3)",
-            )
-            .bind(&hex_tx_hash)
-            .bind(serde_json::to_value(txn)?)
-            .bind(txn.block_number.expect("Block number not found").0.as_u64() as i64)
-            .execute(&mut *tx)
-            .await?;
+            sqlx::query("INSERT INTO EVM_TRANSACTION (id, data, block_number) VALUES ($1, $2,$3)")
+                .bind(&hex_tx_hash)
+                .bind(serde_json::to_value(txn)?)
+                .bind(txn.block_number.expect("Block number not found").0.as_u64() as i64)
+                .execute(&mut *tx)
+                .await?;
         }
 
         tx.commit().await?;
@@ -198,14 +196,12 @@ impl DatabaseClient for PostgresDbClient {
 
     async fn get_transaction(&self, tx_hash: H256) -> anyhow::Result<Transaction> {
         let hex_tx_hash = did::H256::from(tx_hash).to_hex_str();
-        sqlx::query(
-            "SELECT data FROM EVM_TRANSACTION WHERE id = $1",
-        )
-        .bind(&hex_tx_hash)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| anyhow::anyhow!("Error getting transaction {}: {:?}", hex_tx_hash, e))
-        .and_then(|row| from_row_value(&row, 0))
+        sqlx::query("SELECT data FROM EVM_TRANSACTION WHERE id = $1")
+            .bind(&hex_tx_hash)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Error getting transaction {}: {:?}", hex_tx_hash, e))
+            .and_then(|row| from_row_value(&row, 0))
     }
 }
 

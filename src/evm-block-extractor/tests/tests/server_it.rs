@@ -75,7 +75,6 @@ async fn test_get_blocks() {
             assert_eq!(full_block.number, Some(i.into()));
             assert_eq!(full_block.transactions.len(), 1);
             assert_eq!(full_block.transactions[0].hash, block.transactions[0]);
-
         }
 
         {

@@ -481,7 +481,6 @@ impl DatabaseClient for BigQueryDbClient {
             .await
     }
 
-
     async fn get_transaction(&self, tx_hash: H256) -> anyhow::Result<Transaction> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![
