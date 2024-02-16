@@ -31,6 +31,8 @@ ic-exports = { workspace = true, optional = true }
 ic-canister = { workspace = true, optional = true }
 
 [dev-dependencies]
+ic-exports = { workspace = true, features = ["pocket-ic-tests"]}
+once_cell = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }
 
