@@ -131,7 +131,7 @@ impl<C: Client> EthJsonRcpClient<C> {
         self.single_request::<U64>(
             ETH_BLOCK_NUMBER_METHOD.to_string(),
             make_params_array!(),
-            Id::Null,
+            Id::Str("eth_blockNumber".to_string()),
         )
         .await
         .map(|v| v.as_u64())
