@@ -1,8 +1,7 @@
 pub mod big_query_db_client;
 pub mod postgres_db_client;
 
-use did::transaction::StorableExecutionResult;
-use did::{Block, Transaction, TransactionReceipt, H160, H256, U256};
+use did::{Block, Transaction, H160, H256, U256};
 use serde::{Deserialize, Serialize};
 
 /// Account balance
@@ -54,11 +53,10 @@ pub trait DatabaseClient: Send + Sync {
         block_number: u64,
     ) -> anyhow::Result<Block<Transaction>>;
 
-    /// Insert block data; these include receipts, transactions and the blocks
+    /// Insert block data; this includes transactions and the blocks
     async fn insert_block_data(
         &self,
         blocks: &[Block<H256>],
-        receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()>;
 
@@ -77,8 +75,8 @@ pub trait DatabaseClient: Send + Sync {
     /// Insert chain_id
     async fn insert_chain_id(&self, chain_id: u64) -> anyhow::Result<()>;
 
-    /// Get a transaction receipt from the database
-    async fn get_transaction_receipt(&self, tx_hash: H256) -> anyhow::Result<TransactionReceipt>;
+    /// Get a transaction from the database
+    async fn get_transaction(&self, tx_hash: H256) -> anyhow::Result<Transaction>;
 
     /// Get the latest block number
     async fn get_latest_block_number(&self) -> anyhow::Result<Option<u64>>;

@@ -1,5 +1,3 @@
-use did::block::ExeResult;
-use did::transaction::StorableExecutionResult;
 use did::{Block, Transaction, H160, H256, U256, U64};
 use evm_block_extractor::database::AccountBalance;
 use rand::random;
@@ -7,7 +5,7 @@ use rand::random;
 use crate::test_with_clients;
 
 #[tokio::test]
-async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
+async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
     test_with_clients(|db_client| async move {
         db_client.init(None, false).await.unwrap();
 
@@ -30,21 +28,15 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
         for i in 1..=10 {
             for _ in 0..TRANSACTIONS_PER_BLOCK {
                 let tx_hash = ethers_core::types::H256::random();
+                exe_results.push(did::H256::from(tx_hash));
                 blocks[i - 1].transactions.push(tx_hash.into());
-                let dummy_exe_result = new_storable_execution_result(
-                    tx_hash.into(),
-                    blocks[i - 1].hash.clone(),
-                    U64::from(i),
-                );
-                exe_results.push(dummy_exe_result);
             }
         }
 
         let mut txn = vec![];
         for i in 0..10 {
             for j in 0..TRANSACTIONS_PER_BLOCK {
-                let tx_hash =
-                    &exe_results[(i * TRANSACTIONS_PER_BLOCK + j) as usize].transaction_hash;
+                let tx_hash = &exe_results[(i * TRANSACTIONS_PER_BLOCK + j) as usize];
                 let block_number = blocks[i as usize].number.0.as_u64();
                 let dummy_txn = Transaction {
                     hash: tx_hash.clone(),
@@ -56,51 +48,35 @@ async fn test_batch_insertion_of_blocks_and_receipts_transactions_retrieval() {
             }
         }
 
-        db_client
-            .insert_block_data(&blocks, &exe_results, &txn)
-            .await
-            .unwrap();
+        db_client.insert_block_data(&blocks, &txn).await.unwrap();
 
         let block = db_client.get_full_block_by_number(1).await.unwrap();
 
         // Check the transactions
         assert_eq!(block.transactions.len(), TRANSACTIONS_PER_BLOCK as usize);
         for i in 0..TRANSACTIONS_PER_BLOCK {
-            assert_eq!(
-                block.transactions[i as usize].hash,
-                exe_results[i as usize].transaction_hash
-            );
+            assert_eq!(block.transactions[i as usize].hash, exe_results[i as usize]);
         }
 
         assert_eq!(block.number.0.as_u64(), 1);
 
-        let receipt = db_client
-            .get_transaction_receipt(exe_results[0].transaction_hash.clone())
+        let tx = db_client
+            .get_transaction(exe_results[0].clone())
             .await
             .unwrap();
 
-        assert_eq!(
-            receipt.transaction_hash,
-            exe_results[0].transaction_hash.clone()
-        );
+        assert_eq!(tx.hash, exe_results[0].clone());
 
         let block = db_client.get_full_block_by_number(10).await.unwrap();
 
         assert_eq!(block.number.0.as_u64(), 10);
 
-        let receipt = db_client
-            .get_transaction_receipt(
-                exe_results[9 * TRANSACTIONS_PER_BLOCK as usize]
-                    .transaction_hash
-                    .clone(),
-            )
+        let tx = db_client
+            .get_transaction(exe_results[9 * TRANSACTIONS_PER_BLOCK as usize].clone())
             .await
             .unwrap();
 
-        assert_eq!(
-            receipt.transaction_hash,
-            exe_results[9 * TRANSACTIONS_PER_BLOCK as usize].transaction_hash
-        );
+        assert_eq!(tx.hash, exe_results[9 * TRANSACTIONS_PER_BLOCK as usize]);
     })
     .await;
 }
@@ -121,7 +97,7 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
             };
 
             db_client
-                .insert_block_data(&[dummy_block], &[], &[])
+                .insert_block_data(&[dummy_block], &[])
                 .await
                 .unwrap();
         }
@@ -146,7 +122,7 @@ async fn test_init_idempotency() {
         };
 
         assert!(db_client
-            .insert_block_data(&[dummy_block], &[], &[])
+            .insert_block_data(&[dummy_block], &[])
             .await
             .is_err());
 
@@ -161,7 +137,7 @@ async fn test_init_idempotency() {
         };
 
         assert!(db_client
-            .insert_block_data(&[dummy_block], &[], &[])
+            .insert_block_data(&[dummy_block], &[])
             .await
             .is_ok());
 
@@ -206,10 +182,7 @@ async fn test_retrieval_of_transactions_with_blocks() {
 
         blocks[4].transactions = txn.iter().map(|tx| tx.hash.clone()).collect();
 
-        db_client
-            .insert_block_data(&blocks, &[], &txn)
-            .await
-            .unwrap();
+        db_client.insert_block_data(&blocks, &txn).await.unwrap();
 
         let block = db_client.get_block_by_number(1).await.unwrap();
 
@@ -255,7 +228,7 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
         db_client.init(None, false).await.unwrap();
 
         assert!(db_client
-            .insert_block_data(&[block_one.clone().into()], &[], &[])
+            .insert_block_data(&[block_one.clone().into()], &[])
             .await
             .is_ok());
 
@@ -276,7 +249,7 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
 
         // Add a block
         assert!(db_client
-            .insert_block_data(&[block_two.clone().into()], &[], &[])
+            .insert_block_data(&[block_two.clone().into()], &[])
             .await
             .is_ok());
 
@@ -303,11 +276,6 @@ async fn test_deletion_and_clearing_of_database() {
                     ..Default::default()
                 }
                 .into()],
-                &[new_storable_execution_result(
-                    H256::zero(),
-                    H256::zero(),
-                    0_u64.into(),
-                )],
                 &[ethers_core::types::Transaction {
                     block_number: Some(ethers_core::types::U64::zero()),
                     hash: ethers_core::types::H256::random(),
@@ -353,7 +321,7 @@ async fn test_check_if_same_block_hash() {
         };
 
         db_client
-            .insert_block_data(&[dummy_block.clone()], &[], &[])
+            .insert_block_data(&[dummy_block.clone()], &[])
             .await
             .unwrap();
 
@@ -381,31 +349,7 @@ async fn test_check_if_same_block_hash() {
 }
 
 #[tokio::test]
-async fn test_insertion_of_blocks_with_no_txs_and_no_receipts() {
-    test_with_clients(|db_client| async move {
-        db_client.init(None, false).await.unwrap();
-
-        let dummy_block: Block<H256> = Block {
-            number: ethers_core::types::U64::from(1).into(),
-            hash: ethers_core::types::H256::random().into(),
-            ..Default::default()
-        };
-
-        db_client
-            .insert_block_data(&[dummy_block.clone()], &[], &[])
-            .await
-            .unwrap();
-
-        let block = db_client.get_block_by_number(1).await.unwrap();
-
-        assert_eq!(block.number.0.as_u64(), 1);
-        assert_eq!(block.hash, dummy_block.hash);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_insertion_of_blocks_with_txs_and_no_receipts() {
+async fn test_insertion_of_blocks_with_txs() {
     test_with_clients(|db_client| async move {
         db_client.init(None, false).await.unwrap();
 
@@ -423,7 +367,7 @@ async fn test_insertion_of_blocks_with_txs_and_no_receipts() {
         };
 
         db_client
-            .insert_block_data(&[dummy_block.clone()], &[], &[dummy_txn.clone()])
+            .insert_block_data(&[dummy_block.clone()], &[dummy_txn.clone()])
             .await
             .unwrap();
 
@@ -439,7 +383,7 @@ async fn test_insertion_of_blocks_with_txs_and_no_receipts() {
 }
 
 #[tokio::test]
-async fn test_insertion_of_blocks_with_no_txs_and_receipts() {
+async fn test_insertion_of_blocks_with_no_txs() {
     test_with_clients(|db_client| async move {
         db_client.init(None, false).await.unwrap();
 
@@ -449,14 +393,8 @@ async fn test_insertion_of_blocks_with_no_txs_and_receipts() {
             ..Default::default()
         };
 
-        let dummy_receipt = new_storable_execution_result(
-            ethers_core::types::H256::random().into(),
-            dummy_block.hash.clone(),
-            1_u64.into(),
-        );
-
         db_client
-            .insert_block_data(&[dummy_block.clone()], &[dummy_receipt.clone()], &[])
+            .insert_block_data(&[dummy_block.clone()], &[])
             .await
             .unwrap();
 
@@ -466,19 +404,12 @@ async fn test_insertion_of_blocks_with_no_txs_and_receipts() {
         assert_eq!(block.hash, dummy_block.hash);
 
         assert_eq!(block.transactions.len(), 0);
-
-        let receipt = db_client
-            .get_transaction_receipt(dummy_receipt.transaction_hash.clone())
-            .await
-            .unwrap();
-
-        assert_eq!(receipt.transaction_hash, dummy_receipt.transaction_hash);
     })
     .await;
 }
 
 #[tokio::test]
-async fn test_insertion_of_txs_and_receipts_with_no_blocks() {
+async fn test_insertion_of_txs_with_no_blocks() {
     test_with_clients(|db_client| async move {
         db_client.init(None, false).await.unwrap();
 
@@ -488,23 +419,17 @@ async fn test_insertion_of_txs_and_receipts_with_no_blocks() {
             ..Default::default()
         };
 
-        let dummy_receipt = new_storable_execution_result(
-            dummy_txn.hash.clone(),
-            ethers_core::types::H256::random().into(),
-            1_u64.into(),
-        );
-
         db_client
-            .insert_block_data(&[], &[dummy_receipt], &[dummy_txn.clone()])
+            .insert_block_data(&[], &[dummy_txn.clone()])
             .await
             .unwrap();
 
-        let receipt = db_client
-            .get_transaction_receipt(dummy_txn.hash.clone())
+        let tx = db_client
+            .get_transaction(dummy_txn.hash.clone())
             .await
             .unwrap();
 
-        assert_eq!(receipt.transaction_hash, dummy_txn.hash);
+        assert_eq!(tx.hash, dummy_txn.hash);
 
         let block = db_client.get_block_by_number(1).await;
 
@@ -607,25 +532,4 @@ async fn test_insert_and_fetch_chain_id() {
         }
     })
     .await;
-}
-
-fn new_storable_execution_result(
-    transaction_hash: H256,
-    block_hash: H256,
-    block_number: U64,
-) -> StorableExecutionResult {
-    StorableExecutionResult {
-        transaction_hash,
-        block_hash,
-        exe_result: ExeResult::success(U256::max_value(), did::block::TransactOut::None, vec![]),
-        transaction_index: Default::default(),
-        block_number,
-        from: Default::default(),
-        to: Default::default(),
-        transaction_type: Default::default(),
-        cumulative_gas_used: Default::default(),
-        max_fee_per_gas: Default::default(),
-        gas_price: Default::default(),
-        max_priority_fee_per_gas: Default::default(),
-    }
 }

@@ -8,7 +8,6 @@ use tokio::time::Duration;
 
 use crate::config::ExtractorArgs;
 use crate::database::{AccountBalance, DatabaseClient};
-use crate::task::with_retry;
 
 /// Starts the block extractor process
 pub async fn start_extractor(
@@ -104,8 +103,6 @@ impl BlockExtractor {
             )
             .await??;
 
-            let mut receipts_tasks = vec![];
-
             let all_transactions = evm_blocks
                 .iter()
                 .flat_map(|block| &block.transactions)
@@ -116,42 +113,6 @@ impl BlockExtractor {
                 .into_iter()
                 .map(|block| block.into())
                 .collect::<Vec<ethers_core::types::Block<ethers_core::types::H256>>>();
-
-            for block in &blocks {
-                let tx_hashes = block.transactions.clone();
-                let client = client.clone();
-
-                let receipts_task = tokio::spawn(async move {
-                    with_retry(
-                        "get exe results from evm",
-                        Duration::from_secs(1),
-                        4,
-                        || async {
-                            client
-                                .get_tx_execution_results_by_hash(tx_hashes.clone(), batch_size)
-                                .await
-                        },
-                    )
-                    .await
-                });
-
-                receipts_tasks.push(receipts_task);
-            }
-
-            let exe_results = futures::future::join_all(receipts_tasks).await;
-
-            let mut all_exe_results = vec![];
-            for exe_results in exe_results {
-                match exe_results {
-                    Ok(Ok(mut exe_results)) => all_exe_results.append(&mut exe_results),
-                    Ok(Err(e)) => {
-                        warn!("Error getting receipts: {:?}. The process will not be stopped but there will be missing receipts in the DB", e);
-                    }
-                    Err(e) => {
-                        warn!("Error getting receipts: {:?}. The process will not be stopped but there will be missing receipts in the DB", e);
-                    }
-                }
-            }
 
             let blocks = blocks
                 .into_iter()
@@ -164,7 +125,7 @@ impl BlockExtractor {
                 .collect::<Vec<did::Transaction>>();
 
             self.blockchain
-                .insert_block_data(&blocks, &all_exe_results, &all_transactions)
+                .insert_block_data(&blocks, &all_transactions)
                 .await?;
         }
 
