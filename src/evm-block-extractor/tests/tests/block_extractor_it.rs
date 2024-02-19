@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::EthJsonRcpClient;
+use ethereum_json_rpc_client::EthJsonRpcClient;
 use evm_block_extractor::database::AccountBalance;
 use evm_block_extractor::task::block_extractor::BlockExtractor;
 
@@ -13,7 +13,7 @@ async fn test_extractor_collect_blocks() {
         db_client.init(None, false).await.unwrap();
 
         let rpc_url = "https://testnet.bitfinity.network".to_string();
-        let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));
+        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
 
         let request_time_out_secs = 10;
         let rpc_batch_size = 10;

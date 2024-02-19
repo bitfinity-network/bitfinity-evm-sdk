@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use did::{Block, H160, U256, U64};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{Client, EthJsonRcpClient};
+use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use ethers_core::types::{BlockNumber, Transaction, H256};
 use evm_block_extractor::database::{AccountBalance, DatabaseClient};
 use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
@@ -56,7 +56,7 @@ async fn test_get_blocks() {
         let (port, handle) = new_server(db_client).await;
 
         let http_client =
-            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
 
         let block_count = http_client.get_block_number().await.unwrap();
         assert_eq!(block_count, BLOCK_COUNT - 1);
@@ -199,7 +199,7 @@ async fn test_get_genesis_accounts() {
         let (port, handle) = new_server(db_client.clone()).await;
 
         let http_client =
-            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
 
         // Test on empty database
         {
@@ -260,7 +260,7 @@ async fn test_get_chain_id() {
         let (port, handle) = new_server(db_client.clone()).await;
 
         let http_client =
-            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
 
         let chain_id: u64 = random();
         db_client.insert_chain_id(chain_id).await.unwrap();

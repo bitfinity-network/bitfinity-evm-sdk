@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::EthJsonRcpClient;
+use ethereum_json_rpc_client::EthJsonRpcClient;
 use ethers_core::types::BlockNumber;
 use log::*;
 use tokio::time::Duration;
@@ -13,7 +13,7 @@ use crate::database::{AccountBalance, DatabaseClient};
 pub async fn start_extractor(
     config: ExtractorArgs,
     db_client: Arc<dyn DatabaseClient>,
-    evm_client: Arc<EthJsonRcpClient<ReqwestClient>>,
+    evm_client: Arc<EthJsonRpcClient<ReqwestClient>>,
 ) -> anyhow::Result<()> {
     let earliest_block = evm_client
         .get_block_by_number(BlockNumber::Earliest)
@@ -45,7 +45,7 @@ pub async fn start_extractor(
 
 /// Extracts blocks from an EVMC and stores them in a database
 pub struct BlockExtractor {
-    client: Arc<EthJsonRcpClient<ReqwestClient>>,
+    client: Arc<EthJsonRpcClient<ReqwestClient>>,
     request_time_out_secs: u64,
     rpc_batch_size: usize,
     blockchain: Arc<dyn DatabaseClient>,
@@ -53,7 +53,7 @@ pub struct BlockExtractor {
 
 impl BlockExtractor {
     pub fn new(
-        client: Arc<EthJsonRcpClient<ReqwestClient>>,
+        client: Arc<EthJsonRpcClient<ReqwestClient>>,
         request_time_out_secs: u64,
         rpc_batch_size: usize,
         blockchain: Arc<dyn DatabaseClient>,

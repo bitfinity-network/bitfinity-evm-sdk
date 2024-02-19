@@ -5,7 +5,7 @@ use std::time::Duration;
 use clap::Parser;
 use env_logger::Builder;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::EthJsonRcpClient;
+use ethereum_json_rpc_client::EthJsonRpcClient;
 use evm_block_extractor::config::ExtractorArgs;
 use evm_block_extractor::server::{server_start, server_stop};
 use evm_block_extractor::task::block_extractor::start_extractor;
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     info!("----------------------");
 
-    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
+    let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(
         config.remote_rpc_url.clone(),
     )));
     let db_client = config.command.clone().build_client().await?;
