@@ -65,6 +65,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }),
             )
             .await;
+    } else {
+        warn!("remote_rpc_url is empty, fetching blocks is disabled");
     }
 
     // Start the job executor
