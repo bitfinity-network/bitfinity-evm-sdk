@@ -22,8 +22,9 @@ pub struct ExtractorArgs {
     #[arg(long = "server-address", short('s'), default_value = "0.0.0.0:8080")]
     pub server_address: String,
 
-    /// The JSON-RPC URL of the remote EVMC instance from which to extract blocks
-    #[arg(long = "rpc-url", short('u'))]
+    /// The JSON-RPC URL of the remote EVMC instance from which to extract blocks.
+    /// If missing or empty the block extracting task won't start.
+    #[arg(long = "rpc-url", short('u'), default_value = "")]
     pub remote_rpc_url: String,
 
     /// Time in seconds to wait for a response from the EVMC

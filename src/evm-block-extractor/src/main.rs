@@ -33,15 +33,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     info!("----------------------");
 
-    let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
-        config.remote_rpc_url.clone(),
-    )));
     let db_client = config.command.clone().build_client().await?;
 
     let job_executor = JobExecutor::new_with_local_tz();
 
     // Configure and start the block extractor task
-    {
+    if !config.remote_rpc_url.is_empty() {
+        let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(
+            config.remote_rpc_url.clone(),
+        )));
         let config = config.clone();
         let evm_client = evm_client.clone();
         let db_client = db_client.clone();
