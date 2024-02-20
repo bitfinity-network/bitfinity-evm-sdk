@@ -29,19 +29,19 @@ const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 const IC_GET_GENESIS_BALANCES: &str = "ic_getGenesisBalances";
 
-/// A client for interacting with an Ethereum node over JSON-RPC.
-#[derive(Clone)]
-pub struct EthJsonRcpClient<C: Client> {
-    client: C,
-}
-
 macro_rules! make_params_array {
     ($($items:expr),*) => {
         Params::Array(vec![$(serde_json::to_value($items)?, )*])
     };
 }
 
-impl<C: Client> EthJsonRcpClient<C> {
+/// A client for interacting with an Ethereum node over JSON-RPC.
+#[derive(Clone)]
+pub struct EthJsonRpcClient<C: Client> {
+    client: C,
+}
+
+impl<C: Client> EthJsonRpcClient<C> {
     /// Create a new client.
     ///
     /// # Arguments
@@ -131,7 +131,7 @@ impl<C: Client> EthJsonRcpClient<C> {
         self.single_request::<U64>(
             ETH_BLOCK_NUMBER_METHOD.to_string(),
             make_params_array!(),
-            Id::Null,
+            Id::Str("eth_blockNumber".to_string()),
         )
         .await
         .map(|v| v.as_u64())

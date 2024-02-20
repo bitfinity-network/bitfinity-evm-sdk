@@ -12,15 +12,14 @@ repository.workspace = true
 bitfinity = []
 
 [dependencies]
-did = { path = "../did" }
-minter-did = { path = "../minter-did" }
-
-ic-canister = { workspace = true }
-ic-exports = { workspace = true }
 candid = { workspace = true }
+did = { path = "../did" }
+ethers-core = { workspace = true }
+ic-canister = { workspace = true }
+ic-canister-client = { workspace = true }
+ic-exports = { workspace = true }
+jsonrpc-core = { workspace = true }
+minter-did = { path = "../minter-did" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-ethers-core = { workspace = true }
-jsonrpc-core = { workspace = true }
 thiserror = { workspace = true }
-ic-canister-client = { workspace = true }

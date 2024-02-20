@@ -17,9 +17,9 @@ ic_sign = ["ic-canister", "ic-exports"]
 [dependencies]
 async-trait = { workspace = true }
 candid = { workspace = true }
+did = { path = "../did" }
 ethereum-types = { workspace = true }
 ethers-core = { workspace = true }
-did = { path = "../did" }
 hex = { workspace = true }
 ic-stable-structures = { workspace = true }
 serde = { workspace = true }
@@ -31,6 +31,7 @@ ic-exports = { workspace = true, optional = true }
 ic-canister = { workspace = true, optional = true }
 
 [dev-dependencies]
+ic-exports = { workspace = true, features = ["pocket-ic-tests"]}
+once_cell = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }
-

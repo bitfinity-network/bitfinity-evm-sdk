@@ -15,7 +15,7 @@ export-api = []
 
 [dependencies]
 candid = { workspace = true }
-eth-signer = { path = "../", features = ["ic_sign"] }
+eth-signer = { path = "../../", features = ["ic_sign"] }
 ic-exports = { workspace = true }
 ic-canister = { workspace = true }
 ethers-core = { workspace = true }
