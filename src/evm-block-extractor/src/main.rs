@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Configure and start the block extractor task
     if let Some(rpc_url) = config.remote_rpc_url.clone() {
-        let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));
+        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
         let config = config.clone();
         let evm_client = evm_client.clone();
         let db_client = db_client.clone();
