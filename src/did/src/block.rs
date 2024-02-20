@@ -336,8 +336,9 @@ pub fn calculate_next_block_base_fee(
     }
     .unwrap_or_default();
 
-    let base_fee_per_gas_delta = (parent_base_fee * &gas_used_delta)
-        .checked_div(&gas_target)
+    let base_fee_per_gas_delta = parent_base_fee
+        .checked_mul(&gas_used_delta)
+        .and_then(|x| x.checked_div(&gas_target))
         .and_then(|x| x.checked_div(&U256::from(EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR)))
         .unwrap_or_default();
 
@@ -829,6 +830,17 @@ mod test {
             ),
             expected
         );
+    }
+
+    #[test]
+    fn should_calc_base_fee_with_arithmetic_overflow() {
+        let gas_used = U256::new(2000_u64.into());
+        let gas_limit = U256::new(2010_u64.into());
+        let mut base_fee = U256::new(100_u64.into());
+
+        for _ in 0..10000 {
+            base_fee = calculate_next_block_base_fee(&gas_used, &gas_limit, &base_fee);
+        }
     }
 
     fn check_serialization_roundtrip<T>(val: &T)

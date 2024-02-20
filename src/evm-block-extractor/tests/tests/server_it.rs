@@ -1,11 +1,9 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use did::block::{ExeResult, TransactOut};
-use did::transaction::{Bloom, StorableExecutionResult};
 use did::{Block, H160, U256, U64};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{Client, EthJsonRcpClient};
+use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use ethers_core::types::{BlockNumber, Transaction, H256};
 use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
@@ -40,28 +38,9 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
                 ..Default::default()
             }
             .into();
-            let dummy_receipt = StorableExecutionResult {
-                transaction_hash: tx_hash.into(),
-                block_number: i.into(),
-                block_hash: dummy_block.hash.clone(),
-                exe_result: ExeResult::Success {
-                    gas_used: (i * 1000).into(),
-                    logs: vec![],
-                    logs_bloom: Box::new(Bloom::zeros()),
-                    output: TransactOut::None,
-                },
-                transaction_index: 0u64.into(),
-                from: H160::default(),
-                to: None,
-                transaction_type: None,
-                cumulative_gas_used: (i * 1000).into(),
-                max_fee_per_gas: None,
-                gas_price: None,
-                max_priority_fee_per_gas: None,
-            };
 
             db_client
-                .insert_block_data(&[dummy_block], &[dummy_receipt], &[dummy_transaction])
+                .insert_block_data(&[dummy_block], &[dummy_transaction])
                 .await
                 .unwrap();
         }
@@ -72,12 +51,12 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
 }
 
 #[tokio::test]
-async fn test_get_blocks_and_receipts() {
+async fn test_get_blocks() {
     with_filled_db(|db_client| async {
         let (port, handle) = new_server(db_client).await;
 
         let http_client =
-            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
 
         let block_count = http_client.get_block_number().await.unwrap();
         assert_eq!(block_count, BLOCK_COUNT - 1);
@@ -96,14 +75,6 @@ async fn test_get_blocks_and_receipts() {
             assert_eq!(full_block.number, Some(i.into()));
             assert_eq!(full_block.transactions.len(), 1);
             assert_eq!(full_block.transactions[0].hash, block.transactions[0]);
-
-            let receipt = http_client
-                .get_receipt_by_hash(block.transactions[0])
-                .await
-                .unwrap();
-            assert_eq!(receipt.block_number, Some(i.into()));
-            assert_eq!(receipt.block_hash, block.hash);
-            assert_eq!(receipt.transaction_hash, block.transactions[0]);
         }
 
         {
@@ -228,7 +199,7 @@ async fn test_get_genesis_accounts() {
         let (port, handle) = new_server(db_client.clone()).await;
 
         let http_client =
-            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
 
         // Test on empty database
         {
@@ -289,7 +260,7 @@ async fn test_get_chain_id() {
         let (port, handle) = new_server(db_client.clone()).await;
 
         let http_client =
-            EthJsonRcpClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
 
         let chain_id: u64 = random();
         db_client.insert_chain_id(chain_id).await.unwrap();

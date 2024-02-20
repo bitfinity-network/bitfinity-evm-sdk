@@ -18,6 +18,6 @@ default = []
 ic-agent-client = ["ic-canister-client/ic-agent-client"]
 
 [dependencies]
+candid = { workspace = true }
 did = { path = "../did" }
 ic-canister-client = { workspace = true }
-candid = { workspace = true }

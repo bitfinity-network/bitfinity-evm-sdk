@@ -1,5 +1,5 @@
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRcpClient};
+use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
 use ethers_core::types::{BlockNumber, Log, H256};
 
 const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
@@ -13,8 +13,8 @@ fn to_hash(string: &str) -> H256 {
     )
 }
 
-fn reqwest_client() -> EthJsonRcpClient<ReqwestClient> {
-    EthJsonRcpClient::new(ReqwestClient::new(ETHEREUM_JSON_API_URL.to_string()))
+fn reqwest_client() -> EthJsonRpcClient<ReqwestClient> {
+    EthJsonRpcClient::new(ReqwestClient::new(ETHEREUM_JSON_API_URL.to_string()))
 }
 
 #[tokio::test]

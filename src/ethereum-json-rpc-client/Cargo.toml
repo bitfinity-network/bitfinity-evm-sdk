@@ -21,11 +21,12 @@ http-outcall = ["dep:url"]
 anyhow = { workspace = true }
 candid = { workspace = true }
 did = { path = "../did" }
+ethers-core = { workspace = true }
 hex = { workspace = true }
-ic-exports = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }
-url = { workspace = true, optional = true }
+ic-exports = { workspace = true }
 itertools = { workspace = true }
+jsonrpc-core = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true, optional = true, features = [
   "gzip",
@@ -36,8 +37,7 @@ reqwest = { workspace = true, optional = true, features = [
 serde = { workspace = true }
 serde_bytes = { workspace = true }
 serde_json = { workspace = true }
-ethers-core = { workspace = true }
-jsonrpc-core = { workspace = true }
+url = { workspace = true, optional = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }

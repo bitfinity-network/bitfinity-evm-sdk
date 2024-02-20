@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::EthJsonRcpClient;
+use ethereum_json_rpc_client::EthJsonRpcClient;
 use evm_block_extractor::database::AccountBalance;
 use evm_block_extractor::task::block_extractor::BlockExtractor;
 
@@ -13,7 +13,7 @@ async fn test_extractor_collect_blocks() {
         db_client.init(None, false).await.unwrap();
 
         let rpc_url = "https://testnet.bitfinity.network".to_string();
-        let evm_client = Arc::new(EthJsonRcpClient::new(ReqwestClient::new(rpc_url)));
+        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
 
         let request_time_out_secs = 10;
         let rpc_batch_size = 10;
@@ -88,20 +88,6 @@ async fn test_extractor_collect_blocks() {
                     assert!(block.transactions.contains(&tx.hash));
                     assert_eq!(tx.block_number, tx.block_number);
                     assert_eq!(tx.block_hash, tx.block_hash);
-                }
-            }
-
-            // Check receipts
-            {
-                for tx in &full_block.transactions {
-                    let receipt = db_client
-                        .get_transaction_receipt(tx.hash.clone())
-                        .await
-                        .unwrap();
-
-                    assert_eq!(tx.hash, receipt.transaction_hash);
-                    assert_eq!(tx.block_number, Some(receipt.block_number));
-                    assert_eq!(tx.block_hash, Some(receipt.block_hash));
                 }
             }
         }

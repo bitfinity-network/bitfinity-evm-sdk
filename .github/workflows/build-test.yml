@@ -39,27 +39,6 @@ jobs:
           sudo apt install gcc-multilib
           ./scripts/test.sh --target i686-unknown-linux-gnu
 
-  build-dfx-test:
-    if: ${{github.ref_type != 'tag'}}
-    name: 'Build and Test with dfx'
-    uses: bitfinity-network/ci-wf/.github/workflows/build-n-test.yml@main
-    with:
-      runs-on: ubuntu-latest
-      container-image: ghcr.io/bitfinity-network/ic-dev-base:rust1.75-dfx0.15
-      git-fetch-depth: '0'
-      skip-test: false
-      audit-allow-warnings: true
-      cargo-clippy-extra-args: '-- -D warnings'
-      enable-target-cache: true
-      test-script: |
-        export RUST_BACKTRACE="full"
-        ./scripts/build.sh
-        ./scripts/dfx_test.sh
-
-    secrets:
-      gh_login: ${{ secrets.GH_PKG_LOGIN }}
-      gh_token: ${{ secrets.GH_PKG_TOKEN }}
-
   release-binaries:
     if: ${{github.ref_type == 'tag'}}
     name: Release - ${{ matrix.platform.release_for }}

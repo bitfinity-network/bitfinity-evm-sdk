@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 
-use did::transaction::StorableExecutionResult;
-use did::{Block, Transaction, TransactionReceipt, H256};
+use did::{Block, Transaction, H256};
 use gcp_bigquery_client::model::dataset::Dataset;
 use gcp_bigquery_client::model::field_type::serialize_json_as_string;
 use gcp_bigquery_client::model::query_parameter::QueryParameter;
@@ -23,7 +22,6 @@ use super::{
     GENESIS_BALANCES_KEY,
 };
 
-const BQ_EXE_RESULTS_TABLE_ID: &str = "exe_results";
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";
 const BQ_CERTIFIED_BLOCKS_TABLE_ID: &str = "certified_blocks";
 const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
@@ -153,13 +151,6 @@ impl BigQueryDbClient {
                 ],
             ),
             (
-                BQ_EXE_RESULTS_TABLE_ID,
-                vec![
-                    TableFieldSchema::string("tx_hash"),
-                    TableFieldSchema::json("exe_result"),
-                ],
-            ),
-            (
                 BQ_TRANSACTIONS_TABLE_ID,
                 vec![
                     TableFieldSchema::string("tx_hash"),
@@ -281,7 +272,6 @@ impl DatabaseClient for BigQueryDbClient {
         };
 
         delete_table(BQ_BLOCKS_TABLE_ID.to_owned()).await?;
-        delete_table(BQ_EXE_RESULTS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_KEY_VALUE_TABLE_ID.to_owned()).await?;
 
@@ -366,7 +356,6 @@ impl DatabaseClient for BigQueryDbClient {
     async fn insert_block_data(
         &self,
         blocks: &[Block<H256>],
-        receipts: &[StorableExecutionResult],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
         if !blocks.is_empty() {
@@ -376,29 +365,6 @@ impl DatabaseClient for BigQueryDbClient {
                 blocks[blocks.len() - 1].number
             );
         };
-
-        if !receipts.is_empty() {
-            let receipts = receipts
-                .iter()
-                .map(|r| {
-                    let tx_hash = &r.transaction_hash;
-                    let receipt = ExeResultRow {
-                        tx_hash: format!("0x{:x}", tx_hash),
-                        exe_result: serde_json::to_value(r).expect("Failed to serialize receipt"),
-                    };
-
-                    TableDataInsertAllRequestRows {
-                        insert_id: Some(format!("0x{:x}", tx_hash)),
-                        json: serde_json::to_value(receipt).expect("Failed to serialize receipt"),
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            log::debug!("Inserting {} receipts", receipts.len());
-
-            self.insert_batch_data(BQ_EXE_RESULTS_TABLE_ID, receipts)
-                .await?;
-        }
 
         if !blocks.is_empty() {
             let blocks = blocks
@@ -450,35 +416,6 @@ impl DatabaseClient for BigQueryDbClient {
         }
 
         Ok(())
-    }
-
-    async fn get_transaction_receipt(&self, tx_hash: H256) -> anyhow::Result<TransactionReceipt> {
-        let query_request = QueryRequest {
-            query_parameters: Some(vec![
-                QueryParameter {
-                    name: Some("tx_hash".to_string()),
-                    parameter_type: Some(QueryParameterType {
-                        r#type: "STRING".to_string(),
-                        ..Default::default()
-                    }),
-                    parameter_value: Some(QueryParameterValue {
-                        value: Some(format!("0x{:x}", tx_hash)),
-                        ..Default::default()
-                    }),
-                },
-            ]),
-            query:format!(
-                "SELECT exe_result FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = @tx_hash",
-                project_id = self.project_id,
-                dataset_id = self.dataset_id,
-                table_id = BQ_EXE_RESULTS_TABLE_ID,
-            ),
-            ..Default::default()
-        };
-
-        let exe_result: StorableExecutionResult = self.query_one(query_request).await?;
-
-        Ok(TransactionReceipt::from(exe_result))
     }
 
     async fn get_latest_block_number(&self) -> anyhow::Result<Option<u64>> {
@@ -578,7 +515,33 @@ impl DatabaseClient for BigQueryDbClient {
                 "SELECT certified_response FROM `{project_id}.{dataset_id}.{table_id}` ORDER BY id DESC LIMIT 1",
                 project_id = self.project_id,
                 dataset_id = self.dataset_id,
-                table_id = BQ_CERTIFIED_BLOCKS_TABLE_ID,
+                table_id = BQ_CERTIFIED_BLOCKS_TABLE_ID,),
+                ..Default::default()
+            };
+
+        self.query_one(query_request).await
+    }
+
+    async fn get_transaction(&self, tx_hash: H256) -> anyhow::Result<Transaction> {
+        let query_request = QueryRequest {
+            query_parameters: Some(vec![
+                QueryParameter {
+                    name: Some("tx_hash".to_string()),
+                    parameter_type: Some(QueryParameterType {
+                        r#type: "STRING".to_string(),
+                        ..Default::default()
+                    }),
+                    parameter_value: Some(QueryParameterValue {
+                        value: Some(format!("0x{:x}", tx_hash)),
+                        ..Default::default()
+                    }),
+                },
+            ]),
+            query:format!(
+                "SELECT transaction FROM `{project_id}.{dataset_id}.{table_id}` WHERE tx_hash = @tx_hash",
+                project_id = self.project_id,
+                dataset_id = self.dataset_id,
+                table_id = BQ_TRANSACTIONS_TABLE_ID,
             ),
             ..Default::default()
         };
@@ -589,7 +552,7 @@ impl DatabaseClient for BigQueryDbClient {
 
 /// A row in the BigQuery table
 #[derive(Debug, Serialize)]
-pub struct BlockRow {
+struct BlockRow {
     id: u64,
     #[serde(serialize_with = "serialize_json_as_string")]
     body: Value,
@@ -603,14 +566,14 @@ pub struct CertifiedBlockRow {
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub struct ExeResultRow {
+struct ExeResultRow {
     tx_hash: String,
     #[serde(serialize_with = "serialize_json_as_string")]
     exe_result: Value,
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub struct TransactionRow {
+struct TransactionRow {
     tx_hash: String,
     #[serde(serialize_with = "serialize_json_as_string")]
     transaction: Value,
