@@ -91,6 +91,15 @@ async fn test_extractor_collect_blocks() {
                 }
             }
         }
+
+        // Check last certified block
+        let certified_data = db_client.get_last_certified_block_data().await.unwrap();
+        assert!(!certified_data.certificate.is_empty());
+        assert!(!certified_data.witness.is_empty());
+
+        // Check that it is more or less last block
+        assert!(end_block - 10 <= certified_data.data.number.0.as_u64());
+        assert!(end_block + 10 >= certified_data.data.number.0.as_u64());
     })
     .await;
 }
