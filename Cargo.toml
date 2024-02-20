@@ -3,12 +3,13 @@ members = [
     "src/did",
     "src/eth-signer",
     "src/eth-signer/tests/test_canister",
+    "src/ethereum-json-rpc-client",
     "src/evm-block-extractor",
     "src/evm-canister-client",
+    "src/evm-log-extractor",
     "src/minter-client",
     "src/minter-did",
     "src/register-evm-agent",
-    "src/ethereum-json-rpc-client",
     "src/signature-verification-canister-client",
 ]
 resolver = "2"

@@ -1,0 +1,27 @@
+[package]
+name = "evm-log-extractor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+clap = { workspace = true }
+did = { path = "../did" }
+env_logger = { workspace = true }
+ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = [
+    "reqwest",
+] }
+ethers-core = { workspace = true }
+hex = { workspace = true }
+lightspeed_scheduler = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+
+
+
+[dev-dependencies]
+rand = { workspace = true }
+tempfile = { workspace = true }
