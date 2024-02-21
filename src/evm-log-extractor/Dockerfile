@@ -9,7 +9,7 @@ ADD . .
 
 RUN cargo build --release --bin evm-log-extractor
 
-FROM debian:bookworm-slim AS runtime
+FROM ubuntu:22.04 AS runtime
 
 WORKDIR /app
 
@@ -29,5 +29,8 @@ ENV IDENTITY=/data/config/identity.pem
 ENV EVMC_NETWORK_URL=https://icp0.io
 ENV LOGS_DIR=/data/logs
 
-CMD ["sh", "-c", "./evm-log-extractor --evmc-principal=${EVMC_PRINCIPAL} --identity=${IDENTITY} --logs-directory=${LOGS_DIR} --evmc-network-url=${EVMC_NETWORK_URL} --logger-filter=${LOGGER_FILTER}"]
+# Set stop signal to ctrl+c
+STOPSIGNAL SIGINT
+
+CMD exec ./evm-log-extractor --evmc-principal=${EVMC_PRINCIPAL} --identity=${IDENTITY} --logs-directory=${LOGS_DIR} --evmc-network-url=${EVMC_NETWORK_URL} --logger-filter=${LOGGER_FILTER}
 
