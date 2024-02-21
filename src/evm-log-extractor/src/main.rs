@@ -9,7 +9,7 @@ use evm_log_extractor::job::logs::{run_logs_job, LogsJobSettings};
 use lightspeed_scheduler::job::Job;
 use lightspeed_scheduler::scheduler::Scheduler;
 use lightspeed_scheduler::JobExecutor;
-use log::SetLoggerError;
+use log::{info, SetLoggerError};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -29,6 +29,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Wait for a signal to stop the job executor
     tokio::signal::ctrl_c().await.unwrap();
+
+    info!("Shutdown message received");
 
     // Stop the job executor
     let stop_gracefully = true;
