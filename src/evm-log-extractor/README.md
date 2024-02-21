@@ -54,3 +54,9 @@ Default is 5_000.
 
 Path to the directory where the EVM downloaded logs are written into.
 
+
+### Examples
+
+Example of how to run the log extractor from source code targeting an evmc canister running in a local dfx replica:
+
+`$ cargo run -p evm-log-extractor -- --evmc-principal=bkyz2-fmaaa-aaaaa-qaaaq-cai --identity ~/.config/dfx/identity/alice/identity.pem --logs-directory ./target/logs --evmc-network-url "http://127.0.0.1:38985"`
