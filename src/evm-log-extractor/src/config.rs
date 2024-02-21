@@ -18,22 +18,19 @@ pub struct LogExtractorConfig {
     pub evmc_network_url: String,
 
     /// Path to your identity pem file.
-    /// If provided, the tool will use it for calling the remote JSON RPC endpoint.
     #[arg(long)]
     pub identity: PathBuf,
 
-    /// evmc canister Principal. Required if `identity` is set.
-    /// If provided, the tool will use it for calling the remote JSON RPC endpoint.
+    /// evmc canister Principal.
     #[arg(long)]
     pub evmc_principal: Principal,
 
     /// Logs synchronization job interval schedule.
-    /// Available only if `identity` is set.
     #[clap(long, default_value = "10")]
     pub logs_synchronization_job_interval_seconds: u64,
 
     /// Logs synchronization job max logs to download per call.
-    #[clap(long, default_value = "2000")]
+    #[clap(long, default_value = "5000")]
     pub logs_synchronization_job_max_logs_per_call: usize,
 
     /// Path to the directory where to put the EVM downloaded logs.
