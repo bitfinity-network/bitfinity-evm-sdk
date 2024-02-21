@@ -3,10 +3,9 @@ use std::time::Duration;
 
 use clap::Parser;
 use env_logger::Builder;
+use evm_canister_client::{EvmCanisterClient, IcAgentClient};
 use evm_log_extractor::config::LogExtractorConfig;
 use evm_log_extractor::job::logs::{run_logs_job, LogsJobSettings};
-
-use evm_canister_client::{EvmCanisterClient, IcAgentClient};
 use lightspeed_scheduler::job::Job;
 use lightspeed_scheduler::scheduler::Scheduler;
 use lightspeed_scheduler::JobExecutor;
@@ -33,7 +32,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Stop the job executor
     let stop_gracefully = true;
-    job_executor.stop(stop_gracefully).await.expect("The job executor should stop!");
+    job_executor
+        .stop(stop_gracefully)
+        .await
+        .expect("The job executor should stop!");
 
     Ok(())
 }
