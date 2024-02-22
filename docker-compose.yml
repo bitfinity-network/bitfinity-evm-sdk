@@ -33,7 +33,7 @@ services:
     environment:
       # use local dfx replica
       - EVMC_PRINCIPAL=bkyz2-fmaaa-aaaaa-qaaaq-cai
-      - EVMC_NETWORK_URL=http://host.docker.internal:42169
+      - EVMC_NETWORK_URL=http://host.docker.internal:40837
       # use testnet
       #- EVMC_PRINCIPAL=4fe7g-7iaaa-aaaak-aegcq-cai
     volumes:

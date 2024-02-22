@@ -60,3 +60,26 @@ Path to the directory where the EVM downloaded logs are written into.
 Example of how to run the log extractor from source code targeting an evmc canister running in a local dfx replica:
 
 `$ cargo run -p evm-log-extractor -- --evmc-principal=bkyz2-fmaaa-aaaaa-qaaaq-cai --identity ~/.config/dfx/identity/alice/identity.pem --logs-directory ./target/logs --evmc-network-url "http://127.0.0.1:38985"`
+
+
+## Docker image
+
+The evm-log-extractor docker image is an ubuntu:22.04 based image that allows for simple installation of the service.
+
+The docker image accepts the following configuration variables: 
+
+- `LOGGER_FILTER`: (Optional) the level of the logger. Default is `info`
+- `EVMC_PRINCIPAL`: (Mandatory) the canister ID of the evmc canister
+- `EVMC_NETWORK_URL`: (Optional) the URL of the IC network. Default is `https://icp0.io`
+
+It is also required to configure these volumes:
+- `/data/config/identity.pem`: mount point for the identity pem file to be used for calling the evmc canister
+- `/data/logs`: mount point where the extracted logs will be persisted
+
+E.g.:
+```sh
+docker run ghcr.io/bitfinity-network/evm-log-extractor:main \
+    -e EVMC_PRINCIPAL=bkyz2-fmaaa-aaaaa-qaaaq-cai \
+    -v ~/.config/dfx/identity/alice/identity.pem:/data/config/identity.pem:ro \
+    -v ./target/logs:/data/logs
+```

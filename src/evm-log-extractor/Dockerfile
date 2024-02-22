@@ -13,14 +13,6 @@ FROM ubuntu:22.04 AS runtime
 
 WORKDIR /app
 
-# RUN apt-get update -y \
-#     && apt-get install -y --no-install-recommends ca-certificates \
-#     && update-ca-certificates \
-#     # Clean up
-#     && apt-get autoremove -y \
-#     && apt-get clean -y \
-#     && rm -rf /var/lib/apt/lists/*
-
 COPY --from=builder /app/target/release/evm-log-extractor /app/evm-log-extractor
 
 ENV LOGGER_FILTER=info
