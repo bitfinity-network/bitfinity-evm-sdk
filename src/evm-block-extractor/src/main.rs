@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Emvc Block Extractor");
     info!("----------------------");
     info!("- server_address: {}", config.server_address);
-    info!("- remote_rpc_url: {}", config.remote_rpc_url);
+    info!("- remote_rpc_url: {:?}", config.remote_rpc_url);
     info!("- rpc_batch_size: {}", config.rpc_batch_size);
     info!("- request_time_out_secs: {}", config.request_time_out_secs);
     info!(
@@ -33,15 +33,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     info!("----------------------");
 
-    let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(
-        config.remote_rpc_url.clone(),
-    )));
     let db_client = config.command.clone().build_client().await?;
 
     let job_executor = JobExecutor::new_with_local_tz();
 
     // Configure and start the block extractor task
-    {
+    if let Some(rpc_url) = config.remote_rpc_url.clone() {
+        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
         let config = config.clone();
         let evm_client = evm_client.clone();
         let db_client = db_client.clone();
@@ -65,6 +63,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }),
             )
             .await;
+    } else {
+        warn!("remote_rpc_url is empty, fetching blocks is disabled");
     }
 
     // Start the job executor
