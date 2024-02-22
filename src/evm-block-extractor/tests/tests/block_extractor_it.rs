@@ -91,6 +91,30 @@ async fn test_extractor_collect_blocks() {
                 }
             }
         }
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_collect_last_certified_block() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, false).await.unwrap();
+
+        let rpc_url = "https://testnet.bitfinity.network".to_string();
+        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
+
+        let request_time_out_secs = 10;
+        let rpc_batch_size = 10;
+        let extractor = BlockExtractor::new(
+            evm_client.clone(),
+            request_time_out_secs,
+            rpc_batch_size,
+            db_client.clone(),
+        );
+
+        let end_block = evm_client.get_block_number().await.unwrap();
+
+        extractor.collect_last_certified_block().await.unwrap();
 
         // Check last certified block
         let certified_data = db_client.get_last_certified_block_data().await.unwrap();
@@ -101,5 +125,5 @@ async fn test_extractor_collect_blocks() {
         assert!(end_block - 10 <= certified_data.data.number.0.as_u64());
         assert!(end_block + 10 >= certified_data.data.number.0.as_u64());
     })
-    .await;
+    .await
 }

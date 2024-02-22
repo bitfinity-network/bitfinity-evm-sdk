@@ -135,7 +135,7 @@ impl BlockExtractor {
     }
 
     /// Collects last certified block
-    async fn collect_last_certified_block(&self) -> anyhow::Result<()> {
+    pub async fn collect_last_certified_block(&self) -> anyhow::Result<()> {
         const JSON_RPC_METHOD_LAST_CERTIFIED_BLOCK: &str = "ic_getLastCertifiedBlock";
 
         let certified_block = self
