@@ -161,7 +161,11 @@ impl<C: Client> EthJsonRpcClient<C> {
     }
 
     /// Returns transaction count of the address.
-    pub async fn get_transaction_count(&self, address: H160, block: BlockNumber) -> anyhow::Result<u64> {
+    pub async fn get_transaction_count(
+        &self,
+        address: H160,
+        block: BlockNumber,
+    ) -> anyhow::Result<u64> {
         self.single_request::<U64>(
             ETH_GET_TRANSACTION_COUNT_METHOD.to_string(),
             make_params_array!(address, block),
