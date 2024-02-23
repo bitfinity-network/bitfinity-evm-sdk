@@ -21,6 +21,8 @@ pub mod canister_client;
 pub mod http_outcall;
 
 const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
+const ETH_GET_BALANCE_METHOD: &str = "eth_getBalance";
+const ETH_GET_TRANSACTION_COUNT_METHOD: &str = "eth_getTransactionCount";
 const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
 const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
@@ -143,6 +145,31 @@ impl<C: Client> EthJsonRpcClient<C> {
             ETH_CHAIN_ID_METHOD.to_string(),
             Params::Array(vec![]),
             Id::Str("eth_chainId".to_string()),
+        )
+        .await
+        .map(|v| v.as_u64())
+    }
+
+    /// Returns balance of the address.
+    pub async fn get_balance(&self, address: H160, block: BlockNumber) -> anyhow::Result<U256> {
+        self.single_request(
+            ETH_GET_BALANCE_METHOD.to_string(),
+            make_params_array!(address, block),
+            Id::Str("eth_getBalance".to_string()),
+        )
+        .await
+    }
+
+    /// Returns transaction count of the address.
+    pub async fn get_transaction_count(
+        &self,
+        address: H160,
+        block: BlockNumber,
+    ) -> anyhow::Result<u64> {
+        self.single_request::<U64>(
+            ETH_GET_TRANSACTION_COUNT_METHOD.to_string(),
+            make_params_array!(address, block),
+            Id::Str("eth_getTransactionCount".to_string()),
         )
         .await
         .map(|v| v.as_u64())
