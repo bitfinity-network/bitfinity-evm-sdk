@@ -629,6 +629,7 @@ pub struct StorableExecutionResult {
     pub max_fee_per_gas: Option<U256>,
     pub gas_price: Option<U256>,
     pub max_priority_fee_per_gas: Option<U256>,
+    pub timestamp: u64,
 }
 
 impl Storable for StorableExecutionResult {
@@ -1034,6 +1035,7 @@ mod test {
             gas_price: Default::default(),
             max_fee_per_gas: Default::default(),
             max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -1066,6 +1068,7 @@ mod test {
             gas_price: Default::default(),
             max_fee_per_gas: Default::default(),
             max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -1097,6 +1100,7 @@ mod test {
             gas_price: Default::default(),
             max_fee_per_gas: Default::default(),
             max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
@@ -1127,6 +1131,7 @@ mod test {
             gas_price: Default::default(),
             max_fee_per_gas: Default::default(),
             max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
