@@ -63,7 +63,7 @@ jobs:
       - name: Log in to GCP Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ GCP_REGISTRY }}
+          registry: ${{ env.GCP_REGISTRY }}
           username: _json_key
           password: ${{ secrets.EXTRACTOR_GCP_DOCKER_KEY }}
 
@@ -71,7 +71,7 @@ jobs:
         id: gcp-meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ GCP_REGISTRY }}/extractor-410310/block-extractor-repo/${{ IMAGE_NAME }}
+          images: ${{ env.GCP_REGISTRY }}/extractor-410310/block-extractor-repo/${{ env.IMAGE_NAME }}
 
       - name: Build and push Docker image to GCP Registry
         uses: docker/build-push-action@v5
