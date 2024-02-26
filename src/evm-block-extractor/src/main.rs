@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Start the job executor
-    let job_executor_handle = job_executor.run().await?;
+    let _job_executor_handle = job_executor.run().await?;
 
     // Start JSON RPC server
     let server_handle = server_start(&config.server_address, db_client).await?;
@@ -83,9 +83,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Stop the world
     {
-        job_executor_handle
+        let stop_gracefully = true;
+        job_executor
+            .stop(stop_gracefully)
             .await
-            .expect("error when running job executor");
+            .expect("The job executor should stop!");
 
         server_stop(server_handle).await?;
     }

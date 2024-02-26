@@ -24,6 +24,30 @@ async fn should_get_block_number() {
 }
 
 #[tokio::test]
+async fn should_get_balance() {
+    let erc_1820_address = "0xa990077c3205cbDf861e17Fa532eeB069cE9fF96"
+        .parse()
+        .unwrap();
+    let result = reqwest_client()
+        .get_balance(erc_1820_address, BlockNumber::Latest)
+        .await
+        .unwrap();
+    assert_eq!(result, 1409174700000000000u64.into());
+}
+
+#[tokio::test]
+async fn should_get_transaction_count() {
+    let erc_1820_address = "0xa990077c3205cbDf861e17Fa532eeB069cE9fF96"
+        .parse()
+        .unwrap();
+    let result = reqwest_client()
+        .get_transaction_count(erc_1820_address, BlockNumber::Latest)
+        .await
+        .unwrap();
+    assert_eq!(result, 1u64);
+}
+
+#[tokio::test]
 async fn should_get_block_by_number() {
     let result = reqwest_client()
         .get_block_by_number(BlockNumber::Number(11588465.into()))
