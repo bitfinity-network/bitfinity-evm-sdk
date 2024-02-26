@@ -209,7 +209,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         &self,
         address: H160,
         amount: U256,
-    ) -> CanisterClientResult<EvmResult<U256>> {
+    ) -> CanisterClientResult<EvmResult<(H256, U256)>> {
         self.client
             .update("mint_native_tokens", (address, amount))
             .await
