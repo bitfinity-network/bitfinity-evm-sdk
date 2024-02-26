@@ -75,7 +75,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
 
 ## Docker image
 
-The evm-block-extractor docker image is a debian slim based image that allows for simple installation of the service.
+The evm-block-extractor docker image is an ubuntu:22.04 based image that allows for simple installation of the service.
 The docker image accepts the same configuration arguments of the plain executor. 
 E.g.:
 ```sh

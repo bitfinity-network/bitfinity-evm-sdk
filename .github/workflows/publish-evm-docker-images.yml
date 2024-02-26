@@ -1,4 +1,4 @@
-name: 'Deploy EVM Block Extractor Docker Image'
+name: 'Deploy EVM Docker Images'
 
 on:
   workflow_dispatch: {}
@@ -17,12 +17,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  IMAGE_NAME: evm-block-extractor
-  GCP_REGISTRY: us-east4-docker.pkg.dev
-
 jobs:
   deploy-to-github:
+    strategy:
+      matrix:
+        image: ["evm-block-extractor", "evm-log-extractor"]
+
     runs-on: ubuntu-latest
 
     steps:
@@ -40,17 +40,20 @@ jobs:
         id: gh-meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
 
       - name: Build and push Docker image to GitHub Container Registry
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./src/evm-block-extractor/Dockerfile
+          file: ./src/${{ matrix.image }}/Dockerfile
           push: true
           tags: ${{ steps.gh-meta.outputs.tags }}
 
   deploy-to-gcp:
+    env:
+      IMAGE_NAME: evm-block-extractor
+      GCP_REGISTRY: us-east4-docker.pkg.dev
     runs-on: ubuntu-latest
     needs: deploy-to-github
     steps:
@@ -60,7 +63,7 @@ jobs:
       - name: Log in to GCP Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{env.GCP_REGISTRY}}
+          registry: ${{ GCP_REGISTRY }}
           username: _json_key
           password: ${{ secrets.EXTRACTOR_GCP_DOCKER_KEY }}
 
@@ -68,7 +71,7 @@ jobs:
         id: gcp-meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{env.GCP_REGISTRY}}/extractor-410310/block-extractor-repo/${{ env.IMAGE_NAME }}
+          images: ${{ GCP_REGISTRY }}/extractor-410310/block-extractor-repo/${{ IMAGE_NAME }}
 
       - name: Build and push Docker image to GCP Registry
         uses: docker/build-push-action@v5
