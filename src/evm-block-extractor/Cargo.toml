@@ -17,6 +17,7 @@ ethers-core = { workspace = true }
 futures = { workspace = true }
 gcp-bigquery-client = { workspace = true }
 hex = { workspace = true }
+jsonrpc-core = { workspace = true }
 jsonrpsee = { workspace = true }
 lightspeed_scheduler = { workspace = true }
 log = { workspace = true }

@@ -5,7 +5,7 @@ use did::{Block, H160, U256, U64};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use ethers_core::types::{BlockNumber, Transaction, H256};
-use evm_block_extractor::database::{AccountBalance, DatabaseClient};
+use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use jsonrpsee::server::{Server, ServerHandle};
@@ -330,6 +330,60 @@ async fn test_get_block_by_number_variants() {
         }
 
         // stop the server
+        {
+            handle.stop().unwrap();
+            handle.stopped().await;
+        }
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_get_last_certified_block() {
+    test_with_clients(|db_client| async move {
+        // Arrange
+        db_client.init(None, false).await.unwrap();
+
+        let block = Block::<did::H256> {
+            number: 1u64.into(),
+            ..Default::default()
+        };
+
+        let certified_block = CertifiedBlock {
+            certificate: vec![1, 2, 3],
+            witness: vec![5, 6, 7],
+            data: block.clone(),
+        };
+
+        db_client
+            .insert_certified_block_data(certified_block.clone())
+            .await
+            .unwrap();
+
+        let (port, handle) = new_server(db_client.clone()).await;
+
+        let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
+
+        // Act
+        let request = Request::Single(Call::MethodCall(MethodCall {
+            jsonrpc: Some(Version::V2),
+            method: "ic_getLastBlockCertifiedData".to_string(),
+            params: Params::Array(vec![]),
+            id: Id::Null,
+        }));
+
+        let Response::Single(Output::Success(result)) =
+            http_client.send_rpc_request(request).await.unwrap()
+        else {
+            panic!("unexpected return type")
+        };
+
+        // Assert
+        let certified_block: CertifiedBlock = serde_json::from_value(result.result).unwrap();
+        assert_eq!(certified_block.certificate, vec![1, 2, 3]);
+        assert_eq!(certified_block.witness, vec![5, 6, 7]);
+        assert_eq!(certified_block.data, block);
+
         {
             handle.stop().unwrap();
             handle.stopped().await;

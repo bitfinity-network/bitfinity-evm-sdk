@@ -7,7 +7,7 @@ use log::*;
 use tokio::time::Duration;
 
 use crate::config::ExtractorArgs;
-use crate::database::{AccountBalance, DatabaseClient};
+use crate::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 
 /// Starts the block extractor process
 pub async fn start_extractor(
@@ -37,7 +37,7 @@ pub async fn start_extractor(
     debug!("latest block number stored: {:?}", start_block);
 
     extractor
-        .collect_blocks(start_block.map(|b| b + 1).unwrap_or_default(), end_block)
+        .collect_all(start_block.map(|b| b + 1).unwrap_or_default(), end_block)
         .await?;
 
     Ok(())
@@ -69,13 +69,14 @@ impl BlockExtractor {
     /// Collects blocks from the EVMC and stores them in the database.
     /// Returns the inclusive range of blocks that were collected.
     /// This collects also the genesis accounts if needed.
-    pub async fn collect_blocks(
+    pub async fn collect_all(
         &mut self,
         from_block_inclusive: u64,
         to_block_inclusive: u64,
     ) -> anyhow::Result<(u64, u64)> {
         self.collect_chain_id().await?;
         self.collect_genesis_balances().await?;
+        self.collect_last_certified_block().await?;
 
         info!(
             "Getting blocks from {:?} to {}",
@@ -130,6 +131,25 @@ impl BlockExtractor {
         }
 
         Ok((from_block_inclusive, to_block_inclusive))
+    }
+
+    /// Collects last certified block
+    async fn collect_last_certified_block(&self) -> anyhow::Result<()> {
+        const JSON_RPC_METHOD_LAST_CERTIFIED_BLOCK: &str = "ic_getLastCertifiedBlock";
+
+        let certified_block = self
+            .client
+            .single_request::<CertifiedBlock>(
+                JSON_RPC_METHOD_LAST_CERTIFIED_BLOCK.to_string(),
+                jsonrpc_core::Params::Array(vec![]),
+                jsonrpc_core::Id::Null,
+            )
+            .await?;
+        self.blockchain
+            .insert_certified_block_data(certified_block)
+            .await?;
+
+        Ok(())
     }
 
     /// Collects the genesis accounts if needed.
