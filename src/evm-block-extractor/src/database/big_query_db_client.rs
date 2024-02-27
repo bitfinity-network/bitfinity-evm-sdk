@@ -274,6 +274,7 @@ impl DatabaseClient for BigQueryDbClient {
         delete_table(BQ_BLOCKS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_KEY_VALUE_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_CERTIFIED_BLOCKS_TABLE_ID.to_owned()).await?;
 
         self.create_tables_if_not_present().await
     }

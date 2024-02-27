@@ -560,23 +560,45 @@ async fn test_insert_and_fetch_last_block_certified_data() {
             data: block_2,
         };
 
-        db_client
-            .insert_certified_block_data(result_1.clone())
-            .await
-            .unwrap();
-        assert_eq!(
-            result_1,
-            db_client.get_last_certified_block_data().await.unwrap()
-        );
+        // There should be no certified block when the database is empty
+        {
+            // Act
+            let certified_data = db_client.get_last_certified_block_data().await;
 
-        db_client
-            .insert_certified_block_data(result_2.clone())
-            .await
-            .unwrap();
-        assert_eq!(
-            result_2,
-            db_client.get_last_certified_block_data().await.unwrap()
-        );
+            // Assert
+            assert!(certified_data.is_err());
+        }
+
+        // Insert certified blocks
+        {
+            db_client
+                .insert_certified_block_data(result_1.clone())
+                .await
+                .unwrap();
+            assert_eq!(
+                result_1,
+                db_client.get_last_certified_block_data().await.unwrap()
+            );
+
+            db_client
+                .insert_certified_block_data(result_2.clone())
+                .await
+                .unwrap();
+            assert_eq!(
+                result_2,
+                db_client.get_last_certified_block_data().await.unwrap()
+            );
+        }
+
+        // There should be no certified blocks when the database is cleared
+        {
+            // Act
+            db_client.clear().await.unwrap();
+            let certified_data = db_client.get_last_certified_block_data().await;
+
+            // Assert
+            assert!(certified_data.is_err());
+        }
     })
     .await;
 }

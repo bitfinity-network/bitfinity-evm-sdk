@@ -76,9 +76,11 @@ impl DatabaseClient for PostgresDbClient {
 
     async fn clear(&self) -> anyhow::Result<()> {
         log::warn!("Postgres tables are being cleared");
-        sqlx::query("TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_KEY_VALUE_DATA")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_KEY_VALUE_DATA, CERTIFIED_EVM_BLOCK",
+        )
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
