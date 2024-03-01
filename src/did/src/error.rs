@@ -179,7 +179,7 @@ pub enum HaltError {
     CallerGasLimitMoreThanBlock,
     RejectCallerWithCode,
     LackOfFundForMaxFee {
-        fee: u64,
+        fee: U256,
         balance: U256,
     },
     OverflowPayment,
