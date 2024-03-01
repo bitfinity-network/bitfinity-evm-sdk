@@ -22,6 +22,7 @@ pub mod http_outcall;
 
 const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
 const ETH_GET_BALANCE_METHOD: &str = "eth_getBalance";
+const ETH_GET_CODE_METHOD: &str = "eth_getCode";
 const ETH_GET_TRANSACTION_COUNT_METHOD: &str = "eth_getTransactionCount";
 const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
 const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
@@ -156,6 +157,16 @@ impl<C: Client> EthJsonRpcClient<C> {
             ETH_GET_BALANCE_METHOD.to_string(),
             make_params_array!(address, block),
             Id::Str("eth_getBalance".to_string()),
+        )
+        .await
+    }
+
+    /// Returns code of the given contract.
+    pub async fn get_code(&self, address: H160, block: BlockNumber) -> anyhow::Result<String> {
+        self.single_request(
+            ETH_GET_CODE_METHOD.to_string(),
+            make_params_array!(address, block),
+            Id::Str("eth_getCode".to_string()),
         )
         .await
     }
