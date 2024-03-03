@@ -62,7 +62,7 @@ impl NotificationInput {
         ])
     }
 
-    /// Decode notification transaction data from raw trancaction input.
+    /// Decode notification transaction data from raw transaction input.
     pub fn decode(tx_input: &[u8]) -> Option<Self> {
         if tx_input.len() < Self::MIN_INPUT_LEN {
             return None;
