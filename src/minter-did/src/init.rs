@@ -1,10 +1,8 @@
 use std::borrow::Cow;
 use std::mem::size_of;
-use std::time::Duration;
 
 use candid::{CandidType, Principal};
 use did::codec::ByteChunkReader;
-use did::{H160, U256};
 use eth_signer::sign_strategy::SigningStrategy;
 use ic_log::LogSettings;
 use ic_stable_structures::{Bound, Storable};
