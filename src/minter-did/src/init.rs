@@ -19,24 +19,11 @@ pub struct InitData {
     /// Principal of EVM canister, in which minter canister will withdraw/deposit tokens.
     pub evm_principal: Principal,
 
-    /// EVMC chain id
-    pub evm_chain_id: u32,
-
-    /// BFT bridge contract address, if it exists already.
-    pub bft_bridge_contract: Option<H160>,
-
-    /// Gas price for evm transactions
-    pub evm_gas_price: U256,
-
     /// Principal of spender canister, which is used for secure token transfers.
     pub spender_principal: Principal,
 
     /// Signing strategy
     pub signing_strategy: SigningStrategy,
-
-    /// Process transactions results interval.
-    #[serde(default)]
-    pub process_transactions_results_interval: Option<Duration>,
 
     /// Log settings
     #[serde(default)]
