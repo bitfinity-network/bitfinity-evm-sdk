@@ -131,7 +131,7 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
             .await
     }
 
-    /// Approves ICRC-2 token transfer from minter canister to recepient.
+    /// Approves ICRC-2 token transfer from minter canister to recipient.
     /// Returns approved amount.
     ///
     /// # Arguments
@@ -147,7 +147,7 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
             .await
     }
 
-    /// Transfers ICRC-2 tokens from minter canister to recepient.
+    /// Transfers ICRC-2 tokens from minter canister to recipient.
     ///
     /// Before it can be used, ICRC-2 token must be approved by `start_icrc2_mint` which approves the transfer.
     /// After the approval, user should finalize Wrapped token burning, using `BFTBridge::finish_burn()`.
