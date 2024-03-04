@@ -29,10 +29,7 @@ async fn test_extractor_collect_blocks() {
 
         println!("Getting blocks from {:?} to {}", start_block, end_block);
 
-        let result = extractor
-            .collect_blocks(start_block, end_block)
-            .await
-            .unwrap();
+        let result = extractor.collect_all(start_block, end_block).await.unwrap();
 
         assert_eq!(result.0, start_block);
         assert_eq!(result.1, end_block);
@@ -61,6 +58,17 @@ async fn test_extractor_collect_blocks() {
             let db_chain_id = db_client.get_chain_id().await.unwrap().unwrap();
 
             assert_eq!(evmc_chain_id, db_chain_id);
+        }
+
+        // Check last certified block
+        {
+            let certified_data = db_client.get_last_certified_block_data().await.unwrap();
+            assert!(!certified_data.certificate.is_empty());
+            assert!(!certified_data.witness.is_empty());
+
+            // Check that it is more or less last block
+            assert!(end_block - 10 <= certified_data.data.number.0.as_u64());
+            assert!(end_block + 10 >= certified_data.data.number.0.as_u64());
         }
 
         for block_num in start_block..=end_block {

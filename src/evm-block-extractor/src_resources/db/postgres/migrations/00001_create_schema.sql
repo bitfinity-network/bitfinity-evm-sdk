@@ -10,7 +10,6 @@ create table EVM_BLOCK (
 
 -- End - EVM_BLOCK -
 
-
 -----------------------------------------
 -- Begin - EVM_TRANSACTION_EXE_RESULT -
 -----------------------------------------

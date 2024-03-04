@@ -5,7 +5,7 @@ use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 
-use crate::database::DatabaseClient;
+use crate::database::{CertifiedBlock, DatabaseClient};
 
 #[derive(Clone)]
 pub struct EthImpl {
@@ -46,6 +46,9 @@ pub trait IC {
 
     #[method(name = "getGenesisBalances")]
     async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>>;
+
+    #[method(name = "getLastBlockCertifiedData")]
+    async fn get_last_block_certified_data(&self) -> RpcResult<CertifiedBlock>;
 }
 
 #[async_trait::async_trait]
@@ -113,6 +116,19 @@ impl ICServer for EthImpl {
             .into_iter()
             .map(|account| (account.address.into(), account.balance.into()))
             .collect())
+    }
+
+    async fn get_last_block_certified_data(&self) -> RpcResult<CertifiedBlock> {
+        let certified_data = self
+            .blockchain
+            .get_last_certified_block_data()
+            .await
+            .map_err(|e| {
+                log::error!("Error getting last block certified data: {:?}", e);
+                jsonrpsee::types::error::ErrorCode::InternalError
+            })?;
+
+        Ok(certified_data)
     }
 }
 

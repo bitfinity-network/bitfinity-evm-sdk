@@ -1,0 +1,23 @@
+[package]
+name = "evm-log-extractor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true }
+chrono = { workspace = true }
+did = { path = "../did" }
+env_logger = { workspace = true }
+evm-canister-client = { path = "../evm-canister-client", features = ["ic-agent-client"] }
+lightspeed_scheduler = { workspace = true }
+log = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+async-trait = { workspace = true }
+candid = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tempfile = { workspace = true }

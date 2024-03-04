@@ -3,12 +3,13 @@ members = [
     "src/did",
     "src/eth-signer",
     "src/eth-signer/tests/test_canister",
+    "src/ethereum-json-rpc-client",
     "src/evm-block-extractor",
     "src/evm-canister-client",
+    "src/evm-log-extractor",
     "src/minter-client",
     "src/minter-did",
     "src/register-evm-agent",
-    "src/ethereum-json-rpc-client",
     "src/signature-verification-canister-client",
 ]
 resolver = "2"
@@ -23,7 +24,7 @@ include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 name = "bitfinity-evm-sdk"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.12.0"
+version = "0.13.0"
 
 [workspace.dependencies]
 alloy-primitives = { version = "0.6", default-feures = false }
@@ -33,6 +34,7 @@ bincode = "1.3"
 bytes = "1.3"
 candid = "0.10"
 clap = { version = "4", features = ["derive", "env"] }
+chrono = { version = "0.4", default-features = false }
 derive_more = "0.99"
 env_logger = { version = "0.11.0", default-features = false }
 ethereum-types = "0.14"

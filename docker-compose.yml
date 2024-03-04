@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
 
-  extractor:
+  evm-block-extractor:
     # image: ghcr.io/bitfinity-network/evm-block-extractor:main
     image: "evm-block-extractor:latest"
     build:
@@ -22,3 +22,22 @@ services:
     ports:
       - '8080:8080'
     command: --rpc-url https://testnet.bitfinity.network --postgres --username postgres --password postgres --database-name postgres --database-url db
+    depends_on:
+      - db
+
+  evm-log-extractor:
+    # image: ghcr.io/bitfinity-network/evm-log-extractor:main
+    image: "evm-log-extractor:latest"
+    build:
+      dockerfile: ./src/evm-log-extractor/Dockerfile
+    environment:
+      # use local dfx replica
+      - EVMC_PRINCIPAL=bkyz2-fmaaa-aaaaa-qaaaq-cai
+      - EVMC_NETWORK_URL=http://host.docker.internal:40837
+      # use testnet
+      #- EVMC_PRINCIPAL=4fe7g-7iaaa-aaaak-aegcq-cai
+    volumes:
+      - ~/.config/dfx/identity/alice/identity.pem:/data/config/identity.pem:ro
+      - ./target/logs:/data/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

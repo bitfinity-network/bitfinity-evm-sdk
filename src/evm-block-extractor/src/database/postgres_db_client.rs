@@ -5,7 +5,10 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sqlx::postgres::PgRow;
 
-use super::{AccountBalance, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
+use super::{
+    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY,
+    GENESIS_BALANCES_KEY,
+};
 
 static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migrations");
 
@@ -73,9 +76,11 @@ impl DatabaseClient for PostgresDbClient {
 
     async fn clear(&self) -> anyhow::Result<()> {
         log::warn!("Postgres tables are being cleared");
-        sqlx::query("TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_KEY_VALUE_DATA")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "TRUNCATE TABLE EVM_BLOCK, EVM_TRANSACTION, EVM_KEY_VALUE_DATA, CERTIFIED_EVM_BLOCK",
+        )
+        .execute(&self.pool)
+        .await?;
 
         Ok(())
     }
@@ -148,6 +153,30 @@ impl DatabaseClient for PostgresDbClient {
         tx.commit().await?;
 
         Ok(())
+    }
+
+    async fn insert_certified_block_data(&self, response: CertifiedBlock) -> anyhow::Result<()> {
+        let block_id = response.data.number.0.as_u64();
+
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("INSERT INTO CERTIFIED_EVM_BLOCK (id, certified_response) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET certified_response = $2")
+                    .bind(block_id as i64)
+                    .bind(serde_json::to_value(response)?)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| anyhow::anyhow!("Error inserting certified block {}: {:?}", block_id, e))
+                    .map(|_| ())?;
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn get_last_certified_block_data(&self) -> anyhow::Result<CertifiedBlock> {
+        sqlx::query("SELECT certified_response FROM CERTIFIED_EVM_BLOCK ORDER BY id DESC LIMIT 1")
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Error getting last certified block: {:?}", e))
+            .and_then(|row| from_row_value(&row, 0))
     }
 
     /// Get the latest block number

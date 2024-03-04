@@ -1,5 +1,5 @@
 use did::{Block, Transaction, H160, H256, U256, U64};
-use evm_block_extractor::database::AccountBalance;
+use evm_block_extractor::database::{AccountBalance, CertifiedBlock};
 use rand::random;
 
 use crate::test_with_clients;
@@ -529,6 +529,75 @@ async fn test_insert_and_fetch_chain_id() {
 
             // Assert
             assert!(chain_id_from_db.is_none());
+        }
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_insert_and_fetch_last_block_certified_data() {
+    test_with_clients(|db_client| async move {
+        // Arrange
+        db_client.init(None, false).await.unwrap();
+
+        let block_1 = Block::<H256> {
+            number: 1u64.into(),
+            ..Default::default()
+        };
+        let block_2 = Block::<H256> {
+            number: 2u64.into(),
+            ..Default::default()
+        };
+
+        let result_1 = CertifiedBlock {
+            certificate: vec![1, 2, 3],
+            witness: vec![5, 6, 7],
+            data: block_1,
+        };
+        let result_2 = CertifiedBlock {
+            certificate: vec![11, 12, 13],
+            witness: vec![15, 16, 17],
+            data: block_2,
+        };
+
+        // There should be no certified block when the database is empty
+        {
+            // Act
+            let certified_data = db_client.get_last_certified_block_data().await;
+
+            // Assert
+            assert!(certified_data.is_err());
+        }
+
+        // Insert certified blocks
+        {
+            db_client
+                .insert_certified_block_data(result_1.clone())
+                .await
+                .unwrap();
+            assert_eq!(
+                result_1,
+                db_client.get_last_certified_block_data().await.unwrap()
+            );
+
+            db_client
+                .insert_certified_block_data(result_2.clone())
+                .await
+                .unwrap();
+            assert_eq!(
+                result_2,
+                db_client.get_last_certified_block_data().await.unwrap()
+            );
+        }
+
+        // There should be no certified blocks when the database is cleared
+        {
+            // Act
+            db_client.clear().await.unwrap();
+            let certified_data = db_client.get_last_certified_block_data().await;
+
+            // Assert
+            assert!(certified_data.is_err());
         }
     })
     .await;

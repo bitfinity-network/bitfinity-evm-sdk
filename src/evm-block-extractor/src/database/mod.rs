@@ -1,6 +1,7 @@
 pub mod big_query_db_client;
 pub mod postgres_db_client;
 
+use did::certified::CertifiedResult;
 use did::{Block, Transaction, H160, H256, U256};
 use serde::{Deserialize, Serialize};
 
@@ -27,6 +28,9 @@ impl<D> DataContainer<D> {
 const GENESIS_BALANCES_KEY: &str = "genesis_balances";
 /// The chain id key in the key value store
 const CHAIN_ID_KEY: &str = "chain_id";
+
+/// Certified block data
+pub type CertifiedBlock = CertifiedResult<Block<H256>>;
 
 /// A trait for interacting with a blockchain database
 #[async_trait::async_trait]
@@ -59,6 +63,12 @@ pub trait DatabaseClient: Send + Sync {
         blocks: &[Block<H256>],
         transactions: &[Transaction],
     ) -> anyhow::Result<()>;
+
+    /// Insert certified block data
+    async fn insert_certified_block_data(&self, response: CertifiedBlock) -> anyhow::Result<()>;
+
+    /// Returns certified response for the last block
+    async fn get_last_certified_block_data(&self) -> anyhow::Result<CertifiedBlock>;
 
     /// Get genesis balances
     async fn get_genesis_balances(&self) -> anyhow::Result<Option<Vec<AccountBalance>>>;

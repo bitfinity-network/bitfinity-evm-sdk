@@ -17,9 +17,13 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::Value;
 
-use super::{AccountBalance, DataContainer, DatabaseClient, CHAIN_ID_KEY, GENESIS_BALANCES_KEY};
+use super::{
+    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY,
+    GENESIS_BALANCES_KEY,
+};
 
 const BQ_BLOCKS_TABLE_ID: &str = "blocks";
+const BQ_CERTIFIED_BLOCKS_TABLE_ID: &str = "certified_blocks";
 const BQ_TRANSACTIONS_TABLE_ID: &str = "transactions";
 const BQ_KEY_VALUE_TABLE_ID: &str = "key_value_data";
 
@@ -137,6 +141,13 @@ impl BigQueryDbClient {
                 vec![
                     TableFieldSchema::integer("id"),
                     TableFieldSchema::json("body"),
+                ],
+            ),
+            (
+                BQ_CERTIFIED_BLOCKS_TABLE_ID,
+                vec![
+                    TableFieldSchema::integer("id"),
+                    TableFieldSchema::json("certified_response"),
                 ],
             ),
             (
@@ -263,6 +274,7 @@ impl DatabaseClient for BigQueryDbClient {
         delete_table(BQ_BLOCKS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_TRANSACTIONS_TABLE_ID.to_owned()).await?;
         delete_table(BQ_KEY_VALUE_TABLE_ID.to_owned()).await?;
+        delete_table(BQ_CERTIFIED_BLOCKS_TABLE_ID.to_owned()).await?;
 
         self.create_tables_if_not_present().await
     }
@@ -481,6 +493,36 @@ impl DatabaseClient for BigQueryDbClient {
             .await
     }
 
+    async fn insert_certified_block_data(&self, block: CertifiedBlock) -> anyhow::Result<()> {
+        let hash = block.data.hash.to_hex_str();
+        let block_row = CertifiedBlockRow {
+            id: block.data.number.0.as_u64(),
+            certified_response: serde_json::to_value(block).expect("Failed to serialize block"),
+        };
+
+        let rows = TableDataInsertAllRequestRows {
+            insert_id: Some(hash),
+            json: serde_json::to_value(block_row).expect("Failed to serialize block"),
+        };
+
+        self.insert_batch_data(BQ_CERTIFIED_BLOCKS_TABLE_ID, vec![rows])
+            .await
+    }
+
+    async fn get_last_certified_block_data(&self) -> anyhow::Result<CertifiedBlock> {
+        let query_request = QueryRequest {
+            query_parameters: None,
+            query: format!(
+                "SELECT certified_response FROM `{project_id}.{dataset_id}.{table_id}` ORDER BY id DESC LIMIT 1",
+                project_id = self.project_id,
+                dataset_id = self.dataset_id,
+                table_id = BQ_CERTIFIED_BLOCKS_TABLE_ID,),
+                ..Default::default()
+            };
+
+        self.query_one(query_request).await
+    }
+
     async fn get_transaction(&self, tx_hash: H256) -> anyhow::Result<Transaction> {
         let query_request = QueryRequest {
             query_parameters: Some(vec![
@@ -515,6 +557,13 @@ struct BlockRow {
     id: u64,
     #[serde(serialize_with = "serialize_json_as_string")]
     body: Value,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CertifiedBlockRow {
+    id: u64,
+    #[serde(serialize_with = "serialize_json_as_string")]
+    certified_response: Value,
 }
 
 #[derive(Debug, Serialize, Clone)]

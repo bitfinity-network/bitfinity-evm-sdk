@@ -9,7 +9,7 @@ ADD . .
 
 RUN cargo build --release --bin evm-block-extractor
 
-FROM debian:bookworm-slim AS runtime
+FROM ubuntu:22.04 AS runtime
 
 WORKDIR /app
 
@@ -24,6 +24,9 @@ RUN apt-get update -y \
 COPY --from=builder /app/target/release/evm-block-extractor /app/evm-block-extractor
 
 EXPOSE 8080
+
+# Set stop signal to ctrl+c
+STOPSIGNAL SIGINT
 
 ENTRYPOINT ["./evm-block-extractor"]
 
