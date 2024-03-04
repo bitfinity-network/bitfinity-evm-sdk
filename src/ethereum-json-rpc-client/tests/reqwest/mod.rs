@@ -1,6 +1,7 @@
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
-use ethers_core::types::{BlockNumber, Log, H256};
+use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
+use ethers_core::types::{BlockNumber, Log, TransactionRequest, H160, H256};
 
 const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
 const MAX_BATCH_SIZE: usize = 5;
@@ -45,6 +46,65 @@ async fn should_get_code() {
         .await
         .unwrap();
     assert_eq!(result, ERC_1820_EXPECTED_CODE);
+}
+
+/// Calls the funtction of ERC-1820:
+///
+///```solidity
+///     function getManager(address _addr) public view returns(address)
+///```
+#[tokio::test]
+async fn should_perform_eth_call() {
+    let erc_1820_address = "0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24"
+        .parse::<H160>()
+        .unwrap();
+
+    let caller = "0xf990077c3205cbDf861e17Fa532eeB069cE9fF96"
+        .parse()
+        .unwrap();
+
+    #[allow(deprecated)]
+    let func = Function {
+        name: "getManager".to_string(),
+        inputs: vec![Param {
+            name: "getManager".to_string(),
+            kind: ParamType::Address,
+            internal_type: None,
+        }],
+        outputs: vec![Param {
+            name: "".to_string(),
+            kind: ParamType::Address,
+            internal_type: None,
+        }],
+        constant: None,
+        state_mutability: StateMutability::View,
+    };
+
+    let params = TransactionRequest {
+        from: Some(caller),
+        to: Some(erc_1820_address.into()),
+        gas: Some(1000000u64.into()),
+        gas_price: None,
+        value: None,
+        data: Some(func.encode_input(&[Token::Address(caller)]).unwrap().into()),
+        ..Default::default()
+    };
+
+    let result = reqwest_client()
+        .eth_call(params, BlockNumber::Latest)
+        .await
+        .unwrap();
+
+    let result_address = func
+        .decode_output(&hex::decode(result.trim_start_matches("0x")).unwrap())
+        .unwrap()
+        .first()
+        .cloned()
+        .unwrap()
+        .into_address()
+        .unwrap();
+
+    assert_eq!(result_address, caller);
 }
 
 #[tokio::test]

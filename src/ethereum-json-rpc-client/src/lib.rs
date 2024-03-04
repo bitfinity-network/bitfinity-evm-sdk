@@ -4,7 +4,8 @@ use std::pin::Pin;
 use anyhow::Context;
 use did::transaction::StorableExecutionResult;
 use ethers_core::types::{
-    Block, BlockNumber, Log, Transaction, TransactionReceipt, H160, H256, U256, U64,
+    Block, BlockNumber, Log, Transaction, TransactionReceipt, TransactionRequest, H160, H256, U256,
+    U64,
 };
 use itertools::Itertools;
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
@@ -27,6 +28,7 @@ const ETH_GET_TRANSACTION_COUNT_METHOD: &str = "eth_getTransactionCount";
 const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
 const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
+const ETH_CALL_METHOD: &str = "eth_call";
 const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
@@ -186,12 +188,26 @@ impl<C: Client> EthJsonRpcClient<C> {
         .map(|v| v.as_u64())
     }
 
+    /// Performs eth call and return the result.
+    pub async fn eth_call(
+        &self,
+        params: TransactionRequest,
+        block: BlockNumber,
+    ) -> anyhow::Result<String> {
+        self.single_request(
+            ETH_CALL_METHOD.to_string(),
+            make_params_array!(params, block),
+            Id::Str("eth_call".to_string()),
+        )
+        .await
+    }
+
     /// Sends raw transaction and returns transaction hash
     pub async fn send_raw_transaction(&self, transaction: Transaction) -> anyhow::Result<H256> {
         let bytes = transaction.rlp();
         let transaction = format!("0x{}", hex::encode(bytes));
 
-        self.single_request::<H256>(
+        self.single_request(
             ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
             make_params_array!(transaction),
             Id::Str("send_rawTransaction".to_string()),
