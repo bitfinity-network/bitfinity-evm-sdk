@@ -83,11 +83,9 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
             .await
     }
 
-    /// Creates ERC-20 mint order for ICRC-2 tokens burning.
-    pub async fn burn_icrc2(
-        &self,
-        reason: Icrc2Burn,
-    ) -> CanisterClientResult<McResult<SignedMintOrder>> {
+    /// Creates ERC-20 mint order for ICRC-2 tokens burning and sends it to the BFTBridge.
+    /// Returns operation id.
+    pub async fn burn_icrc2(&self, reason: Icrc2Burn) -> CanisterClientResult<McResult<u32>> {
         self.client.update("burn_icrc2", (reason,)).await
     }
 
