@@ -47,7 +47,7 @@ pub trait IC {
     #[method(name = "getGenesisBalances")]
     async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>>;
 
-    #[method(name = "getLastBlockCertifiedData")]
+    #[method(name = "getLastCertifiedBlock")]
     async fn get_last_block_certified_data(&self) -> RpcResult<CertifiedBlock>;
 }
 

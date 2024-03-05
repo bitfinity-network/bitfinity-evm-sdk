@@ -135,18 +135,13 @@ impl BlockExtractor {
 
     /// Collects last certified block
     async fn collect_last_certified_block(&self) -> anyhow::Result<()> {
-        const JSON_RPC_METHOD_LAST_CERTIFIED_BLOCK: &str = "ic_getLastCertifiedBlock";
-
-        let certified_block = self
-            .client
-            .single_request::<CertifiedBlock>(
-                JSON_RPC_METHOD_LAST_CERTIFIED_BLOCK.to_string(),
-                jsonrpc_core::Params::Array(vec![]),
-                jsonrpc_core::Id::Null,
-            )
-            .await?;
+        let certified_block = self.client.get_last_certified_block().await?;
         self.blockchain
-            .insert_certified_block_data(certified_block)
+            .insert_certified_block_data(CertifiedBlock {
+                data: certified_block.data.into(),
+                witness: certified_block.witness,
+                certificate: certified_block.certificate,
+            })
             .await?;
 
         Ok(())

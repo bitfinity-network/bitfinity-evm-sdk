@@ -2,6 +2,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
+use did::certified::CertifiedResult;
 use did::transaction::StorableExecutionResult;
 use ethers_core::types::{
     Block, BlockNumber, Log, Transaction, TransactionReceipt, H160, H256, U256, U64,
@@ -30,6 +31,7 @@ const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 const IC_GET_GENESIS_BALANCES: &str = "ic_getGenesisBalances";
+const IC_GET_LAST_CERTIFIED_BLOCK: &str = "ic_getLastCertifiedBlock";
 
 macro_rules! make_params_array {
     ($($items:expr),*) => {
@@ -58,7 +60,7 @@ impl<C: Client> EthJsonRpcClient<C> {
             ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string(),
             make_params_array!(block, false),
             // For some reason some JSON RPC services fail to parse requests with null id
-            Id::Str("get_block_by_number".to_string()),
+            Id::Str(ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string()),
         )
         .await
     }
@@ -72,7 +74,7 @@ impl<C: Client> EthJsonRpcClient<C> {
             ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string(),
             make_params_array!(block, true),
             // For some reason some JSON RPC services fail to parse requests with null id
-            Id::Str("get_full_block_by_number".to_string()),
+            Id::Str(ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string()),
         )
         .await
     }
@@ -133,7 +135,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request::<U64>(
             ETH_BLOCK_NUMBER_METHOD.to_string(),
             make_params_array!(),
-            Id::Str("eth_blockNumber".to_string()),
+            Id::Str(ETH_BLOCK_NUMBER_METHOD.to_string()),
         )
         .await
         .map(|v| v.as_u64())
@@ -144,7 +146,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request::<U64>(
             ETH_CHAIN_ID_METHOD.to_string(),
             Params::Array(vec![]),
-            Id::Str("eth_chainId".to_string()),
+            Id::Str(ETH_CHAIN_ID_METHOD.to_string()),
         )
         .await
         .map(|v| v.as_u64())
@@ -155,7 +157,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_GET_BALANCE_METHOD.to_string(),
             make_params_array!(address, block),
-            Id::Str("eth_getBalance".to_string()),
+            Id::Str(ETH_GET_BALANCE_METHOD.to_string()),
         )
         .await
     }
@@ -169,7 +171,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request::<U64>(
             ETH_GET_TRANSACTION_COUNT_METHOD.to_string(),
             make_params_array!(address, block),
-            Id::Str("eth_getTransactionCount".to_string()),
+            Id::Str(ETH_GET_TRANSACTION_COUNT_METHOD.to_string()),
         )
         .await
         .map(|v| v.as_u64())
@@ -183,7 +185,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request::<H256>(
             ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
             make_params_array!(transaction),
-            Id::Str("send_rawTransaction".to_string()),
+            Id::Str(ETH_SEND_RAW_TRANSACTION_METHOD.to_string()),
         )
         .await
     }
@@ -193,7 +195,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_GET_LOGS_METHOD.to_string(),
             make_params_array!(params),
-            Id::Str("ETH_GET_LOGS_METHOD".to_string()),
+            Id::Str(ETH_GET_LOGS_METHOD.to_string()),
         )
         .await
     }
@@ -247,6 +249,16 @@ impl<C: Client> EthJsonRpcClient<C> {
             IC_GET_GENESIS_BALANCES.to_string(),
             make_params_array!(),
             Id::Str(IC_GET_GENESIS_BALANCES.to_string()),
+        )
+        .await
+    }
+
+    /// Returns the last certified block
+    pub async fn get_last_certified_block(&self) -> anyhow::Result<CertifiedResult<Block<H256>>> {
+        self.single_request(
+            IC_GET_LAST_CERTIFIED_BLOCK.to_string(),
+            make_params_array!(),
+            Id::Str(IC_GET_LAST_CERTIFIED_BLOCK.to_string()),
         )
         .await
     }
