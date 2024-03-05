@@ -53,10 +53,7 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
 #[tokio::test]
 async fn test_get_blocks() {
     with_filled_db(|db_client| async {
-        let (port, handle) = new_server(db_client).await;
-
-        let http_client =
-            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+        let (http_client, _port, handle) = new_server(db_client).await;
 
         let block_count = http_client.get_block_number().await.unwrap();
         assert_eq!(block_count, BLOCK_COUNT - 1);
@@ -88,9 +85,10 @@ async fn test_get_blocks() {
 #[tokio::test]
 async fn test_get_blocks_rlp() {
     with_filled_db(|db_client| async {
-        let (port, handle) = new_server(db_client).await;
+        let (_http_client, port, handle) = new_server(db_client).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
+
         // Test first five blocks
         let request = Request::Single(Call::MethodCall(MethodCall {
             jsonrpc: Some(Version::V2),
@@ -144,7 +142,7 @@ async fn test_get_blocks_rlp() {
 #[tokio::test]
 async fn test_batched_request() {
     with_filled_db(|db_client| async {
-        let (port, handle) = new_server(db_client).await;
+        let (_http_client, port, handle) = new_server(db_client).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = Request::Batch(vec![
@@ -196,10 +194,7 @@ async fn test_get_genesis_accounts() {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
-        let (port, handle) = new_server(db_client.clone()).await;
-
-        let http_client =
-            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+        let (http_client, _port, handle) = new_server(db_client.clone()).await;
 
         // Test on empty database
         {
@@ -257,10 +252,7 @@ async fn test_get_chain_id() {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
-        let (port, handle) = new_server(db_client.clone()).await;
-
-        let http_client =
-            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+        let (http_client, _port, handle) = new_server(db_client.clone()).await;
 
         let chain_id: u64 = random();
         db_client.insert_chain_id(chain_id).await.unwrap();
@@ -282,7 +274,7 @@ async fn test_get_chain_id() {
 #[tokio::test]
 async fn test_get_block_by_number_variants() {
     with_filled_db(|db_client| async {
-        let (port, handle) = new_server(db_client).await;
+        let (_http_client, port, handle) = new_server(db_client).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = Request::Batch(vec![
@@ -360,29 +352,15 @@ async fn test_get_last_certified_block() {
             .await
             .unwrap();
 
-        let (port, handle) = new_server(db_client.clone()).await;
-
-        let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
+        let (http_client, _port, handle) = new_server(db_client.clone()).await;
 
         // Act
-        let request = Request::Single(Call::MethodCall(MethodCall {
-            jsonrpc: Some(Version::V2),
-            method: "ic_getLastBlockCertifiedData".to_string(),
-            params: Params::Array(vec![]),
-            id: Id::Null,
-        }));
-
-        let Response::Single(Output::Success(result)) =
-            http_client.send_rpc_request(request).await.unwrap()
-        else {
-            panic!("unexpected return type")
-        };
+        let certified_block = http_client.get_last_certified_block().await.unwrap();
 
         // Assert
-        let certified_block: CertifiedBlock = serde_json::from_value(result.result).unwrap();
         assert_eq!(certified_block.certificate, vec![1, 2, 3]);
         assert_eq!(certified_block.witness, vec![5, 6, 7]);
-        assert_eq!(certified_block.data, block);
+        assert_eq!(certified_block.data, block.into());
 
         {
             handle.stop().unwrap();
@@ -392,7 +370,9 @@ async fn test_get_last_certified_block() {
     .await
 }
 
-async fn new_server(db_client: Arc<dyn DatabaseClient>) -> (u16, ServerHandle) {
+async fn new_server(
+    db_client: Arc<dyn DatabaseClient>,
+) -> (EthJsonRpcClient<ReqwestClient>, u16, ServerHandle) {
     let eth = EthImpl::new(db_client);
     let mut module = RpcModule::new(());
     module.merge(EthServer::into_rpc(eth.clone())).unwrap();
@@ -401,7 +381,9 @@ async fn new_server(db_client: Arc<dyn DatabaseClient>) -> (u16, ServerHandle) {
     loop {
         let port = port_check::free_local_port().unwrap();
         if let Ok(server) = Server::builder().build(format!("0.0.0.0:{port}")).await {
-            return (port, server.start(module));
+            let client =
+                EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+            return (client, port, server.start(module));
         }
     }
 }
