@@ -1,10 +1,9 @@
-use candid::{Nat, Principal};
+use candid::Principal;
 use did::build::BuildData;
 use did::H160;
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 use minter_did::error::Result as McResult;
 use minter_did::id256::Id256;
-use minter_did::init::OperationPricing;
 use minter_did::order::SignedMintOrder;
 use minter_did::reason::Icrc2Burn;
 
@@ -84,40 +83,10 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
             .await
     }
 
-    /// Returns operation points number of the user.
-    pub async fn get_user_operation_points(
-        &self,
-        user: Option<Principal>,
-    ) -> CanisterClientResult<u32> {
-        self.client
-            .query("get_user_operation_points", (user,))
-            .await
-    }
-
-    /// Returns operations pricing.
-    /// This method is available for canister owner only.
-    pub async fn set_operation_pricing(
-        &mut self,
-        pricing: OperationPricing,
-    ) -> CanisterClientResult<McResult<()>> {
-        self.client
-            .update("set_operation_pricing", (pricing,))
-            .await
-    }
-
-    /// Returns operation pricing.
-    pub async fn get_operation_pricing(&self) -> CanisterClientResult<OperationPricing> {
-        self.client.query("get_operation_pricing", ()).await
-    }
-
-    /// Creates ERC-20 mint order for ICRC-2 tokens burning.
-    pub async fn create_erc_20_mint_order(
-        &self,
-        reason: Icrc2Burn,
-    ) -> CanisterClientResult<McResult<SignedMintOrder>> {
-        self.client
-            .update("create_erc_20_mint_order", (reason,))
-            .await
+    /// Creates ERC-20 mint order for ICRC-2 tokens burning and sends it to the BFTBridge.
+    /// Returns operation id.
+    pub async fn burn_icrc2(&self, reason: Icrc2Burn) -> CanisterClientResult<McResult<u32>> {
+        self.client.update("burn_icrc2", (reason,)).await
     }
 
     /// Returns `(nonce, mint_order)` pairs for the given sender id.
@@ -131,39 +100,15 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
             .await
     }
 
-    /// Approves ICRC-2 token transfer from minter canister to recipient.
-    /// Returns approved amount.
-    ///
-    /// # Arguments
-    /// - `user` is an address of wallet which has been used for Wrapped token burning.
-    /// - `operation_id` is an ID retuned by `BFTBridge::burn()` operation.
-    pub async fn start_icrc2_mint(
+    /// Returns mint order for the given parameters.
+    pub async fn get_mint_order(
         &self,
-        user: &H160,
+        sender: Id256,
+        src_token: Id256,
         operation_id: u32,
-    ) -> CanisterClientResult<McResult<Nat>> {
+    ) -> CanisterClientResult<Option<SignedMintOrder>> {
         self.client
-            .update("start_icrc2_mint", (user, operation_id))
-            .await
-    }
-
-    /// Transfers ICRC-2 tokens from minter canister to recipient.
-    ///
-    /// Before it can be used, ICRC-2 token must be approved by `start_icrc2_mint` which approves the transfer.
-    /// After the approval, user should finalize Wrapped token burning, using `BFTBridge::finish_burn()`.
-    pub async fn finish_icrc2_mint(
-        &self,
-        operation_id: u32,
-        address: &H160,
-        icrc2_token: Principal,
-        recipient: Principal,
-        amount: Nat,
-    ) -> CanisterClientResult<McResult<Nat>> {
-        self.client
-            .update(
-                "finish_icrc2_mint",
-                (operation_id, address, icrc2_token, recipient, amount),
-            )
+            .query("get_mint_order", (sender, src_token, operation_id))
             .await
     }
 
