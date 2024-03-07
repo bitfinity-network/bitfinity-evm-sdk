@@ -47,7 +47,7 @@ impl Client for ReqwestClient {
             if !response.status().is_success() {
                 let status = response.status();
                 let text = response.text().await.unwrap_or_default();
-                return Err(anyhow::anyhow!("RPC request failed: {status} - {text}"));
+                anyhow::bail!("RPC request failed: {status} - {text}");
             }
 
             let json_response = response
