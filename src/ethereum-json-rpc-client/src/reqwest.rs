@@ -42,13 +42,21 @@ impl Client for ReqwestClient {
             let response = request_builder
                 .send()
                 .await
-                .context("failed to send RPC request")?
+                .context("failed to send RPC request")?;
+
+            if !response.status().is_success() {
+                let status = response.status();
+                let text = response.text().await.unwrap_or_default();
+                return Err(anyhow::anyhow!("RPC request failed: {status} - {text}"));
+            }
+
+            let json_response = response
                 .json::<Response>()
                 .await
                 .context("failed to decode RPC response")?;
 
-            log::trace!("response: {:?}", response);
-            Ok(response)
+            log::trace!("response: {:?}", json_response);
+            Ok(json_response)
         })
     }
 }
