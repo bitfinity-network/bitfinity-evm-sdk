@@ -55,7 +55,7 @@ log = "0.4"
 murmur3 = "0.5"
 num = "0.4"
 once_cell = "1.16"
-port_check = "0.1"
+port_check = "0.2"
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
 reqwest = { version = "0.11", default-features = false }
 rlp = "0.5"
@@ -79,7 +79,7 @@ thiserror = "1.0"
 tokio = { version = "1.24", features = ["macros", "rt", "signal"] }
 url = "2.5"
 wiremock = "0.6"
-yup-oauth2 = "8.3.2"
+yup-oauth2 = "8"
 
 [profile.dev]
 debug = false
