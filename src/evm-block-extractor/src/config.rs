@@ -4,7 +4,6 @@ use clap::{Parser, Subcommand};
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::PgPool;
 
-use crate::constants::{DEVNET_PREFIX, MAINNET_PREFIX, TESTNET_PREFIX};
 use crate::database::big_query_db_client::BigQueryDbClient;
 use crate::database::postgres_db_client::PostgresDbClient;
 use crate::database::DatabaseClient;
@@ -108,18 +107,6 @@ impl Database {
                 log::info!("Use BigQuery database");
                 log::info!("- project-id: {}", project_id);
                 log::info!("- dataset-id: {}", dataset_id);
-
-                if ![TESTNET_PREFIX, MAINNET_PREFIX, DEVNET_PREFIX]
-                    .iter()
-                    .any(|&prefix| dataset_id.contains(prefix))
-                {
-                    return Err(anyhow::anyhow!(
-                        "Invalid dataset ID. The dataset ID must be prefixed with {}, {}, or {}",
-                        TESTNET_PREFIX,
-                        MAINNET_PREFIX,
-                        DEVNET_PREFIX
-                    ));
-                }
 
                 let client = BigQueryDbClient::new(project_id, dataset_id, sa_key).await?;
                 Ok(Arc::new(client))
