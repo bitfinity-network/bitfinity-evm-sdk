@@ -782,4 +782,33 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn get_canister_build_data(&self) -> CanisterClientResult<BuildData> {
         self.client.query("get_canister_build_data", ()).await
     }
+
+    /// Disables/Enables the processing of transactions.
+    pub async fn admin_disable_process_pending_transactions(
+        &self,
+        value: bool,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_disable_process_pending_transactions", (value,))
+            .await
+    }
+
+    /// Returns the current status of the processing of transactions.
+    pub async fn is_process_pending_transactions_disabled(&self) -> CanisterClientResult<bool> {
+        self.client
+            .query("is_process_pending_transactions_disabled", ())
+            .await
+    }
+
+    /// Enable/Disable creation of empty blocks.
+    pub async fn admin_allow_empty_blocks(&self, value: bool) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_allow_empty_blocks", (value,))
+            .await
+    }
+
+    /// Returns the current status of the creation of empty blocks.
+    pub async fn is_empty_block_enabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_empty_block_enabled", ()).await
+    }
 }
