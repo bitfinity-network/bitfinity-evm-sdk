@@ -794,7 +794,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Returns the current status of the processing of transactions.
-    pub async fn admin_process_pending_transactions(&self) -> CanisterClientResult<bool> {
+    pub async fn is_process_pending_transactions_disabled(&self) -> CanisterClientResult<bool> {
         self.client
             .query("is_process_pending_transactions_disabled", ())
             .await
