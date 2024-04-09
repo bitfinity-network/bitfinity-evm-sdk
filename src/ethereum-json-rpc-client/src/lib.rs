@@ -204,6 +204,17 @@ impl<C: Client> EthJsonRpcClient<C> {
         .await
     }
 
+    /// Sends raw transaction and takes the arguments in bytes.
+    pub async fn send_raw_transaction_bytes(&self, transaction: &[u8]) -> anyhow::Result<H256> {
+        let transaction = format!("0x{}", hex::encode(transaction));
+        self.single_request(
+            ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
+            make_params_array!(transaction),
+            Id::Str(ETH_SEND_RAW_TRANSACTION_METHOD.to_string()),
+        )
+        .await
+    }
+
     /// Sends raw transaction and returns transaction hash
     pub async fn send_raw_transaction(&self, transaction: Transaction) -> anyhow::Result<H256> {
         let bytes = transaction.rlp();
