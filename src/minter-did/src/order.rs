@@ -50,10 +50,16 @@ pub struct MintOrder {
 
     /// Decimals of the token.
     pub decimals: u8,
+
+    /// Mint operation should approve tokens, using this address as a spender.
+    pub approve_spender: H160,
+
+    /// Mint operation should approve this amount of tokens.
+    pub approve_amount: U256,
 }
 
 impl MintOrder {
-    pub const ENCODED_DATA_SIZE: usize = 197;
+    pub const ENCODED_DATA_SIZE: usize = 249;
     pub const SIGNED_ENCODED_DATA_SIZE: usize = Self::ENCODED_DATA_SIZE + 65;
 
     /// Encodes order data and signs it.
@@ -71,7 +77,9 @@ impl MintOrder {
     ///     148..180 bytes of name,                 }
     ///     180..196 bytes of symbol,               }
     ///     196..197 bytes of decimals,             }
-    ///     197..262 bytes of signature (r - 32 bytes, s - 32 bytes, v - 1 byte)
+    ///     197..217 bytes of approve_address,      }
+    ///     217..249 bytes of approve_amount,       }
+    ///     249..314 bytes of signature (r - 32 bytes, s - 32 bytes, v - 1 byte)
     /// ]
     /// ```
     ///
@@ -94,6 +102,8 @@ impl MintOrder {
         buf[148..180].copy_from_slice(&self.name);
         buf[180..196].copy_from_slice(&self.symbol);
         buf[196] = self.decimals;
+        buf[197..217].copy_from_slice(self.approve_spender.0.as_bytes());
+        buf[217..249].copy_from_slice(&self.approve_amount.to_big_endian());
 
         let digest = keccak256(&buf[..Self::ENCODED_DATA_SIZE]);
 
@@ -127,6 +137,8 @@ impl MintOrder {
         let name = data[148..180].try_into().unwrap(); // exactly 32 bytes, as expected
         let symbol = data[180..196].try_into().unwrap(); // exactly 16 bytes, as expected
         let decimals = data[196];
+        let approve_spender = H160::from_slice(&data[197..217]);
+        let approve_amount = U256::from_big_endian(&data[217..249]);
 
         Some(Self {
             amount,
@@ -140,6 +152,8 @@ impl MintOrder {
             name,
             symbol,
             decimals,
+            approve_spender,
+            approve_amount,
         })
     }
 
