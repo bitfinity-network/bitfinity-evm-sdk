@@ -63,22 +63,25 @@ impl Storable for Indices {
 }
 
 /// Full information about entry
-#[derive(Clone, CandidType, Deserialize)]
+#[derive(Clone, Debug, CandidType, Deserialize)]
 pub struct FullStorageValue {
     /// Data
     pub data: Vec<u8>,
+    /// Number of inserts subtracted by number of removals.
+    /// May be zero for the values which were removed in past before the moment they are cleaned.
+    pub rc: u32,
 }
 
-impl fmt::Debug for FullStorageValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FullStorageValue")
-            .field("data_len", &self.data.len())
-            .finish()
-    }
-}
 
 impl FullStorageValue {
     pub fn hash(&self) -> u128 {
-        murmur3::murmur3_x86_128(&mut Cursor::new(&self.data), 0).expect("should calculate hash")
+        let mut all_data = Vec::with_capacity(
+            self.data.len()
+                + mem::size_of_val(&self.rc)
+        );
+        all_data.extend(&self.data);
+        all_data.extend(self.rc.to_le_bytes());
+
+        murmur3::murmur3_x86_128(&mut Cursor::new(&all_data), 0).expect("should calculate hash")
     }
 }
