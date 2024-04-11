@@ -3,33 +3,9 @@
 ## Introduction
 
 The EVM block extractor is an advanced tool used to collect EVM blocks and transactions, and send them to a specified data storage. 
-This version is enhanced to handle parallel requests efficiently and integrates with Google Cloud Platform's BigQuery service or Postgres.
+This version is enhanced to handle parallel requests efficiently and integrates with Postgres DB.
 
 ## Configuration
-
-### Usage with BigQuery
-
-```sh
-evm-block-extractor
-  --server-address <server-address>
-  --rpc-url <evmc-rpc-url>
-  --max-number-of-requests <max-parallel-requests>
-  --rpc-batch-size <rpc-batch-size>
-  --bigquery
-  --project-id <bigquery-project-id>
-  --dataset-id <bigquery-dataset-id>
-  --sa-key <service-account-key>
-```
-
-Where:
-
-- **server-address:** The address where the server will be hosted (default: 127.0.0.1:8080).
-- **rpc-url**: is the endpoint of the EVMC json-rpc url
-- **max-number-of-requests**: is the maximum number of parallel requests to be sent to the EVMC json-rpc endpoint
-- **rpc-batch-size**: is the number of blocks to be requested in a single batch
-- **dataset-id**: is the BigQuery dataset id where the data will be sent
-- **sa-key**: the service account key in JSON format for GCP authentication.
-
 
 ### Usage with Postgres
 

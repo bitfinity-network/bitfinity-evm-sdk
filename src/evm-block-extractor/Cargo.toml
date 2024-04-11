@@ -15,7 +15,6 @@ ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = [
 ] }
 ethers-core = { workspace = true }
 futures = { workspace = true }
-gcp-bigquery-client = { workspace = true }
 hex = { workspace = true }
 jsonrpc-core = { workspace = true }
 jsonrpsee = { workspace = true }
@@ -25,7 +24,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "tls-rustls"] }
 tokio = { workspace = true }
-yup-oauth2 = { workspace = true }
 
 
 [dev-dependencies]
@@ -34,4 +32,4 @@ port_check = { workspace = true }
 rand = { workspace = true }
 tempfile = { workspace = true }
 testcontainers = { workspace = true }
-wiremock = { workspace = true }
+

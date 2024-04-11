@@ -6,7 +6,6 @@ use evm_block_extractor::database::DatabaseClient;
 use testcontainers::testcontainers::clients::Cli;
 use testcontainers::testcontainers::Container;
 
-mod client;
 mod tests;
 
 async fn test_with_clients<T: Fn(Arc<dyn DatabaseClient>) -> F, F: Future<Output = ()>>(test: T) {
@@ -19,12 +18,6 @@ async fn test_with_clients<T: Fn(Arc<dyn DatabaseClient>) -> F, F: Future<Output
     println!("----------------------------------");
     let (postgres_client, _node) = new_postgres_db_client(&docker).await;
     test(postgres_client).await;
-
-    println!("----------------------------------");
-    println!("Running test with BigQueryDbClient");
-    println!("----------------------------------");
-    let (bigquery_client, _node, _temp_file, _auth) = client::new_bigquery_client(&docker).await;
-    test(bigquery_client).await;
 }
 
 async fn new_postgres_db_client(
