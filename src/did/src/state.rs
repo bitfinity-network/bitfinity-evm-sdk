@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::io::Cursor;
-use std::{fmt, mem};
+use std::mem;
 
 use candid::CandidType;
 use ic_stable_structures::{Bound, Storable};
