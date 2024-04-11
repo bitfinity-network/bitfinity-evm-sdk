@@ -72,13 +72,9 @@ pub struct FullStorageValue {
     pub rc: u32,
 }
 
-
 impl FullStorageValue {
     pub fn hash(&self) -> u128 {
-        let mut all_data = Vec::with_capacity(
-            self.data.len()
-                + mem::size_of_val(&self.rc)
-        );
+        let mut all_data = Vec::with_capacity(self.data.len() + mem::size_of_val(&self.rc));
         all_data.extend(&self.data);
         all_data.extend(self.rc.to_le_bytes());
 
