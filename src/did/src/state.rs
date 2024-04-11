@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::io::Cursor;
-use std::{fmt, mem};
+use std::mem;
 
 use candid::CandidType;
 use ic_stable_structures::{Bound, Storable};
@@ -63,37 +63,20 @@ impl Storable for Indices {
 }
 
 /// Full information about entry
-#[derive(Clone, CandidType, Deserialize)]
+#[derive(Clone, Debug, CandidType, Deserialize)]
 pub struct FullStorageValue {
     /// Data
     pub data: Vec<u8>,
     /// Number of inserts subtracted by number of removals.
     /// May be zero for the values which were removed in past before the moment they are cleaned.
-    pub ref_count: u32,
-    /// Index of the block when the item was removed last time (ref counter set to zeo)
-    pub removed_at_block: u64,
-}
-
-impl fmt::Debug for FullStorageValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FullStorageValue")
-            .field("data_len", &self.data.len())
-            .field("ref_count", &self.ref_count)
-            .field("removed_at_block", &self.removed_at_block)
-            .finish()
-    }
+    pub rc: u32,
 }
 
 impl FullStorageValue {
     pub fn hash(&self) -> u128 {
-        let mut all_data = Vec::with_capacity(
-            self.data.len()
-                + mem::size_of_val(&self.ref_count)
-                + mem::size_of_val(&self.removed_at_block),
-        );
+        let mut all_data = Vec::with_capacity(self.data.len() + mem::size_of_val(&self.rc));
         all_data.extend(&self.data);
-        all_data.extend(self.ref_count.to_le_bytes());
-        all_data.extend(self.removed_at_block.to_le_bytes());
+        all_data.extend(self.rc.to_le_bytes());
 
         murmur3::murmur3_x86_128(&mut Cursor::new(&all_data), 0).expect("should calculate hash")
     }
