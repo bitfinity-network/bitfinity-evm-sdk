@@ -6,8 +6,8 @@ use did::permission::{Permission, PermissionList};
 use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
 use did::transaction::StorableExecutionResult;
 use did::{
-    Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256,
-    U256, U64,
+    AccountInfoMap, Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt,
+    H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
@@ -810,5 +810,14 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Returns the current status of the creation of empty blocks.
     pub async fn is_empty_block_enabled(&self) -> CanisterClientResult<bool> {
         self.client.query("is_empty_block_enabled", ()).await
+    }
+
+    /// Updates the state of the EVM canister.
+    pub async fn update_state(&self, accounts: AccountInfoMap) -> CanisterClientResult<Result<()>> {
+        self.client.update("update_state", (accounts,)).await
+    }
+
+    pub async fn reset_state(&self) -> CanisterClientResult<Result<()>> {
+        self.client.update("reset_state", ()).await
     }
 }
