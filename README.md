@@ -10,7 +10,7 @@
 - [did](./src/did): Data types for [evm-canister](https://github.com/bitfinity-network/evm-canister)
 - [eth-signer](./src/eth-signer/): A library which provides a trait for signing transactions and messages.
 - [evm-block-extractor](./src/evm-block-extractor/): It is made up of two components:
-  - [evm-block-extractor](./src/evm-block-extractor/): A library for extracting blocks from the Bitfinity EVM and storing them in BigQuery
+  - [evm-block-extractor](./src/evm-block-extractor/): A library for extracting blocks from the Bitfinity EVM and storing them in a PostgresSQL DB
   - [evm-block-extractor-server](./src/evm-block-extractor/bin/server): A JSON-RPC server for the EVM block extractor
 - [evm-canister-client](./src/evm-canister-client/): A library for interacting with the Bitfinity EVM
 - [register-evm-agent](./src/register-evm-agent/): A Cli tool for generating an ETH Wallet & reserving a canister to the Bitfinity EVM

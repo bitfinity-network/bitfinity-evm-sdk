@@ -4,7 +4,6 @@ use clap::{Parser, Subcommand};
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::PgPool;
 
-use crate::database::big_query_db_client::BigQueryDbClient;
 use crate::database::postgres_db_client::PostgresDbClient;
 use crate::database::DatabaseClient;
 
@@ -54,24 +53,6 @@ pub struct ExtractorArgs {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Database {
-    #[command(name = "--bigquery")]
-    BigQuery {
-        /// The project ID of the BigQuery table
-        #[arg(long = "project-id", short('p'), default_value = "bitfinity-evm")]
-        project_id: String,
-
-        /// The dataset ID of the BigQuery table
-        /// The dataset ID can be one of the following:
-        /// - `testnet`
-        /// - `mainnet`
-        /// - `devnet`
-        #[arg(long = "dataset-id", short('d'))]
-        dataset_id: String,
-
-        /// The service account key in JSON format
-        #[arg(long = "sa-key", short('k'), env = "GCP_BLOCK_EXTRACTOR_SA_KEY")]
-        sa_key: String,
-    },
     #[command(name = "--postgres")]
     Postgres {
         /// The username of the Postgres database
@@ -99,18 +80,6 @@ impl Database {
     /// Build a database client based on the database type
     pub async fn build_client(self) -> anyhow::Result<Arc<dyn DatabaseClient>> {
         match self {
-            Database::BigQuery {
-                project_id,
-                dataset_id,
-                sa_key,
-            } => {
-                log::info!("Use BigQuery database");
-                log::info!("- project-id: {}", project_id);
-                log::info!("- dataset-id: {}", dataset_id);
-
-                let client = BigQueryDbClient::new(project_id, dataset_id, sa_key).await?;
-                Ok(Arc::new(client))
-            }
             Database::Postgres {
                 username,
                 password,

@@ -1,4 +1,3 @@
-pub mod big_query_db_client;
 pub mod postgres_db_client;
 
 use did::certified::CertifiedResult;
