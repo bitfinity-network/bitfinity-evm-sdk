@@ -1,4 +1,4 @@
-use ethers_core::types::Bytes;
+use alloy_primitives::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::formats::PreferOne;

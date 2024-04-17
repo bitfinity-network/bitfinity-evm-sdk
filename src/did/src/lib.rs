@@ -17,8 +17,11 @@ pub mod init;
 pub mod integer;
 pub mod keccak;
 pub mod logs;
-pub mod mint_order_exemption;
-pub mod notify;
+
+// TODO: Uncomment these when we have implemented the types
+// pub mod mint_order_exemption;
+// pub mod notify;
+
 pub mod permission;
 pub mod state;
 pub mod transaction;
@@ -33,8 +36,11 @@ pub use fees::FeeHistory;
 pub use gas::*;
 pub use hash::{H160, H256, H64};
 pub use integer::{U256, U64};
-pub use mint_order_exemption::MintOrderExemptionUserData;
-pub use notify::NotificationInput;
+
+// TODO: Uncomment these when we have implemented the types
+// pub use mint_order_exemption::MintOrderExemptionUserData;
+// pub use notify::NotificationInput;
+
 pub use transaction::{BlockId, BlockNumber, Transaction, TransactionReceipt};
 
 pub use crate::bytes::Bytes;

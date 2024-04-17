@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use candid::{CandidType, Deserialize};
-use ethers_core::types::Log as EthersLog;
+use alloy_primitives::Log as EthersLog;
 use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::Serialize;
@@ -206,7 +206,7 @@ impl Encodable for Block<Transaction> {
         // Block transactions
         s.begin_list(self.transactions.len());
         for transaction in &self.transactions {
-            let transaction = ethers_core::types::Transaction::from(transaction.clone());
+            let transaction = alloy_rpc_types::Transaction::from(transaction.clone());
             s.append_raw(&transaction.rlp(), 1);
         }
 
@@ -282,7 +282,7 @@ impl Decodable for Block<Transaction> {
         block.transactions.reserve(transactions_count);
         for i in 0..transactions_count {
             let transaction_rlp = transactions.at(i)?;
-            let tx = ethers_core::types::Transaction::decode(&transaction_rlp)?;
+            let tx = alloy_rpc_types::Transaction::decode(&transaction_rlp)?;
 
             block.transactions.push(tx.into());
         }
@@ -369,69 +369,69 @@ impl SlicedStorable for Block<H256> {
     const CHUNK_SIZE: ChunkSize = 512;
 }
 
-impl<D, T: From<D>> From<ethers_core::types::Block<D>> for Block<T> {
-    fn from(block: ethers_core::types::Block<D>) -> Self {
-        Block {
-            hash: block.hash.map(Into::into).unwrap_or_default(),
-            parent_hash: block.parent_hash.into(),
-            uncles_hash: block.uncles_hash.into(),
-            author: block.author.map(Into::into).unwrap_or_default(),
-            state_root: block.state_root.into(),
-            transactions_root: block.transactions_root.into(),
-            receipts_root: block.receipts_root.into(),
-            number: block.number.map(Into::into).unwrap_or_default(),
-            gas_used: block.gas_used.into(),
-            gas_limit: block.gas_limit.into(),
-            extra_data: block.extra_data.into(),
-            logs_bloom: block.logs_bloom.map(Into::into).unwrap_or_default(),
-            timestamp: block.timestamp.into(),
-            difficulty: block.difficulty.into(),
-            total_difficulty: block.total_difficulty.map(Into::into).unwrap_or_default(),
-            seal_fields: block.seal_fields.into_iter().map(Into::into).collect(),
-            uncles: block.uncles.into_iter().map(Into::into).collect(),
-            transactions: block.transactions.into_iter().map(Into::into).collect(),
-            size: block.size.map(Into::into),
-            mix_hash: block.mix_hash.map(Into::into).unwrap_or_default(),
-            nonce: block.nonce.map(Into::into).unwrap_or_default(),
-            base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
-        }
-    }
-}
+// impl<D, T: From<D>> From<alloy_rpc_types::Block<D>> for Block<T> {
+//     fn from(block: ethers_core::types::Block<D>) -> Self {
+//         Block {
+//             hash: block.hash.map(Into::into).unwrap_or_default(),
+//             parent_hash: block.parent_hash.into(),
+//             uncles_hash: block.uncles_hash.into(),
+//             author: block.author.map(Into::into).unwrap_or_default(),
+//             state_root: block.state_root.into(),
+//             transactions_root: block.transactions_root.into(),
+//             receipts_root: block.receipts_root.into(),
+//             number: block.number.map(Into::into).unwrap_or_default(),
+//             gas_used: block.gas_used.into(),
+//             gas_limit: block.gas_limit.into(),
+//             extra_data: block.extra_data.into(),
+//             logs_bloom: block.logs_bloom.map(Into::into).unwrap_or_default(),
+//             timestamp: block.timestamp.into(),
+//             difficulty: block.difficulty.into(),
+//             total_difficulty: block.total_difficulty.map(Into::into).unwrap_or_default(),
+//             seal_fields: block.seal_fields.into_iter().map(Into::into).collect(),
+//             uncles: block.uncles.into_iter().map(Into::into).collect(),
+//             transactions: block.transactions.into_iter().map(Into::into).collect(),
+//             size: block.size.map(Into::into),
+//             mix_hash: block.mix_hash.map(Into::into).unwrap_or_default(),
+//             nonce: block.nonce.map(Into::into).unwrap_or_default(),
+//             base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
+//         }
+//     }
+// }
 
-impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T>
-where
-    T: Default,
-{
-    fn from(block: Block<D>) -> Self {
-        ethers_core::types::Block {
-            hash: Some(block.hash.into()),
-            parent_hash: block.parent_hash.into(),
-            uncles_hash: block.uncles_hash.into(),
-            author: Some(block.author.into()),
-            state_root: block.state_root.into(),
-            transactions_root: block.transactions_root.into(),
-            receipts_root: block.receipts_root.into(),
-            number: Some(block.number.into()),
-            gas_used: block.gas_used.into(),
-            gas_limit: block.gas_limit.into(),
-            extra_data: block.extra_data.into(),
-            logs_bloom: Some(block.logs_bloom.into()),
-            timestamp: block.timestamp.into(),
-            difficulty: block.difficulty.into(),
-            total_difficulty: Some(block.total_difficulty.into()),
-            seal_fields: block.seal_fields.into_iter().map(|x| x.into()).collect(),
-            uncles: block.uncles.into_iter().map(Into::into).collect(),
-            transactions: block.transactions.into_iter().map(Into::into).collect(),
-            size: block.size.map(Into::into),
-            mix_hash: Some(block.mix_hash.into()),
-            nonce: Some(block.nonce.into()),
-            base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
-            other: ethers_core::types::OtherFields::default(),
-            // We can leave it empty because we don't need it for our fork
-            ..Default::default()
-        }
-    }
-}
+// impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T>
+// where
+//     T: Default,
+// {
+//     fn from(block: Block<D>) -> Self {
+//         ethers_core::types::Block {
+//             hash: Some(block.hash.into()),
+//             parent_hash: block.parent_hash.into(),
+//             uncles_hash: block.uncles_hash.into(),
+//             author: Some(block.author.into()),
+//             state_root: block.state_root.into(),
+//             transactions_root: block.transactions_root.into(),
+//             receipts_root: block.receipts_root.into(),
+//             number: Some(block.number.into()),
+//             gas_used: block.gas_used.into(),
+//             gas_limit: block.gas_limit.into(),
+//             extra_data: block.extra_data.into(),
+//             logs_bloom: Some(block.logs_bloom.into()),
+//             timestamp: block.timestamp.into(),
+//             difficulty: block.difficulty.into(),
+//             total_difficulty: Some(block.total_difficulty.into()),
+//             seal_fields: block.seal_fields.into_iter().map(|x| x.into()).collect(),
+//             uncles: block.uncles.into_iter().map(Into::into).collect(),
+//             transactions: block.transactions.into_iter().map(Into::into).collect(),
+//             size: block.size.map(Into::into),
+//             mix_hash: Some(block.mix_hash.into()),
+//             nonce: Some(block.nonce.into()),
+//             base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
+//             other: ethers_core::types::OtherFields::default(),
+//             // We can leave it empty because we don't need it for our fork
+//             ..Default::default()
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, CandidType)]
 pub struct TransactionExecutionLog {
@@ -461,7 +461,7 @@ impl From<EthersLog> for TransactionExecutionLog {
     fn from(log: EthersLog) -> Self {
         Self {
             address: log.address.into(),
-            topics: log.topics.into_iter().map(|h| h.into()).collect(),
+            topics: log.topics().into_iter().map(|h| h.into()).collect(),
             data: log.data.0.into(),
         }
     }

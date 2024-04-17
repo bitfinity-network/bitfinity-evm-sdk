@@ -15,12 +15,12 @@ repository.workspace = true
 
 [dependencies]
 alloy-primitives = { workspace = true }
+alloy-rpc-types = { workspace = true }
+alloy-rlp = { workspace = true }
 bincode = { workspace = true }
 bytes = { workspace = true }
 candid = { workspace = true }
 derive_more = { workspace = true }
-ethereum-types = { workspace = true }
-ethers-core = { workspace = true }
 hex = { workspace = true }
 ic-log = { workspace = true }
 ic-stable-structures = { workspace = true }

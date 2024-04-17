@@ -58,14 +58,14 @@ impl From<Bytes> for Vec<u8> {
     }
 }
 
-impl From<Bytes> for ethers_core::types::Bytes {
+impl From<Bytes> for alloy_primitives::Bytes {
     fn from(value: Bytes) -> Self {
-        ethers_core::types::Bytes(value.0)
+        alloy_primitives::Bytes(value.0)
     }
 }
 
-impl From<ethers_core::types::Bytes> for Bytes {
-    fn from(value: ethers_core::types::Bytes) -> Self {
+impl From<alloy_primitives::Bytes> for Bytes {
+    fn from(value: alloy_primitives::Bytes) -> Self {
         Bytes(value.0)
     }
 }
@@ -105,18 +105,6 @@ impl<'de> Deserialize<'de> for Bytes {
     {
         let value = String::deserialize(deserializer)?;
         Bytes::from_hex_str(&value).map_err(|e| serde::de::Error::custom(e.to_string()))
-    }
-}
-
-impl From<alloy_primitives::Bytes> for Bytes {
-    fn from(value: alloy_primitives::Bytes) -> Self {
-        Bytes(value.0)
-    }
-}
-
-impl From<Bytes> for alloy_primitives::Bytes {
-    fn from(value: Bytes) -> Self {
-        alloy_primitives::Bytes(value.0)
     }
 }
 

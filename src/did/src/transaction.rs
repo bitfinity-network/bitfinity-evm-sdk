@@ -1,12 +1,14 @@
 use std::borrow::Cow;
 use std::rc::Rc;
 
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
-use ethers_core::types::transaction::eip2930;
-use ethers_core::types::Signature as EthersSignature;
+use alloy_rpc_types::transaction::{AccessList as AlloyAccessList, AccessListItem as AlloyAccessListItem, Transaction as AlloyTransaction};
+use alloy_rpc_types::Signature as AlloySignature;
 use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
+use num::ToPrimitive;
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
@@ -164,23 +166,24 @@ impl From<u64> for BlockId {
 /// ECDSA signature representation
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 pub struct Signature {
-    pub v: U64,
+    pub v: U256,
     pub r: U256,
     pub s: U256,
 }
 
-impl From<Signature> for EthersSignature {
+impl From<Signature> for AlloySignature {
     fn from(value: Signature) -> Self {
         Self {
             r: value.r.into(),
             s: value.s.into(),
             v: value.v.into(),
+            y_parity: None
         }
     }
 }
 
-impl From<EthersSignature> for Signature {
-    fn from(value: EthersSignature) -> Self {
+impl From<AlloySignature> for Signature {
+    fn from(value: AlloySignature) -> Self {
         Self {
             r: value.r.into(),
             s: value.s.into(),
@@ -224,7 +227,7 @@ pub struct Transaction {
     pub hash: H256,
 
     /// The transaction's nonce
-    pub nonce: U256,
+    pub nonce: U64,
 
     /// Block hash. None when pending.
     #[serde(default, rename = "blockHash")]
@@ -260,7 +263,7 @@ pub struct Transaction {
     pub input: Bytes,
 
     /// ECDSA recovery id
-    pub v: U64,
+    pub v: U256,
 
     /// ECDSA signature r
     pub r: U256,
@@ -309,11 +312,13 @@ pub struct Transaction {
     pub max_fee_per_gas: Option<U256>,
 
     #[serde(rename = "chainId", default, skip_serializing_if = "Option::is_none")]
-    pub chain_id: Option<U256>,
+    pub chain_id: Option<U64>,
 }
 
-impl From<ethers_core::types::Transaction> for Transaction {
-    fn from(tx: ethers_core::types::Transaction) -> Self {
+impl From<AlloyTransaction> for Transaction {
+    fn from(tx: AlloyTransaction) -> Self {
+        let signature = tx.signature.unwrap_or_default();
+
         Self {
             hash: tx.hash.into(),
             nonce: tx.nonce.into(),
@@ -326,10 +331,10 @@ impl From<ethers_core::types::Transaction> for Transaction {
             gas_price: tx.gas_price.map(Into::into),
             gas: tx.gas.into(),
             input: tx.input.into(),
-            v: tx.v.into(),
-            r: tx.r.into(),
-            s: tx.s.into(),
-            transaction_type: tx.transaction_type.map(Into::into),
+            v: signature.v.into(),
+            r: signature.r.into(),
+            s: signature.s.into(),
+            transaction_type: tx.transaction_type.and_then(|val| val.to_u64()).map(Into::into),
             access_list: tx.access_list.map(Into::into),
             max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
             max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
@@ -338,8 +343,15 @@ impl From<ethers_core::types::Transaction> for Transaction {
     }
 }
 
-impl From<Transaction> for ethers_core::types::Transaction {
+impl From<Transaction> for AlloyTransaction {
     fn from(tx: Transaction) -> Self {
+
+        let signature = Signature {
+            v: tx.v,
+            r: tx.r,
+            s: tx.s,
+        };
+
         Self {
             hash: tx.hash.into(),
             nonce: tx.nonce.into(),
@@ -349,18 +361,18 @@ impl From<Transaction> for ethers_core::types::Transaction {
             from: tx.from.into(),
             to: tx.to.map(Into::into),
             value: tx.value.into(),
-            gas_price: tx.gas_price.map(Into::into),
+            gas_price: tx.gas_price.map(|val| val.0.as),
             gas: tx.gas.into(),
             input: tx.input.into(),
-            v: tx.v.into(),
-            r: tx.r.into(),
-            s: tx.s.into(),
+            signature: Some(signature.into()),
             transaction_type: tx.transaction_type.map(Into::into),
             access_list: tx.access_list.map(Into::into),
             max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
             max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
             chain_id: tx.chain_id.map(Into::into),
-            other: ethers_core::types::OtherFields::default(),
+            other: alloy_rpc_types::other::OtherFields::default(),
+            max_fee_per_blob_gas: None,
+            blob_versioned_hashes: None,
         }
     }
 }
@@ -392,8 +404,8 @@ pub struct AccessListItem {
 #[derive(Clone, Serialize, Deserialize, Default, PartialEq, Eq, Debug, CandidType)]
 pub struct AccessList(pub Vec<AccessListItem>);
 
-impl From<eip2930::AccessList> for AccessList {
-    fn from(access_list: eip2930::AccessList) -> Self {
+impl From<AlloyAccessList> for AccessList {
+    fn from(access_list: AlloyAccessList) -> Self {
         AccessList(
             access_list
                 .0
@@ -410,13 +422,13 @@ impl From<eip2930::AccessList> for AccessList {
         )
     }
 }
-impl From<AccessList> for eip2930::AccessList {
+impl From<AccessList> for AlloyAccessList {
     fn from(access_list: AccessList) -> Self {
-        eip2930::AccessList(
+        AlloyAccessList(
             access_list
                 .0
                 .into_iter()
-                .map(|access_list| eip2930::AccessListItem {
+                .map(|access_list| AlloyAccessListItem {
                     address: access_list.address.into(),
                     storage_keys: access_list
                         .storage_keys
@@ -648,14 +660,14 @@ impl SlicedStorable for StorableExecutionResult {
     const CHUNK_SIZE: ChunkSize = 512;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Bloom(pub ethereum_types::Bloom);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, RlpEncodable, RlpDecodable)]
+pub struct Bloom(pub alloy_primitives::Bloom);
 
 impl Bloom {
     pub const FILTER_LENGTH_BYTES: usize = 256;
 
     pub fn zeros() -> Bloom {
-        Bloom(ethereum_types::Bloom::zero())
+        Bloom(alloy_primitives::Bloom::ZERO)
     }
 
     pub fn to_hex_str(&self) -> String {
@@ -684,11 +696,11 @@ impl Bloom {
     }
 
     fn process_log(log: &TransactionExecutionLog, f: &mut impl FnMut(usize, u8) -> bool) -> bool {
-        Bloom::process_data(log.address.0.as_bytes(), f)
+        Bloom::process_data(log.address.0.as_slice(), f)
             && log
                 .topics
                 .iter()
-                .all(|t| Bloom::process_data(t.0.as_bytes(), f))
+                .all(|t| Bloom::process_data(t.0.as_slice(), f))
     }
 
     fn process_data(data: &[u8], f: &mut impl FnMut(usize, u8) -> bool) -> bool {
@@ -715,18 +727,6 @@ impl Default for Bloom {
     }
 }
 
-impl Encodable for Bloom {
-    fn rlp_append(&self, s: &mut RlpStream) {
-        self.0.rlp_append(s);
-    }
-}
-
-impl Decodable for Bloom {
-    fn decode(r: &Rlp) -> Result<Self, DecoderError> {
-        Ok(Bloom(ethereum_types::Bloom::decode(r)?))
-    }
-}
-
 impl std::fmt::LowerHex for Bloom {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         self.0.fmt(f)
@@ -746,13 +746,13 @@ impl CandidType for Bloom {
     }
 }
 
-impl From<ethereum_types::Bloom> for Bloom {
-    fn from(bloom: ethereum_types::Bloom) -> Self {
+impl From<alloy_primitives::Bloom> for Bloom {
+    fn from(bloom: alloy_primitives::Bloom) -> Self {
         Bloom(bloom)
     }
 }
 
-impl From<Bloom> for ethereum_types::Bloom {
+impl From<Bloom> for alloy_primitives::Bloom {
     fn from(bloom: Bloom) -> Self {
         bloom.0
     }
@@ -1151,7 +1151,7 @@ mod test {
             s: U256::max_value() - U256::one(),
             v: U64::max_value(),
         };
-        let ethers_signature = EthersSignature::from(signature.clone());
+        let ethers_signature = AlloySignature::from(signature.clone());
         let roundtrip_signature = Signature::from(ethers_signature);
         assert_eq!(signature, roundtrip_signature);
     }
