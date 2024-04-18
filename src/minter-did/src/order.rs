@@ -56,6 +56,12 @@ pub struct MintOrder {
 
     /// Mint operation should approve this amount of tokens.
     pub approve_amount: U256,
+
+    /// Address of wallet from which fee will be charged.
+    pub fee_payer: H160,
+
+    /// Amount of native tokens to be charged.
+    pub fee_amount: U256,
 }
 
 impl MintOrder {
@@ -139,6 +145,8 @@ impl MintOrder {
         let decimals = data[196];
         let approve_spender = H160::from_slice(&data[197..217]);
         let approve_amount = U256::from_big_endian(&data[217..249]);
+        let fee_payer = H160::from_slice(&data[249..269]);
+        let fee_amount = U256::from_big_endian(&data[269..301]);
 
         Some(Self {
             amount,
@@ -154,6 +162,8 @@ impl MintOrder {
             decimals,
             approve_spender,
             approve_amount,
+            fee_payer,
+            fee_amount,
         })
     }
 
