@@ -1,5 +1,7 @@
 use candid::{CandidType, Principal};
-use did::{keccak::keccak_hash, transaction::Signature, H160, U256};
+use did::keccak::keccak_hash;
+use did::transaction::Signature;
+use did::{H160, U256};
 use ic_exports::icrc_types::icrc1::account::Subaccount;
 use serde::Deserialize;
 
@@ -56,7 +58,8 @@ impl ApproveMintedTokens {
 #[cfg(test)]
 mod tests {
     use candid::Principal;
-    use did::{keccak::keccak_hash, H160, U256};
+    use did::keccak::keccak_hash;
+    use did::{H160, U256};
     use eth_signer::{Signer, Wallet};
 
     use super::ApproveMintedTokens;
