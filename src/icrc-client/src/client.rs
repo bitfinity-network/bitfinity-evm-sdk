@@ -4,8 +4,8 @@ use ic_exports::icrc_types::icrc::generic_value::Value;
 use ic_exports::icrc_types::icrc1::account::{Account, Subaccount};
 use ic_exports::icrc_types::icrc1::transfer::{TransferArg, TransferError};
 use ic_exports::icrc_types::icrc2::allowance::{Allowance, AllowanceArgs};
-use ic_exports::icrc_types::icrc2::approve::ApproveArgs;
-use ic_exports::icrc_types::icrc2::transfer_from::TransferFromArgs;
+use ic_exports::icrc_types::icrc2::approve::{ApproveArgs, ApproveError};
+use ic_exports::icrc_types::icrc2::transfer_from::{TransferFromArgs, TransferFromError};
 use serde::Deserialize;
 
 use crate::error::{IcrcError, IcrcResult};
@@ -81,7 +81,7 @@ impl<C: CanisterClient> IcrcCanisterClient<C> {
     pub async fn icrc1_transfer(
         &self,
         transfer_args: TransferArg,
-    ) -> CanisterClientResult<IcrcResult<Nat>> {
+    ) -> CanisterClientResult<Result<Nat, TransferError>> {
         self.client.update("icrc1_transfer", (transfer_args,)).await
     }
 
@@ -100,7 +100,7 @@ impl<C: CanisterClient> IcrcCanisterClient<C> {
     pub async fn icrc2_approve(
         &self,
         approve: ApproveArgs,
-    ) -> CanisterClientResult<IcrcResult<Nat>> {
+    ) -> CanisterClientResult<Result<Nat, ApproveError>> {
         self.client.update("icrc2_approve", (approve,)).await
     }
 
@@ -110,7 +110,7 @@ impl<C: CanisterClient> IcrcCanisterClient<C> {
         to: Account,
         amount: Nat,
         spender_subaccount: Option<Subaccount>,
-    ) -> CanisterClientResult<IcrcResult<Nat>> {
+    ) -> CanisterClientResult<Result<Nat, TransferFromError>> {
         let transfer_args = TransferFromArgs {
             to,
             fee: None,
