@@ -3,4 +3,4 @@ mod error;
 
 pub use error::{IcrcError, IcrcResult};
 
-pub use client::{IcrcClient, StandardRecord};
+pub use client::{IcrcCanisterClient, StandardRecord};

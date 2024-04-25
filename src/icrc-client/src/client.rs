@@ -18,11 +18,11 @@ pub struct StandardRecord {
 
 /// ICRC-1/ICRC-2 client
 #[derive(Debug, Clone)]
-pub struct IcrcClient<C: CanisterClient> {
+pub struct IcrcCanisterClient<C: CanisterClient> {
     client: C,
 }
 
-impl<C: CanisterClient> IcrcClient<C> {
+impl<C: CanisterClient> IcrcCanisterClient<C> {
     /// Create a ICRC Client
     ///
     /// # Arguments
