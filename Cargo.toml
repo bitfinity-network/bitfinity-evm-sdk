@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "src/icrc-client",
     "src/did",
     "src/eth-signer",
     "src/eth-signer/tests/test_canister",
