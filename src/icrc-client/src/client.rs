@@ -61,6 +61,10 @@ impl<C: CanisterClient> IcrcCanisterClient<C> {
         self.client.query("icrc1_supported_standards", ()).await
     }
 
+    pub async fn icrc1_minting_account(&self) -> CanisterClientResult<Option<Account>> {
+        self.client.query("icrc1_minting_account", ()).await
+    }
+
     pub async fn icrc1_balance_of(&self, account: Account) -> CanisterClientResult<Nat> {
         self.client.query("icrc1_balance_of", (account,)).await
     }
