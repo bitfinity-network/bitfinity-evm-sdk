@@ -45,7 +45,7 @@ impl<C: CanisterClient> IcrcCanisterClient<C> {
         self.client.query(" icrc1_symbol", ()).await
     }
 
-    pub async fn icrc1_decimals(&self) -> CanisterClientResult<Nat> {
+    pub async fn icrc1_decimals(&self) -> CanisterClientResult<u8> {
         self.client.query("icrc1_decimals", ()).await
     }
 
