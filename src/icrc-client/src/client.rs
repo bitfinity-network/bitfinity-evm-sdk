@@ -80,19 +80,8 @@ impl<C: CanisterClient> IcrcCanisterClient<C> {
     /// transfer, or an error if the transfer failed.
     pub async fn icrc1_transfer(
         &self,
-        to: Account,
-        amount: Nat,
-        from_subaccount: Option<Subaccount>,
+        transfer_args: TransferArg,
     ) -> CanisterClientResult<IcrcResult<Nat>> {
-        let transfer_args = TransferArg {
-            from_subaccount,
-            to,
-            fee: None,
-            created_at_time: None,
-            memo: None,
-            amount,
-        };
-
         self.client.update("icrc1_transfer", (transfer_args,)).await
     }
 
@@ -110,24 +99,9 @@ impl<C: CanisterClient> IcrcCanisterClient<C> {
     /// Returns the new allowance amount.
     pub async fn icrc2_approve(
         &self,
-        from_subaccount: Option<Subaccount>,
-        spender: Account,
-        amount: Nat,
-        expected_allowance: Option<Nat>,
-        expires_at: Option<u64>,
+        approve: ApproveArgs,
     ) -> CanisterClientResult<IcrcResult<Nat>> {
-        let approve_args = ApproveArgs {
-            from_subaccount,
-            spender,
-            amount,
-            expected_allowance,
-            expires_at,
-            fee: None,
-            memo: None,
-            created_at_time: None,
-        };
-
-        self.client.update("icrc2_approve", (approve_args,)).await
+        self.client.update("icrc2_approve", (approve,)).await
     }
 
     pub async fn icrc2_transfer_from(
