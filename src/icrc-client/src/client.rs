@@ -110,21 +110,8 @@ impl<C: CanisterClient> IcrcCanisterClient<C> {
 
     pub async fn icrc2_transfer_from(
         &self,
-        from: Account,
-        to: Account,
-        amount: Nat,
-        spender_subaccount: Option<Subaccount>,
+        transfer_args: TransferFromArgs,
     ) -> CanisterClientResult<Result<Nat, TransferFromError>> {
-        let transfer_args = TransferFromArgs {
-            to,
-            fee: None,
-            created_at_time: None,
-            memo: None,
-            amount,
-            spender_subaccount,
-            from,
-        };
-
         self.client
             .update("icrc2_transfer_from", (transfer_args,))
             .await
