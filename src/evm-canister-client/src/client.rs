@@ -811,4 +811,36 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn is_empty_block_enabled(&self) -> CanisterClientResult<bool> {
         self.client.query("is_empty_block_enabled", ()).await
     }
+
+    /// Enable/Disable transfers of tokens
+    pub async fn admin_disable_token_transfer(
+        &mut self,
+        value: bool,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_disable_token_transfer", (value,))
+            .await
+    }
+
+    /// Returns whether transfers of tokens are currently disabled.
+    pub async fn is_token_transfer_disabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_token_transfer_disabled", ()).await
+    }
+
+    /// Disable/Enable zero gas price transaction
+    pub async fn admin_enable_zero_gas_price_transactions(
+        &mut self,
+        enabled: bool,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_enable_zero_gas_price_transactions", (enabled,))
+            .await
+    }
+
+    /// Returns whether transactions with zero gas price are currently enabled.
+    pub async fn is_zero_gas_price_transactions_enabled(&self) -> CanisterClientResult<bool> {
+        self.client
+            .query("is_zero_gas_price_transactions_enabled", ())
+            .await
+    }
 }
