@@ -814,7 +814,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Enable/Disable transfers of tokens
     pub async fn admin_disable_token_transfer(
-        &mut self,
+        &self,
         value: bool,
     ) -> CanisterClientResult<Result<()>> {
         self.client
@@ -829,7 +829,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Disable/Enable zero gas price transaction
     pub async fn admin_enable_zero_gas_price_transactions(
-        &mut self,
+        &self,
         enabled: bool,
     ) -> CanisterClientResult<Result<()>> {
         self.client
@@ -846,7 +846,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Disable/Enable the inspect message
     pub async fn admin_disable_inspect_message(
-        &mut self,
+        &self,
         value: bool,
     ) -> CanisterClientResult<Result<()>> {
         self.client
