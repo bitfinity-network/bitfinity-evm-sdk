@@ -843,4 +843,19 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .query("is_zero_gas_price_transactions_enabled", ())
             .await
     }
+
+    /// Disable/Enable the inspect message
+    pub async fn admin_disable_inspect_message(
+        &mut self,
+        value: bool,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_disable_inspect_message", (value,))
+            .await
+    }
+
+    /// Returns whether the inspect message is disabled.
+    pub async fn is_inspect_message_disabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_inspect_message_disabled", ()).await
+    }
 }
