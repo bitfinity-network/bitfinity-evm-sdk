@@ -62,7 +62,7 @@ pub struct MintOrder {
 }
 
 impl MintOrder {
-    pub const ENCODED_DATA_SIZE: usize = 301;
+    pub const ENCODED_DATA_SIZE: usize = 269;
     pub const SIGNED_ENCODED_DATA_SIZE: usize = Self::ENCODED_DATA_SIZE + 65;
 
     /// Encodes order data and signs it.
@@ -83,7 +83,7 @@ impl MintOrder {
     ///     197..217 bytes of approve_address,      }
     ///     217..249 bytes of approve_amount,       }
     ///     249..269 bytes of fee_payer,            }
-    ///     301..366 bytes of signature (r - 32 bytes, s - 32 bytes, v - 1 byte)
+    ///     269..334 bytes of signature (r - 32 bytes, s - 32 bytes, v - 1 byte)
     /// ]
     /// ```
     ///
