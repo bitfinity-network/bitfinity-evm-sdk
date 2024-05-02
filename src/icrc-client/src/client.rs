@@ -1,12 +1,13 @@
 use candid::{CandidType, Nat};
 use ic_canister_client::{CanisterClient, CanisterClientResult};
-use ic_exports::icrc_types::icrc::generic_value::Value;
-use ic_exports::icrc_types::icrc1::account::Account;
-use ic_exports::icrc_types::icrc1::transfer::{TransferArg, TransferError};
-use ic_exports::icrc_types::icrc2::allowance::{Allowance, AllowanceArgs};
-use ic_exports::icrc_types::icrc2::approve::{ApproveArgs, ApproveError};
-use ic_exports::icrc_types::icrc2::transfer_from::{TransferFromArgs, TransferFromError};
 use serde::Deserialize;
+
+use crate::icrc::generic_value::Value;
+use crate::icrc1::account::Account;
+use crate::icrc1::transfer::{TransferArg, TransferError};
+use crate::icrc2::allowance::{Allowance, AllowanceArgs};
+use crate::icrc2::approve::{ApproveArgs, ApproveError};
+use crate::icrc2::transfer_from::{TransferFromArgs, TransferFromError};
 
 #[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct StandardRecord {
