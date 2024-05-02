@@ -1,14 +1,12 @@
 use candid::{CandidType, Nat};
-use ic_canister_client::{CanisterClient, CanisterClientError, CanisterClientResult};
+use ic_canister_client::{CanisterClient, CanisterClientResult};
 use ic_exports::icrc_types::icrc::generic_value::Value;
-use ic_exports::icrc_types::icrc1::account::{Account, Subaccount};
+use ic_exports::icrc_types::icrc1::account::Account;
 use ic_exports::icrc_types::icrc1::transfer::{TransferArg, TransferError};
 use ic_exports::icrc_types::icrc2::allowance::{Allowance, AllowanceArgs};
 use ic_exports::icrc_types::icrc2::approve::{ApproveArgs, ApproveError};
 use ic_exports::icrc_types::icrc2::transfer_from::{TransferFromArgs, TransferFromError};
 use serde::Deserialize;
-
-use crate::error::{IcrcError, IcrcResult};
 
 #[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct StandardRecord {
@@ -22,6 +20,10 @@ pub struct IcrcCanisterClient<C: CanisterClient> {
     client: C,
 }
 
+/// Implements the ICRC-1 and ICRC-2 client interfaces.
+///
+/// The `IcrcCanisterClient` provides a set of methods to interact with an ICRC-1 and ICRC-2 compatible canister.
+/// It allows querying metadata, balances, and performing token transfers.
 impl<C: CanisterClient> IcrcCanisterClient<C> {
     /// Create a ICRC Client
     ///
@@ -108,6 +110,8 @@ impl<C: CanisterClient> IcrcCanisterClient<C> {
         self.client.update("icrc2_approve", (approve,)).await
     }
 
+    /// Transfers the specified `amount` of tokens from the `from` account
+    /// to `to` account.
     pub async fn icrc2_transfer_from(
         &self,
         transfer_args: TransferFromArgs,
