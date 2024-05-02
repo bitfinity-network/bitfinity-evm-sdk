@@ -2,12 +2,12 @@ use candid::{CandidType, Nat};
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 use serde::Deserialize;
 
-use crate::icrc::generic_value::Value;
-use crate::icrc1::account::Account;
-use crate::icrc1::transfer::{TransferArg, TransferError};
-use crate::icrc2::allowance::{Allowance, AllowanceArgs};
-use crate::icrc2::approve::{ApproveArgs, ApproveError};
-use crate::icrc2::transfer_from::{TransferFromArgs, TransferFromError};
+use crate::account::Account;
+use crate::allowance::{Allowance, AllowanceArgs};
+use crate::approve::{ApproveArgs, ApproveError};
+use crate::transfer::{TransferArg, TransferError};
+use crate::transfer_from::{TransferFromArgs, TransferFromError};
+use crate::Value;
 
 #[derive(CandidType, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct StandardRecord {
