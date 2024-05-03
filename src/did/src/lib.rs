@@ -38,5 +38,4 @@ pub use notify::NotificationInput;
 pub use transaction::{BlockId, BlockNumber, Transaction, TransactionReceipt};
 
 pub use crate::bytes::Bytes;
-
 pub use crate::ic::*;

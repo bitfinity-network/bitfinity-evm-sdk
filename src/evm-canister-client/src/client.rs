@@ -834,5 +834,4 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn is_inspect_message_disabled(&self) -> CanisterClientResult<bool> {
         self.client.query("is_inspect_message_disabled", ()).await
     }
-    
 }
