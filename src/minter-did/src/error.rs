@@ -1,5 +1,6 @@
 use candid::{CandidType, Deserialize};
 use did::H160;
+use ic_canister_client::CanisterClientError;
 use ic_exports::ic_kit::RejectionCode;
 use ic_exports::icrc_types::icrc2::approve::ApproveError;
 use ic_exports::icrc_types::icrc2::transfer_from::TransferFromError;
@@ -74,5 +75,11 @@ impl From<TransferFromError> for Error {
 impl From<ApproveError> for Error {
     fn from(value: ApproveError) -> Self {
         Self::Icrc2ApproveError(value)
+    }
+}
+
+impl From<CanisterClientError> for Error {
+    fn from(value: CanisterClientError) -> Self {
+        Self::Internal(value.to_string())
     }
 }

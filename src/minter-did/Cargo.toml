@@ -23,6 +23,7 @@ ic-log = { workspace = true }
 ic-stable-structures = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+ic-canister-client = { workspace = true }
 
 [dev-dependencies]
 rand = { workspace = true }

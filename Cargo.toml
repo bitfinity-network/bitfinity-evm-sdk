@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "src/icrc-client",
     "src/did",
     "src/eth-signer",
     "src/eth-signer/tests/test_canister",
@@ -24,10 +25,10 @@ include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 name = "bitfinity-evm-sdk"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.16.0"
+version = "0.17.0"
 
 [workspace.dependencies]
-alloy-primitives = { version = "0.6", default-feures = false }
+alloy-primitives = { version = "0.7", default-feures = false }
 anyhow = "1.0"
 async-trait = "0.1"
 bincode = "1.3"
@@ -41,11 +42,11 @@ ethereum-types = "0.14"
 ethers-core = "2.0"
 futures = { version = "0.3", default-features = false }
 hex = "0.4"
-ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.14.x" }
-ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.14.x" }
-ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.14.x" }
-ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.14.x" }
-ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.14.x" }
+ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.15.x" }
+ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.15.x" }
+ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.15.x" }
+ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.15.x" }
+ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.15.x" }
 itertools = "0.12"
 jsonrpc-core = "18.0"
 jsonrpsee = { version = "0.22", features = ["server", "macros"] }
@@ -56,7 +57,7 @@ num = "0.4"
 once_cell = "1.16"
 port_check = "0.2"
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
-reqwest = { version = "0.11", default-features = false }
+reqwest = { version = "0.12", default-features = false }
 rlp = "0.5"
 serde = "1.0"
 serde_bytes = "0.11"

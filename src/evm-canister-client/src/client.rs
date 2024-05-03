@@ -820,4 +820,19 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn reset_state(&self) -> CanisterClientResult<Result<()>> {
         self.client.update("reset_state", ()).await
     }
+    /// Disable/Enable the inspect message
+    pub async fn admin_disable_inspect_message(
+        &self,
+        value: bool,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_disable_inspect_message", (value,))
+            .await
+    }
+
+    /// Returns whether the inspect message is disabled.
+    pub async fn is_inspect_message_disabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_inspect_message_disabled", ()).await
+    }
+    
 }

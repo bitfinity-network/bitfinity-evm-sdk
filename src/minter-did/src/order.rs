@@ -56,10 +56,13 @@ pub struct MintOrder {
 
     /// Mint operation should approve this amount of tokens.
     pub approve_amount: U256,
+
+    /// Address of wallet from which fee will be charged.
+    pub fee_payer: H160,
 }
 
 impl MintOrder {
-    pub const ENCODED_DATA_SIZE: usize = 249;
+    pub const ENCODED_DATA_SIZE: usize = 269;
     pub const SIGNED_ENCODED_DATA_SIZE: usize = Self::ENCODED_DATA_SIZE + 65;
 
     /// Encodes order data and signs it.
@@ -79,7 +82,8 @@ impl MintOrder {
     ///     196..197 bytes of decimals,             }
     ///     197..217 bytes of approve_address,      }
     ///     217..249 bytes of approve_amount,       }
-    ///     249..314 bytes of signature (r - 32 bytes, s - 32 bytes, v - 1 byte)
+    ///     249..269 bytes of fee_payer,            }
+    ///     269..334 bytes of signature (r - 32 bytes, s - 32 bytes, v - 1 byte)
     /// ]
     /// ```
     ///
@@ -104,6 +108,7 @@ impl MintOrder {
         buf[196] = self.decimals;
         buf[197..217].copy_from_slice(self.approve_spender.0.as_bytes());
         buf[217..249].copy_from_slice(&self.approve_amount.to_big_endian());
+        buf[249..269].copy_from_slice(self.fee_payer.0.as_bytes());
 
         let digest = keccak256(&buf[..Self::ENCODED_DATA_SIZE]);
 
@@ -139,6 +144,7 @@ impl MintOrder {
         let decimals = data[196];
         let approve_spender = H160::from_slice(&data[197..217]);
         let approve_amount = U256::from_big_endian(&data[217..249]);
+        let fee_payer = H160::from_slice(&data[249..269]);
 
         Some(Self {
             amount,
@@ -154,6 +160,7 @@ impl MintOrder {
             decimals,
             approve_spender,
             approve_amount,
+            fee_payer,
         })
     }
 
