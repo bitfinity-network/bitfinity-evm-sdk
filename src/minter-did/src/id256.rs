@@ -7,6 +7,9 @@ use serde::Deserialize;
 
 use crate::error::Error;
 
+#[cfg(feature = "runes")]
+use ordinals::{RuneId};
+
 /// 32-bytes entity identifier.
 /// Uniquely identifies:
 /// - an EVM address,
@@ -43,6 +46,7 @@ impl Id256 {
     pub const BYTE_SIZE: usize = ID_256_BYTE_SIZE;
     pub const PRINCIPAL_MARK: u8 = 0;
     pub const EVM_ADDRESS_MARK: u8 = 1;
+    pub const RUNE_ID_MARK: u8 = 2;
 
     /// Creates unique identifier for contract.
     /// Chain id required to make identifiers unique across all chains.
@@ -99,6 +103,36 @@ impl Id256 {
         const NO_TO_TOKEN_MARK: u8 = 3;
         bytes[19] = NO_TO_TOKEN_MARK;
         H160::from_slice(&bytes)
+    }
+
+    pub fn from_rune_id(block_id: u64, tx_id: u32) -> Self {
+        let mut buf = [0u8; Self::BYTE_SIZE];
+
+        buf[0] = Self::RUNE_ID_MARK;
+
+        let block_id_bytes = block_id.to_be_bytes();
+        let tx_id_bytes = tx_id.to_be_bytes();
+        buf[1..][..block_id_bytes.len()].copy_from_slice(&block_id_bytes);
+        buf[1 + block_id_bytes.len()..][..tx_id_bytes.len()].copy_from_slice(&tx_id_bytes);
+
+        Self(buf)
+    }
+
+    pub fn to_rune_id(&self) -> Result<(u64, u32), Error> {
+        if self.0[0] != Self::RUNE_ID_MARK {
+            return Err(Error::Internal("wrong rune id mark in Id256".into()));
+        }
+
+        let block_id_bytes = self.0[1..9]
+            .try_into()
+            .expect("we have exactly 8 bytes, as expected for u64");
+        let block_id = u64::from_be_bytes(block_id_bytes);
+
+        let tx_id_bytes = self.0[9..13]
+            .try_into()
+            .expect("we have exactly 8 bytes, as expected for u32");
+        let tx_id = u32::from_be_bytes(tx_id_bytes);
+        Ok((block_id, tx_id))
     }
 }
 
@@ -175,6 +209,23 @@ impl Storable for Id256 {
     }
 }
 
+#[cfg(feature = "runes")]
+impl From<RuneId> for Id256 {
+    fn from(value: RuneId) -> Self {
+        Self::from_rune_id(value.block, value.tx)
+    }
+}
+
+#[cfg(feature = "runes")]
+impl TryFrom<Id256> for RuneId {
+    type Error = Error;
+
+    fn try_from(value: Id256) -> Result<Self, Self::Error> {
+        let (block, tx) = value.to_rune_id()?;
+        Ok(RuneId { block, tx })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,5 +295,29 @@ mod tests {
 
         let decoded = Id256::from_bytes(id.to_bytes());
         assert_eq!(id, decoded);
+    }
+
+    #[test]
+    fn rune_id_id256_roundtrip() {
+        let block_id = 100500;
+        let tx_id = 42;
+
+        let id = Id256::from_rune_id(block_id, tx_id);
+        assert_eq!(id.to_rune_id(), Ok((block_id, tx_id)));
+    }
+
+    #[test]
+    fn rune_id_decode_error() {
+        let id = Id256::from_evm_address(&H160::from_slice(&[42; 20]), 31156);
+        assert!(matches!(id.to_rune_id(), Err(Error::Internal(_))), "unexpected to_rune_id result: {:?}", id.to_rune_id())
+    }
+
+    #[cfg(feature = "runes")]
+    #[test]
+    fn to_from_rune_id() {
+        let rune_id = RuneId { block: 256, tx: 42 };
+        let id = Id256::from(rune_id);
+
+        assert_eq!(id.try_into(), Ok(rune_id));
     }
 }
