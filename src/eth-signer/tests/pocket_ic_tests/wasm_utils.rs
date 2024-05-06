@@ -8,7 +8,7 @@ use once_cell::sync::OnceCell;
 pub fn get_test_canister_bytecode() -> Vec<u8> {
     static CANISTER_BYTECODE: OnceCell<Vec<u8>> = OnceCell::new();
     CANISTER_BYTECODE
-        .get_or_init(|| load_wasm_bytecode_or_panic("ic-sign-test-canister.wasm"))
+        .get_or_init(|| load_wasm_bytecode_or_panic("ic-sign-test-canister.wasm.gz"))
         .to_owned()
 }
 
