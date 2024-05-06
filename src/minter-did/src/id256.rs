@@ -105,6 +105,11 @@ impl Id256 {
         H160::from_slice(&bytes)
     }
 
+    /// Convert BTC rune id into id256 type.
+    ///
+    /// Runes are identified by block_id/transaction index in which the rune was etched.
+    ///
+    /// If `runes` feature is enabled, `rune_id.into()` can be used with the same effect.
     pub fn from_rune_id(block_id: u64, tx_id: u32) -> Self {
         let mut buf = [0u8; Self::BYTE_SIZE];
 
@@ -118,6 +123,10 @@ impl Id256 {
         Self(buf)
     }
 
+    /// Converts Id256 into `(block_id, tx_id)` rune identifier if the ID represents the rune id,
+    /// or returns an error otherwise.
+    ///
+    /// If `runes` feature is enabled, `id.try_into()` can be used with the same effect.
     pub fn to_rune_id(&self) -> Result<(u64, u32), Error> {
         if self.0[0] != Self::RUNE_ID_MARK {
             return Err(Error::Internal("wrong rune id mark in Id256".into()));
