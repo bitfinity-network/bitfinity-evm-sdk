@@ -25,7 +25,7 @@ fn load_wasm_bytecode_or_panic(wasm_name: &str) -> Vec<u8> {
 }
 
 fn get_path_to_wasm(wasm_name: &str) -> PathBuf {
-    const ARTIFACT_PATH: &str = "../../target/wasm32-unknown-unknown/release/";
+    const ARTIFACT_PATH: &str = "../../target/artifact/";
     // Get to the root of the project
     let wasm_path = format!("{}{}", ARTIFACT_PATH, wasm_name);
     println!("path: {wasm_path:?}");
