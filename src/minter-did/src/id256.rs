@@ -43,6 +43,7 @@ impl Id256 {
     pub const BYTE_SIZE: usize = ID_256_BYTE_SIZE;
     pub const PRINCIPAL_MARK: u8 = 0;
     pub const EVM_ADDRESS_MARK: u8 = 1;
+    pub const BTC_TX_MARK: u8 = 2;
 
     /// Creates unique identifier for contract.
     /// Chain id required to make identifiers unique across all chains.
@@ -99,6 +100,42 @@ impl Id256 {
         const NO_TO_TOKEN_MARK: u8 = 3;
         bytes[19] = NO_TO_TOKEN_MARK;
         H160::from_slice(&bytes)
+    }
+
+    /// Convert BTC transaction index into id256 type.
+    ///
+    /// Transactions in BTC network are indexed by the block id the transaction belongs to and the
+    /// index of the transaction in the block.
+    pub fn from_btc_tx_index(block_id: u64, tx_index: u32) -> Self {
+        let mut buf = [0u8; Self::BYTE_SIZE];
+
+        buf[0] = Self::BTC_TX_MARK;
+
+        let block_id_bytes = block_id.to_be_bytes();
+        let tx_id_bytes = tx_index.to_be_bytes();
+        buf[1..][..block_id_bytes.len()].copy_from_slice(&block_id_bytes);
+        buf[1 + block_id_bytes.len()..][..tx_id_bytes.len()].copy_from_slice(&tx_id_bytes);
+
+        Self(buf)
+    }
+
+    /// Converts Id256 into `(block_id, tx_index)` transaction index if the ID represents the rune id,
+    /// or returns an error otherwise.
+    pub fn to_btc_tx_index(&self) -> Result<(u64, u32), Error> {
+        if self.0[0] != Self::BTC_TX_MARK {
+            return Err(Error::Internal("wrong rune id mark in Id256".into()));
+        }
+
+        let block_id_bytes = self.0[1..9]
+            .try_into()
+            .expect("we have exactly 8 bytes, as expected for u64");
+        let block_id = u64::from_be_bytes(block_id_bytes);
+
+        let tx_index_bytes = self.0[9..13]
+            .try_into()
+            .expect("we have exactly 8 bytes, as expected for u32");
+        let tx_index = u32::from_be_bytes(tx_index_bytes);
+        Ok((block_id, tx_index))
     }
 }
 
@@ -244,5 +281,20 @@ mod tests {
 
         let decoded = Id256::from_bytes(id.to_bytes());
         assert_eq!(id, decoded);
+    }
+
+    #[test]
+    fn btc_tx_index_roundtrip() {
+        let block_id = 100500;
+        let tx_id = 42;
+
+        let id = Id256::from_btc_tx_index(block_id, tx_id);
+        assert_eq!(id.to_btc_tx_index(), Ok((block_id, tx_id)));
+    }
+
+    #[test]
+    fn btc_tx_index_decode_error() {
+        let id = Id256::from_evm_address(&H160::from_slice(&[42; 20]), 31156);
+        assert!(matches!(id.to_btc_tx_index(), Err(Error::Internal(_))), "unexpected to_rune_id result: {:?}", id.to_btc_tx_index())
     }
 }
