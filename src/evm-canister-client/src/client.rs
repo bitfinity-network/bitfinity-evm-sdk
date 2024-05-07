@@ -828,7 +828,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Returns the current transaction processing interval in seconds
-    pub async fn get_transaction_processing_interval(&self) -> CanisterClientResult<u64> {
+    pub async fn get_transaction_processing_interval_secs(&self) -> CanisterClientResult<u64> {
         self.client
             .query("get_transaction_processing_interval_secs", ())
             .await
