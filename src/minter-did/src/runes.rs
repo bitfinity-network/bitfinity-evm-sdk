@@ -2,15 +2,12 @@ use ordinals::{RuneId};
 use crate::error::Error;
 use crate::id256::Id256;
 
-
-#[cfg(feature = "runes")]
 impl From<RuneId> for Id256 {
     fn from(value: RuneId) -> Self {
         Self::from_btc_tx_index(value.block, value.tx)
     }
 }
 
-#[cfg(feature = "runes")]
 impl TryFrom<Id256> for RuneId {
     type Error = Error;
 
@@ -24,7 +21,6 @@ impl TryFrom<Id256> for RuneId {
 mod tests {
     use super::*;
 
-    #[cfg(feature = "runes")]
     #[test]
     fn to_from_rune_id() {
         let rune_id = RuneId { block: 256, tx: 42 };
