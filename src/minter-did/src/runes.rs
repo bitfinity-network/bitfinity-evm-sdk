@@ -1,4 +1,5 @@
-use ordinals::{RuneId};
+use ordinals::RuneId;
+
 use crate::error::Error;
 use crate::id256::Id256;
 
