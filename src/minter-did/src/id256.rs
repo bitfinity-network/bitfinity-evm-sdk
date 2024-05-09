@@ -295,6 +295,10 @@ mod tests {
     #[test]
     fn btc_tx_index_decode_error() {
         let id = Id256::from_evm_address(&H160::from_slice(&[42; 20]), 31156);
-        assert!(matches!(id.to_btc_tx_index(), Err(Error::Internal(_))), "unexpected to_rune_id result: {:?}", id.to_btc_tx_index())
+        assert!(
+            matches!(id.to_btc_tx_index(), Err(Error::Internal(_))),
+            "unexpected to_rune_id result: {:?}",
+            id.to_btc_tx_index()
+        )
     }
 }

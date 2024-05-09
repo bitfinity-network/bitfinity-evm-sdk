@@ -2,7 +2,7 @@ use candid::{CandidType, Deserialize};
 use did::H160;
 use ic_canister_client::CanisterClientError;
 use ic_exports::ic_kit::RejectionCode;
-use ic_exports::icrc_types::icrc1::transfer::TransferError;
+use ic_exports::icrc_types::icrc1::transfer::{TransferArg, TransferError};
 use ic_exports::icrc_types::icrc2::transfer_from::TransferFromError;
 use thiserror::Error;
 
@@ -19,6 +19,9 @@ pub enum Error {
 
     #[error("icrc2 transfer failed: {0:?}")]
     Icrc2TransferError(TransferError),
+
+    #[error("inter-canister call failed with code {0:?}: {1}")]
+    InterCanisterCallFailed(RejectionCode, String),
 
     #[error("icrc2 approval failed: {0:?}")]
     Icrc2TransferFromError(TransferFromError),
@@ -51,6 +54,14 @@ pub enum Error {
     InsufficientOperationPoints { expected: u32, got: u32 },
 }
 
+/// Minter canister operation error.
+#[derive(Debug, Error, Deserialize, CandidType, PartialEq, Eq, Clone)]
+#[error("transfer maybe failed: {error:?}. Transfer arg: {arg:?}")]
+pub struct MaybeFailedTransfer {
+    pub arg: TransferArg,
+    pub error: TransferError,
+}
+
 impl From<String> for Error {
     fn from(value: String) -> Self {
         Self::Internal(value)
@@ -59,10 +70,7 @@ impl From<String> for Error {
 
 impl From<(RejectionCode, String)> for Error {
     fn from(value: (RejectionCode, String)) -> Self {
-        Self::from(format!(
-            "inter-canister call failed {:?}: {}",
-            value.0, value.1
-        ))
+        Self::InterCanisterCallFailed(value.0, value.1)
     }
 }
 
