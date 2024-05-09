@@ -2,7 +2,7 @@ use candid::{CandidType, Deserialize};
 use did::H160;
 use ic_canister_client::CanisterClientError;
 use ic_exports::ic_kit::RejectionCode;
-use ic_exports::icrc_types::icrc1::transfer::{TransferArg, TransferError};
+use ic_exports::icrc_types::icrc1::transfer::TransferError;
 use ic_exports::icrc_types::icrc2::transfer_from::TransferFromError;
 use thiserror::Error;
 
@@ -52,14 +52,6 @@ pub enum Error {
 
     #[error("not enough operation points: expected {expected}, got {got}")]
     InsufficientOperationPoints { expected: u32, got: u32 },
-}
-
-/// Minter canister operation error.
-#[derive(Debug, Error, Deserialize, CandidType, PartialEq, Eq, Clone)]
-#[error("transfer maybe failed: {error:?}. Transfer arg: {arg:?}")]
-pub struct MaybeFailedTransfer {
-    pub arg: TransferArg,
-    pub error: TransferError,
 }
 
 impl From<String> for Error {
