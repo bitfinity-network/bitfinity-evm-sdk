@@ -826,4 +826,28 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn is_inspect_message_disabled(&self) -> CanisterClientResult<bool> {
         self.client.query("is_inspect_message_disabled", ()).await
     }
+
+    /// Returns the current transaction processing interval in seconds
+    pub async fn get_transaction_processing_interval_secs(&self) -> CanisterClientResult<u64> {
+        self.client
+            .query("get_transaction_processing_interval_secs", ())
+            .await
+    }
+
+    /// Sets the transaction processing interval.
+    /// This function can only be called by the admin.
+    ///
+    /// # Arguments
+    /// * `secs` - the new transaction processing interval in seconds
+    ///
+    /// # Errors
+    /// * `NotAuthorized` - if the caller is not the admin
+    pub async fn admin_set_transaction_processing_interval_secs(
+        &self,
+        secs: u64,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_transaction_processing_interval_secs", (secs,))
+            .await
+    }
 }

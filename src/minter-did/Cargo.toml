@@ -13,17 +13,22 @@ repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+runes = ["ordinals"]
+
 [dependencies]
 candid = { workspace = true }
 did = { path = "../did" }
 eth-signer = { path = "../eth-signer" }
 ethers-core = { workspace = true }
+ic-canister-client = { workspace = true }
 ic-exports = { workspace = true, features = ["icrc"] }
 ic-log = { workspace = true }
 ic-stable-structures = { workspace = true }
+ordinals = { workspace = true, optional = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-ic-canister-client = { workspace = true }
 
 [dev-dependencies]
 rand = { workspace = true }
