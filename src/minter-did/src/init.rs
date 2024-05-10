@@ -12,9 +12,6 @@ pub struct InitData {
     /// Principal of EVM canister, in which minter canister will withdraw/deposit tokens.
     pub evm_principal: Principal,
 
-    /// Principal of spender canister, which is used for secure token transfers.
-    pub spender_principal: Principal,
-
     /// Signing strategy
     pub signing_strategy: SigningStrategy,
 
