@@ -148,7 +148,7 @@ impl TryFrom<&[u8]> for Id256 {
             .map_err(|_| Error::Internal("data of Id256 should contain exactly 32 bytes".into()))?;
 
         match inner[0] {
-            Self::PRINCIPAL_MARK | Self::EVM_ADDRESS_MARK => Ok(Self(inner)),
+            Self::PRINCIPAL_MARK | Self::EVM_ADDRESS_MARK | Self::BTC_TX_MARK => Ok(Self(inner)),
             _ => Err(Error::Internal("wrong Id256 mark in first byte".into())),
         }
     }
@@ -290,6 +290,16 @@ mod tests {
 
         let id = Id256::from_btc_tx_index(block_id, tx_id);
         assert_eq!(id.to_btc_tx_index(), Ok((block_id, tx_id)));
+    }
+
+    #[test]
+    fn btc_tx_id256_from_slice() {
+        let block_id = 100500;
+        let tx_id = 42;
+
+        let id = Id256::from_btc_tx_index(block_id, tx_id);
+        let slice = id.0;
+        assert_eq!(Id256::from_slice(&slice), Some(id));
     }
 
     #[test]
