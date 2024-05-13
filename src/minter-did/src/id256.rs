@@ -293,6 +293,16 @@ mod tests {
     }
 
     #[test]
+    fn btc_tx_id256_from_slice() {
+        let block_id = 100500;
+        let tx_id = 42;
+
+        let id = Id256::from_btc_tx_index(block_id, tx_id);
+        let slice = id.0;
+        assert_eq!(Id256::from_slice(&slice), Some(id));
+    }
+
+    #[test]
     fn btc_tx_index_decode_error() {
         let id = Id256::from_evm_address(&H160::from_slice(&[42; 20]), 31156);
         assert!(
