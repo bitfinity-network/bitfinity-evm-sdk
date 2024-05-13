@@ -148,7 +148,7 @@ impl TryFrom<&[u8]> for Id256 {
             .map_err(|_| Error::Internal("data of Id256 should contain exactly 32 bytes".into()))?;
 
         match inner[0] {
-            Self::PRINCIPAL_MARK | Self::EVM_ADDRESS_MARK => Ok(Self(inner)),
+            Self::PRINCIPAL_MARK | Self::EVM_ADDRESS_MARK | Self::BTC_TX_MARK => Ok(Self(inner)),
             _ => Err(Error::Internal("wrong Id256 mark in first byte".into())),
         }
     }
