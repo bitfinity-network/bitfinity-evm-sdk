@@ -2,11 +2,12 @@ use candid::Principal;
 use did::block::{BlockResult, ExeResult};
 use did::build::BuildData;
 use did::error::Result;
+use did::evm_reset_state::EvmResetState;
 use did::permission::{Permission, PermissionList};
 use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
 use did::transaction::StorableExecutionResult;
 use did::{
-    AccountInfoMap, Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt,
+    Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt,
     H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
@@ -812,14 +813,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("is_empty_block_enabled", ()).await
     }
 
-    /// Updates the state of the EVM canister.
-    pub async fn update_state(&self, accounts: AccountInfoMap) -> CanisterClientResult<Result<()>> {
-        self.client.update("update_state", (accounts,)).await
+    /// Resets the state of the EVM canister.
+    pub async fn admin_reset_state(&self, state: EvmResetState) -> CanisterClientResult<Result<()>> {
+        self.client.update("admin_reset_state", (state,)).await
     }
 
-    pub async fn reset_state(&self) -> CanisterClientResult<Result<()>> {
-        self.client.update("reset_state", ()).await
-    }
     /// Disable/Enable the inspect message
     pub async fn admin_disable_inspect_message(
         &self,
