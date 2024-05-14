@@ -82,7 +82,7 @@ pub struct ERC721MintOrder {
     /// Mint operation should approve tokens, using this address as a spender.
     pub approve_spender: H160,
 
-    /// Mint operation should approve this amount of tokens.
+    /// Token URI of the NFT.
     pub token_uri: String,
 }
 
