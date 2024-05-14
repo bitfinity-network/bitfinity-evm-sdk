@@ -29,7 +29,7 @@ impl Storable for StorablePrincipal {
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Bytes, H160, H256, U256};
+use crate::{Bytes, H160, U256};
 
 #[derive(Debug, candid::CandidType, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct RawAccountInfo {
@@ -40,7 +40,7 @@ pub struct RawAccountInfo {
     /// Account bytecode.
     pub bytecode: Option<Bytes>,
     /// Storage value for the account.
-    pub storage: Vec<(H256, U256)>,
+    pub storage: Vec<(U256, U256)>,
 }
 
 pub type AccountInfoMap = BTreeMap<H160, RawAccountInfo>;
