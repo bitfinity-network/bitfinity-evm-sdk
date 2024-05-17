@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 
 use candid::Principal;
 use ic_stable_structures::{Bound, Storable};
@@ -25,6 +26,24 @@ impl Storable for StorablePrincipal {
         is_fixed_size: false,
     };
 }
+
+use serde::{Deserialize, Serialize};
+
+use crate::{Bytes, H160, U256};
+
+#[derive(Debug, candid::CandidType, PartialEq, Eq, Clone, Serialize, Deserialize)]
+pub struct RawAccountInfo {
+    /// Account nonce.
+    pub nonce: U256,
+    /// Account balance.
+    pub balance: U256,
+    /// Account bytecode.
+    pub bytecode: Option<Bytes>,
+    /// Storage value for the account.
+    pub storage: Vec<(U256, U256)>,
+}
+
+pub type AccountInfoMap = BTreeMap<H160, RawAccountInfo>;
 
 #[cfg(test)]
 mod tests {
