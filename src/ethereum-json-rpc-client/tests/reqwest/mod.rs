@@ -36,13 +36,9 @@ async fn should_get_balance() {
     assert_eq!(result, 1409174700000000000u64.into());
 }
 
-
 #[tokio::test]
 async fn should_get_gas_price() {
-    let price = reqwest_client()
-        .gas_price()
-        .await
-        .unwrap();
+    let price = reqwest_client().gas_price().await.unwrap();
     assert!(price > U256::zero());
 }
 

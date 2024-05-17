@@ -41,6 +41,8 @@ ethereum-types = "0.14"
 ethers-core = "2.0"
 futures = { version = "0.3", default-features = false }
 hex = "0.4"
+# Newer version 0.13.3 breakes backward compatibility. Add this temporary fix until pocket-ic or ic-cdk crates are fixed.
+ic-cdk = "=0.13.2"
 ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.16.x" }
 ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.16.x" }
 ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.16.x" }
