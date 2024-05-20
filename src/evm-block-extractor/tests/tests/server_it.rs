@@ -83,63 +83,6 @@ async fn test_get_blocks() {
 }
 
 #[tokio::test]
-async fn test_get_blocks_rlp() {
-    with_filled_db(|db_client| async {
-        let (_http_client, port, handle) = new_server(db_client).await;
-
-        let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
-
-        // Test first five blocks
-        let request = Request::Single(Call::MethodCall(MethodCall {
-            jsonrpc: Some(Version::V2),
-            method: "ic_getBlocksRLP".to_string(),
-            params: Params::Array(vec![json!("0x0"), json!("0x5")]),
-            id: Id::Str("ic_getBlocksRLP".to_string()),
-        }));
-
-        let Response::Single(Output::Success(result)) =
-            http_client.send_rpc_request(request).await.unwrap()
-        else {
-            panic!("unexpected return type")
-        };
-
-        let data: String = serde_json::from_value(result.result).unwrap();
-        let blocks: Vec<did::Block<did::Transaction>> =
-            ethers_core::utils::rlp::decode_list(&hex::decode(data).unwrap());
-        assert_eq!(blocks.len(), 5);
-        assert_eq!(blocks[0].number, 0u64.into());
-        assert_eq!(blocks[4].number, 4u64.into());
-
-        // Test last 2 blocks
-        let request = Request::Single(Call::MethodCall(MethodCall {
-            jsonrpc: Some(Version::V2),
-            method: "ic_getBlocksRLP".to_string(),
-            params: Params::Array(vec![json!("0x8"), json!("0x5")]),
-            id: Id::Str("ic_getBlocksRLP".to_string()),
-        }));
-
-        let Response::Single(Output::Success(result)) =
-            http_client.send_rpc_request(request).await.unwrap()
-        else {
-            panic!("unexpected return type")
-        };
-
-        let data: String = serde_json::from_value(result.result).unwrap();
-        let blocks: Vec<did::Block<did::Transaction>> =
-            ethers_core::utils::rlp::decode_list(&hex::decode(data).unwrap());
-        assert_eq!(blocks.len(), 2);
-        assert_eq!(blocks[0].number, 8u64.into());
-        assert_eq!(blocks[1].number, 9u64.into());
-
-        {
-            handle.stop().unwrap();
-            handle.stopped().await;
-        }
-    })
-    .await
-}
-
-#[tokio::test]
 async fn test_batched_request() {
     with_filled_db(|db_client| async {
         let (_http_client, port, handle) = new_server(db_client).await;
@@ -148,9 +91,9 @@ async fn test_batched_request() {
         let request = Request::Batch(vec![
             Call::MethodCall(MethodCall {
                 jsonrpc: Some(Version::V2),
-                method: "ic_getBlocksRLP".to_string(),
-                params: Params::Array(vec![json!("0x0"), json!("0x5")]),
-                id: Id::Str("ic_getBlocksRLP".to_string()),
+                method: "ic_getGenesisBalances".to_string(),
+                params: Params::Array(vec![]),
+                id: Id::Str("ic_getGenesisBalances".to_string()),
             }),
             Call::MethodCall(MethodCall {
                 jsonrpc: Some(Version::V2),
@@ -166,11 +109,9 @@ async fn test_batched_request() {
 
         match &results[..] {
             [Output::Success(result_1), Output::Success(result_2)] => {
-                assert_eq!(result_1.id, Id::Str("ic_getBlocksRLP".to_string()));
-                let data: String = serde_json::from_value(result_1.result.clone()).unwrap();
-                let blocks: Vec<did::Block<did::Transaction>> =
-                    ethers_core::utils::rlp::decode_list(&hex::decode(data).unwrap());
-                assert_eq!(blocks.len(), 5);
+                assert_eq!(result_1.id, Id::Str("ic_getGenesisBalances".to_string()));
+                let data = serde_json::from_value::<Vec<(H160, U256)>>(result_1.result.clone());
+                assert!(data.is_ok());
 
                 assert_eq!(result_2.id, Id::Str("eth_blockNumber".to_string()));
                 let data: String = serde_json::from_value(result_2.result.clone()).unwrap();

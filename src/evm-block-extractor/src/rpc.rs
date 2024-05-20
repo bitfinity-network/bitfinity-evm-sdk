@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use ethers_core::types::{BlockNumber, H160, U256, U64};
-use ethers_core::utils::rlp::{RlpStream, EMPTY_LIST_RLP};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 
@@ -41,9 +40,6 @@ pub trait Eth {
 /// ic_* RPC methods
 #[rpc(server, namespace = "ic")]
 pub trait IC {
-    #[method(name = "getBlocksRLP")]
-    async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<String>;
-
     #[method(name = "getGenesisBalances")]
     async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>>;
 
@@ -53,58 +49,6 @@ pub trait IC {
 
 #[async_trait::async_trait]
 impl ICServer for EthImpl {
-    async fn get_blocks_rlp(&self, from: BlockNumber, max_number: U64) -> RpcResult<String> {
-        let db = &self.blockchain;
-        let from = match from {
-            BlockNumber::Latest => db
-                .get_latest_block_number()
-                .await
-                .map_err(|e| {
-                    log::error!("Error getting block number: {:?}", e);
-                    jsonrpsee::types::error::ErrorCode::InternalError
-                })?
-                .unwrap_or(0),
-            BlockNumber::Earliest => db.get_earliest_block_number().await.map_err(|e| {
-                log::error!("Error getting earliest block number: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
-            })?,
-            BlockNumber::Number(num) => num.as_u64(),
-            BlockNumber::Pending => return Ok(hex::encode(EMPTY_LIST_RLP)),
-            _ => return Ok(hex::encode(EMPTY_LIST_RLP)),
-        };
-
-        let block_count = db
-            .get_latest_block_number()
-            .await
-            .map_err(|e| {
-                log::error!("Error getting block number: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
-            })?
-            .unwrap_or(0)
-            + 1;
-
-        let end_block = std::cmp::min(from + std::cmp::min(10, max_number.as_u64()), block_count);
-
-        if end_block <= from {
-            return Ok(hex::encode(EMPTY_LIST_RLP));
-        }
-
-        let mut rlp = RlpStream::new_list((end_block - from) as usize);
-        for block_index in from..end_block {
-            let block = db
-                .get_full_block_by_number(block_index)
-                .await
-                .map_err(|e| {
-                    log::error!("Error getting block: {:?}", e);
-                    jsonrpsee::types::error::ErrorCode::InternalError
-                })?;
-
-            rlp.append(&block);
-        }
-
-        Ok(hex::encode(rlp.out()))
-    }
-
     async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>> {
         let tx = self.blockchain.get_genesis_balances().await.map_err(|e| {
             log::error!("Error getting genesis balances: {:?}", e);

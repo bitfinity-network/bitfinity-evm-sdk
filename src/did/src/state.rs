@@ -1,6 +1,4 @@
 use std::borrow::Cow;
-use std::io::Cursor;
-use std::mem;
 
 use candid::CandidType;
 use ic_stable_structures::{Bound, Storable};
@@ -18,13 +16,6 @@ pub struct BasicAccount {
     pub nonce: U256,
 }
 
-/// Action to update key-value state
-#[derive(Debug, CandidType, Deserialize, Clone)]
-pub enum StateUpdateAction<K, V> {
-    Removed { key: K },
-    Replace { key: K, value: V },
-}
-
 /// StableDBStorage indices information
 #[derive(Debug, Clone, Serialize, CandidType, Deserialize, Eq, PartialEq)]
 pub struct Indices {
@@ -35,7 +26,7 @@ pub struct Indices {
 }
 
 impl Indices {
-    const STORABLE_BYTE_SIZE: usize = mem::size_of::<u64>() * 2;
+    const STORABLE_BYTE_SIZE: usize = std::mem::size_of::<u64>() * 2;
 }
 
 impl Storable for Indices {
@@ -70,14 +61,4 @@ pub struct FullStorageValue {
     /// Number of inserts subtracted by number of removals.
     /// May be zero for the values which were removed in past before the moment they are cleaned.
     pub rc: u32,
-}
-
-impl FullStorageValue {
-    pub fn hash(&self) -> u128 {
-        let mut all_data = Vec::with_capacity(self.data.len() + mem::size_of_val(&self.rc));
-        all_data.extend(&self.data);
-        all_data.extend(self.rc.to_le_bytes());
-
-        murmur3::murmur3_x86_128(&mut Cursor::new(&all_data), 0).expect("should calculate hash")
-    }
 }
