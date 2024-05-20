@@ -18,13 +18,6 @@ pub struct BasicAccount {
     pub nonce: U256,
 }
 
-/// Action to update key-value state
-#[derive(Debug, CandidType, Deserialize, Clone)]
-pub enum StateUpdateAction<K, V> {
-    Removed { key: K },
-    Replace { key: K, value: V },
-}
-
 /// StableDBStorage indices information
 #[derive(Debug, Clone, Serialize, CandidType, Deserialize, Eq, PartialEq)]
 pub struct Indices {
