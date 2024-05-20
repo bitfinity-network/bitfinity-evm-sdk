@@ -72,17 +72,6 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
         self.client.update("get_bft_bridge_contract", ()).await
     }
 
-    /// Registers BftBridge contract for EVM canister.
-    /// This method is available for canister owner only.
-    pub async fn register_evmc_bft_bridge(
-        &self,
-        bft_bridge_address: H160,
-    ) -> CanisterClientResult<McResult<()>> {
-        self.client
-            .update("register_evmc_bft_bridge", (bft_bridge_address,))
-            .await
-    }
-
     /// Creates ERC-20 mint order for ICRC-2 tokens burning and sends it to the BFTBridge.
     /// Returns operation id.
     pub async fn burn_icrc2(&self, reason: Icrc2Burn) -> CanisterClientResult<McResult<u32>> {

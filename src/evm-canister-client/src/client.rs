@@ -7,8 +7,8 @@ use did::permission::{Permission, PermissionList};
 use did::state::{BasicAccount, FullStorageValue, Indices, StateUpdateAction};
 use did::transaction::StorableExecutionResult;
 use did::{
-    Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt,
-    H160, H256, U256, U64,
+    Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256,
+    U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
@@ -814,7 +814,10 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Resets the state of the EVM canister.
-    pub async fn admin_reset_state(&self, state: EvmResetState) -> CanisterClientResult<Result<()>> {
+    pub async fn admin_reset_state(
+        &self,
+        state: EvmResetState,
+    ) -> CanisterClientResult<Result<()>> {
         self.client.update("admin_reset_state", (state,)).await
     }
 
