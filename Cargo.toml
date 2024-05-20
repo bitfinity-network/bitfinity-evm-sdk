@@ -48,12 +48,11 @@ ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk"
 ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.16.x" }
 ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.16.x" }
 ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.16.x" }
-itertools = "0.12"
+itertools = "0.13"
 jsonrpc-core = "18.0"
 jsonrpsee = { version = "0.22", features = ["server", "macros"] }
 lightspeed_scheduler = "0.58"
 log = "0.4"
-murmur3 = "0.5"
 num = "0.4"
 once_cell = "1.16"
 ordinals = "0.0.7"

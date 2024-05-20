@@ -1,5 +1,5 @@
 use candid::Principal;
-use did::block::{BlockResult, ExeResult};
+use did::block::BlockResult;
 use did::build::BuildData;
 use did::error::Result;
 use did::evm_reset_state::EvmResetState;
@@ -7,14 +7,12 @@ use did::permission::{Permission, PermissionList};
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::{
-    Block, BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256,
-    U256, U64,
+    BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
 
 use crate::EvmResult;
-pub type BlockWithData = Vec<(Block<H256>, Vec<(Transaction, ExeResult)>)>;
 
 /// An EVM canister client.
 #[derive(Debug, Clone)]
