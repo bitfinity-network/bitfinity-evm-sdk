@@ -76,6 +76,12 @@ impl AccountInfoMap {
     }
 }
 
+impl<D: Into<BTreeMap<H160, RawAccountInfo>>> From<D> for AccountInfoMap {
+    fn from(data: D) -> Self {
+        Self { data: data.into() }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
