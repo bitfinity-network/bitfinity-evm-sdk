@@ -68,7 +68,7 @@ impl AccountInfoMap {
         const KEY_SIZE: usize = H160::BYTE_SIZE;
         let mut total_size = KEY_SIZE * self.data.len();
 
-        for (_address, account) in &self.data {
+        for account in self.data.values() {
             total_size += account.estimate_byte_size();
         }
 
