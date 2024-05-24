@@ -7,8 +7,6 @@ use serde::Deserialize;
 use crate::permission::Permission;
 use crate::{H160, U256};
 
-pub type GenesisAccount = (H160, Option<U256>);
-
 /// These are the arguments which are taken by the evm canister init fn
 #[derive(Debug, Clone, CandidType, Deserialize)]
 pub struct EvmCanisterInitData {
@@ -21,10 +19,12 @@ pub struct EvmCanisterInitData {
     pub permissions: Option<Vec<(Principal, Vec<Permission>)>>,
     #[serde(default)]
     pub transaction_processing_interval: Option<Duration>,
+    #[serde(default)]
+    pub reserve_memory_pages: Option<u64>,
     /// Owner of the EVM Canister
     pub owner: Principal,
     /// Genesis accounts
-    pub genesis_accounts: Vec<GenesisAccount>,
+    pub genesis_accounts: Vec<(H160, Option<U256>)>,
     /// Coinbase address
     pub coinbase: H160,
 }
@@ -37,6 +37,7 @@ impl Default for EvmCanisterInitData {
             chain_id: Default::default(),
             log_settings: Default::default(),
             permissions: Default::default(),
+            reserve_memory_pages: Default::default(),
             transaction_processing_interval: Default::default(),
             owner: Principal::management_canister(),
             genesis_accounts: vec![],
@@ -44,3 +45,6 @@ impl Default for EvmCanisterInitData {
         }
     }
 }
+
+/// These are the arguments which are taken by the signature verification canister init fn
+pub type SignatureVerificationCanisterInitData = Vec<Principal>;
