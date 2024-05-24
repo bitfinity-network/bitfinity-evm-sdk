@@ -45,7 +45,6 @@ pub struct RawAccountInfo {
 }
 
 impl RawAccountInfo {
-
     /// Estimate the byte size of the account info.
     pub fn estimate_byte_size(&self) -> usize {
         const NONCE_SIZE: usize = U256::BYTE_SIZE;
@@ -55,27 +54,24 @@ impl RawAccountInfo {
 
         NONCE_SIZE + BALANCE_SIZE + bytecode_size + storage_size
     }
-
 }
 
 /// A Map from account address to account info.
 #[derive(Debug, candid::CandidType, PartialEq, Eq, Clone, Serialize, Deserialize)]
-pub struct AccountInfoMap{
+pub struct AccountInfoMap {
     pub data: BTreeMap<H160, RawAccountInfo>,
 }
 
 impl AccountInfoMap {
-
     /// Estimate the byte size of the account info map.
     pub fn estimate_byte_size(&self) -> usize {
-
         const KEY_SIZE: usize = H160::BYTE_SIZE;
         let mut total_size = KEY_SIZE * self.data.len();
-    
+
         for (_address, account) in &self.data {
             total_size += account.estimate_byte_size();
         }
-    
+
         total_size
     }
 }
@@ -110,7 +106,10 @@ mod tests {
             nonce: U256::from(1u64),
             balance: U256::from(2u64),
             bytecode: Some(Bytes::from(vec![1, 2, 3])),
-            storage: vec![(U256::from(1u64), U256::from(2u64)), (U256::from(3u64), U256::from(4u64))],
+            storage: vec![
+                (U256::from(1u64), U256::from(2u64)),
+                (U256::from(3u64), U256::from(4u64)),
+            ],
         };
 
         let bytes = Encode!(&account_info).unwrap();
@@ -121,14 +120,19 @@ mod tests {
     #[test]
     fn test_account_info_map_roundtrip() {
         let account_info_map = AccountInfoMap {
-            data: [
-                (H160::from([1; 20]), RawAccountInfo {
+            data: [(
+                H160::from([1; 20]),
+                RawAccountInfo {
                     nonce: U256::from(1u64),
                     balance: U256::from(2u64),
                     bytecode: Some(Bytes::from(vec![1, 2, 3])),
-                    storage: vec![(U256::from(1u64), U256::from(2u64)), (U256::from(3u64), U256::from(4u64))],
-                }),
-            ].into(),
+                    storage: vec![
+                        (U256::from(1u64), U256::from(2u64)),
+                        (U256::from(3u64), U256::from(4u64)),
+                    ],
+                },
+            )]
+            .into(),
         };
 
         let bytes = Encode!(&account_info_map).unwrap();
@@ -142,7 +146,10 @@ mod tests {
             nonce: U256::from(1u64),
             balance: U256::from(2u64),
             bytecode: Some(Bytes::from(vec![1, 2, 3])),
-            storage: vec![(U256::from(1u64), U256::from(2u64)), (U256::from(3u64), U256::from(4u64))],
+            storage: vec![
+                (U256::from(1u64), U256::from(2u64)),
+                (U256::from(3u64), U256::from(4u64)),
+            ],
         };
 
         let account_info_map = AccountInfoMap {
@@ -150,7 +157,8 @@ mod tests {
                 (H160::from([1; 20]), account_info.clone()),
                 (H160::from([2; 20]), account_info.clone()),
                 (H160::from([3; 20]), account_info.clone()),
-            ].into(),
+            ]
+            .into(),
         };
 
         let account_info_size = account_info.estimate_byte_size();
