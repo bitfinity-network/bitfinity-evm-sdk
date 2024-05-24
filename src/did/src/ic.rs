@@ -57,12 +57,17 @@ impl RawAccountInfo {
 }
 
 /// A Map from account address to account info.
-#[derive(Debug, candid::CandidType, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, candid::CandidType, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct AccountInfoMap {
     pub data: BTreeMap<H160, RawAccountInfo>,
 }
 
 impl AccountInfoMap {
+    /// Create a new account info map.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// Estimate the byte size of the account info map.
     pub fn estimate_byte_size(&self) -> usize {
         const KEY_SIZE: usize = H160::BYTE_SIZE;
