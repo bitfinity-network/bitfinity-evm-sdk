@@ -26,6 +26,11 @@ pub struct Icrc2Burn {
     /// If user want's mint operation to approve minted tokens,
     /// he can use this field.
     pub approve_minted_tokens: Option<ApproveMintedTokens>,
+
+    /// Address from which fee should be charged for mint transaction
+    /// performed by minter canister.
+    /// If None, mint transaction will not be sent and user can send it by himself.
+    pub fee_payer: Option<H160>,
 }
 
 #[derive(Debug, Clone, Deserialize, CandidType)]
