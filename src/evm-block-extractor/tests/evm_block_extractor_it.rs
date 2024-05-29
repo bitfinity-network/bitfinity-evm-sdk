@@ -21,7 +21,10 @@ async fn new_postgres_db_client() -> (
     Arc<dyn DatabaseClient>,
     ContainerAsync<testcontainers::postgres::Postgres>,
 ) {
-    let node = testcontainers::postgres::Postgres::default().start().await.unwrap();
+    let node = testcontainers::postgres::Postgres::default()
+        .start()
+        .await
+        .unwrap();
 
     let db = Database::Postgres {
         username: "postgres".to_string(),

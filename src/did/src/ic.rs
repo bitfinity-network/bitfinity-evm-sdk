@@ -1,6 +1,6 @@
-use std::collections::BTreeMap;
-use serde::{Deserialize, Serialize};
 use crate::{Bytes, H160, U256};
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 /// Account full data
 #[derive(Debug, candid::CandidType, PartialEq, Eq, Clone, Serialize, Deserialize)]
