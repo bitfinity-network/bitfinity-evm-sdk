@@ -382,11 +382,19 @@ mod tests {
         assert!(orders.insert(sender, src_token, 0, order.clone()).is_none());
         assert!(orders.insert(sender, src_token, 1, order.clone()).is_none());
 
-        assert!(orders.insert(other_sender, src_token, 2, order.clone()).is_none());
-        assert!(orders.insert(other_sender, src_token, 3, order.clone()).is_none());
+        assert!(orders
+            .insert(other_sender, src_token, 2, order.clone())
+            .is_none());
+        assert!(orders
+            .insert(other_sender, src_token, 3, order.clone())
+            .is_none());
 
-        assert!(orders.insert(sender, other_src_token, 4, order.clone()).is_none());
-        assert!(orders.insert(sender, other_src_token, 5, order.clone()).is_none());
+        assert!(orders
+            .insert(sender, other_src_token, 4, order.clone())
+            .is_none());
+        assert!(orders
+            .insert(sender, other_src_token, 5, order.clone())
+            .is_none());
 
         assert_eq!(
             orders.get_all(sender, src_token),
