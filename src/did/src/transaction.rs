@@ -6,7 +6,7 @@ use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
 use ethers_core::types::transaction::eip2930;
 use ethers_core::types::Signature as EthersSignature;
-use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
+use ic_stable_structures::{Bound, Storable};
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
@@ -377,11 +377,6 @@ impl Storable for Transaction {
     }
 }
 
-impl SlicedStorable for Transaction {
-    // Most of test transactions takes about 250 bytes
-    const CHUNK_SIZE: ic_stable_structures::ChunkSize = 256;
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 pub struct AccessListItem {
     pub address: H160,
@@ -642,10 +637,6 @@ impl Storable for StorableExecutionResult {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         codec::decode(&bytes)
     }
-}
-
-impl SlicedStorable for StorableExecutionResult {
-    const CHUNK_SIZE: ChunkSize = 512;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

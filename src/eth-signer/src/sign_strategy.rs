@@ -9,7 +9,7 @@ use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::utils;
 #[cfg(feature = "ic_sign")]
 pub use ic_sign::{IcSigner, ManagementCanisterSigner, SigningKeyId};
-use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
+use ic_stable_structures::{Bound, Storable};
 use serde::{Deserialize, Serialize};
 
 use crate::{Signer, Wallet};
@@ -109,10 +109,6 @@ impl Storable for TxSigner {
     }
 
     const BOUND: Bound = Bound::Unbounded;
-}
-
-impl SlicedStorable for TxSigner {
-    const CHUNK_SIZE: ChunkSize = 64;
 }
 
 #[async_trait(?Send)]
