@@ -21,14 +21,17 @@ async fn new_postgres_db_client() -> (
     Arc<dyn DatabaseClient>,
     ContainerAsync<testcontainers::postgres::Postgres>,
 ) {
-    let node = testcontainers::postgres::Postgres::default().start().await;
+    let node = testcontainers::postgres::Postgres::default()
+        .start()
+        .await
+        .unwrap();
 
     let db = Database::Postgres {
         username: "postgres".to_string(),
         password: "postgres".to_string(),
         database_name: "postgres".to_string(),
         database_url: "127.0.0.1".to_owned(),
-        database_port: node.get_host_port_ipv4(5432).await,
+        database_port: node.get_host_port_ipv4(5432).await.unwrap(),
         require_ssl: false,
     };
 
