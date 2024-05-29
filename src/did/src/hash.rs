@@ -6,7 +6,7 @@ use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::Display;
 use ethers_core::types::NameOrAddress;
-use ic_stable_structures::{Bound, Storable};
+use ic_stable_structures::{Bound, Bounded, Storable};
 use serde::Serialize;
 
 #[derive(
@@ -221,6 +221,21 @@ impl rlp::Decodable for H256 {
     fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
         ethereum_types::H256::decode(rlp).map(Into::into)
     }
+}
+
+impl Bounded<H64> for H64 {
+    const MIN: H64 = Hash::<ethereum_types::H64>(ethereum_types::H64([u8::MIN; 8]));
+    const MAX: H64 = Hash::<ethereum_types::H64>(ethereum_types::H64([u8::MAX; 8]));
+}
+
+impl Bounded<H160> for H160 {
+    const MIN: H160 = Hash::<ethereum_types::H160>(ethereum_types::H160([u8::MIN; 20]));
+    const MAX: H160 = Hash::<ethereum_types::H160>(ethereum_types::H160([u8::MAX; 20]));
+}
+
+impl Bounded<H256> for H256 {
+    const MIN: H256 = Hash::<ethereum_types::H256>(ethereum_types::H256([u8::MIN; 32]));
+    const MAX: H256 = Hash::<ethereum_types::H256>(ethereum_types::H256([u8::MAX; 32]));
 }
 
 impl From<H64> for ethereum_types::H64 {
