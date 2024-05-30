@@ -494,7 +494,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Removes permissions from a principal and returns the principal permissions
     pub async fn admin_ic_permissions_remove(
-        &mut self,
+        &self,
         principal: Principal,
         permissions: Vec<Permission>,
     ) -> CanisterClientResult<Result<PermissionList>> {
@@ -515,7 +515,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Sets the min gas price
     pub async fn admin_set_min_gas_price(
-        &mut self,
+        &self,
         min_gas_price: U256,
     ) -> CanisterClientResult<Result<()>> {
         self.client
@@ -756,7 +756,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Set the blockchain size limit for transactions, receipts, and blocks.
     pub async fn admin_set_blockchain_size_limit(
-        &mut self,
+        &self,
         limit: BlockchainStorageLimits,
     ) -> CanisterClientResult<Result<()>> {
         self.client
@@ -766,7 +766,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Sets the block size limit.
     pub async fn admin_set_block_size_limit(
-        &mut self,
+        &self,
         block_size: u64,
     ) -> CanisterClientResult<Result<()>> {
         self.client
@@ -777,7 +777,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Allocates `pages` additional pages of stable storage memory.
     /// Returns error in case when failed to allocate the missing pages.
     pub async fn admin_reserve_stable_storage_pages(
-        &mut self,
+        &self,
         pages: u64,
     ) -> CanisterClientResult<Result<()>> {
         self.client
