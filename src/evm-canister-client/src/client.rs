@@ -765,13 +765,21 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Sets the block size limit.
-    pub async fn admin_set_block_size_limit(&mut self, block_size: u64) -> CanisterClientResult<Result<()>> {
-        self.client.update("admin_set_block_size_limit", (block_size,)).await
+    pub async fn admin_set_block_size_limit(
+        &mut self,
+        block_size: u64,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_block_size_limit", (block_size,))
+            .await
     }
 
     /// Allocates `pages` additional pages of stable storage memory.
     /// Returns error in case when failed to allocate the missing pages.
-    pub async fn admin_reserve_stable_storage_pages(&mut self, pages: u64) -> CanisterClientResult<Result<()>> {
+    pub async fn admin_reserve_stable_storage_pages(
+        &mut self,
+        pages: u64,
+    ) -> CanisterClientResult<Result<()>> {
         self.client
             .update("admin_reserve_stable_storage_pages", (pages,))
             .await
