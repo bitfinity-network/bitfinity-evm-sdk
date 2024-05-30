@@ -7,7 +7,8 @@ use did::permission::{Permission, PermissionList};
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::{
-    BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction, TransactionReceipt, H160, H256, U256, U64
+    BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
+    TransactionReceipt, H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
@@ -752,15 +753,15 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
-        /// Set the blockchain size limit for transactions, receipts, and blocks.
-        pub async fn admin_set_blockchain_size_limit(
-            &mut self,
-            limit: BlockchainStorageLimits,
-        ) -> CanisterClientResult<Result<()>> {
-            self.client
-                .update("admin_set_blockchain_size_limit", (limit,))
-                .await
-        }
+    /// Set the blockchain size limit for transactions, receipts, and blocks.
+    pub async fn admin_set_blockchain_size_limit(
+        &mut self,
+        limit: BlockchainStorageLimits,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_blockchain_size_limit", (limit,))
+            .await
+    }
 
     /// Returns `EvmStats` which contains statistics for the Network
     pub async fn ic_stats(&self) -> CanisterClientResult<Result<EvmStats>> {
