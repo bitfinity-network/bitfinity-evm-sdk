@@ -7,7 +7,7 @@ use did::permission::{Permission, PermissionList};
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::{
-    BlockNumber, Bytes, EstimateGasRequest, EvmStats, Transaction, TransactionReceipt, H160, H256, U256, U64
+    BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction, TransactionReceipt, H160, H256, U256, U64
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
@@ -513,8 +513,13 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Sets the min gas price
-    pub async fn admin_set_min_gas_price(&mut self, min_gas_price: U256) -> CanisterClientResult<Result<()>> {
-        self.client.update("admin_set_min_gas_price", (min_gas_price,)).await
+    pub async fn admin_set_min_gas_price(
+        &mut self,
+        min_gas_price: U256,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_min_gas_price", (min_gas_price,))
+            .await
     }
 
     /// Returns the chain ID used for signing replay-protected transactions.
@@ -632,10 +637,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Errors
     /// * `Internal` - if the block gas limit is 0
     /// * `NotAuthorized` - if the caller is not the admin
-    pub async fn admin_set_block_gas_limit(
-        &self,
-        limit: u64,
-    ) -> CanisterClientResult<Result<()>> {
+    pub async fn admin_set_block_gas_limit(&self, limit: u64) -> CanisterClientResult<Result<()>> {
         self.client
             .update("admin_set_block_gas_limit", (limit,))
             .await
@@ -750,9 +752,18 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+        /// Set the blockchain size limit for transactions, receipts, and blocks.
+        pub async fn admin_set_blockchain_size_limit(
+            &mut self,
+            limit: BlockchainStorageLimits,
+        ) -> CanisterClientResult<Result<()>> {
+            self.client
+                .update("admin_set_blockchain_size_limit", (limit,))
+                .await
+        }
+
     /// Returns `EvmStats` which contains statistics for the Network
     pub async fn ic_stats(&self) -> CanisterClientResult<Result<EvmStats>> {
         self.client.query("ic_stats", ()).await
     }
-
 }

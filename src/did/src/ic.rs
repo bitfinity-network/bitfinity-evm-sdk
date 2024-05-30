@@ -86,6 +86,15 @@ pub struct EvmStats {
     pub transactions_history_count: u64,
 }
 
+/// The limits for the blockchain storage
+#[derive(Debug, Copy, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BlockchainStorageLimits {
+    /// The maximum number of the blocks in the storage
+    pub blocks_max_history_size: u64,
+    /// The maximum number of the transactions and receipts in the storage
+    pub transactions_and_receipts_max_history_size: u64,
+}
+
 #[cfg(test)]
 mod tests {
 
