@@ -34,12 +34,12 @@ pub struct U256(pub ethereum_types::U256);
 #[serde(transparent)]
 pub struct U64(pub ethereum_types::U64);
 
-impl Bounded<U256> for U256 {
+impl Bounded for U256 {
     const MIN: U256 = U256(ethereum_types::U256::zero());
     const MAX: U256 = U256(ethereum_types::U256::max_value());
 }
 
-impl Bounded<U64> for U64 {
+impl Bounded for U64 {
     const MIN: U64 = U64(ethereum_types::U64::zero());
     const MAX: U64 = U64(ethereum_types::U64::max_value());
 }

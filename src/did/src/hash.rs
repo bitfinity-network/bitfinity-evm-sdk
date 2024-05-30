@@ -223,17 +223,17 @@ impl rlp::Decodable for H256 {
     }
 }
 
-impl Bounded<H64> for H64 {
+impl Bounded for H64 {
     const MIN: H64 = Hash::<ethereum_types::H64>(ethereum_types::H64([u8::MIN; 8]));
     const MAX: H64 = Hash::<ethereum_types::H64>(ethereum_types::H64([u8::MAX; 8]));
 }
 
-impl Bounded<H160> for H160 {
+impl Bounded for H160 {
     const MIN: H160 = Hash::<ethereum_types::H160>(ethereum_types::H160([u8::MIN; 20]));
     const MAX: H160 = Hash::<ethereum_types::H160>(ethereum_types::H160([u8::MAX; 20]));
 }
 
-impl Bounded<H256> for H256 {
+impl Bounded for H256 {
     const MIN: H256 = Hash::<ethereum_types::H256>(ethereum_types::H256([u8::MIN; 32]));
     const MAX: H256 = Hash::<ethereum_types::H256>(ethereum_types::H256([u8::MAX; 32]));
 }
