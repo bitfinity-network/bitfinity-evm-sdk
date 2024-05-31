@@ -36,6 +36,7 @@ jobs:
           ./scripts/test.sh
       - name: test i686-unknown-linux-gnu
         run: |
+          sudo apt update
           sudo apt install gcc-multilib
           ./scripts/test.sh --target i686-unknown-linux-gnu
 
