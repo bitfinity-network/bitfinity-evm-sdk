@@ -7,7 +7,7 @@ use std::str::FromStr;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize, Nat};
 use derive_more::{From, Into};
-use ic_stable_structures::{Bound, Storable};
+use ic_stable_structures::{Bound, Bounded, Storable};
 use num::BigUint;
 use serde::Serialize;
 #[derive(
@@ -33,6 +33,16 @@ pub struct U256(pub ethereum_types::U256);
 )]
 #[serde(transparent)]
 pub struct U64(pub ethereum_types::U64);
+
+impl Bounded for U256 {
+    const MIN: U256 = U256(ethereum_types::U256::zero());
+    const MAX: U256 = U256(ethereum_types::U256::max_value());
+}
+
+impl Bounded for U64 {
+    const MIN: U64 = U64(ethereum_types::U64::zero());
+    const MAX: U64 = U64(ethereum_types::U64::max_value());
+}
 
 impl U256 {
     pub const BYTE_SIZE: usize = 32;

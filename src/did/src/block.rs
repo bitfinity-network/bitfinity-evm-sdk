@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use candid::{CandidType, Deserialize};
 use ethers_core::types::Log as EthersLog;
-use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
+use ic_stable_structures::{Bound, Storable};
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -364,11 +364,6 @@ impl Storable for Block<H256> {
     }
 }
 
-impl SlicedStorable for Block<H256> {
-    // Most blocks in tests takes less then 500 bytes.
-    const CHUNK_SIZE: ChunkSize = 512;
-}
-
 impl<D, T: From<D>> From<ethers_core::types::Block<D>> for Block<T> {
     fn from(block: ethers_core::types::Block<D>) -> Self {
         Block {
@@ -524,11 +519,6 @@ impl Storable for ExeResult {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         codec::decode(&bytes)
     }
-}
-
-impl SlicedStorable for ExeResult {
-    // Most of ExeResult instances from tests encoded into less then 500 bytes.
-    const CHUNK_SIZE: ChunkSize = 512;
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, CandidType)]

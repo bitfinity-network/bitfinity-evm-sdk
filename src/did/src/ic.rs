@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 
+use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
-use crate::{Bytes, H160, U256};
+use crate::{Bytes, H160, H256, U256};
 
 /// Account full data
 #[derive(Debug, candid::CandidType, PartialEq, Eq, Clone, Serialize, Deserialize)]
@@ -58,6 +59,40 @@ impl<D: Into<BTreeMap<H160, RawAccountInfo>>> From<D> for AccountInfoMap {
     fn from(data: D) -> Self {
         Self { data: data.into() }
     }
+}
+
+/// Contains the stats for the evm
+#[derive(Debug, Clone, CandidType, Eq, PartialEq, Deserialize)]
+pub struct EvmStats {
+    /// This is the number of the pending transaction count
+    pub pending_transactions_count: usize,
+    /// Returns a vec of the transactions in the pool
+    pub pending_transactions: Vec<H256>,
+    /// Latest Block number
+    pub block_number: usize,
+    /// The CHAIN_ID for the evm
+    pub chain_id: u64,
+    /// This is the hash of all account balances, contract storage etc
+    pub state_root: H256,
+    /// Amount of Cycles that the canister has
+    pub cycles: u128,
+    /// The gas limit for the block
+    pub block_gas_limit: u64,
+    /// The total number of blocks in the history
+    pub blocks_history_count: u64,
+    /// The total number of receipts in the history
+    pub receipts_history_count: u64,
+    /// The total number of transactions in the history
+    pub transactions_history_count: u64,
+}
+
+/// The limits for the blockchain storage
+#[derive(Debug, Copy, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BlockchainStorageLimits {
+    /// The maximum number of the blocks in the storage
+    pub blocks_max_history_size: u64,
+    /// The maximum number of the transactions and receipts in the storage
+    pub transactions_and_receipts_max_history_size: u64,
 }
 
 #[cfg(test)]

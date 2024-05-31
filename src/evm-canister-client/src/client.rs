@@ -7,7 +7,8 @@ use did::permission::{Permission, PermissionList};
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::{
-    BlockNumber, Bytes, EstimateGasRequest, Transaction, TransactionReceipt, H160, H256, U256, U64,
+    BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
+    TransactionReceipt, H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
@@ -493,7 +494,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Removes permissions from a principal and returns the principal permissions
     pub async fn admin_ic_permissions_remove(
-        &mut self,
+        &self,
         principal: Principal,
         permissions: Vec<Permission>,
     ) -> CanisterClientResult<Result<PermissionList>> {
@@ -509,6 +510,16 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ) -> CanisterClientResult<Result<PermissionList>> {
         self.client
             .query("admin_ic_permissions_get", (principal,))
+            .await
+    }
+
+    /// Sets the min gas price
+    pub async fn admin_set_min_gas_price(
+        &self,
+        min_gas_price: U256,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_min_gas_price", (min_gas_price,))
             .await
     }
 
@@ -531,10 +542,15 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("get_block_gas_limit", ()).await
     }
 
+    /// Returns the block size limit.
+    pub async fn get_block_size_limit(&self) -> CanisterClientResult<u64> {
+        self.client.query("get_block_size_limit", ()).await
+    }
+
     /// Returns the history size. This is the number of blocks for which any
     /// EVM state-related information can be acquired.
-    pub async fn get_history_size(&self) -> CanisterClientResult<u64> {
-        self.client.query("get_history_size", ()).await
+    pub async fn get_evm_state_history_size(&self) -> CanisterClientResult<u64> {
+        self.client.query("get_evm_state_history_size", ()).await
     }
 
     /// Returns the min gas price
@@ -612,6 +628,33 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Sets the block gas limit. This is the maximum amount of gas that can be
+    /// used in a block.
+    /// This function can only be called by the admin.
+    ///
+    /// # Arguments
+    /// * `limit` - the new block gas limit, this must be greater than 0
+    ///
+    /// # Errors
+    /// * `Internal` - if the block gas limit is 0
+    /// * `NotAuthorized` - if the caller is not the admin
+    pub async fn admin_set_block_gas_limit(&self, limit: u64) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_block_gas_limit", (limit,))
+            .await
+    }
+
+    /// Sets the history size - the number of blocks for which any
+    /// EVM state-related information can be acquired.
+    pub async fn admin_set_evm_state_history_size(
+        &self,
+        history_size: u64,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_evm_state_history_size", (history_size,))
+            .await
+    }
+
     /// Returns the execution result of a transaction by transaction hash.
     pub async fn get_tx_execution_result_by_hash(
         &self,
@@ -656,7 +699,8 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("is_empty_block_enabled", ()).await
     }
 
-    /// Resets the state of the EVM canister.
+    /// Manages the reset state of the EVM.
+    /// This endpoint is for initializing the EVM state or for recovering from a corrupted state.
     pub async fn admin_reset_state(
         &self,
         state: EvmResetState,
@@ -701,5 +745,48 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client
             .update("admin_set_transaction_processing_interval_secs", (secs,))
             .await
+    }
+
+    /// Returns number of WASM pages allocated for the given memory id
+    pub async fn memory_pages_allocated_for_id(&self, memory_id: u8) -> CanisterClientResult<u64> {
+        self.client
+            .query("memory_pages_allocated_for_id", (memory_id,))
+            .await
+    }
+
+    /// Set the blockchain size limit for transactions, receipts, and blocks.
+    pub async fn admin_set_blockchain_size_limit(
+        &self,
+        limit: BlockchainStorageLimits,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_blockchain_size_limit", (limit,))
+            .await
+    }
+
+    /// Sets the block size limit.
+    pub async fn admin_set_block_size_limit(
+        &self,
+        block_size: u64,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_block_size_limit", (block_size,))
+            .await
+    }
+
+    /// Allocates `pages` additional pages of stable storage memory.
+    /// Returns error in case when failed to allocate the missing pages.
+    pub async fn admin_reserve_stable_storage_pages(
+        &self,
+        pages: u64,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_reserve_stable_storage_pages", (pages,))
+            .await
+    }
+
+    /// Returns `EvmStats` which contains statistics for the Network
+    pub async fn ic_stats(&self) -> CanisterClientResult<Result<EvmStats>> {
+        self.client.query("ic_stats", ()).await
     }
 }

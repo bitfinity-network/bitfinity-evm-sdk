@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use candid::{CandidType, Deserialize};
-use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
+use ic_stable_structures::Storable;
 
 use crate::codec;
 
@@ -35,10 +35,6 @@ impl Storable for PermissionList {
     }
 
     const BOUND: ic_stable_structures::Bound = ic_stable_structures::Bound::Unbounded;
-}
-
-impl SlicedStorable for PermissionList {
-    const CHUNK_SIZE: ChunkSize = 32;
 }
 
 #[cfg(test)]
