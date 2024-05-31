@@ -105,4 +105,22 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
     pub async fn get_canister_build_data(&self) -> CanisterClientResult<BuildData> {
         self.client.query("get_canister_build_data", ()).await
     }
+
+    /// Adds the given principal to the whitelist.
+    pub async fn add_to_whitelist(
+        &self,
+        principal: Principal,
+    ) -> CanisterClientResult<McResult<()>> {
+        self.client.update("add_to_whitelist", (principal,)).await
+    }
+
+    /// Removes the given principal from the whitelist.
+    pub async fn remove_from_whitelist(
+        &self,
+        principal: Principal,
+    ) -> CanisterClientResult<McResult<()>> {
+        self.client
+            .update("remove_from_whitelist", (principal,))
+            .await
+    }
 }
