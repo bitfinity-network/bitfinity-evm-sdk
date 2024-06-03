@@ -16,8 +16,8 @@ pub enum Permission {
     ReadLogs,
     /// Allows calling the endpoints to set the logs configuration
     UpdateLogsConfiguration,
-    /// Allows caller to update blockchain history
-    UpdateBlockchain,
+    /// Allows caller to reset the EVM state
+    ResetEvmState,
 }
 
 #[derive(Debug, Clone, Default, CandidType, Deserialize, PartialEq, Eq, serde::Serialize)]
