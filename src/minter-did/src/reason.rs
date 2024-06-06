@@ -109,6 +109,29 @@ impl ApproveMintedTokens {
 
         Some(())
     }
+
+    /// Validate the nonce and expiration time.
+    ///
+    /// This is to prevent replay attacks.
+    pub fn validate(&self, expected_nonce: u32, time: u64) -> crate::error::Result<()> {
+        if self.expiration < time {
+            return Err(crate::error::Error::Internal(
+                format!("approve error: the approve expired at ts: {}", time).to_string(),
+            ));
+        }
+
+        if self.nonce != expected_nonce {
+            return Err(crate::error::Error::Internal(
+                format!(
+                    "approve error: invalid nonce: expected {}, got {}",
+                    expected_nonce, self.nonce
+                )
+                .to_string(),
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -172,5 +195,36 @@ mod tests {
         assert!(approve_data
             .check_signature(&wallet.address().into())
             .is_none());
+    }
+
+    #[test]
+    fn validate_nonce_and_expiration() {
+        let data = ApproveMintedTokens::new(
+            H160::default(),
+            U256::default(),
+            1,
+            50,
+            0,
+            Principal::from_slice(&[42; 20]),
+            did::transaction::Signature::default(),
+        );
+
+        let validate = data.validate(0, 100);
+
+        assert!(validate.is_err());
+
+        let err = validate.unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "internal error: approve error: the approve expired at ts: 100"
+        );
+
+        // nonce is invalid
+        let validate = data.validate(1, 49);
+        assert!(validate.is_err());
+
+        //valid data
+        let validate = data.validate(0, 49);
+        assert!(validate.is_ok());
     }
 }
