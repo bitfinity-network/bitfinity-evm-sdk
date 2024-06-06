@@ -701,10 +701,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Manages the reset state of the EVM.
     /// This endpoint is for initializing the EVM state or for recovering from a corrupted state.
-    pub async fn reset_state(
-        &self,
-        state: EvmResetState,
-    ) -> CanisterClientResult<Result<()>> {
+    pub async fn reset_state(&self, state: EvmResetState) -> CanisterClientResult<Result<()>> {
         self.client.update("reset_state", (state,)).await
     }
 
