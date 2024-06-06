@@ -39,60 +39,69 @@ pub struct ApproveMintedTokens {
     /// Approve minted tokens amount.
     pub approve_amount: U256,
 
-    /// Signed keccak256 hash of [ApproveMintSignature].
-    /// Required to prove caller's ownership of the wallet from which the minted tokens will be approved.
-    pub signature: Signature,
-}
-
-/// Represents the signature data required to approve minted tokens.
-///
-pub struct ApproveMintSignature {
-    pub approve_spender: H160,
-    pub approve_amount: U256,
     pub chain_id: u32,
     /// Expiration time in seconds since Unix epoch.
     pub expiration: u64,
     /// Nonce of the sender
     pub nonce: u32,
     pub token_principal: Principal,
+
+    /// Signed keccak256 hash of [ApproveMintSignature].
+    /// Required to prove caller's ownership of the wallet from which the minted tokens will be approved.
+    pub signature: Signature,
 }
 
-impl ApproveMintSignature {
-    /// Creates a new signature
+impl ApproveMintedTokens {
     pub fn new(
         approve_spender: H160,
         approve_amount: U256,
-        nonce: u32,
-        expiration: u64,
-        token_principal: Principal,
         chain_id: u32,
+        expiration: u64,
+        nonce: u32,
+        token_principal: Principal,
+        signature: Signature,
     ) -> Self {
         Self {
             approve_spender,
             approve_amount,
-            nonce,
-            expiration,
-            token_principal,
             chain_id,
+            expiration,
+            nonce,
+            token_principal,
+            signature,
         }
     }
 
     /// Hash of the signature data to be signed.
-    pub fn hash(&self) -> H256 {
+    pub fn hash(
+        approve_spender: &H160,
+        approve_amount: &U256,
+        chain_id: u32,
+        expiration: u64,
+        nonce: u32,
+        token_principal: Principal,
+    ) -> H256 {
         let mut data = Vec::new();
-        data.extend_from_slice(&self.approve_spender.to_bytes());
-        data.extend_from_slice(&self.approve_amount.to_little_endian());
-        data.extend_from_slice(&self.chain_id.to_le_bytes());
-        data.extend_from_slice(&self.expiration.to_le_bytes());
-        data.extend_from_slice(&self.nonce.to_le_bytes());
-        data.extend_from_slice(self.token_principal.as_slice());
+        data.extend_from_slice(&approve_spender.to_bytes());
+        data.extend_from_slice(&approve_amount.to_little_endian());
+        data.extend_from_slice(&chain_id.to_le_bytes());
+        data.extend_from_slice(&expiration.to_le_bytes());
+        data.extend_from_slice(&nonce.to_le_bytes());
+        data.extend_from_slice(token_principal.as_slice());
 
         keccak_hash(data.as_slice())
     }
 
-    pub fn check_signature(&self, signer: &H160, signature: Signature) -> Option<()> {
-        let eth_signature: ethers_core::types::Signature = signature.clone().into();
-        let hash = self.hash();
+    pub fn check_signature(&self, signer: &H160) -> Option<()> {
+        let eth_signature: ethers_core::types::Signature = self.signature.clone().into();
+        let hash = Self::hash(
+            &self.approve_spender,
+            &self.approve_amount,
+            self.chain_id,
+            self.expiration,
+            self.nonce,
+            self.token_principal,
+        );
         let recovered_signer = eth_signature.recover(hash.0).ok()?;
         if recovered_signer != signer.0 {
             return None;
@@ -105,37 +114,63 @@ impl ApproveMintSignature {
 #[cfg(test)]
 mod tests {
     use candid::Principal;
-    use did::keccak::keccak_hash;
     use did::{H160, U256};
     use eth_signer::{Signer, Wallet};
 
-    use super::ApproveMintSignature;
     use super::ApproveMintedTokens;
     #[test]
     fn should_accept_correct_signature() {
-        let principal = Principal::from_slice(&[42; 20]);
+        let token_principal = Principal::from_slice(&[42; 20]);
+        let approve_spender = H160::default();
+        let approve_amount = U256::default();
+
         let approve_signature_data =
-            ApproveMintSignature::new(H160::default(), U256::default(), 0, 0, principal, 0);
+            ApproveMintedTokens::hash(&approve_spender, &approve_amount, 1, 0, 0, token_principal);
 
         let wallet = Wallet::new(&mut rand::thread_rng());
-        let signature = wallet.sign_hash(approve_signature_data.hash().0).unwrap();
+        let signature = wallet.sign_hash(approve_signature_data.0).unwrap();
 
-        assert!(approve_signature_data
-            .check_signature(&wallet.address().into(), signature.into())
+        let approve_data = ApproveMintedTokens::new(
+            approve_spender,
+            approve_amount,
+            1,
+            0,
+            0,
+            token_principal,
+            signature.into(),
+        );
+
+        assert!(approve_data
+            .check_signature(&wallet.address().into())
             .is_some());
     }
 
     #[test]
     fn should_reject_invalid_signature() {
-        let principal = Principal::from_slice(&[42; 20]);
-        let mut approve_signature_data =
-            ApproveMintSignature::new(H160::default(), U256::default(), 0, 0, principal, 0);
-        let wallet = Wallet::new(&mut rand::thread_rng());
-        let signature = wallet.sign_hash(approve_signature_data.hash().0).unwrap();
+        let approve_signature_hash = ApproveMintedTokens::hash(
+            &H160::default(),
+            &U256::default(),
+            1,
+            0,
+            0,
+            Principal::from_slice(&[42; 20]),
+        );
 
-        approve_signature_data.token_principal = Principal::from_slice(&[43; 20]);
-        assert!(approve_signature_data
-            .check_signature(&wallet.address().into(), signature.into())
+        let wallet = Wallet::new(&mut rand::thread_rng());
+        let signature = wallet.sign_hash(approve_signature_hash.0).unwrap();
+
+        let approve_data = ApproveMintedTokens::new(
+            H160::default(),
+            U256::default(),
+            1,
+            0,
+            0,
+            Principal::from_slice(&[43; 20]),
+            signature.into(),
+        );
+
+        assert!(approve_data
+            .check_signature(&wallet.address().into())
             .is_none());
     }
 }
