@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 /// Information to perform burn operation for ICRC-2 token and create a mint order.
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct Icrc2Burn {
+    /// Principal from which tokens should be sent.
+    pub sender: Principal,
+
     /// Amount to burn;
     pub amount: U256,
 
