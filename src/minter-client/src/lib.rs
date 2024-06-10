@@ -5,7 +5,6 @@ use ic_canister_client::{CanisterClient, CanisterClientResult};
 use minter_did::error::Result as McResult;
 use minter_did::id256::Id256;
 use minter_did::order::SignedMintOrder;
-use minter_did::reason::Icrc2Burn;
 
 pub struct MinterCanisterClient<C> {
     client: C,
@@ -70,12 +69,6 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
     /// Returns the address of the BFT bridge contract in EVM canister.
     pub async fn get_bft_bridge_contract(&self) -> CanisterClientResult<McResult<Option<H160>>> {
         self.client.update("get_bft_bridge_contract", ()).await
-    }
-
-    /// Creates ERC-20 mint order for ICRC-2 tokens burning and sends it to the BFTBridge.
-    /// Returns operation id.
-    pub async fn burn_icrc2(&self, reason: Icrc2Burn) -> CanisterClientResult<McResult<u32>> {
-        self.client.update("burn_icrc2", (reason,)).await
     }
 
     /// Returns `(nonce, mint_order)` pairs for the given sender id.
