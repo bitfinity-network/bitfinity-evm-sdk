@@ -26,7 +26,6 @@ ic-log = { workspace = true }
 ic-stable-structures = { workspace = true }
 jsonrpc-core = { workspace = true }
 log = { workspace = true }
-murmur3 = { workspace = true }
 num = { workspace = true }
 once_cell = { workspace = true }
 rlp = { workspace = true }

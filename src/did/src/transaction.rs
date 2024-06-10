@@ -7,7 +7,7 @@ use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
 use alloy_rpc_types::transaction::{AccessList as AlloyAccessList, AccessListItem as AlloyAccessListItem, Transaction as AlloyTransaction};
 use alloy_rpc_types::Signature as AlloySignature;
-use ic_stable_structures::{Bound, ChunkSize, SlicedStorable, Storable};
+use ic_stable_structures::{Bound, Storable};
 use num::ToPrimitive;
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::{Deserializer, Serialize, Serializer};
@@ -389,11 +389,6 @@ impl Storable for Transaction {
     }
 }
 
-impl SlicedStorable for Transaction {
-    // Most of test transactions takes about 250 bytes
-    const CHUNK_SIZE: ic_stable_structures::ChunkSize = 256;
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 pub struct AccessListItem {
     pub address: H160,
@@ -654,10 +649,6 @@ impl Storable for StorableExecutionResult {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         codec::decode(&bytes)
     }
-}
-
-impl SlicedStorable for StorableExecutionResult {
-    const CHUNK_SIZE: ChunkSize = 512;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, RlpEncodable, RlpDecodable)]

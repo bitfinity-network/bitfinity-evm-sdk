@@ -1,7 +1,7 @@
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
 use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
-use ethers_core::types::{BlockNumber, Log, TransactionRequest, H160, H256};
+use ethers_core::types::{BlockNumber, Log, TransactionRequest, H160, H256, U256};
 
 const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
 const MAX_BATCH_SIZE: usize = 5;
@@ -34,6 +34,12 @@ async fn should_get_balance() {
         .await
         .unwrap();
     assert_eq!(result, 1409174700000000000u64.into());
+}
+
+#[tokio::test]
+async fn should_get_gas_price() {
+    let price = reqwest_client().gas_price().await.unwrap();
+    assert!(price > U256::zero());
 }
 
 #[tokio::test]

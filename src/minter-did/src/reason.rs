@@ -1,5 +1,7 @@
 use candid::{CandidType, Principal};
-use did::{keccak::keccak_hash, transaction::Signature, H160, U256};
+use did::keccak::keccak_hash;
+use did::transaction::Signature;
+use did::{H160, U256};
 use ic_exports::icrc_types::icrc1::account::Subaccount;
 use serde::Deserialize;
 
@@ -18,12 +20,14 @@ pub struct Icrc2Burn {
     /// Address of the Wrapped token recipient.
     pub recipient_address: H160,
 
-    /// This ID will be a key for stored MintOrder related with this ICRC-2 burn.
-    pub operation_id: u32,
-
     /// If user want's mint operation to approve minted tokens,
     /// he can use this field.
     pub approve_minted_tokens: Option<ApproveMintedTokens>,
+
+    /// Address from which fee should be charged for mint transaction
+    /// performed by minter canister.
+    /// If None, mint transaction will not be sent and user can send it by himself.
+    pub fee_payer: Option<H160>,
 }
 
 #[derive(Debug, Clone, Deserialize, CandidType)]
@@ -56,7 +60,8 @@ impl ApproveMintedTokens {
 #[cfg(test)]
 mod tests {
     use candid::Principal;
-    use did::{keccak::keccak_hash, H160, U256};
+    use did::keccak::keccak_hash;
+    use did::{H160, U256};
     use eth_signer::{Signer, Wallet};
 
     use super::ApproveMintedTokens;

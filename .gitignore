@@ -42,3 +42,6 @@ solidity/broadcast/
 *.wasm.gz
 
 .cargo
+
+# IDE files
+.idea

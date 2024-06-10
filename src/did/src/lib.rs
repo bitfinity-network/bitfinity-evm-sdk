@@ -10,6 +10,7 @@ pub mod certified;
 pub mod codec;
 pub mod constant;
 pub mod error;
+pub mod evm_reset_state;
 pub mod gas;
 pub mod hash;
 pub mod ic;
@@ -44,3 +45,4 @@ pub use integer::{U256, U64};
 pub use transaction::{BlockId, BlockNumber, Transaction, TransactionReceipt};
 
 pub use crate::bytes::Bytes;
+pub use crate::ic::*;

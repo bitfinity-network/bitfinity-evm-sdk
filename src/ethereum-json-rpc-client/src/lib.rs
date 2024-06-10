@@ -24,6 +24,7 @@ pub mod http_outcall;
 
 const ETH_CHAIN_ID_METHOD: &str = "eth_chainId";
 const ETH_GET_BALANCE_METHOD: &str = "eth_getBalance";
+const ETH_GAS_PRICE_METHOD: &str = "eth_gasPrice";
 const ETH_GET_CODE_METHOD: &str = "eth_getCode";
 const ETH_GET_TRANSACTION_COUNT_METHOD: &str = "eth_getTransactionCount";
 const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
@@ -35,6 +36,7 @@ const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 const IC_GET_GENESIS_BALANCES: &str = "ic_getGenesisBalances";
 const IC_GET_LAST_CERTIFIED_BLOCK: &str = "ic_getLastCertifiedBlock";
+const ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD: &str = "eth_maxPriorityFeePerGas";
 
 macro_rules! make_params_array {
     ($($items:expr),*) => {
@@ -161,6 +163,26 @@ impl<C: Client> EthJsonRpcClient<C> {
             ETH_GET_BALANCE_METHOD.to_string(),
             make_params_array!(address, block),
             Id::Str(ETH_GET_BALANCE_METHOD.to_string()),
+        )
+        .await
+    }
+
+    /// Returns the gas price
+    pub async fn gas_price(&self) -> anyhow::Result<U256> {
+        self.single_request(
+            ETH_GAS_PRICE_METHOD.to_string(),
+            make_params_array!(),
+            Id::Str(ETH_GAS_PRICE_METHOD.to_string()),
+        )
+        .await
+    }
+
+    /// Returns the max price per gas
+    pub async fn max_priority_fee_per_gas(&self) -> anyhow::Result<U256> {
+        self.single_request(
+            ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD.to_string(),
+            make_params_array!(),
+            Id::Str(ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD.to_string()),
         )
         .await
     }

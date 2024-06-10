@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use candid::{CandidType, Deserialize};
-use ic_stable_structures::{ChunkSize, SlicedStorable, Storable};
+use ic_stable_structures::Storable;
 
 use crate::codec;
 
@@ -16,8 +16,8 @@ pub enum Permission {
     ReadLogs,
     /// Allows calling the endpoints to set the logs configuration
     UpdateLogsConfiguration,
-    /// Allows caller to update blockchain history
-    UpdateBlockchain,
+    /// Allows caller to reset the EVM state
+    ResetEvmState,
 }
 
 #[derive(Debug, Clone, Default, CandidType, Deserialize, PartialEq, Eq, serde::Serialize)]
@@ -35,10 +35,6 @@ impl Storable for PermissionList {
     }
 
     const BOUND: ic_stable_structures::Bound = ic_stable_structures::Bound::Unbounded;
-}
-
-impl SlicedStorable for PermissionList {
-    const CHUNK_SIZE: ChunkSize = 32;
 }
 
 #[cfg(test)]
