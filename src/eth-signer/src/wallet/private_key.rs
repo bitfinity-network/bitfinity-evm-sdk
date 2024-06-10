@@ -2,9 +2,9 @@
 use std::borrow::Cow;
 use std::str::FromStr;
 
-use ethers_core::k256::ecdsa::{self, SigningKey};
-use ethers_core::rand::{CryptoRng, Rng};
-use ethers_core::utils;
+use alloy_signer::utils::secret_key_to_address;
+use k256::ecdsa::{self, SigningKey};
+use rand::{CryptoRng, Rng};
 use thiserror::Error;
 
 use super::Wallet;
@@ -30,7 +30,7 @@ impl<'a> Wallet<'a, SigningKey> {
     /// Creates a new random keypair seeded with the provided RNG
     pub fn new<R: Rng + CryptoRng>(rng: &mut R) -> Self {
         let signer = SigningKey::random(rng);
-        let address = utils::secret_key_to_address(&signer);
+        let address = secret_key_to_address(&signer);
         Self {
             signer: Cow::Owned(signer),
             address,
@@ -41,7 +41,7 @@ impl<'a> Wallet<'a, SigningKey> {
     /// Creates a new Wallet instance from a raw scalar value (big endian).
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, WalletError> {
         let signer = SigningKey::from_slice(bytes)?;
-        let address = utils::secret_key_to_address(&signer);
+        let address = secret_key_to_address(&signer);
         Ok(Self {
             signer: Cow::Owned(signer),
             address,
@@ -60,7 +60,7 @@ impl<'a> PartialEq for Wallet<'a, SigningKey> {
 
 impl From<SigningKey> for Wallet<'static, SigningKey> {
     fn from(signer: SigningKey) -> Self {
-        let address = utils::secret_key_to_address(&signer);
+        let address = secret_key_to_address(&signer);
 
         Self {
             signer: Cow::Owned(signer),
@@ -70,12 +70,10 @@ impl From<SigningKey> for Wallet<'static, SigningKey> {
     }
 }
 
-use ethers_core::k256::SecretKey as K256SecretKey;
-
 impl From<K256SecretKey> for Wallet<'static, SigningKey> {
     fn from(key: K256SecretKey) -> Self {
         let signer = key.into();
-        let address = utils::secret_key_to_address(&signer);
+        let address = secret_key_to_address(&signer);
 
         Self {
             signer: Cow::Owned(signer),
@@ -117,7 +115,9 @@ impl TryFrom<String> for Wallet<'static, SigningKey> {
 
 #[cfg(test)]
 mod tests {
-    use ethers_core::types::Address;
+
+    use alloy_primitives::{eip191_hash_message, Address};
+    use alloy_rpc_types::TransactionRequest;
 
     use super::*;
     use crate::Signer;
@@ -125,7 +125,7 @@ mod tests {
     #[tokio::test]
     async fn signs_msg() {
         let message = "Some data";
-        let hash = ethers_core::utils::hash_message(message);
+        let hash = eip191_hash_message(message);
         let key = Wallet::<SigningKey>::new(&mut rand::thread_rng());
         let address = key.address;
 
@@ -147,7 +147,6 @@ mod tests {
 
     #[tokio::test]
     async fn signs_tx() {
-        use ethers_core::types::{TransactionRequest, U64};
 
         use crate::TypedTransaction;
         // retrieved test vector from:
@@ -221,7 +220,6 @@ mod tests {
 
     #[test]
     fn signs_tx_empty_chain_id_sync() {
-        use ethers_core::types::TransactionRequest;
 
         use crate::TypedTransaction;
 

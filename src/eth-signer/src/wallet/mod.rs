@@ -1,14 +1,13 @@
 use std::borrow::Cow;
 use std::fmt;
 
+use alloy_primitives::{eip191_hash_message, Address, U256};
+use alloy_rpc_types::Signature;
 use async_trait::async_trait;
-use ethers_core::k256::ecdsa::signature::hazmat::PrehashSigner;
-use ethers_core::k256::ecdsa::{RecoveryId, Signature as RecoverableSignature};
-use ethers_core::k256::elliptic_curve::FieldBytes;
-use ethers_core::k256::Secp256k1;
-use ethers_core::types::transaction::eip2718::TypedTransaction;
-use ethers_core::types::{Address, Signature, H256, U256};
-use ethers_core::utils;
+use k256::ecdsa::signature::hazmat::PrehashSigner;
+use k256::ecdsa::{RecoveryId, Signature as RecoverableSignature};
+use k256::elliptic_curve::FieldBytes;
+use k256::Secp256k1;
 pub use private_key::WalletError;
 
 use crate::{to_eip155_v, Signer};
@@ -50,7 +49,7 @@ mod private_key;
 /// ```
 ///
 /// [`Signature`]: ethers_core::types::Signature
-/// [`hash_message`]: fn@ethers_core::utils::hash_message
+/// [`hash_message`]: fn@ethers_core::eip191_hash_message
 #[derive(Clone)]
 pub struct Wallet<'a, D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> {
     /// The Wallet's private Key
@@ -84,7 +83,7 @@ impl<'a, D: Sync + Send + PrehashSigner<(RecoverableSignature, RecoveryId)> + Cl
         message: S,
     ) -> Result<Signature, Self::Error> {
         let message = message.as_ref();
-        let message_hash = utils::hash_message(message);
+        let message_hash = eip191_hash_message(message);
 
         self.sign_hash(message_hash)
     }
@@ -128,22 +127,22 @@ impl<'a, D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Wallet<'a
         let mut sig = self.sign_hash(sighash)?;
 
         // sign_hash sets `v` to recid + 27, so we need to subtract 27 before normalizing
-        sig.v = to_eip155_v(sig.v as u8 - 27, chain_id);
+        sig.v = U256::from(to_eip155_v(sig.v as u8 - 27, chain_id));
         Ok(sig)
     }
 
     /// Signs the provided hash.
-    pub fn sign_hash(&self, hash: H256) -> Result<Signature, WalletError> {
+    pub fn sign_hash(&self, hash: alloy_primitives::B256) -> Result<Signature, WalletError> {
         let (recoverable_sig, recovery_id) = self.signer.sign_prehash(hash.as_ref())?;
 
-        let v = u8::from(recovery_id) as u64 + 27;
+        let v = U256::from(u8::from(recovery_id) as u64 + 27);
 
         let r_bytes: FieldBytes<Secp256k1> = recoverable_sig.r().into();
         let s_bytes: FieldBytes<Secp256k1> = recoverable_sig.s().into();
-        let r = U256::from_big_endian(r_bytes.as_slice());
-        let s = U256::from_big_endian(s_bytes.as_slice());
+        let r = U256::from_be_slice(r_bytes.as_slice());
+        let s = U256::from_be_slice(s_bytes.as_slice());
 
-        Ok(Signature { r, s, v })
+        Ok(Signature { r, s, v: v, y_parity: None})
     }
 
     /// Gets the wallet's signer

@@ -1,8 +1,8 @@
 use std::error::Error;
 
+use alloy_primitives::Address;
+use alloy_rpc_types::Signature;
 use async_trait::async_trait;
-use ethers_core::types::transaction::eip2718::TypedTransaction;
-use ethers_core::types::{Address, Signature};
 pub use wallet::{Wallet, WalletError};
 
 mod wallet;
@@ -13,7 +13,7 @@ pub mod sign_strategy;
 pub mod transaction;
 
 /// A wallet instantiated with a locally stored private key
-pub type LocalWallet<'a> = Wallet<'a, ethers_core::k256::ecdsa::SigningKey>;
+pub type LocalWallet<'a> = Wallet<'a, k256::ecdsa::SigningKey>;
 
 /// Applies [EIP155](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md)
 pub fn to_eip155_v<T: Into<u8>>(recovery_id: T, chain_id: u64) -> u64 {

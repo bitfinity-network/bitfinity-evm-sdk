@@ -15,13 +15,19 @@ repository.workspace = true
 ic_sign = ["ic-canister", "ic-exports"]
 
 [dependencies]
+alloy-consensus = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-rpc-types = { workspace = true }
+alloy-signer = { workspace = true }
 async-trait = { workspace = true }
 candid = { workspace = true }
 did = { path = "../did" }
-ethereum-types = { workspace = true }
-ethers-core = { workspace = true }
+# ethereum-types = { workspace = true }
+# ethers-core = { workspace = true }
 hex = { workspace = true }
+k256 = { workspace = true }
 ic-stable-structures = { workspace = true }
+rand = { workspace = true }
 serde = { workspace = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true }

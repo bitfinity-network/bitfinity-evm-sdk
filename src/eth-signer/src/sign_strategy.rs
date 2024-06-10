@@ -1,12 +1,10 @@
 use std::borrow::Cow;
 
+use alloy_signer::utils::secret_key_to_address;
 use async_trait::async_trait;
 use candid::CandidType;
-use did::transaction::Signature;
-use did::{codec, H160};
-use ethers_core::k256::ecdsa::{self, SigningKey};
-use ethers_core::types::transaction::eip2718::TypedTransaction;
-use ethers_core::utils;
+use did::{codec, transaction::Signature, H160};
+use k256::ecdsa::{self, SigningKey};
 #[cfg(feature = "ic_sign")]
 pub use ic_sign::{IcSigner, ManagementCanisterSigner, SigningKeyId};
 use ic_stable_structures::{Bound, Storable};
@@ -63,7 +61,7 @@ impl SigningStrategy {
         match self {
             SigningStrategy::Local { private_key } => {
                 let signer = SigningKey::from_slice(&private_key)?;
-                let address = utils::secret_key_to_address(&signer);
+                let address = secret_key_to_address(&signer);
                 let wallet = Wallet::new_with_signer(Cow::Owned(signer), address, chain_id);
                 Ok(TxSigner::Local(LocalTxSigner::new(wallet)))
             }
@@ -172,7 +170,7 @@ impl TransactionSigner for LocalTxSigner {
 
     async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature> {
         self.wallet
-            .sign_hash(ethereum_types::H256(digest))
+            .sign_hash(alloy_primitives::B256::new(digest))
             .map_err(TransactionSignerError::WalletError)
             .map(Into::into)
     }
@@ -414,7 +412,7 @@ mod test {
         let signer = signing_strategy.make_signer(42).unwrap();
         let digest = [42u8; 32];
         let signature = signer.sign_digest(digest).await.unwrap();
-        let recovered = ethers_core::types::Signature::from(signature)
+        let recovered = alloy_rpc_types::Signature::from(signature)
             .recover(digest)
             .unwrap();
         assert_eq!(recovered, signer.get_address().await.unwrap().0);
