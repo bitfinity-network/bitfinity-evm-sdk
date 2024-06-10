@@ -9,7 +9,6 @@ use alloy_rpc_types::transaction::{AccessList as AlloyAccessList, AccessListItem
 use alloy_rpc_types::Signature as AlloySignature;
 use ic_stable_structures::{Bound, Storable};
 use num::ToPrimitive;
-use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
 use sha3::Keccak256;
@@ -361,15 +360,15 @@ impl From<Transaction> for AlloyTransaction {
             from: tx.from.into(),
             to: tx.to.map(Into::into),
             value: tx.value.into(),
-            gas_price: tx.gas_price.map(|val| val.0.as),
-            gas: tx.gas.into(),
+            gas_price: tx.gas_price.map(|val| val.0.saturating_to()),
+            gas: tx.gas.0.saturating_to(),
             input: tx.input.into(),
             signature: Some(signature.into()),
-            transaction_type: tx.transaction_type.map(Into::into),
+            transaction_type: tx.transaction_type.map(|val| val.0.saturating_to()),
             access_list: tx.access_list.map(Into::into),
-            max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
-            max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
-            chain_id: tx.chain_id.map(Into::into),
+            max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(|val| val.0.saturating_to()),
+            max_fee_per_gas: tx.max_fee_per_gas.map(|val| val.0.saturating_to()),
+            chain_id: tx.chain_id.map(|val| val.0.saturating_to()),
             other: alloy_rpc_types::other::OtherFields::default(),
             max_fee_per_blob_gas: None,
             blob_versioned_hashes: None,
@@ -517,7 +516,7 @@ impl From<StorableExecutionResult> for TransactionReceipt {
                 };
 
                 ExeResultData {
-                    status: U64::one(),
+                    status: U64::from(1),
                     gas_used,
                     logs,
                     logs_bloom: *logs_bloom,

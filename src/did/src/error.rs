@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use candid::{CandidType, Deserialize};
 use jsonrpc_core::{Error, ErrorCode};
-use rlp::DecoderError;
+use alloy_rlp::Error as RlpError;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -93,15 +93,15 @@ impl From<String> for EvmError {
     }
 }
 
-impl From<DecoderError> for EvmError {
-    fn from(decode_error: DecoderError) -> Self {
-        Self::Internal(format!("rlp err: {decode_error}"))
+impl From<RlpError> for EvmError {
+    fn from(decode_error: RlpError) -> Self {
+        Self::Internal(format!("rlp err: {decode_error:?}"))
     }
 }
 
 impl From<serde_json::Error> for EvmError {
     fn from(err: serde_json::Error) -> Self {
-        Self::Internal(format!("JSON encoding error: {err}"))
+        Self::Internal(format!("JSON encoding error: {err:?}"))
     }
 }
 

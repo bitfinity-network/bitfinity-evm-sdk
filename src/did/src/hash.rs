@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
 
-use alloy_rlp::{RlpDecodable, RlpEncodable};
+use bytes::BufMut;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::Display;
@@ -10,7 +10,7 @@ use ic_stable_structures::{Bound, Bounded, Storable};
 use serde::Serialize;
 
 #[derive(
-    Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize, RlpEncodable, RlpDecodable, Display, Hash,
+    Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize, Display, Hash,
 )]
 #[serde(transparent)]
 pub struct Hash<T>(pub T);
@@ -187,55 +187,55 @@ impl CandidType for H256 {
     }
 }
 
-impl rlp::Encodable for H64 {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.rlp_append(s);
+impl alloy_rlp::Encodable for H64 {
+    fn encode(&self, out: &mut dyn BufMut) {
+        self.0.encode(out);
     }
 }
 
-impl rlp::Decodable for H64 {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        ethereum_types::H64::decode(rlp).map(Into::into)
+impl alloy_rlp::Decodable for H64 {
+    fn decode(data: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        alloy_primitives::B64::decode(data).map(Into::into)
     }
 }
 
-impl rlp::Encodable for H160 {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.rlp_append(s);
+impl alloy_rlp::Encodable for H160 {
+    fn encode(&self, out: &mut dyn BufMut) {
+        self.0.encode(out);
     }
 }
 
-impl rlp::Decodable for H160 {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        ethereum_types::H160::decode(rlp).map(Into::into)
+impl alloy_rlp::Decodable for H160 {
+    fn decode(data: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        alloy_primitives::Address::decode(data).map(Into::into)
     }
 }
 
-impl rlp::Encodable for H256 {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.rlp_append(s);
+impl alloy_rlp::Encodable for H256 {
+    fn encode(&self, out: &mut dyn BufMut) {
+        self.0.encode(out);
     }
 }
 
-impl rlp::Decodable for H256 {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        ethereum_types::H256::decode(rlp).map(Into::into)
+impl alloy_rlp::Decodable for H256 {
+    fn decode(data: &mut &[u8]) -> Result<Self, alloy_rlp::Error> {
+        alloy_primitives::B256::decode(data).map(Into::into)
     }
 }
 
 impl Bounded for H64 {
-    const MIN: H64 = Hash::<ethereum_types::H64>(ethereum_types::H64([u8::MIN; 8]));
-    const MAX: H64 = Hash::<ethereum_types::H64>(ethereum_types::H64([u8::MAX; 8]));
+    const MIN: H64 = Hash::<alloy_primitives::B64>(alloy_primitives::B64::new([u8::MIN; 8]));
+    const MAX: H64 = Hash::<alloy_primitives::B64>(alloy_primitives::B64::new([u8::MAX; 8]));
 }
 
 impl Bounded for H160 {
-    const MIN: H160 = Hash::<ethereum_types::H160>(ethereum_types::H160([u8::MIN; 20]));
-    const MAX: H160 = Hash::<ethereum_types::H160>(ethereum_types::H160([u8::MAX; 20]));
+    const MIN: H160 = Hash::<alloy_primitives::Address>(alloy_primitives::Address::new([u8::MIN; 20]));
+    const MAX: H160 = Hash::<alloy_primitives::Address>(alloy_primitives::Address::new([u8::MAX; 20]));
 }
 
 impl Bounded for H256 {
-    const MIN: H256 = Hash::<ethereum_types::H256>(ethereum_types::H256([u8::MIN; 32]));
-    const MAX: H256 = Hash::<ethereum_types::H256>(ethereum_types::H256([u8::MAX; 32]));
+    const MIN: H256 = Hash::<alloy_primitives::B256>(alloy_primitives::B256::new([u8::MIN; 32]));
+    const MAX: H256 = Hash::<alloy_primitives::B256>(alloy_primitives::B256::new([u8::MAX; 32]));
 }
 
 impl From<H64> for alloy_primitives::B64 {

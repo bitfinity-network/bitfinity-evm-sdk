@@ -1,11 +1,12 @@
 use std::fmt;
 use std::rc::Rc;
 
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 use candid::types::*;
 use candid::CandidType;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, RlpEncodable, RlpDecodable)]
 pub struct Bytes(pub bytes::Bytes);
 
 impl Bytes {
@@ -19,18 +20,6 @@ impl Bytes {
 
     pub fn to_hex_str(&self) -> String {
         format!("0x{self:x}")
-    }
-}
-
-impl rlp::Encodable for Bytes {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.rlp_append(s);
-    }
-}
-
-impl rlp::Decodable for Bytes {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        bytes::Bytes::decode(rlp).map(Into::into)
     }
 }
 

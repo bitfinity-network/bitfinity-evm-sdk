@@ -1,10 +1,13 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::hash::Hash;
 
+use alloy_rlp::Encodable;
+use bytes::BufMut;
 use candid::{CandidType, Deserialize};
-use alloy_primitives::Log as EthersLog;
+use alloy_primitives::Log as AlloyLog;
+use ic_stable_structures::stable_structures::vec;
 use ic_stable_structures::{Bound, Storable};
-use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::Serialize;
 use serde_json::{json, Value};
 
@@ -71,7 +74,7 @@ pub struct Block<TX> {
     pub uncles: Vec<H256>,
     /// Transactions
     #[serde(bound = "TX: serde::Serialize + serde::de::DeserializeOwned", default)]
-    pub transactions: Vec<TX>,
+    pub transactions: TX,
     /// Size in bytes
     pub size: Option<U256>,
     /// Mix Hash
@@ -84,7 +87,7 @@ pub struct Block<TX> {
     pub base_fee_per_gas: Option<U256>,
 }
 
-impl Block<H256> {
+impl Block<Transactions<H256>> {
     pub fn with_state_root(state_root: H256) -> Self {
         Self {
             hash: H256::zero(),
@@ -116,7 +119,7 @@ impl Block<H256> {
     pub fn into_full_block(
         self,
         transactions: Vec<Transaction>,
-    ) -> Result<Block<Transaction>, EvmError> {
+    ) -> Result<Block<Transactions>, EvmError> {
         let mut transactions_by_hash: HashMap<_, _> = transactions
             .into_iter()
             .map(|tx| (tx.hash.clone(), tx))
@@ -157,14 +160,14 @@ impl Block<H256> {
     }
 }
 
-impl Default for Block<H256> {
+impl Default for Block<Transactions<H256>> {
     fn default() -> Self {
         Block::with_state_root(KECCAK_NULL_RLP)
     }
 }
 
-impl From<Block<Transaction>> for Block<H256> {
-    fn from(block: Block<Transaction>) -> Self {
+impl From<Block<Transactions>> for Block<Transactions<H256>> {
+    fn from(block: Block<Transactions>) -> Self {
         Self {
             hash: block.hash,
             parent_hash: block.parent_hash,
@@ -196,106 +199,141 @@ impl From<Block<Transaction>> for Block<H256> {
     }
 }
 
-impl Encodable for Block<Transaction> {
-    fn rlp_append(&self, s: &mut RlpStream) {
-        s.begin_list(3); // block header, transactions, other block headers
+// impl Encodable for Block<Transaction> {
+//     fn rlp_append(&self, s: &mut RlpStream) {
+//         s.begin_list(3); // block header, transactions, other block headers
 
-        // Block header
-        block_header_rlp(self, s);
+//         // Block header
+//         block_header_rlp(self, s);
 
-        // Block transactions
-        s.begin_list(self.transactions.len());
-        for transaction in &self.transactions {
-            let transaction = alloy_rpc_types::Transaction::from(transaction.clone());
-            s.append_raw(&transaction.rlp(), 1);
-        }
+//         // Block transactions
+//         s.begin_list(self.transactions.len());
+//         for transaction in &self.transactions {
+//             let transaction = alloy_rpc_types::Transaction::from(transaction.clone());
+//             s.append_raw(&transaction.rlp(), 1);
+//         }
 
-        // Uncles block headers. Currently not supported
-        {
-            s.begin_list(0);
-        }
-    }
-}
+//         // Uncles block headers. Currently not supported
+//         {
+//             s.begin_list(0);
+//         }
+//     }
+// }
 
-fn block_header_rlp<T>(block: &Block<T>, s: &mut RlpStream) {
-    // Block header
+
+fn block_header_rlp<T>(block: &Block<T>, out: &mut dyn BufMut) {
     let len = 15 + (block.base_fee_per_gas.is_some() as usize);
 
-    s.begin_list(len);
-    s.append(&block.parent_hash);
-    s.append(&block.uncles_hash);
-    s.append(&block.author);
-    s.append(&block.state_root);
-    s.append(&block.transactions_root);
-    s.append(&block.receipts_root);
-    s.append(&block.logs_bloom);
-    s.append(&block.difficulty);
-    s.append(&block.number);
-    s.append(&block.gas_limit);
-    s.append(&block.gas_used);
-    s.append(&block.timestamp);
-    s.append(&block.extra_data);
-    s.append(&block.mix_hash);
-    s.append(&block.nonce);
+    // Create a header indicating the encoded content is a list with the payload length computed
+    // from the header's payload calculation function.
+    let list_header =
+        alloy_rlp::Header { list: true, payload_length: len };
+    list_header.encode(out);
 
-    if let Some(base_fee) = block.base_fee_per_gas.as_ref() {
-        s.append(base_fee);
+    // Encode each header field sequentially
+    block.parent_hash.encode(out); // Encode parent hash.
+    block.uncles_hash.encode(out); // Encode ommer's hash.
+    block.author.encode(out); // Encode beneficiary.
+    block.state_root.encode(out); // Encode state root.
+    block.transactions_root.encode(out); // Encode transactions root.
+    block.receipts_root.encode(out); // Encode receipts root.
+    block.logs_bloom.encode(out); // Encode logs bloom.
+    block.difficulty.encode(out); // Encode difficulty.
+    block.number.encode(out); // Encode block number.
+    block.gas_limit.encode(out); // Encode gas limit.
+    block.gas_used.encode(out); // Encode gas used.
+    block.timestamp.encode(out); // Encode timestamp.
+    block.extra_data.encode(out); // Encode extra data.
+    block.mix_hash.encode(out); // Encode mix hash.
+    block.nonce.encode(out); // Encode nonce.
+
+    // Encode base fee. Put empty list if base fee is missing,
+    // but withdrawals root is present.
+    if let Some(ref base_fee) = block.base_fee_per_gas {
+        base_fee.encode(out);
     }
+
 }
 
-impl Decodable for Block<Transaction> {
-    fn decode(r: &Rlp) -> Result<Self, DecoderError> {
-        let header = r.at(0)?;
-        let item_count = header.item_count()?;
+// fn block_header_rlp<T>(block: &Block<T>, s: &mut RlpStream) {
+//     // Block header
+//     let len = 15 + (block.base_fee_per_gas.is_some() as usize);
 
-        let mut block = Self {
-            parent_hash: header.val_at(0)?,
-            uncles_hash: header.val_at(1)?,
-            author: header.val_at(2)?,
-            state_root: header.val_at(3)?,
-            transactions_root: header.val_at(4)?,
-            receipts_root: header.val_at(5)?,
-            logs_bloom: header.val_at(6)?,
-            difficulty: header.val_at(7)?,
-            number: header.val_at(8)?,
-            gas_limit: header.val_at(9)?,
-            gas_used: header.val_at(10)?,
-            timestamp: header.val_at(11)?,
-            extra_data: header.val_at::<Vec<_>>(12)?.into(),
-            mix_hash: header.val_at(13)?,
-            nonce: header.val_at(14)?,
-            hash: Default::default(),
-            total_difficulty: Default::default(),
-            seal_fields: Vec::new(),
-            uncles: Vec::new(),
-            transactions: Vec::new(),
-            size: None,
-            base_fee_per_gas: if item_count > 15 {
-                Some(header.val_at(15)?)
-            } else {
-                None
-            },
-        };
+//     s.begin_list(len);
+//     s.append(&block.parent_hash);
+//     s.append(&block.uncles_hash);
+//     s.append(&block.author);
+//     s.append(&block.state_root);
+//     s.append(&block.transactions_root);
+//     s.append(&block.receipts_root);
+//     s.append(&block.logs_bloom);
+//     s.append(&block.difficulty);
+//     s.append(&block.number);
+//     s.append(&block.gas_limit);
+//     s.append(&block.gas_used);
+//     s.append(&block.timestamp);
+//     s.append(&block.extra_data);
+//     s.append(&block.mix_hash);
+//     s.append(&block.nonce);
 
-        let transactions = r.at(1)?;
-        let transactions_count = transactions.item_count()?;
-        block.transactions.reserve(transactions_count);
-        for i in 0..transactions_count {
-            let transaction_rlp = transactions.at(i)?;
-            let tx = alloy_rpc_types::Transaction::decode(&transaction_rlp)?;
+//     if let Some(base_fee) = block.base_fee_per_gas.as_ref() {
+//         s.append(base_fee);
+//     }
+// }
 
-            block.transactions.push(tx.into());
-        }
+// impl Decodable for Block<Transaction> {
+//     fn decode(r: &Rlp) -> Result<Self, DecoderError> {
+//         let header = r.at(0)?;
+//         let item_count = header.item_count()?;
 
-        Ok(block)
-    }
-}
+//         let mut block = Self {
+//             parent_hash: header.val_at(0)?,
+//             uncles_hash: header.val_at(1)?,
+//             author: header.val_at(2)?,
+//             state_root: header.val_at(3)?,
+//             transactions_root: header.val_at(4)?,
+//             receipts_root: header.val_at(5)?,
+//             logs_bloom: header.val_at(6)?,
+//             difficulty: header.val_at(7)?,
+//             number: header.val_at(8)?,
+//             gas_limit: header.val_at(9)?,
+//             gas_used: header.val_at(10)?,
+//             timestamp: header.val_at(11)?,
+//             extra_data: header.val_at::<Vec<_>>(12)?.into(),
+//             mix_hash: header.val_at(13)?,
+//             nonce: header.val_at(14)?,
+//             hash: Default::default(),
+//             total_difficulty: Default::default(),
+//             seal_fields: Vec::new(),
+//             uncles: Vec::new(),
+//             transactions: Vec::new(),
+//             size: None,
+//             base_fee_per_gas: if item_count > 15 {
+//                 Some(header.val_at(15)?)
+//             } else {
+//                 None
+//             },
+//         };
+
+//         let transactions = r.at(1)?;
+//         let transactions_count = transactions.item_count()?;
+//         block.transactions.reserve(transactions_count);
+//         for i in 0..transactions_count {
+//             let transaction_rlp = transactions.at(i)?;
+//             let tx = alloy_rpc_types::Transaction::decode(&transaction_rlp)?;
+
+//             block.transactions.push(tx.into());
+//         }
+
+//         Ok(block)
+//     }
+// }
 
 /// Calculate the hash of a block
 pub fn calculate_block_hash<T>(block: &Block<T>) -> H256 {
-    let mut rlp = RlpStream::new();
+    let mut rlp = vec![];
     block_header_rlp(block, &mut rlp);
-    keccak_hash(&rlp.out())
+    keccak_hash(&rlp)
 }
 
 /// Calculate the size of a block in bytes considering all of its transactions
@@ -343,7 +381,7 @@ pub fn calculate_next_block_base_fee(
         .unwrap_or_default();
 
     if parent_gas_used > &gas_target {
-        let base_fee_delta = std::cmp::max(U256::one(), base_fee_per_gas_delta);
+        let base_fee_delta = std::cmp::max(U256::from(1u64), base_fee_per_gas_delta);
         parent_base_fee + &base_fee_delta
     } else {
         parent_base_fee
@@ -364,34 +402,107 @@ impl Storable for Block<H256> {
     }
 }
 
-// impl<D, T: From<D>> From<alloy_rpc_types::Block<D>> for Block<T> {
-//     fn from(block: ethers_core::types::Block<D>) -> Self {
-//         Block {
-//             hash: block.hash.map(Into::into).unwrap_or_default(),
-//             parent_hash: block.parent_hash.into(),
-//             uncles_hash: block.uncles_hash.into(),
-//             author: block.author.map(Into::into).unwrap_or_default(),
-//             state_root: block.state_root.into(),
-//             transactions_root: block.transactions_root.into(),
-//             receipts_root: block.receipts_root.into(),
-//             number: block.number.map(Into::into).unwrap_or_default(),
-//             gas_used: block.gas_used.into(),
-//             gas_limit: block.gas_limit.into(),
-//             extra_data: block.extra_data.into(),
-//             logs_bloom: block.logs_bloom.map(Into::into).unwrap_or_default(),
-//             timestamp: block.timestamp.into(),
-//             difficulty: block.difficulty.into(),
-//             total_difficulty: block.total_difficulty.map(Into::into).unwrap_or_default(),
-//             seal_fields: block.seal_fields.into_iter().map(Into::into).collect(),
-//             uncles: block.uncles.into_iter().map(Into::into).collect(),
-//             transactions: block.transactions.into_iter().map(Into::into).collect(),
-//             size: block.size.map(Into::into),
-//             mix_hash: block.mix_hash.map(Into::into).unwrap_or_default(),
-//             nonce: block.nonce.map(Into::into).unwrap_or_default(),
-//             base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
-//         }
-//     }
-// }
+impl From<alloy_rpc_types::Block> for Block<BlockTransactions> {
+    fn from(block: alloy_rpc_types::Block) -> Self {
+
+        // There are no seal fields in the Alloy block
+        let TODO_SEAL_FIELDS = vec![];
+
+        Block {
+            hash: block.header.hash.map(Into::into).unwrap_or_default(),
+            parent_hash: block.header.parent_hash.into(),
+            uncles_hash: block.header.uncles_hash.into(),
+            author: block.header.miner.into(),
+            state_root: block.header.state_root.into(),
+            transactions_root: block.header.transactions_root.into(),
+            receipts_root: block.header.receipts_root.into(),
+            number: block.header.number.map(Into::into).unwrap_or_default(),
+            gas_used: block.header.gas_used.into(),
+            gas_limit: block.header.gas_limit.into(),
+            extra_data: block.header.extra_data.into(),
+            logs_bloom: block.header.logs_bloom.into(),
+            timestamp: block.header.timestamp.into(),
+            difficulty: block.header.difficulty.into(),
+            total_difficulty: block.header.total_difficulty.map(Into::into).unwrap_or_default(),
+            seal_fields: TODO_SEAL_FIELDS,
+            uncles: block.uncles.into_iter().map(Into::into).collect(),
+            transactions: block.transactions.into(),
+            size: block.size.map(Into::into),
+            mix_hash: block.header.mix_hash.map(Into::into).unwrap_or_default(),
+            nonce: block.header.nonce.map(Into::into).unwrap_or_default(),
+            base_fee_per_gas: block.header.base_fee_per_gas.map(Into::into),
+        }
+    }
+}
+
+impl<T> From<&Block<T>> for alloy_rpc_types::Header {
+    fn from(block: &Block<T>) -> Self {
+        alloy_rpc_types::Header {
+            hash: Some(block.hash.clone().into()),
+            parent_hash: block.parent_hash.clone().into(),
+            uncles_hash: block.uncles_hash.clone().into(),
+            miner: block.author.clone().into(),
+            state_root: block.state_root.clone().into(),
+            transactions_root: block.transactions_root.clone().into(),
+            receipts_root: block.receipts_root.clone().into(),
+            number: Some(block.number.into()),
+            gas_used: block.gas_used.0.saturating_to(),
+            gas_limit: block.gas_limit.0.saturating_to(),
+            extra_data: block.extra_data.clone().into(),
+            logs_bloom: block.logs_bloom.clone().into(),
+            timestamp: block.timestamp.0.saturating_to(),
+            difficulty: block.difficulty.clone().into(),
+            total_difficulty: Some(block.total_difficulty.clone().into()),
+            mix_hash: Some(block.mix_hash.clone().into()),
+            nonce: Some(block.nonce.clone().into()),
+            base_fee_per_gas: block.base_fee_per_gas.clone().map(|val| val.0.saturating_to()),
+            withdrawals_root: None,
+            blob_gas_used: None,
+            excess_blob_gas: None,
+            parent_beacon_block_root: None,
+        }
+    }
+}
+
+impl From<Block<BlockTransactions>> for alloy_rpc_types::Block {
+    fn from(block: Block<BlockTransactions>) -> Self {
+        let header = alloy_rpc_types::Header {
+            hash: Some(block.hash.into()),
+            parent_hash: block.parent_hash.into(),
+            uncles_hash: block.uncles_hash.into(),
+            miner: block.author.into(),
+            state_root: block.state_root.into(),
+            transactions_root: block.transactions_root.into(),
+            receipts_root: block.receipts_root.into(),
+            number: Some(block.number.into()),
+            gas_used: block.gas_used.0.saturating_to(),
+            gas_limit: block.gas_limit.0.saturating_to(),
+            extra_data: block.extra_data.into(),
+            logs_bloom: block.logs_bloom.into(),
+            timestamp: block.timestamp.0.saturating_to(),
+            difficulty: block.difficulty.into(),
+            total_difficulty: Some(block.total_difficulty.into()),
+            mix_hash: Some(block.mix_hash.into()),
+            nonce: Some(block.nonce.into()),
+            base_fee_per_gas: block.base_fee_per_gas.map(|val| val.0.saturating_to()),
+            withdrawals_root: None,
+            blob_gas_used: None,
+            excess_blob_gas: None,
+            parent_beacon_block_root: None,
+        };
+
+        let block = alloy_rpc_types::Block {
+            header,
+            uncles: block.uncles.into_iter().map(Into::into).collect(),
+            transactions: block.transactions.into(),
+            size: block.size.map(Into::into),
+            withdrawals: None,
+            other: Default::default(),
+        };
+
+        block
+    }
+}
 
 // impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T>
 // where
@@ -443,21 +554,22 @@ pub struct TransactionExecutionLog {
     pub data: Bytes,
 }
 
-impl rlp::Encodable for TransactionExecutionLog {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        s.begin_list(3);
-        s.append(&self.address);
-        s.append_list(&self.topics);
-        s.append(&self.data.0);
-    }
-}
+// impl rlp::Encodable for TransactionExecutionLog {
+//     fn rlp_append(&self, s: &mut rlp::RlpStream) {
+//         s.begin_list(3);
+//         s.append(&self.address);
+//         s.append_list(&self.topics);
+//         s.append(&self.data.0);
+//     }
+// }
 
-impl From<EthersLog> for TransactionExecutionLog {
-    fn from(log: EthersLog) -> Self {
+impl From<AlloyLog> for TransactionExecutionLog {
+    fn from(log: AlloyLog) -> Self {
+        let (topics, data) = log.data.split();
         Self {
             address: log.address.into(),
-            topics: log.topics().into_iter().map(|h| h.into()).collect(),
-            data: log.data.0.into(),
+            topics: topics.into_iter().map(|h| h.into()).collect(),
+            data: data.into(),
         }
     }
 }
@@ -554,6 +666,52 @@ impl BlockResult {
             BlockResult::WithHash(block) => json!(block),
             BlockResult::WithTransaction(block) => json!(block),
             BlockResult::NoBlockFound => Value::Null,
+        }
+    }
+}
+
+pub type Transactions<T = Transaction> = Vec<T>;
+
+/// Block Transactions depending on the boolean attribute of `eth_getBlockBy*`,
+/// or if used by `eth_getUncle*`
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum BlockTransactions<T = Transaction> {
+    /// Only hashes
+    Hashes(Vec<H256>),
+    /// Full transactions
+    Full(Vec<T>),
+    /// Special case for uncle response.
+    Uncle,
+}
+
+impl From<alloy_rpc_types::BlockTransactions> for BlockTransactions {
+    fn from(block_txs: alloy_rpc_types::BlockTransactions) -> Self {
+        match block_txs {
+            alloy_rpc_types::BlockTransactions::Hashes(hashes) => {
+                BlockTransactions::Hashes(hashes.into_iter().map(Into::into).collect())
+            }
+            alloy_rpc_types::BlockTransactions::Full(txs) => {
+                BlockTransactions::Full(txs.into_iter().map(Into::into).collect())
+            }
+            alloy_rpc_types::BlockTransactions::Uncle => BlockTransactions::Uncle,
+        }
+    }
+}
+
+impl<T> From<BlockTransactions<T>> for alloy_rpc_types::BlockTransactions
+where
+    T: Into<alloy_rpc_types::Transaction>,
+{
+    fn from(block_txs: BlockTransactions<T>) -> Self {
+        match block_txs {
+            BlockTransactions::Hashes(hashes) => {
+                alloy_rpc_types::BlockTransactions::Hashes(hashes.into_iter().map(Into::into).collect())
+            }
+            BlockTransactions::Full(txs) => {
+                alloy_rpc_types::BlockTransactions::Full(txs.into_iter().map(Into::into).collect())
+            }
+            BlockTransactions::Uncle => alloy_rpc_types::BlockTransactions::Uncle,
         }
     }
 }

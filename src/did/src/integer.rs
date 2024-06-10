@@ -4,6 +4,7 @@ use std::ops::{Add, AddAssign, Mul, Sub};
 use std::rc::Rc;
 use std::str::FromStr;
 
+use alloy_rlp::{RlpDecodable, RlpEncodable};
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize, Nat};
 use derive_more::{From, Into};
@@ -11,7 +12,7 @@ use ic_stable_structures::{Bound, Bounded, Storable};
 use num::BigUint;
 use serde::Serialize;
 #[derive(
-    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into,
+    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into, RlpEncodable, RlpDecodable,
 )]
 #[serde(transparent)]
 pub struct U256(pub alloy_primitives::U256);
@@ -30,18 +31,19 @@ pub struct U256(pub alloy_primitives::U256);
     Hash,
     From,
     Into,
+    RlpEncodable, RlpDecodable,
 )]
 #[serde(transparent)]
 pub struct U64(pub alloy_primitives::U64);
 
 impl Bounded for U256 {
-    const MIN: U256 = U256(ethereum_types::U256::zero());
-    const MAX: U256 = U256(ethereum_types::U256::max_value());
+    const MIN: U256 = U256(alloy_primitives::U256::ZERO);
+    const MAX: U256 = U256(alloy_primitives::U256::MAX);
 }
 
 impl Bounded for U64 {
-    const MIN: U64 = U64(ethereum_types::U64::zero());
-    const MAX: U64 = U64(ethereum_types::U64::max_value());
+    const MIN: U64 = U64(alloy_primitives::U64::ZERO);
+    const MAX: U64 = U64(alloy_primitives::U64::MAX);
 }
 
 impl U256 {
@@ -70,10 +72,6 @@ impl U256 {
 
     pub const fn zero() -> Self {
         Self(alloy_primitives::U256::ZERO)
-    }
-
-    pub const fn one() -> Self {
-        Self(alloy_primitives::U256::from(1u64))
     }
 
     pub fn is_zero(&self) -> bool {
@@ -139,10 +137,6 @@ impl U64 {
 
     pub const fn zero() -> Self {
         Self(alloy_primitives::U64::ZERO)
-    }
-
-    pub const fn one() -> Self {
-        Self(alloy_primitives::U64::from(1u64))
     }
 
     pub fn is_zero(&self) -> bool {
@@ -322,17 +316,17 @@ impl Sub for U64 {
     }
 }
 
-impl rlp::Encodable for U256 {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.rlp_append(s);
-    }
-}
+// impl rlp::Encodable for U256 {
+//     fn rlp_append(&self, s: &mut rlp::RlpStream) {
+//         self.0.rlp_append(s);
+//     }
+// }
 
-impl rlp::Decodable for U256 {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        alloy_primitives::U256::decode(rlp).map(Into::into)
-    }
-}
+// impl rlp::Decodable for U256 {
+//     fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
+//         alloy_primitives::U256::decode(rlp).map(Into::into)
+//     }
+// }
 
 impl fmt::Display for U256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -346,17 +340,17 @@ impl fmt::LowerHex for U256 {
     }
 }
 
-impl rlp::Encodable for U64 {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.0.rlp_append(s);
-    }
-}
+// impl rlp::Encodable for U64 {
+//     fn rlp_append(&self, s: &mut rlp::RlpStream) {
+//         self.0.0.rlp_append(s);
+//     }
+// }
 
-impl rlp::Decodable for U64 {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        alloy_primitives::U64::decode(rlp).map(Into::into)
-    }
-}
+// impl rlp::Decodable for U64 {
+//     fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
+//         alloy_primitives::U64::decode(rlp).map(Into::into)
+//     }
+// }
 
 impl fmt::Display for U64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
