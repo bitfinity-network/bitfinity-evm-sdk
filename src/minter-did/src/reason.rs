@@ -3,10 +3,10 @@ use did::keccak::keccak_hash;
 use did::transaction::Signature;
 use did::{H160, U256};
 use ic_exports::icrc_types::icrc1::account::Subaccount;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Information to perform burn operation for ICRC-2 token and create a mint order.
-#[derive(Debug, Clone, Deserialize, CandidType)]
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct Icrc2Burn {
     /// Amount to burn;
     pub amount: U256,
@@ -30,7 +30,7 @@ pub struct Icrc2Burn {
     pub fee_payer: Option<H160>,
 }
 
-#[derive(Debug, Clone, Deserialize, CandidType)]
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct ApproveMintedTokens {
     /// Approve minted tokens for this address.
     pub approve_spender: H160,
