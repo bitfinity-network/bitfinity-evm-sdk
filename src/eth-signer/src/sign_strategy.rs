@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use alloy_consensus::TypedTransaction;
 use alloy_signer::utils::secret_key_to_address;
 use async_trait::async_trait;
 use candid::CandidType;
@@ -194,7 +195,7 @@ impl Serialize for LocalTxSigner {
         let chain_id = self.wallet.chain_id();
         let serialization_data = WalletSerializationData {
             signing_key_bytes: &signing_key_bytes,
-            address_bytes: address.as_bytes(),
+            address_bytes: address.as_slice(),
             chain_id,
         };
 

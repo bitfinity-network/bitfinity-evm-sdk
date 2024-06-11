@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt;
 
+use alloy_consensus::{Transaction, TypedTransaction};
 use alloy_primitives::{eip191_hash_message, Address, U256};
 use alloy_rpc_types::Signature;
 use async_trait::async_trait;
@@ -119,7 +120,7 @@ impl<'a, D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Wallet<'a
     /// does not specify one.
     pub fn sign_transaction_sync(&self, tx: &TypedTransaction) -> Result<Signature, WalletError> {
         // rlp (for sighash) must have the same chain id as v in the signature
-        let chain_id = tx.chain_id().map(|id| id.as_u64()).unwrap_or(self.chain_id);
+        let chain_id = tx.chain_id().unwrap_or(self.chain_id);
         let mut tx = tx.clone();
         tx.set_chain_id(chain_id);
 

@@ -5,6 +5,8 @@ edition = "2021"
 
 
 [dependencies]
+alloy-primitives = { workspace = true }
+alloy-rpc-types = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 clap = { workspace = true }
@@ -13,7 +15,6 @@ env_logger = { workspace = true }
 ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = [
     "reqwest",
 ] }
-ethers-core = { workspace = true }
 futures = { workspace = true }
 hex = { workspace = true }
 jsonrpc-core = { workspace = true }

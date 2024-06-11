@@ -1,11 +1,11 @@
 use std::fmt;
 
+use alloy_consensus::TypedTransaction;
+use alloy_primitives::{Address, SignatureError, B160};
+use alloy_rpc_types::Signature;
 use candid::{CandidType, Principal};
-use ethers_core::k256::elliptic_curve::sec1::ToEncodedPoint;
-use ethers_core::k256::PublicKey;
-use ethers_core::types::transaction::eip2718::TypedTransaction;
-use ethers_core::types::{Signature, SignatureError, H160};
-use ethers_core::utils;
+use k256::elliptic_curve::sec1::ToEncodedPoint;
+use k256::PublicKey;
 use ic_canister::virtual_canister_call;
 use ic_exports::ic_cdk::api::call::RejectionCode;
 use ic_exports::ic_cdk::api::management_canister::ecdsa::{
@@ -103,7 +103,7 @@ impl IcSigner {
     /// Signs the digest using `ManagementCanister::sign_with_ecdsa()` call.
     pub async fn sign_digest(
         &self,
-        canister_address: &H160,
+        canister_address: &Address,
         digest: [u8; 32],
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
@@ -127,8 +127,8 @@ impl IcSigner {
         .map_err(|(code, msg)| IcSignerError::SigningFailed(code, msg))?
         .signature;
 
-        let r = ethers_core::types::U256::from_big_endian(&signature_data[0..32]);
-        let s = ethers_core::types::U256::from_big_endian(&signature_data[32..64]);
+        let r = alloy_primitives::U256::from_be_slice(&signature_data[0..32]);
+        let s = alloy_primitives::U256::from_be_slice(&signature_data[32..64]);
 
         // Signature malleability check is not required, because DFinity uses `k256` crate
         // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
@@ -176,7 +176,7 @@ impl IcSigner {
     }
 
     /// Convert public key to ethereum address.
-    pub fn pubkey_to_address(&self, pubkey: &[u8]) -> Result<H160, IcSignerError> {
+    pub fn pubkey_to_address(&self, pubkey: &[u8]) -> Result<Address, IcSignerError> {
         let uncompressed_public_key =
             PublicKey::from_sec1_bytes(pubkey).map_err(|_| IcSignerError::InvalidPublicKey)?;
 
@@ -187,16 +187,17 @@ impl IcSigner {
 
         let mut bytes = [0u8; 20];
         bytes.copy_from_slice(&hash[12..]);
-        Ok(H160::from_slice(&bytes))
+        Ok(Address::from_slice(&bytes))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use alloy_consensus::TypedTransaction;
+    use alloy_primitives::B256;
+    use alloy_rpc_types::TransactionRequest;
     use candid::Principal;
-    use ethers_core::k256::ecdsa::SigningKey;
-    use ethers_core::types::transaction::eip2718::TypedTransaction;
-    use ethers_core::types::{TransactionRequest, H160, H256};
+    use k256::ecdsa::SigningKey;
     use ic_canister::register_virtual_responder;
     use ic_exports::ic_cdk::api::management_canister::ecdsa::{
         EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
@@ -220,7 +221,7 @@ mod tests {
             "sign_with_ecdsa",
             move |args: (SignWithEcdsaArgument,)| {
                 let hash = args.0.message_hash;
-                let h256 = H256::from_slice(&hash);
+                let h256 = B256::from_slice(&hash);
                 let signature = wallet_to_sign.sign_hash(h256).unwrap();
                 SignWithEcdsaResponse {
                     signature: signature.to_vec(),
@@ -246,7 +247,7 @@ mod tests {
         let from = wallet.address;
         let tx: TypedTransaction = TransactionRequest::new()
             .from(from)
-            .to(H160::zero())
+            .to(Address::ZERO)
             .value(10)
             .chain_id(355113)
             .nonce(0)

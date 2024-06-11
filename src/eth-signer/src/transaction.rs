@@ -1,9 +1,10 @@
 use std::borrow::Cow;
 
+use alloy_consensus::TypedTransaction;
+use alloy_rpc_types::Signature as AlloySignature;
 use did::error::EvmError;
 use did::hash::H160;
 use did::integer::U256;
-use did::transaction::Signature;
 use did::Transaction;
 use k256::ecdsa::SigningKey;
 
@@ -18,7 +19,7 @@ pub enum SigningMethod<'a> {
     None,
     // Precalculated signature
     // Could be used only for the cases when the transaction is executed ReadOnly
-    Signature(Signature),
+    Signature(AlloySignature),
     /// Use signing key to generate signature in `calculate_hash_and_build` method
     SigningKey(&'a SigningKey),
 }
@@ -41,13 +42,13 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
     pub fn calculate_hash_and_build(self) -> Result<Transaction, EvmError> {
         // NOTE: we intentionally do not set chain id here since chain ID shouldn't be present in
         // legacy transaction RLP encoding
-        let mut transaction = ethers_core::types::Transaction {
+        let mut transaction = alloy_rpc_types::Transaction {
             from: self.from.0,
             to: self.to.map(Into::into),
-            nonce: self.nonce.0,
+            nonce: self.nonce.0.saturating_to(),
             value: self.value.0,
-            gas: self.gas.0,
-            gas_price: self.gas_price.map(Into::into),
+            gas: self.gas.0.saturating_to(),
+            gas_price: self.gas_price.map(|val| val.0.saturating_to()),
             input: self.input.into(),
             ..Default::default()
         };
@@ -86,8 +87,9 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
 #[cfg(test)]
 mod test {
 
+    use alloy_rpc_types::Signature as AlloySignature;
+    use alloy_signer::utils::secret_key_to_address;
     use did::U64;
-    use ethers_core::utils;
 
     use super::*;
     use crate::LocalWallet;
@@ -107,7 +109,7 @@ mod test {
         };
         let tx = transaction_builder.calculate_hash_and_build().unwrap();
 
-        assert_eq!(tx.v, U64::zero());
+        assert_eq!(tx.v, U256::zero());
         assert_eq!(tx.r, U256::zero());
         assert_eq!(tx.s, U256::zero());
         assert_eq!(tx.chain_id, Some(31540u64.into()));
@@ -123,16 +125,17 @@ mod test {
             gas: 10_000u64.into(),
             gas_price: Some(20_000u64.into()),
             input: Vec::new(),
-            signature: SigningMethod::Signature(EthersSignature {
+            signature: SigningMethod::Signature(AlloySignature {
                 r: 1u64.into(),
                 s: 2u64.into(),
-                v: 3u64,
+                v: 3u64.into(),
+                y_parity: None,
             }),
             chain_id: 31541,
         };
         let tx = transaction_builder.calculate_hash_and_build().unwrap();
 
-        assert_eq!(tx.v, U64::from(3u64));
+        assert_eq!(tx.v, U256::from(3u64));
         assert_eq!(tx.r, U256::from(1u64));
         assert_eq!(tx.s, U256::from(2u64));
         assert_eq!(tx.chain_id, Some(31541u64.into()));
@@ -141,7 +144,7 @@ mod test {
     #[test]
     fn test_build_transaction_with_signing_key() {
         let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
-        let from = utils::secret_key_to_address(&key);
+        let from = secret_key_to_address(&key);
         let chain_id = 31540;
         let transaction_builder = TransactionBuilder {
             from: &from.into(),
@@ -155,7 +158,7 @@ mod test {
             chain_id,
         };
 
-        let tx: ethers_core::types::Transaction = transaction_builder
+        let tx: alloy_rpc_types::Transaction = transaction_builder
             .calculate_hash_and_build()
             .unwrap()
             .into();
@@ -172,7 +175,7 @@ mod test {
     #[test]
     fn test_build_transaction_with_signing_key_should_include_chain_id() {
         let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
-        let from = utils::secret_key_to_address(&key);
+        let from = secret_key_to_address(&key);
         let chain_id = 31540;
         let transaction_builder = TransactionBuilder {
             from: &from.into(),
@@ -186,7 +189,7 @@ mod test {
             chain_id,
         };
 
-        let tx: ethers_core::types::Transaction = transaction_builder
+        let tx: alloy_rpc_types::Transaction = transaction_builder
             .calculate_hash_and_build()
             .unwrap()
             .into();
@@ -204,7 +207,7 @@ mod test {
     #[test]
     fn test_build_transaction_should_have_recoverable_from() {
         let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
-        let from = utils::secret_key_to_address(&key);
+        let from = secret_key_to_address(&key);
         let chain_id = 31540;
         let transaction_builder = TransactionBuilder {
             from: &from.into(),
@@ -218,7 +221,7 @@ mod test {
             chain_id,
         };
 
-        let tx: ethers_core::types::Transaction = transaction_builder
+        let tx: alloy_rpc_types::Transaction = transaction_builder
             .calculate_hash_and_build()
             .unwrap()
             .into();

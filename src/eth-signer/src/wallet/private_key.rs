@@ -116,6 +116,7 @@ impl TryFrom<String> for Wallet<'static, SigningKey> {
 #[cfg(test)]
 mod tests {
 
+    use alloy_consensus::TypedTransaction;
     use alloy_primitives::{eip191_hash_message, Address};
     use alloy_rpc_types::TransactionRequest;
 
@@ -148,7 +149,6 @@ mod tests {
     #[tokio::test]
     async fn signs_tx() {
 
-        use crate::TypedTransaction;
         // retrieved test vector from:
         // https://web3js.readthedocs.io/en/v1.2.0/web3-eth-accounts.html#eth-accounts-signtransaction
         let tx: TypedTransaction = TransactionRequest {
@@ -180,9 +180,7 @@ mod tests {
 
     #[tokio::test]
     async fn signs_tx_empty_chain_id() {
-        use ethers_core::types::TransactionRequest;
 
-        use crate::TypedTransaction;
         // retrieved test vector from:
         // https://web3js.readthedocs.io/en/v1.2.0/web3-eth-accounts.html#eth-accounts-signtransaction
         let tx: TypedTransaction = TransactionRequest {
@@ -220,8 +218,6 @@ mod tests {
 
     #[test]
     fn signs_tx_empty_chain_id_sync() {
-
-        use crate::TypedTransaction;
 
         let chain_id = 1337u64;
         // retrieved test vector from:

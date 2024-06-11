@@ -27,7 +27,7 @@ repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 version = "0.23.0"
 
 [workspace.dependencies]
-alloy-consensus = "0.1"
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", rev = "a32e6f7" }
 alloy-primitives = { version = "0.7", default-feures = false }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "a32e6f7" }
 alloy-rlp = "0.3"

@@ -1,12 +1,10 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::hash::Hash;
 
 use alloy_rlp::Encodable;
 use bytes::BufMut;
 use candid::{CandidType, Deserialize};
 use alloy_primitives::Log as AlloyLog;
-use ic_stable_structures::stable_structures::vec;
 use ic_stable_structures::{Bound, Storable};
 use serde::Serialize;
 use serde_json::{json, Value};

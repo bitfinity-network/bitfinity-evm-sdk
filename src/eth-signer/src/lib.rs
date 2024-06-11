@@ -1,5 +1,6 @@
 use std::error::Error;
 
+use alloy_consensus::TypedTransaction;
 use alloy_primitives::Address;
 use alloy_rpc_types::Signature;
 use async_trait::async_trait;
