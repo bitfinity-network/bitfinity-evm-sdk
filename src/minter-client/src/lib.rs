@@ -5,7 +5,6 @@ use ic_canister_client::{CanisterClient, CanisterClientResult};
 use minter_did::error::Result as McResult;
 use minter_did::id256::Id256;
 use minter_did::order::SignedMintOrder;
-use minter_did::reason::Icrc2Burn;
 
 pub struct MinterCanisterClient<C> {
     client: C,
@@ -72,12 +71,6 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
         self.client.update("get_bft_bridge_contract", ()).await
     }
 
-    /// Creates ERC-20 mint order for ICRC-2 tokens burning and sends it to the BFTBridge.
-    /// Returns operation id.
-    pub async fn burn_icrc2(&self, reason: Icrc2Burn) -> CanisterClientResult<McResult<u32>> {
-        self.client.update("burn_icrc2", (reason,)).await
-    }
-
     /// Returns `(nonce, mint_order)` pairs for the given sender id.
     pub async fn list_mint_orders(
         &self,
@@ -104,5 +97,23 @@ impl<C: CanisterClient> MinterCanisterClient<C> {
     /// Returns the build data of the canister.
     pub async fn get_canister_build_data(&self) -> CanisterClientResult<BuildData> {
         self.client.query("get_canister_build_data", ()).await
+    }
+
+    /// Adds the given principal to the whitelist.
+    pub async fn add_to_whitelist(
+        &self,
+        principal: Principal,
+    ) -> CanisterClientResult<McResult<()>> {
+        self.client.update("add_to_whitelist", (principal,)).await
+    }
+
+    /// Removes the given principal from the whitelist.
+    pub async fn remove_from_whitelist(
+        &self,
+        principal: Principal,
+    ) -> CanisterClientResult<McResult<()>> {
+        self.client
+            .update("remove_from_whitelist", (principal,))
+            .await
     }
 }
