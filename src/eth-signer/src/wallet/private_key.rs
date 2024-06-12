@@ -121,7 +121,7 @@ mod tests {
     use alloy_rpc_types::TransactionRequest;
 
     use super::*;
-    use crate::Signer;
+    use crate::{utils::set_chain_id, Signer};
 
     #[tokio::test]
     async fn signs_msg() {
@@ -211,7 +211,7 @@ mod tests {
         // since we initialize with None we need to re-set the chain_id for the sighash to be
         // correct
         let mut tx = tx;
-        tx.set_chain_id(1);
+        set_chain_id(&mut tx, 1);
         let sighash = tx.sighash();
         sig.verify(sighash, wallet.address).unwrap();
     }
@@ -256,7 +256,7 @@ mod tests {
         // since we initialize with None we need to re-set the chain_id for the sighash to be
         // correct
         let mut tx = tx;
-        tx.set_chain_id(chain_id);
+        set_chain_id(&mut tx, chain_id);
         let sighash = tx.sighash();
         sig.verify(sighash, wallet.address).unwrap();
     }

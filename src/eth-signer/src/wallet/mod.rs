@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::fmt;
 
 use alloy_consensus::{Transaction, TypedTransaction};
-use alloy_primitives::{eip191_hash_message, Address, U256};
+use alloy_primitives::{eip191_hash_message, to_eip155_v, Address, U256};
 use alloy_rpc_types::Signature;
 use async_trait::async_trait;
 use alloy_signer::k256::ecdsa::signature::hazmat::PrehashSigner;
@@ -11,7 +11,8 @@ use alloy_signer::k256::elliptic_curve::FieldBytes;
 use alloy_signer::k256::Secp256k1;
 pub use private_key::WalletError;
 
-use crate::{to_eip155_v, Signer};
+use crate::utils::set_chain_id;
+use crate::Signer;
 
 mod private_key;
 
@@ -93,7 +94,7 @@ impl<'a, D: Sync + Send + PrehashSigner<(RecoverableSignature, RecoveryId)> + Cl
         let mut tx_with_chain = tx.clone();
         if tx_with_chain.chain_id().is_none() {
             // in the case we don't have a chain_id, let's use the signer chain id instead
-            tx_with_chain.set_chain_id(self.chain_id);
+            set_chain_id(&mut tx_with_chain, self.chain_id);
         }
         self.sign_transaction_sync(&tx_with_chain)
     }
@@ -122,7 +123,7 @@ impl<'a, D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Wallet<'a
         // rlp (for sighash) must have the same chain id as v in the signature
         let chain_id = tx.chain_id().unwrap_or(self.chain_id);
         let mut tx = tx.clone();
-        tx.set_chain_id(chain_id);
+        set_chain_id(&mut tx, chain_id);
 
         let sighash = tx.sighash();
         let mut sig = self.sign_hash(sighash)?;

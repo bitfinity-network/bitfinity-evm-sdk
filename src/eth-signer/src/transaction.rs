@@ -92,7 +92,7 @@ mod test {
     use did::U64;
 
     use super::*;
-    use crate::LocalWallet;
+    use crate::{utils::set_chain_id, LocalWallet};
 
     #[test]
     fn test_build_transaction_with_empty_signature() {
@@ -194,7 +194,7 @@ mod test {
             .unwrap()
             .into();
         let mut typed_tx: TypedTransaction = (&tx).into();
-        typed_tx.set_chain_id(chain_id + 1);
+        set_chain_id(&mut typed_tx, chain_id + 1);
         let wallet = LocalWallet::new_with_signer(Cow::Borrowed(&key), from, chain_id);
         let signature_with_different_chain_id = wallet.sign_transaction_sync(&typed_tx).unwrap();
 
