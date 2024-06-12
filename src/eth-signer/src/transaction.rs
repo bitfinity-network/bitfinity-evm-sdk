@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
-use alloy_consensus::TypedTransaction;
-use alloy_rpc_types::Signature as AlloySignature;
+use alloy_consensus::{TxLegacy, TypedTransaction};
+use alloy_network::{eip2718::Encodable2718, EthereumSigner, TransactionBuilder as AlloyTransactionBuilder};
+use alloy_rpc_types::{Signature as AlloySignature, TransactionRequest};
 use did::error::EvmError;
 use did::hash::H160;
 use did::integer::U256;
@@ -62,8 +63,24 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
                 let wallet =
                     Wallet::new_with_signer(Cow::Borrowed(key), transaction.from, self.chain_id);
 
+
+                        // Build a transaction to send 100 wei from Alice to Bob.
+//     let tx_request = TransactionRequest::default()
+//     // .with_from(alice)
+//     // .with_to(bob)
+//     .with_nonce(0)
+//     // .with_chain_id(anvil.chain_id())
+//     .with_value(U256::from(100u64).into())
+//     .with_gas_limit(21_000)
+//     .with_max_priority_fee_per_gas(1_000_000_000)
+//     .with_max_fee_per_gas(20_000_000_000);
+
+// // Build and sign the transaction using the `EthereumSigner` with the provided signer.
+// let tx_envelope = tx_request.build(&signer).await?;
+
                 // NOTE: we can avoid cloning input here by re-implementing code that calculates
                 // transaction signature hash
+
                 let typed_tx: TypedTransaction = (&transaction).into();
                 let signature = wallet
                     .sign_transaction_sync(&typed_tx)
