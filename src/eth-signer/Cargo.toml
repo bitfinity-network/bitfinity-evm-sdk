@@ -20,6 +20,7 @@ alloy-network = { workspace = true }
 alloy-primitives = { workspace = true }
 alloy-rpc-types = { workspace = true }
 alloy-signer = { workspace = true }
+alloy-signer-wallet = { workspace = true }
 async-trait = { workspace = true }
 candid = { workspace = true }
 did = { path = "../did" }

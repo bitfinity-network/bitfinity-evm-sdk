@@ -1,46 +1,48 @@
 use std::error::Error;
 
-use alloy_consensus::TypedTransaction;
+use alloy_consensus::SignableTransaction;
 use alloy_primitives::Address;
 use alloy_rpc_types::Signature;
 use async_trait::async_trait;
-pub use wallet::{Wallet, WalletError};
 
-mod wallet;
+pub use alloy_signer::k256;
+pub use alloy_signer::Signer;
+pub use alloy_signer_wallet::{Wallet, WalletError};
+
+// mod wallet;
 mod utils;
 
-#[cfg(feature = "ic_sign")]
-pub mod ic_sign;
+// #[cfg(feature = "ic_sign")]
+// pub mod ic_sign;
 pub mod sign_strategy;
 pub mod transaction;
 
 /// A wallet instantiated with a locally stored private key
-pub type LocalWallet<'a> = Wallet<'a, alloy_signer::k256::ecdsa::SigningKey>;
+pub type LocalWallet = Wallet<alloy_signer::k256::ecdsa::SigningKey>;
 
-/// Trait for signing transactions and messages
-///
-/// Implement this trait to support different signing modes, e.g. Ledger, hosted etc.
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Signer: std::fmt::Debug + Send + Sync {
-    type Error: Error + Send + Sync;
+// Trait for signing transactions and messages
+// Implement this trait to support different signing modes, e.g. Ledger, hosted etc.
+// #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+// #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+// pub trait Signer: std::fmt::Debug + Send + Sync {
+//     type Error: Error + Send + Sync;
 
-    /// Signs the hash of the provided message after prefixing it
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
-        &self,
-        message: S,
-    ) -> Result<Signature, Self::Error>;
+//     /// Signs the hash of the provided message after prefixing it
+//     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
+//         &self,
+//         message: S,
+//     ) -> Result<Signature, Self::Error>;
 
-    /// Signs the transaction
-    async fn sign_transaction(&self, message: &TypedTransaction) -> Result<Signature, Self::Error>;
+//     /// Signs the transaction
+//     async fn sign_transaction(&self, tx: &mut dyn SignableTransaction<Signature>) -> Result<Signature, Self::Error>;
 
-    /// Returns the signer's Ethereum Address
-    fn address(&self) -> Address;
+//     /// Returns the signer's Ethereum Address
+//     fn address(&self) -> Address;
 
-    /// Returns the signer's chain id
-    fn chain_id(&self) -> u64;
+//     /// Returns the signer's chain id
+//     fn chain_id(&self) -> u64;
 
-    /// Sets the signer's chain id
-    #[must_use]
-    fn with_chain_id<T: Into<u64>>(self, chain_id: T) -> Self;
-}
+//     /// Sets the signer's chain id
+//     #[must_use]
+//     fn with_chain_id<T: Into<u64>>(self, chain_id: T) -> Self;
+// }

@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
-use alloy_consensus::TypedTransaction;
+use alloy_consensus::{SignableTransaction, TypedTransaction};
+use alloy_network::TxSigner as AlloyTxSigner;
 use alloy_signer::utils::secret_key_to_address;
 use async_trait::async_trait;
 use candid::CandidType;
@@ -15,14 +16,18 @@ use crate::{Signer, Wallet};
 
 #[derive(thiserror::Error, Debug)]
 pub enum TransactionSignerError {
-    #[error("wallet error: {0}")]
+
+    #[error("signer error: {0:?}")]
+    SignerError(#[from] alloy_signer::Error),
+
+    #[error("wallet error: {0:?}")]
     WalletError(#[from] crate::WalletError),
 
     #[cfg(feature = "ic_sign")]
-    #[error("ic sign error: {0}")]
+    #[error("ic sign error: {0:?}")]
     IcSignError(#[from] crate::ic_sign::IcSignerError),
 
-    #[error("ecdsa error: {0}")]
+    #[error("ecdsa error: {0:?}")]
     EcdsaError(#[from] ecdsa::Error),
 }
 
@@ -37,11 +42,11 @@ pub trait TransactionSigner {
     /// Sign the created transaction
     async fn sign_transaction(
         &self,
-        transaction: &TypedTransaction,
-    ) -> TransactionSignerResult<Signature>;
+        tx: &mut dyn SignableTransaction<alloy_primitives::Signature>,
+    ) -> TransactionSignerResult<alloy_primitives::Signature>;
 
     /// Sign the given digest
-    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature>;
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<alloy_primitives::Signature>;
 }
 
 /// Signing strategy for signing EVM transactions
@@ -63,7 +68,7 @@ impl SigningStrategy {
             SigningStrategy::Local { private_key } => {
                 let signer = SigningKey::from_slice(&private_key)?;
                 let address = secret_key_to_address(&signer);
-                let wallet = Wallet::new_with_signer(Cow::Owned(signer), address, chain_id);
+                let wallet = Wallet::new_with_signer(signer, address, Some(chain_id));
                 Ok(TxSigner::Local(LocalTxSigner::new(wallet)))
             }
             #[cfg(feature = "ic_sign")]
@@ -122,8 +127,8 @@ impl TransactionSigner for TxSigner {
 
     async fn sign_transaction(
         &self,
-        transaction: &TypedTransaction,
-    ) -> TransactionSignerResult<Signature> {
+        transaction: &mut dyn SignableTransaction<alloy_primitives::Signature>,
+    ) -> TransactionSignerResult<alloy_primitives::Signature> {
         match self {
             Self::Local(signer) => signer.sign_transaction(transaction).await,
             #[cfg(feature = "ic_sign")]
@@ -131,7 +136,7 @@ impl TransactionSigner for TxSigner {
         }
     }
 
-    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature> {
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<alloy_primitives::Signature> {
         match self {
             Self::Local(signer) => signer.sign_digest(digest).await,
             #[cfg(feature = "ic_sign")]
@@ -143,11 +148,11 @@ impl TransactionSigner for TxSigner {
 /// Local private key implementation
 #[derive(Clone)]
 pub struct LocalTxSigner {
-    wallet: Wallet<'static, SigningKey>,
+    wallet: Wallet<SigningKey>,
 }
 
 impl LocalTxSigner {
-    fn new(wallet: Wallet<'static, SigningKey>) -> LocalTxSigner {
+    fn new(wallet: Wallet<SigningKey>) -> LocalTxSigner {
         Self { wallet }
     }
 }
@@ -160,19 +165,20 @@ impl TransactionSigner for LocalTxSigner {
 
     async fn sign_transaction(
         &self,
-        transaction: &TypedTransaction,
-    ) -> TransactionSignerResult<Signature> {
+        transaction: &mut dyn SignableTransaction<alloy_primitives::Signature>,
+    ) -> TransactionSignerResult<alloy_primitives::Signature> {
         self.wallet
             .sign_transaction(transaction)
             .await
-            .map_err(TransactionSignerError::WalletError)
+            .map_err(TransactionSignerError::SignerError)
             .map(Into::into)
     }
 
-    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature> {
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<alloy_primitives::Signature> {
         self.wallet
-            .sign_hash(alloy_primitives::B256::new(digest))
-            .map_err(TransactionSignerError::WalletError)
+            .sign_hash(&alloy_primitives::B256::new(digest))
+            .await
+            .map_err(TransactionSignerError::SignerError)
             .map(Into::into)
     }
 }
@@ -182,7 +188,7 @@ impl TransactionSigner for LocalTxSigner {
 struct WalletSerializationData<'a> {
     signing_key_bytes: &'a [u8],
     address_bytes: &'a [u8],
-    chain_id: u64,
+    chain_id: Option<u64>,
 }
 
 impl Serialize for LocalTxSigner {
@@ -215,7 +221,7 @@ impl<'de> Deserialize<'de> for LocalTxSigner {
             .map_err(|e| D::Error::custom(format!("failed to decode signing key: {e}")))?;
         let address = H160::from_slice(val.address_bytes);
         Ok(LocalTxSigner::new(Wallet::new_with_signer(
-            Cow::Owned(signing_key),
+            signing_key,
             address.into(),
             val.chain_id,
         )))

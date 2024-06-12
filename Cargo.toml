@@ -33,6 +33,7 @@ alloy-primitives = { version = "0.7", default-feures = false }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "a32e6f7" }
 alloy-rlp = "0.3"
 alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "a32e6f7" }
+alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "a32e6f7" }
 anyhow = "1.0"
 async-trait = "0.1"
 bincode = "1.3"

@@ -6,7 +6,6 @@ use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
 use alloy_rpc_types::transaction::{AccessList as AlloyAccessList, AccessListItem as AlloyAccessListItem, Transaction as AlloyTransaction};
-use alloy_rpc_types::Signature as AlloySignature;
 use ic_stable_structures::{Bound, Storable};
 use num::ToPrimitive;
 use serde::{Deserializer, Serialize, Serializer};
@@ -170,7 +169,7 @@ pub struct Signature {
     pub s: U256,
 }
 
-impl From<Signature> for AlloySignature {
+impl From<Signature> for alloy_rpc_types::Signature {
     fn from(value: Signature) -> Self {
         Self {
             r: value.r.into(),
@@ -181,8 +180,8 @@ impl From<Signature> for AlloySignature {
     }
 }
 
-impl From<AlloySignature> for Signature {
-    fn from(value: AlloySignature) -> Self {
+impl From<alloy_rpc_types::Signature> for Signature {
+    fn from(value: alloy_rpc_types::Signature) -> Self {
         Self {
             r: value.r.into(),
             s: value.s.into(),
