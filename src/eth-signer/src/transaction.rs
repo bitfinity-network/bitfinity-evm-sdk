@@ -1,7 +1,9 @@
 use std::borrow::Cow;
+use std::hash::Hash;
 
 use alloy_consensus::{TxLegacy, TypedTransaction};
 use alloy_network::{eip2718::Encodable2718, EthereumSigner, TransactionBuilder as AlloyTransactionBuilder};
+use alloy_network::TxSignerSync;
 use alloy_rpc_types::{Signature as AlloySignature, TransactionRequest};
 use did::error::EvmError;
 use did::hash::H160;
@@ -60,39 +62,59 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
                 transaction.signature = Some(signature);
             }
             SigningMethod::SigningKey(key) => {
+                let TODO_remove_key_clone = 0;
                 let wallet =
-                    Wallet::new_with_signer(Cow::Borrowed(key), transaction.from, self.chain_id);
+                    Wallet::new_with_signer(key.clone(), transaction.from, Some(self.chain_id));
 
+                let tx_request = transaction.clone().into_request();
 
-                        // Build a transaction to send 100 wei from Alice to Bob.
-//     let tx_request = TransactionRequest::default()
-//     // .with_from(alice)
-//     // .with_to(bob)
-//     .with_nonce(0)
-//     // .with_chain_id(anvil.chain_id())
-//     .with_value(U256::from(100u64).into())
-//     .with_gas_limit(21_000)
-//     .with_max_priority_fee_per_gas(1_000_000_000)
-//     .with_max_fee_per_gas(20_000_000_000);
+                // let mut state = vec![];
+                // tx_request.hash(&mut state);
 
-// // Build and sign the transaction using the `EthereumSigner` with the provided signer.
-// let tx_envelope = tx_request.build(&signer).await?;
+                let REMOVE_UNWRAP   = 0;
+                let mut typed_tx = tx_request.build_unsigned().unwrap();
+
+            // Build and sign the transaction using the `EthereumSigner` with the provided signer.
+            // let tx_envelope = tx_request.build(&EthereumSigner::from(wallet)).await?;
 
                 // NOTE: we can avoid cloning input here by re-implementing code that calculates
                 // transaction signature hash
 
-                let typed_tx: TypedTransaction = (&transaction).into();
-                let signature = wallet
-                    .sign_transaction_sync(&typed_tx)
-                    .map_err(|e| EvmError::TransactionSignature(e.to_string()))?;
+                let signature: alloy_primitives::Signature = match typed_tx {
+                    TypedTransaction::Legacy(mut tx) => wallet
+                    .sign_transaction_sync(&mut tx)
+                    .map_err(|e| EvmError::TransactionSignature(e.to_string()))?,
+                    TypedTransaction::Eip2930(mut tx) => wallet
+                    .sign_transaction_sync(&mut tx)
+                    .map_err(|e| EvmError::TransactionSignature(e.to_string()))?,
+                    TypedTransaction::Eip1559(mut tx) => wallet
+                    .sign_transaction_sync(&mut tx)
+                    .map_err(|e| EvmError::TransactionSignature(e.to_string()))?,
+                    TypedTransaction::Eip4844(mut tx) => wallet
+                    .sign_transaction_sync(&mut tx)
+                    .map_err(|e| EvmError::TransactionSignature(e.to_string()))?,
+                };
 
-                transaction.r = signature.r;
-                transaction.s = signature.s;
-                transaction.v = signature.v.into();
+                // let typed_tx: TypedTransaction = (&transaction).into();
+                // let signature = wallet
+                //     .sign_transaction_sync(&mut typed_tx)
+                //     .map_err(|e| EvmError::TransactionSignature(e.to_string()))?;
+
+                // transaction.r = signature.r;
+                // transaction.s = signature.s;
+                // transaction.v = signature.v.into();
+
+                // WARN: the parity conversion is not fully implemented here
+                transaction.signature = Some(AlloySignature {
+                    r: signature.r(),
+                    s: signature.s(),
+                    v: alloy_primitives::U256::from(signature.v().to_u64()),
+                    y_parity: None,
+                });
             }
         }
 
-        transaction.hash = transaction.hash();
+        // transaction.hash = transaction.hash();
         transaction.chain_id = Some(self.chain_id.into());
 
         Ok(transaction.into())
