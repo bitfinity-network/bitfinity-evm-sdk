@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use alloy_signer::utils::secret_key_to_address;
 use alloy_signer::k256::ecdsa::{self, SigningKey};
+use alloy_signer::k256::SecretKey as K256SecretKey;
 use rand::{CryptoRng, Rng};
 use thiserror::Error;
 

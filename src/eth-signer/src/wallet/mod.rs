@@ -11,7 +11,7 @@ use alloy_signer::k256::elliptic_curve::FieldBytes;
 use alloy_signer::k256::Secp256k1;
 pub use private_key::WalletError;
 
-use crate::utils::set_chain_id;
+use crate::utils::{set_chain_id, transaction_signature_hash};
 use crate::Signer;
 
 mod private_key;
@@ -125,11 +125,11 @@ impl<'a, D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Wallet<'a
         let mut tx = tx.clone();
         set_chain_id(&mut tx, chain_id);
 
-        let sighash = tx.sighash();
+        let sighash = transaction_signature_hash(&tx);
         let mut sig = self.sign_hash(sighash)?;
 
         // sign_hash sets `v` to recid + 27, so we need to subtract 27 before normalizing
-        sig.v = U256::from(to_eip155_v(sig.v as u8 - 27, chain_id));
+        sig.v = U256::from(to_eip155_v(sig.v.saturating_to::<u8>() - 27, chain_id));
         Ok(sig)
     }
 

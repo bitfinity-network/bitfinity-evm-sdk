@@ -1,7 +1,7 @@
 use std::fmt;
 
-use alloy_consensus::TypedTransaction;
-use alloy_primitives::{Address, SignatureError, B160};
+use alloy_consensus::{Transaction, TypedTransaction};
+use alloy_primitives::{keccak256, Address, SignatureError, B160};
 use alloy_rpc_types::Signature;
 use candid::{CandidType, Principal};
 use alloy_signer::k256::elliptic_curve::sec1::ToEncodedPoint;
@@ -14,6 +14,8 @@ use ic_exports::ic_cdk::api::management_canister::ecdsa::{
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use crate::utils::transaction_signature_hash;
 
 pub type DerivationPath = Vec<Vec<u8>>;
 
@@ -83,7 +85,7 @@ impl IcSigner {
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
     ) -> Result<Signature, IcSignerError> {
-        let hash = tx.sighash();
+        let hash = transaction_signature_hash(tx);
         let digest = hash.as_fixed_bytes();
         let tx_from = tx.from().ok_or(IcSignerError::FromAddressNotPresent)?;
         let mut signature = Self
@@ -93,7 +95,7 @@ impl IcSigner {
         // For non-legacy transactions recovery id should be updated.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         signature.v += match tx.chain_id() {
-            Some(chain_id) => chain_id.as_u64() * 2 + 35,
+            Some(chain_id) => chain_id * 2 + 35,
             None => 27,
         };
 
@@ -183,7 +185,7 @@ impl IcSigner {
         let public_key = uncompressed_public_key.to_encoded_point(false);
         let public_key = public_key.as_bytes();
         debug_assert_eq!(public_key[0], 0x04);
-        let hash = utils::keccak256(&public_key[1..]);
+        let hash = keccak256(&public_key[1..]);
 
         let mut bytes = [0u8; 20];
         bytes.copy_from_slice(&hash[12..]);
@@ -197,7 +199,7 @@ mod tests {
     use alloy_primitives::B256;
     use alloy_rpc_types::TransactionRequest;
     use candid::Principal;
-    use alloy_signer::k265::ecdsa::SigningKey;
+    use alloy_signer::k256::ecdsa::SigningKey;
     use ic_canister::register_virtual_responder;
     use ic_exports::ic_cdk::api::management_canister::ecdsa::{
         EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,

@@ -56,9 +56,7 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
         match self.signature {
             SigningMethod::None => {}
             SigningMethod::Signature(signature) => {
-                transaction.r = signature.r;
-                transaction.s = signature.s;
-                transaction.v = signature.v.into();
+                transaction.signature = Some(signature);
             }
             SigningMethod::SigningKey(key) => {
                 let wallet =
