@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use std::str::FromStr;
 
 use alloy_signer::utils::secret_key_to_address;
-use k256::ecdsa::{self, SigningKey};
+use alloy_signer::k256::ecdsa::{self, SigningKey};
 use rand::{CryptoRng, Rng};
 use thiserror::Error;
 

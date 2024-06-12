@@ -14,9 +14,10 @@ pub mod sign_strategy;
 pub mod transaction;
 
 /// A wallet instantiated with a locally stored private key
-pub type LocalWallet<'a> = Wallet<'a, k256::ecdsa::SigningKey>;
+pub type LocalWallet<'a> = Wallet<'a, alloy_signer::k256::ecdsa::SigningKey>;
 
 /// Applies [EIP155](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md)
+#[deprecated(note = "Use the one from alloy-primitives")]
 pub fn to_eip155_v<T: Into<u8>>(recovery_id: T, chain_id: u64) -> u64 {
     (recovery_id.into() as u64) + 35 + chain_id * 2
 }

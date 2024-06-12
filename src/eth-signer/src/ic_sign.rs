@@ -4,8 +4,8 @@ use alloy_consensus::TypedTransaction;
 use alloy_primitives::{Address, SignatureError, B160};
 use alloy_rpc_types::Signature;
 use candid::{CandidType, Principal};
-use k256::elliptic_curve::sec1::ToEncodedPoint;
-use k256::PublicKey;
+use alloy_signer::k256::elliptic_curve::sec1::ToEncodedPoint;
+use alloy_signer::k256::PublicKey;
 use ic_canister::virtual_canister_call;
 use ic_exports::ic_cdk::api::call::RejectionCode;
 use ic_exports::ic_cdk::api::management_canister::ecdsa::{
@@ -197,7 +197,7 @@ mod tests {
     use alloy_primitives::B256;
     use alloy_rpc_types::TransactionRequest;
     use candid::Principal;
-    use k256::ecdsa::SigningKey;
+    use alloy_signer::k265::ecdsa::SigningKey;
     use ic_canister::register_virtual_responder;
     use ic_exports::ic_cdk::api::management_canister::ecdsa::{
         EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,

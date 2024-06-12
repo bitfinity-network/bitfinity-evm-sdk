@@ -25,7 +25,6 @@ did = { path = "../did" }
 # ethereum-types = { workspace = true }
 # ethers-core = { workspace = true }
 hex = { workspace = true }
-k256 = { workspace = true }
 ic-stable-structures = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }

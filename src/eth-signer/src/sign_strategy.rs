@@ -5,7 +5,7 @@ use alloy_signer::utils::secret_key_to_address;
 use async_trait::async_trait;
 use candid::CandidType;
 use did::{codec, transaction::Signature, H160};
-use k256::ecdsa::{self, SigningKey};
+use alloy_signer::k256::ecdsa::{self, SigningKey};
 #[cfg(feature = "ic_sign")]
 pub use ic_sign::{IcSigner, ManagementCanisterSigner, SigningKeyId};
 use ic_stable_structures::{Bound, Storable};

@@ -6,7 +6,7 @@ use did::error::EvmError;
 use did::hash::H160;
 use did::integer::U256;
 use did::Transaction;
-use k256::ecdsa::SigningKey;
+use alloy_signer::k256::ecdsa::SigningKey;
 
 
 use crate::Wallet;

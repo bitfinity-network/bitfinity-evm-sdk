@@ -55,7 +55,6 @@ ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sd
 itertools = "0.13"
 jsonrpc-core = "18.0"
 jsonrpsee = { version = "0.22", features = ["server", "macros"] }
-k256 = "0.13"
 lightspeed_scheduler = "0.58"
 log = "0.4"
 num = "0.4"

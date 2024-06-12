@@ -5,10 +5,10 @@ use alloy_consensus::{Transaction, TypedTransaction};
 use alloy_primitives::{eip191_hash_message, Address, U256};
 use alloy_rpc_types::Signature;
 use async_trait::async_trait;
-use k256::ecdsa::signature::hazmat::PrehashSigner;
-use k256::ecdsa::{RecoveryId, Signature as RecoverableSignature};
-use k256::elliptic_curve::FieldBytes;
-use k256::Secp256k1;
+use alloy_signer::k256::ecdsa::signature::hazmat::PrehashSigner;
+use alloy_signer::k256::ecdsa::{RecoveryId, Signature as RecoverableSignature};
+use alloy_signer::k256::elliptic_curve::FieldBytes;
+use alloy_signer::k256::Secp256k1;
 pub use private_key::WalletError;
 
 use crate::{to_eip155_v, Signer};
