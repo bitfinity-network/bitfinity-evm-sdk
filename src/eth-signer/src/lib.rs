@@ -12,8 +12,8 @@ pub use alloy_signer_wallet::{Wallet, WalletError};
 // mod wallet;
 mod utils;
 
-// #[cfg(feature = "ic_sign")]
-// pub mod ic_sign;
+#[cfg(feature = "ic_sign")]
+pub mod ic_sign;
 pub mod sign_strategy;
 pub mod transaction;
 

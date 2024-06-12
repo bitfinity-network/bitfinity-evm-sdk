@@ -1,6 +1,6 @@
 use std::fmt;
 
-use alloy_consensus::{Transaction, TypedTransaction};
+use alloy_consensus::{SignableTransaction, Transaction, TypedTransaction};
 use alloy_primitives::{keccak256, Address, SignatureError, B160};
 use alloy_rpc_types::Signature;
 use candid::{CandidType, Principal};
@@ -81,23 +81,23 @@ impl IcSigner {
     /// The `tx.from` expected to be set to the canister address.
     pub async fn sign_transaction(
         &self,
-        tx: &TypedTransaction,
+        tx: &mut dyn SignableTransaction<alloy_primitives::Signature>,
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
     ) -> Result<Signature, IcSignerError> {
         let hash = transaction_signature_hash(tx);
-        let digest = hash.as_fixed_bytes();
+        // let digest = hash.as_fixed_bytes();
         let tx_from = tx.from().ok_or(IcSignerError::FromAddressNotPresent)?;
         let mut signature = Self
-            .sign_digest(tx_from, *digest, key_id, derivation_path)
+            .sign_digest(tx_from, *hash, key_id, derivation_path)
             .await?;
 
         // For non-legacy transactions recovery id should be updated.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
-        signature.v += match tx.chain_id() {
-            Some(chain_id) => chain_id * 2 + 35,
-            None => 27,
-        };
+        // signature.v += match tx.chain_id() {
+        //     Some(chain_id) => chain_id * 2 + 35,
+        //     None => 27,
+        // };
 
         Ok(signature)
     }
@@ -196,10 +196,11 @@ impl IcSigner {
 #[cfg(test)]
 mod tests {
     use alloy_consensus::TypedTransaction;
+    use alloy_network::TransactionBuilder;
     use alloy_primitives::B256;
     use alloy_rpc_types::TransactionRequest;
     use candid::Principal;
-    use alloy_signer::k256::ecdsa::SigningKey;
+    use alloy_signer::{k256::ecdsa::SigningKey, Signer};
     use ic_canister::register_virtual_responder;
     use ic_exports::ic_cdk::api::management_canister::ecdsa::{
         EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
@@ -207,15 +208,15 @@ mod tests {
     };
     use ic_exports::ic_kit::MockContext;
 
-    use super::{IcSigner, *};
+    use super::*;
     use crate::ic_sign::SigningKeyId;
     use crate::Wallet;
 
-    fn init_context() -> Wallet<'static, SigningKey> {
+    fn init_context() -> Wallet<SigningKey> {
         MockContext::new().inject();
 
-        let wallet = Wallet::new(&mut rand::thread_rng());
-        let pubkey = wallet.signer.verifying_key().to_encoded_point(true);
+        let wallet = Wallet::random();
+        let pubkey = wallet.signer().verifying_key().to_encoded_point(true);
 
         let wallet_to_sign = wallet.clone();
         register_virtual_responder(
@@ -224,7 +225,7 @@ mod tests {
             move |args: (SignWithEcdsaArgument,)| {
                 let hash = args.0.message_hash;
                 let h256 = B256::from_slice(&hash);
-                let signature = wallet_to_sign.sign_hash(h256).unwrap();
+                let signature = wallet_to_sign.sign_hash(&h256).unwrap();
                 SignWithEcdsaResponse {
                     signature: signature.to_vec(),
                 }
@@ -246,23 +247,25 @@ mod tests {
     #[tokio::test]
     async fn should_sign_transactions() {
         let wallet = init_context();
-        let from = wallet.address;
-        let tx: TypedTransaction = TransactionRequest::new()
+        let from = wallet.address();
+        let tx: TypedTransaction = TransactionRequest::default()
             .from(from)
-            .to(Address::ZERO)
-            .value(10)
-            .chain_id(355113)
+            .to(Some(Address::ZERO))
+            .value(alloy_primitives::U256::from(10))
+            .with_chain_id(355113)
             .nonce(0)
-            .gas_price(10)
-            .gas(53000)
-            .into();
+            .with_gas_price(10)
+            .with_gas_limit(53000)
+            .build_unsigned().unwrap();
 
         let signature = IcSigner
             .sign_transaction(&tx, SigningKeyId::Dfx, DerivationPath::default())
             .await
             .unwrap();
 
-        let recovered_from = signature.recover(tx.sighash()).unwrap();
+        let sighash = transaction_signature_hash(&tx);
+
+        let recovered_from = signature.recover(sighash).unwrap();
         assert_eq!(recovered_from, from);
     }
 }
