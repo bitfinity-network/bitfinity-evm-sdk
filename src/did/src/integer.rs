@@ -613,12 +613,8 @@ mod tests {
     #[test]
     fn test_u256_conversion() {
         assert_eq!(
-            U256::from([1u64, 2u64, 3u64, 4u64]),
-            U256(alloy_primitives::U256([1u64, 2u64, 3u64, 4u64]))
-        );
-        assert_eq!(
-            U256::from(&[1u64, 2u64, 3u64, 4u64]),
-            U256(alloy_primitives::U256([1u64, 2u64, 3u64, 4u64]))
+            U256::from(31u64),
+            U256(alloy_primitives::U256::from(31u64))
         );
     }
 

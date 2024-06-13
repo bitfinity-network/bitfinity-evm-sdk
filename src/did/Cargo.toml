@@ -36,6 +36,8 @@ sha3 = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-eth-signer = { path = "../eth-signer" }
+alloy-consensus = { workspace = true }
+alloy-network = { workspace = true }
+# eth-signer = { path = "../eth-signer" }
 rand = { workspace = true }
 tokio = { workspace = true }
