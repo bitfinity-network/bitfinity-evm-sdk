@@ -36,7 +36,7 @@ impl BlockNumber {
             "pending" => Self::Pending,
             "safe" => Self::Safe,
             "finalized" => Self::Finalized,
-            n => BlockNumber::Number(U64::from_hex_str(n)?),
+            n => BlockNumber::Number(U64::from_str(n)?),
         })
     }
 }
@@ -245,7 +245,7 @@ impl Signature {
     /// vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept
     /// these malleable signatures as well.
     pub fn check_malleability(s: &U256) -> Result<(), EvmError> {
-        let upper_limit = U256::from_hex_str(Self::S_UPPER_LIMIT_HEX_STR)?;
+        let upper_limit = U256::from_str(Self::S_UPPER_LIMIT_HEX_STR)?;
         if s > &upper_limit {
             return Err(EvmError::TransactionSignature(format!(
                 "S value in transaction signature should not exceed {upper_limit}"
@@ -552,7 +552,7 @@ impl From<StorableExecutionResult> for TransactionReceipt {
                 };
 
                 ExeResultData {
-                    status: U64::from(1),
+                    status: U64::from(1u64),
                     gas_used,
                     logs,
                     logs_bloom: *logs_bloom,
@@ -834,8 +834,8 @@ mod test {
     fn test_storable_transaction() {
         let tx = Transaction {
             access_list: Some(AccessList(vec![AccessListItem {
-                address: alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-                storage_keys: vec![alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into()],
+                address: alloy_primitives::Address::random().into(),
+                storage_keys: vec![alloy_primitives::B256::random().into()],
             }])),
             ..Default::default()
         };
@@ -850,8 +850,8 @@ mod test {
     fn test_candid_encoding_transaction() {
         let tx = Transaction {
             access_list: Some(AccessList(vec![AccessListItem {
-                address: alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-                storage_keys: vec![alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into()],
+                address: alloy_primitives::Address::random().into(),
+                storage_keys: vec![alloy_primitives::B256::random().into()],
             }])),
             ..Default::default()
         };
@@ -1059,12 +1059,12 @@ mod test {
                 logs_bloom: Default::default(),
                 output: TransactOut::Call(vec![]),
             },
-            transaction_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            transaction_hash: H256::from(alloy_primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            block_hash: H256::from(alloy_primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes())),
-            to: Some(H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()))),
+            from: H160::from(alloy_primitives::Address::random()),
+            to: Some(H160::from(alloy_primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -1084,7 +1084,7 @@ mod test {
 
     #[test]
     fn test_from_success_create_exe_result_to_transaction_receipt() {
-        let contract_address = H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()));
+        let contract_address = H160::from(alloy_primitives::Address::random());
         let exe_result = StorableExecutionResult {
             exe_result: ExeResult::Success {
                 gas_used: rand::random::<u64>().into(),
@@ -1092,12 +1092,12 @@ mod test {
                 logs_bloom: Default::default(),
                 output: TransactOut::Create(vec![1, 2], Some(contract_address.clone())),
             },
-            transaction_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            transaction_hash: H256::from(alloy_primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            block_hash: H256::from(alloy_primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes())),
-            to: Some(H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()))),
+            from: H160::from(alloy_primitives::Address::random()),
+            to: Some(H160::from(alloy_primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -1124,12 +1124,12 @@ mod test {
                 gas_used: rand::random::<u64>().into(),
                 output: vec![1, 2, 3].into(),
             },
-            transaction_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            transaction_hash: H256::from(alloy_primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            block_hash: H256::from(alloy_primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes())),
-            to: Some(H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()))),
+            from: H160::from(alloy_primitives::Address::random()),
+            to: Some(H160::from(alloy_primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -1155,12 +1155,12 @@ mod test {
                 gas_used: rand::random::<u64>().into(),
                 error: crate::HaltError::PriorityFeeGreaterThanMaxFee,
             },
-            transaction_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            transaction_hash: H256::from(alloy_primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            block_hash: H256::from(alloy_primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes())),
-            to: Some(H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()))),
+            from: H160::from(alloy_primitives::Address::random()),
+            to: Some(H160::from(alloy_primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -1193,7 +1193,7 @@ mod test {
 
     #[test]
     fn test_signature_malleability_check() {
-        let s = U256::from_hex_str(Signature::S_UPPER_LIMIT_HEX_STR).unwrap();
+        let s = U256::from_str(Signature::S_UPPER_LIMIT_HEX_STR).unwrap();
         Signature::check_malleability(&s).unwrap();
 
         // If signature S field exceeds the limit, it should return an error.

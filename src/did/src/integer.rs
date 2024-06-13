@@ -57,10 +57,7 @@ impl U256 {
         Self(alloy_primitives::U256::MAX)
     }
 
-    pub fn from_hex_str(mut s: &str) -> Result<Self, String> {
-        if s.starts_with("0x") || s.starts_with("0X") {
-            s = &s[2..]
-        }
+    pub fn from_str(s: &str) -> Result<Self, String> {
         alloy_primitives::U256::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
@@ -122,10 +119,7 @@ impl U64 {
         Self(alloy_primitives::U64::MAX)
     }
 
-    pub fn from_hex_str(mut s: &str) -> Result<Self, String> {
-        if s.starts_with("0x") || s.starts_with("0X") {
-            s = &s[2..]
-        }
+    pub fn from_str(s: &str) -> Result<Self, String> {
         alloy_primitives::U64::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
@@ -179,44 +173,44 @@ impl From<&U256> for Nat {
     }
 }
 
-// impl From<usize> for U64 {
-//     fn from(value: usize) -> Self {
-//         Self(value.into())
-//     }
-// }
+impl From<usize> for U64 {
+    fn from(value: usize) -> Self {
+        Self(alloy_primitives::U64::from(value))
+    }
+}
 
-// impl From<U64> for usize {
-//     fn from(value: U64) -> Self {
-//         value.0.as_usize()
-//     }
-// }
+impl From<U64> for usize {
+    fn from(value: U64) -> Self {
+        value.0.saturating_to()
+    }
+}
 
 impl From<u64> for U64 {
     fn from(value: u64) -> Self {
-        Self(alloy_primitives::U64::from_le_bytes(value.to_le_bytes()))
+        Self(alloy_primitives::U64::from(value))
     }
 }
 impl From<U64> for u64 {
     fn from(value: U64) -> Self {
-        Self::from_le_bytes(value.0.to_le_bytes())
+        value.0.saturating_to()
     }
 }
 
 impl From<usize> for U256 {
     fn from(value: usize) -> Self {
-        Self(alloy_primitives::U256::from_le_bytes(value.to_le_bytes()))
+        Self(alloy_primitives::U256::from(value))
     }
 }
 
 impl From<u64> for U256 {
     fn from(value: u64) -> Self {
-        Self(alloy_primitives::U256::from_le_bytes(value.to_le_bytes()))
+        Self(alloy_primitives::U256::from(value))
     }
 }
 
 impl From<u128> for U256 {
     fn from(value: u128) -> Self {
-        Self(alloy_primitives::U256::from_le_bytes(value.to_le_bytes()))
+        Self(alloy_primitives::U256::from(value))
     }
 }
 
@@ -511,15 +505,15 @@ mod tests {
 
     #[test]
     fn test_u256_from_hex_should_fail_long_length() {
-        assert!(U256::from_hex_str(
-            "18201820182018201820182018201820182018201820182018201820182018212"
+        assert!(U256::from_str(
+            "18201820182018201820182018201820182018201820182018201820182018212346663463463467547784573467275678678978347246457548567956852652399999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"
         )
         .is_err());
     }
 
     #[test]
     fn test_u256_from_hex_should_fail_invalid_char() {
-        assert!(U256::from_hex_str(
+        assert!(U256::from_str(
             "18201820182018201820182018201820182018201820182018201820182018g"
         )
         .is_err());
@@ -530,26 +524,26 @@ mod tests {
         let value: U256 = alloy_primitives::U256::from(rand::random::<u128>()).into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
-        assert_eq!(value, U256::from_hex_str(&lower_hex).unwrap());
+        assert_eq!(value, U256::from_str(&lower_hex).unwrap());
     }
 
     #[test]
     fn test_u256_from_hex_should_succeed() {
-        assert_eq!(U256::from(0u64), U256::from_hex_str("00").unwrap());
-        assert_eq!(U256::from(1u64), U256::from_hex_str("01").unwrap());
-        assert_eq!(U256::from(255u64), U256::from_hex_str("ff").unwrap());
+        assert_eq!(U256::from(0u64), U256::from_str("00").unwrap());
+        assert_eq!(U256::from(1u64), U256::from_str("01").unwrap());
+        assert_eq!(U256::from(255u64), U256::from_str("0xff").unwrap());
         assert_eq!(
             U256::from(2074343815918867987178857765017879333u128),
-            U256::from_hex_str("18F810BD8895AA66364CBDD91A20325").unwrap()
+            U256::from_str("0x18F810BD8895AA66364CBDD91A20325").unwrap()
         );
 
         assert_eq!(
             U256::from(0x0123456789abcdefu128),
-            U256::from_hex_str("0123456789abcdef").unwrap()
+            U256::from_str("0x0123456789abcdef").unwrap()
         );
         assert_eq!(
             U256::max_value(),
-            U256::from_hex_str("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+            U256::from_str("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
                 .unwrap()
         );
     }
@@ -633,7 +627,7 @@ mod tests {
 
     #[test]
     fn test_u64_from_hex_should_fail_odd_length() {
-        assert!(U64::from_hex_str(
+        assert!(U64::from_str(
             "182018201820182018201820182018201820182018201820182018201820182"
         )
         .is_err());
@@ -641,7 +635,7 @@ mod tests {
 
     #[test]
     fn test_u64_from_hex_should_fail_long_length() {
-        assert!(U64::from_hex_str(
+        assert!(U64::from_str(
             "18201820182018201820182018201820182018201820182018201820182018212"
         )
         .is_err());
@@ -649,7 +643,7 @@ mod tests {
 
     #[test]
     fn test_u64_from_hex_should_fail_invalid_char() {
-        assert!(U64::from_hex_str(
+        assert!(U64::from_str(
             "18201820182018201820182018201820182018201820182018201820182018g"
         )
         .is_err());
@@ -660,26 +654,26 @@ mod tests {
         let value: U64 = alloy_primitives::U64::from(rand::random::<u64>()).into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
-        assert_eq!(value, U64::from_hex_str(&lower_hex).unwrap());
+        assert_eq!(value, U64::from_str(&lower_hex).unwrap());
     }
 
     #[test]
     fn test_u64_from_hex_should_succeed() {
-        assert_eq!(U64::from(0u64), U64::from_hex_str("00").unwrap());
-        assert_eq!(U64::from(1u64), U64::from_hex_str("0x01").unwrap());
-        assert_eq!(U64::from(255u64), U64::from_hex_str("ff").unwrap());
+        assert_eq!(U64::from(0u64), U64::from_str("00").unwrap());
+        assert_eq!(U64::from(1u64), U64::from_str("0x01").unwrap());
+        assert_eq!(U64::from(255u64), U64::from_str("0xff").unwrap());
         assert_eq!(
             U64::from(72057594037927936u64),
-            U64::from_hex_str("100000000000000").unwrap()
+            U64::from_str("0x100000000000000").unwrap()
         );
 
         assert_eq!(
             U64::from(0x0123456789abcdefu64),
-            U64::from_hex_str("0123456789abcdef").unwrap()
+            U64::from_str("0x0123456789abcdef").unwrap()
         );
         assert_eq!(
             U64::max_value(),
-            U64::from_hex_str("0Xffffffffffffffff").unwrap()
+            U64::from_str("0Xffffffffffffffff").unwrap()
         );
     }
 

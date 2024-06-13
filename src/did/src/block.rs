@@ -733,7 +733,7 @@ mod test {
     #[test]
     fn test_storable_block() {
         let mut block = Block {
-            author: alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            author: alloy_primitives::Address::random().into(),
             number: rand::random::<u64>().into(),
             ..Default::default()
         };
@@ -789,7 +789,7 @@ mod test {
             chain_id: Some(chain_id.into()),
             ..Default::default()
         };
-        tx.hash = alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes());
+        tx.hash = alloy_primitives::B256::random();
         tx.into()
     }
 
@@ -802,12 +802,12 @@ mod test {
                 logs_bloom: Default::default(),
                 output: Default::default(),
             },
-            transaction_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            transaction_hash: H256::from(alloy_primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            block_hash: H256::from(alloy_primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes())),
-            to: Some(H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()))),
+            from: H160::from(alloy_primitives::Address::random()),
+            to: Some(H160::from(alloy_primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -829,12 +829,12 @@ mod test {
                 error: HaltError::CallTooDeep,
                 gas_used: Default::default(),
             },
-            transaction_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            transaction_hash: H256::from(alloy_primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            block_hash: H256::from(alloy_primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes())),
-            to: Some(H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()))),
+            from: H160::from(alloy_primitives::Address::random()),
+            to: Some(H160::from(alloy_primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -857,12 +857,12 @@ mod test {
                 gas_used: Default::default(),
                 output: Default::default(),
             },
-            transaction_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            transaction_hash: H256::from(alloy_primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes())),
+            block_hash: H256::from(alloy_primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes())),
-            to: Some(H160::from(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()))),
+            from: H160::from(alloy_primitives::Address::random()),
+            to: Some(H160::from(alloy_primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -880,21 +880,21 @@ mod test {
     #[test]
     fn test_block_result() {
         let block = Block::<Transactions> {
-            author: alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            author: alloy_primitives::Address::random().into(),
             number: U64::from(rand::random::<u64>()),
             logs_bloom: Bloom(alloy_primitives::Bloom::from_slice(&[4u8; 256])),
-            nonce: alloy_primitives::B64::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            nonce: alloy_primitives::B64::random().into(),
             transactions: vec![create_transaction(
                 Some(U256::from(rand::random::<u64>())),
                 1,
             )],
-            mix_hash: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            mix_hash: alloy_primitives::B256::random().into(),
             hash: Default::default(),
-            parent_hash: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            uncles_hash: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            state_root: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            transactions_root: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            receipts_root: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            parent_hash: alloy_primitives::B256::random().into(),
+            uncles_hash: alloy_primitives::B256::random().into(),
+            state_root: alloy_primitives::B256::random().into(),
+            transactions_root: alloy_primitives::B256::random().into(),
+            receipts_root: alloy_primitives::B256::random().into(),
             gas_used: U256::from(rand::random::<u64>()),
             gas_limit: U256::from(rand::random::<u64>()),
             extra_data: Default::default(),
@@ -1028,18 +1028,18 @@ mod test {
             .collect::<Vec<_>>();
 
         let block = Block::<Transactions<H256>> {
-            author: alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            author: alloy_primitives::Address::random().into(),
             number: U64::from(rand::random::<u64>()),
             logs_bloom: Bloom(alloy_primitives::Bloom::from_slice(&[4u8; 256])),
-            nonce: alloy_primitives::B64::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            nonce: alloy_primitives::B64::random().into(),
             transactions: tx_hashes,
-            mix_hash: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            mix_hash: alloy_primitives::B256::random().into(),
             hash: Default::default(),
-            parent_hash: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            uncles_hash: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            state_root: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            transactions_root: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            receipts_root: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            parent_hash: alloy_primitives::B256::random().into(),
+            uncles_hash: alloy_primitives::B256::random().into(),
+            state_root: alloy_primitives::B256::random().into(),
+            transactions_root: alloy_primitives::B256::random().into(),
+            receipts_root: alloy_primitives::B256::random().into(),
             gas_used: U256::from(rand::random::<u64>()),
             gas_limit: U256::from(rand::random::<u64>()),
             extra_data: Default::default(),
@@ -1073,18 +1073,18 @@ mod test {
             .collect::<Vec<_>>();
 
         let block = Block::<Transactions<H256>> {
-            author: alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            author: alloy_primitives::Address::random().into(),
             number: U64::from(rand::random::<u64>()),
             logs_bloom: Bloom(alloy_primitives::Bloom::from_slice(&[4u8; 256])),
-            nonce: alloy_primitives::B64::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            nonce: alloy_primitives::B64::random().into(),
             transactions: tx_hashes,
-            mix_hash: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            mix_hash: alloy_primitives::B256::random().into(),
             hash: Default::default(),
-            parent_hash: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            uncles_hash: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            state_root: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            transactions_root: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
-            receipts_root: alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into(),
+            parent_hash: alloy_primitives::B256::random().into(),
+            uncles_hash: alloy_primitives::B256::random().into(),
+            state_root: alloy_primitives::B256::random().into(),
+            transactions_root: alloy_primitives::B256::random().into(),
+            receipts_root: alloy_primitives::B256::random().into(),
             gas_used: U256::from(rand::random::<u64>()),
             gas_limit: U256::from(rand::random::<u64>()),
             extra_data: Default::default(),

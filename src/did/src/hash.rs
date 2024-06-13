@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn test_serde_h160() {
-        let h160 = H160::new(alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()));
+        let h160 = H160::new(alloy_primitives::Address::random());
 
         let encoded = serde_json::json!(&h160);
         let decoded = serde_json::from_value(encoded).unwrap();
@@ -526,7 +526,7 @@ mod tests {
 
     #[test]
     fn test_serde_h256() {
-        let h256 = H256::new(alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()));
+        let h256 = H256::new(alloy_primitives::B256::random());
 
         let encoded = serde_json::json!(&h256);
         let decoded = serde_json::from_value(encoded).unwrap();
@@ -544,7 +544,7 @@ mod tests {
 
     #[test]
     fn test_h160_fmt_lower_hex() {
-        let value: H160 = alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()).into();
+        let value: H160 = alloy_primitives::Address::random().into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(value, H160::from_hex_str(&lower_hex).unwrap());
@@ -552,7 +552,7 @@ mod tests {
 
     #[test]
     fn test_h256_fmt_lower_hex() {
-        let value: H256 = alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into();
+        let value: H256 = alloy_primitives::B256::random().into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(value, H256::from_hex_str(&lower_hex).unwrap());
@@ -560,7 +560,7 @@ mod tests {
 
     #[test]
     fn test_h64_transparent_serde_serialization() {
-        let value: H64 = alloy_primitives::B64::from_slice(&rand::random::<u64>().to_le_bytes()).into();
+        let value: H64 = alloy_primitives::B64::random().into();
 
         let encoded_value = serde_json::json!(&value);
         let decoded_primitive: alloy_primitives::B64 = serde_json::from_value(encoded_value).unwrap();
@@ -572,7 +572,7 @@ mod tests {
 
     #[test]
     fn test_h160_transparent_serde_serialization() {
-        let value: H160 = alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()).into();
+        let value: H160 = alloy_primitives::Address::random().into();
 
         let encoded_value = serde_json::json!(&value);
         let decoded_primitive: alloy_primitives::Address =
@@ -585,7 +585,7 @@ mod tests {
 
     #[test]
     fn test_h256_transparent_serde_serialization() {
-        let value: H256 = alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into();
+        let value: H256 = alloy_primitives::B256::random().into();
 
         let encoded_value = serde_json::json!(&value);
         let decoded_primitive: alloy_primitives::B256 =
@@ -598,7 +598,7 @@ mod tests {
 
     #[test]
     fn test_alloy_address_roundtrip() {
-        let value: H160 = alloy_primitives::Address::from_slice(&rand::random::<u64>().to_le_bytes()).into();
+        let value: H160 = alloy_primitives::Address::random().into();
 
         let alloy_address = alloy_primitives::Address::from(value.clone());
         let decoded_value = H160::from(alloy_address);
@@ -608,7 +608,7 @@ mod tests {
 
     #[test]
     fn test_alloy_h256_roundtrip() {
-        let value: H256 = alloy_primitives::B256::from_slice(&rand::random::<u64>().to_le_bytes()).into();
+        let value: H256 = alloy_primitives::B256::random().into();
 
         let alloy_h256 = alloy_primitives::B256::from(value.clone());
         let decoded_value = H256::from(alloy_h256);
@@ -618,7 +618,7 @@ mod tests {
 
     #[test]
     fn test_alloy_h64_roundtrip() {
-        let value: H64 = alloy_primitives::B64::from_slice(&rand::random::<u64>().to_le_bytes()).into();
+        let value: H64 = alloy_primitives::B64::random().into();
 
         let alloy_h64 = alloy_primitives::B64::from(value.clone());
         let decoded_value = H64::from(alloy_h64);

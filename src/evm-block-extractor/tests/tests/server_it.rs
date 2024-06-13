@@ -257,7 +257,7 @@ async fn test_get_block_by_number_variants() {
 
                 let number_block: Block<H256> =
                     serde_json::from_value(number_block.result.clone()).unwrap();
-                    assert_eq!(number_block.number, U64::from_hex_str("0x5").unwrap());
+                    assert_eq!(number_block.number, U64::from_str("0x5").unwrap());
             }
             _ => panic!("unexpected results"),
         }
