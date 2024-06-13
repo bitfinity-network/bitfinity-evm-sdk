@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+use alloy_consensus::Sealable;
 use alloy_rlp::Encodable;
 use bytes::BufMut;
 use candid::{CandidType, Deserialize};
@@ -222,12 +223,12 @@ impl From<Block<Transactions>> for Block<Transactions<H256>> {
 
 
 fn block_header_rlp<T>(block: &Block<T>, out: &mut dyn BufMut) {
-    let len = 15 + (block.base_fee_per_gas.is_some() as usize);
+    let payload_length = header_payload_length(block);
 
     // Create a header indicating the encoded content is a list with the payload length computed
     // from the header's payload calculation function.
     let list_header =
-        alloy_rlp::Header { list: true, payload_length: len };
+        alloy_rlp::Header { list: true, payload_length };
     list_header.encode(out);
 
     // Encode each header field sequentially
@@ -255,6 +256,31 @@ fn block_header_rlp<T>(block: &Block<T>, out: &mut dyn BufMut) {
 
 }
 
+/// Calculate the length of the block header payload in bytes
+fn header_payload_length<T>(block: &Block<T>) -> usize {
+    let mut length = 0;
+    length += block.parent_hash.length();
+    length += block.uncles_hash.length();
+    length += block.author.length();
+    length += block.state_root.length();
+    length += block.transactions_root.length();
+    length += block.receipts_root.length();
+    length += block.logs_bloom.length();
+    length += block.difficulty.length();
+    length += block.number.length();
+    length += block.gas_limit.length();
+    length += block.gas_used.length();
+    length += block.timestamp.length();
+    length += block.extra_data.length();
+    length += block.mix_hash.length();
+    length += block.nonce.length();
+
+    if let Some(base_fee) = &block.base_fee_per_gas {
+        length += base_fee.length();
+    }
+
+    length
+}
 // fn block_header_rlp<T>(block: &Block<T>, s: &mut RlpStream) {
 //     // Block header
 //     let len = 15 + (block.base_fee_per_gas.is_some() as usize);
@@ -331,9 +357,55 @@ fn block_header_rlp<T>(block: &Block<T>, out: &mut dyn BufMut) {
 
 /// Calculate the hash of a block
 pub fn calculate_block_hash<T>(block: &Block<T>) -> H256 {
-    let mut rlp = vec![];
-    block_header_rlp(block, &mut rlp);
-    keccak_hash(&rlp)
+
+    // To calculate the header we create a header by duplicating all block data.
+    // The is inefficient but it works.
+    // We should use our block_header_rlp function to encode the header and hash it
+    // but it currently produces a wrong result
+    let TODO = 0;
+
+    // create a header with block data
+    let consensus_header = alloy_consensus::Header {
+        parent_hash: block.parent_hash.0,
+        ommers_hash: block.uncles_hash.0,
+        beneficiary: block.author.0,
+        state_root: block.state_root.0,
+        transactions_root: block.transactions_root.0,
+        receipts_root: block.receipts_root.0,
+        logs_bloom: block.logs_bloom.0,
+        difficulty: block.difficulty.0,
+        number: block.number.0.saturating_to(),
+        gas_limit: block.gas_limit.0.saturating_to(),
+        gas_used: block.gas_used.0.saturating_to(),
+        timestamp: block.timestamp.0.saturating_to(),
+        extra_data: block.extra_data.0.clone().into(),
+        mix_hash: block.mix_hash.0,
+        nonce: block.nonce.0,
+        base_fee_per_gas: block.base_fee_per_gas.as_ref().map(|val| val.0.saturating_to()),
+        withdrawals_root: None,
+        blob_gas_used: None,
+        excess_blob_gas: None,
+        parent_beacon_block_root: None,
+    };
+
+    {
+        let REMOVE_ME = 0;
+        // let mut out: Vec<u8> = Vec::<u8>::new();
+        // consensus_header.encode(&mut out);
+
+        // println!("consensus_header encode: {:?}", out);
+
+        // let mut rlp = vec![];
+        // block_header_rlp(block, &mut rlp);
+
+        // println!("block_header_rlp encode: {:?}", rlp);
+    }
+
+    consensus_header.hash().into()
+
+    // let mut rlp = vec![];
+    // block_header_rlp(block, &mut rlp);
+    // keccak_hash(&rlp)
 }
 
 /// Calculate the size of a block in bytes considering all of its transactions
@@ -685,6 +757,12 @@ pub enum BlockTransactions<T = Transaction> {
     Uncle,
 }
 
+impl Default for BlockTransactions {
+    fn default() -> Self {
+        BlockTransactions::Full(vec![])
+    }
+}
+
 impl From<alloy_rpc_types::BlockTransactions> for BlockTransactions {
     fn from(block_txs: alloy_rpc_types::BlockTransactions) -> Self {
         match block_txs {
@@ -762,14 +840,15 @@ mod test {
         for (hash, value) in jsons {
             println!("Check block {}", hash);
             let value = value.get("result").unwrap().to_owned();
-            let block: Block<H256> = serde_json::from_value(value.clone()).unwrap();
+            let block: Block<Transactions<H256>> = serde_json::from_value(value.clone()).unwrap();
 
             let block_to_value = serde_json::to_value(block.clone()).unwrap();
-            let block_from_value: Block<H256> =
+            let block_from_value: Block<Transactions<H256>> =
                 serde_json::from_value(block_to_value.clone()).unwrap();
             assert_eq!(block_from_value, block);
 
             let calculated_block_hash = calculate_block_hash(&block);
+            println!("Calculated block hash: {:?}", calculated_block_hash);
             assert_eq!(
                 alloy_primitives::B256::from_str(&hash).unwrap(),
                 calculated_block_hash.0

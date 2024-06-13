@@ -1031,15 +1031,27 @@ mod test {
             let ethers_transaction: alloy_rpc_types::Transaction = transaction.clone().into();
             let tx_envelop = alloy_consensus::TxEnvelope::try_from(ethers_transaction.clone()).unwrap();
             let calculated_hash = match &tx_envelop {
-                TxEnvelope::Legacy(tx) => tx.signature_hash(),
-                TxEnvelope::Eip2930(tx) => tx.signature_hash(),
-                TxEnvelope::Eip1559(tx) => tx.signature_hash(),
-                TxEnvelope::Eip4844(tx) => tx.signature_hash(),
+                TxEnvelope::Legacy(tx) => tx.hash().clone(),
+                TxEnvelope::Eip2930(tx) => tx.hash().clone(),
+                TxEnvelope::Eip1559(tx) => tx.hash().clone(),
+                TxEnvelope::Eip4844(tx) => tx.hash().clone(),
                 _ => panic!("Envelop type not supported"),
             };
             assert_eq!(
                 alloy_primitives::B256::from_str(&hash).unwrap(),
                 calculated_hash
+            );
+            
+            let from_signer = match &tx_envelop {
+                TxEnvelope::Legacy(tx) => tx.recover_signer().unwrap(),
+                TxEnvelope::Eip2930(tx) => tx.recover_signer().unwrap(),
+                TxEnvelope::Eip1559(tx) => tx.recover_signer().unwrap(),
+                TxEnvelope::Eip4844(tx) => tx.recover_signer().unwrap(),
+                _ => panic!("Envelop type not supported"),
+            };
+            assert_eq!(
+                from_signer,
+                transaction.from.0
             );
 
             let transaction_to_value = serde_json::to_value(transaction).unwrap();
