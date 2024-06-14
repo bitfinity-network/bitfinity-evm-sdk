@@ -40,6 +40,6 @@ thiserror = { workspace = true }
 alloy-primitives = { workspace = true, features = ["rand"]}
 alloy-consensus = { workspace = true, features = ["k256"]}
 alloy-network = { workspace = true }
-# eth-signer = { path = "../eth-signer" }
+eth-signer = { path = "../eth-signer" }
 rand = { workspace = true }
 tokio = { workspace = true }

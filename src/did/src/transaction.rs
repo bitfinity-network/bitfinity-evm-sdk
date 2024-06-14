@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use alloy_rlp::{RlpDecodable, RlpEncodable};
 use candid::types::{Type, TypeInner};
@@ -704,7 +705,7 @@ impl Storable for StorableExecutionResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, RlpEncodable, RlpDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq, RlpEncodable, RlpDecodable)]
 pub struct Bloom(pub alloy_primitives::Bloom);
 
 impl Bloom {
@@ -787,6 +788,25 @@ impl CandidType for Bloom {
         S: candid::types::Serializer,
     {
         serializer.serialize_text(&self.to_hex_str())
+    }
+}
+
+impl Serialize for Bloom {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Bloom {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        alloy_primitives::Bloom::from_str(String::deserialize(deserializer)?.as_str())
+            .map_err(serde::de::Error::custom).map(Into::into)
     }
 }
 

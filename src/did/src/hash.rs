@@ -165,7 +165,7 @@ impl Serialize for H64 {
     where
         S: Serializer,
     {
-        serializer.serialize_str(self.to_hex_str().as_str())
+        self.0.serialize(serializer)
     }
 }
 
@@ -197,7 +197,7 @@ impl Serialize for H160 {
     where
         S: Serializer,
     {
-        serializer.serialize_str(self.to_hex_str().as_str())
+        self.0.serialize(serializer)
     }
 }
 
@@ -229,7 +229,7 @@ impl Serialize for H256 {
     where
         S: Serializer,
     {
-        serializer.serialize_str(self.to_hex_str().as_str())
+        self.0.serialize(serializer)
     }
 }
 
