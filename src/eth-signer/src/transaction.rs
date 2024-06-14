@@ -4,7 +4,8 @@ use std::hash::Hash;
 use alloy_consensus::{TxLegacy, TypedTransaction};
 use alloy_network::{eip2718::Encodable2718, EthereumSigner, TransactionBuilder as AlloyTransactionBuilder};
 use alloy_network::TxSignerSync;
-use alloy_rpc_types::{Signature as AlloySignature, TransactionRequest};
+use alloy_rpc_types::{Signature as AlloyRpcSignature, TransactionRequest};
+use alloy_primitives::Signature as AlloyPrimitivesSignature;
 use did::error::EvmError;
 use did::hash::H160;
 use did::integer::U256;
@@ -22,7 +23,7 @@ pub enum SigningMethod<'a> {
     None,
     // Precalculated signature
     // Could be used only for the cases when the transaction is executed ReadOnly
-    Signature(AlloySignature),
+    Signature(AlloyRpcSignature),
     /// Use signing key to generate signature in `calculate_hash_and_build` method
     SigningKey(&'a SigningKey),
 }
@@ -80,7 +81,7 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
                 // NOTE: we can avoid cloning input here by re-implementing code that calculates
                 // transaction signature hash
 
-                let signature: alloy_primitives::Signature = match typed_tx {
+                let signature: AlloyPrimitivesSignature = match typed_tx {
                     TypedTransaction::Legacy(mut tx) => wallet
                     .sign_transaction_sync(&mut tx)
                     .map_err(|e| EvmError::TransactionSignature(e.to_string()))?,
@@ -105,7 +106,7 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
                 // transaction.v = signature.v.into();
 
                 // WARN: the parity conversion is not fully implemented here
-                transaction.signature = Some(AlloySignature {
+                transaction.signature = Some(AlloyRpcSignature {
                     r: signature.r(),
                     s: signature.s(),
                     v: alloy_primitives::U256::from(signature.v().to_u64()),
@@ -124,7 +125,7 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
 #[cfg(test)]
 mod test {
 
-    use alloy_rpc_types::Signature as AlloySignature;
+    use alloy_rpc_types::Signature as AlloyRpcSignature;
     use alloy_signer::utils::secret_key_to_address;
     use did::U64;
 
@@ -162,7 +163,7 @@ mod test {
             gas: 10_000u64.into(),
             gas_price: Some(20_000u64.into()),
             input: Vec::new(),
-            signature: SigningMethod::Signature(AlloySignature {
+            signature: SigningMethod::Signature(AlloyRpcSignature {
                 r: alloy_primitives::U256::from(1u64),
                 s: alloy_primitives::U256::from(2u64),
                 v: alloy_primitives::U256::from(3u64),

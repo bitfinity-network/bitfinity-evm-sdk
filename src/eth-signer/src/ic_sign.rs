@@ -1,8 +1,9 @@
 use std::fmt;
 
 use alloy_consensus::{SignableTransaction, Transaction, TypedTransaction};
-use alloy_primitives::{keccak256, Address, SignatureError, B160};
-use alloy_rpc_types::Signature;
+use alloy_network::TransactionBuilder;
+use alloy_primitives::{keccak256, Address, SignatureError};
+use alloy_rpc_types::{Signature as AlloyRpcSignature, TransactionRequest};
 use candid::{CandidType, Principal};
 use alloy_signer::k256::elliptic_curve::sec1::ToEncodedPoint;
 use alloy_signer::k256::PublicKey;
@@ -26,6 +27,9 @@ pub enum IcSignerError {
 
     #[error("from address is not specified in transaction")]
     FromAddressNotPresent,
+
+    #[error("InvalidTransaction: {0}")]
+    InvalidTransaction(String),
 
     #[error("invalid public key")]
     InvalidPublicKey,
@@ -81,15 +85,18 @@ impl IcSigner {
     /// The `tx.from` expected to be set to the canister address.
     pub async fn sign_transaction(
         &self,
-        tx: &mut dyn SignableTransaction<alloy_primitives::Signature>,
+        tx: TransactionRequest,
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
-    ) -> Result<Signature, IcSignerError> {
-        let hash = transaction_signature_hash(tx);
+    ) -> Result<AlloyRpcSignature, IcSignerError> {
+        let tx_from = tx.from.ok_or(IcSignerError::FromAddressNotPresent)?;
+        let unsigned_tx = tx.build_unsigned().map_err(|e| {
+            IcSignerError::InvalidTransaction(format!("{e:?}"))
+        })?;
+        let hash = transaction_signature_hash(&unsigned_tx);
         // let digest = hash.as_fixed_bytes();
-        let tx_from = tx.from().ok_or(IcSignerError::FromAddressNotPresent)?;
         let mut signature = Self
-            .sign_digest(tx_from, *hash, key_id, derivation_path)
+            .sign_digest(&tx_from, *hash, key_id, derivation_path)
             .await?;
 
         // For non-legacy transactions recovery id should be updated.
@@ -109,7 +116,7 @@ impl IcSigner {
         digest: [u8; 32],
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
-    ) -> Result<Signature, IcSignerError> {
+    ) -> Result<AlloyRpcSignature, IcSignerError> {
         let request = SignWithEcdsaArgument {
             key_id: EcdsaKeyId {
                 curve: EcdsaCurve::Secp256k1,
@@ -132,13 +139,13 @@ impl IcSigner {
         let r = alloy_primitives::U256::from_be_slice(&signature_data[0..32]);
         let s = alloy_primitives::U256::from_be_slice(&signature_data[32..64]);
 
-        // Signature malleability check is not required, because DFinity uses `k256` crate
+        // AlloyRpcSignature malleability check is not required, because DFinity uses `k256` crate
         // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
         // Link: https://github.com/dfinity/ic/blob/master/rs/crypto/ecdsa_secp256k1/src/lib.rs
 
         // IC doesn't support recovery id signature parameter, so set it manually.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
-        let mut signature = Signature { r, s, v: 0 };
+        let mut signature = AlloyRpcSignature { r, s, v: 0 };
 
         // Recovery id value may be increased by one, depending on internal
         // signing parameter we don't know.

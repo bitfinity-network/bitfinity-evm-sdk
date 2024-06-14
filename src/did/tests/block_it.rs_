@@ -1,7 +1,7 @@
 use did::transaction::Bloom;
 use did::{Block, Transaction, H160, H256, H64, U256, U64};
 use eth_signer::transaction::{SigningMethod, TransactionBuilder};
-use ethers_core::k256::ecdsa::SigningKey;
+use eth_signer::k256::ecdsa::SigningKey;
 
 fn create_transaction(gas_price: Option<U256>, chain_id: u64) -> Transaction {
     TransactionBuilder {

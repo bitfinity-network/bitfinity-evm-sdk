@@ -7,12 +7,11 @@ use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::Display;
 use ic_stable_structures::{Bound, Bounded, Storable};
-use serde::Serialize;
+use serde::{Deserializer, Serialize, Serializer};
 
 #[derive(
-    Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize, Display, Hash,
+    Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Display, Hash,
 )]
-#[serde(transparent)]
 pub struct Hash<T>(pub T);
 
 ///Fixed-size uninterpreted hash type with 8 bytes (64 bits) size.
@@ -161,6 +160,25 @@ impl CandidType for H64 {
     }
 }
 
+impl Serialize for H64 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.to_hex_str().as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for H64 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Self::from_hex_str(String::deserialize(deserializer)?.as_str())
+            .map_err(serde::de::Error::custom)
+    }
+}
+
 impl CandidType for H160 {
     fn _ty() -> candid::types::Type {
         Type(Rc::new(TypeInner::Text))
@@ -174,6 +192,25 @@ impl CandidType for H160 {
     }
 }
 
+impl Serialize for H160 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.to_hex_str().as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for H160 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Self::from_hex_str(String::deserialize(deserializer)?.as_str())
+            .map_err(serde::de::Error::custom)
+    }
+}
+
 impl CandidType for H256 {
     fn _ty() -> candid::types::Type {
         Type(Rc::new(TypeInner::Text))
@@ -184,6 +221,25 @@ impl CandidType for H256 {
         S: candid::types::Serializer,
     {
         serializer.serialize_text(&self.to_hex_str())
+    }
+}
+
+impl Serialize for H256 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.to_hex_str().as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for H256 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Self::from_hex_str(String::deserialize(deserializer)?.as_str())
+            .map_err(serde::de::Error::custom)
     }
 }
 

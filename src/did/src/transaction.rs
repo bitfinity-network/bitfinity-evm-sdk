@@ -5,7 +5,8 @@ use alloy_rlp::{RlpDecodable, RlpEncodable};
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
-use alloy_rpc_types::transaction::{AccessList as AlloyAccessList, AccessListItem as AlloyAccessListItem, Transaction as AlloyTransaction};
+use alloy_primitives::Signature as AlloyPrimitivesSignature;
+use alloy_rpc_types::transaction::{AccessList as AlloyAccessList, AccessListItem as AlloyAccessListItem, Transaction as AlloyTransaction, Signature as AlloyRpcSignature};
 use ic_stable_structures::{Bound, Storable};
 use num::ToPrimitive;
 use serde::{Deserializer, Serialize, Serializer};
@@ -169,7 +170,7 @@ pub struct Signature {
     pub s: U256,
 }
 
-impl From<Signature> for alloy_rpc_types::Signature {
+impl From<Signature> for AlloyRpcSignature {
     fn from(value: Signature) -> Self {
         Self {
             r: value.r.into(),
@@ -180,14 +181,31 @@ impl From<Signature> for alloy_rpc_types::Signature {
     }
 }
 
-impl From<alloy_rpc_types::Signature> for Signature {
-    fn from(value: alloy_rpc_types::Signature) -> Self {
+impl From<AlloyRpcSignature> for Signature {
+    fn from(value: AlloyRpcSignature) -> Self {
         Self {
             r: value.r.into(),
             s: value.s.into(),
             v: value.v.into(),
         }
     }
+}
+
+/// Convert AlloyPrimitivesSignature to AlloyRpcSignature
+// pub fn alloy_primitives_signature_to_rpc(value: AlloyPrimitivesSignature) -> Result<AlloyRpcSignature, EvmError> {
+//     let v = value.v();
+//     Ok(AlloyRpcSignature {
+//         r: value.r().into(),
+//         s: value.s().into(),
+//         v: v.to_u64().into(),
+//         y_parity: v.y_parity_byte_non_eip155()
+//     })
+// }
+
+/// Convert AlloyRpcSignature to AlloyPrimitivesSignature
+#[inline]
+pub fn rpc_signature_to_alloy_primitives(value: AlloyRpcSignature) -> Result<AlloyPrimitivesSignature, EvmError> {
+    AlloyPrimitivesSignature::try_from(value).map_err(|e| EvmError::Internal(format!("{e:?}")))
 }
 
 /// Type that represents the signature parity byte, meant for use in RPC.
@@ -1198,7 +1216,7 @@ mod test {
             s: U256::max_value() - U256::from(1u64),
             v: U256::max_value(),
         };
-        let ethers_signature = alloy_rpc_types::Signature::from(signature.clone());
+        let ethers_signature = AlloyRpcSignature::from(signature.clone());
         let roundtrip_signature = Signature::from(ethers_signature);
         assert_eq!(signature, roundtrip_signature);
     }

@@ -10,11 +10,10 @@ use candid::{CandidType, Deserialize, Nat};
 use derive_more::{From, Into};
 use ic_stable_structures::{Bound, Bounded, Storable};
 use num::BigUint;
-use serde::Serialize;
+use serde::{Deserializer, Serialize, Serializer};
 #[derive(
-    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into, RlpEncodable, RlpDecodable,
+    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, From, Into, RlpEncodable, RlpDecodable,
 )]
-#[serde(transparent)]
 pub struct U256(pub alloy_primitives::U256);
 
 #[derive(
@@ -26,14 +25,11 @@ pub struct U256(pub alloy_primitives::U256);
     PartialEq,
     PartialOrd,
     Ord,
-    Serialize,
-    Deserialize,
     Hash,
     From,
     Into,
     RlpEncodable, RlpDecodable,
 )]
-#[serde(transparent)]
 pub struct U64(pub alloy_primitives::U64);
 
 impl Bounded for U256 {
@@ -373,6 +369,25 @@ impl Storable for U256 {
     };
 }
 
+impl Serialize for U64 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.to_hex_str().as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for U64 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Self::from_str(String::deserialize(deserializer)?.as_str())
+            .map_err(serde::de::Error::custom)
+    }
+}
+
 impl CandidType for U64 {
     fn _ty() -> candid::types::Type {
         Type(Rc::new(TypeInner::Text))
@@ -383,6 +398,25 @@ impl CandidType for U64 {
         S: candid::types::Serializer,
     {
         serializer.serialize_text(&self.to_hex_str())
+    }
+}
+
+impl Serialize for U256 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.to_hex_str().as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for U256 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Self::from_str(String::deserialize(deserializer)?.as_str())
+            .map_err(serde::de::Error::custom)
     }
 }
 
