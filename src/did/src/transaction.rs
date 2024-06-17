@@ -169,6 +169,9 @@ pub struct Signature {
     pub v: U256,
     pub r: U256,
     pub s: U256,
+    /// The y parity of the signature. This is only used for typed (non-legacy) transactions.
+    #[serde(default, rename = "yParity", skip_serializing_if = "Option::is_none")]
+    pub y_parity: Option<Parity>,
 }
 
 impl From<Signature> for AlloyRpcSignature {
@@ -177,7 +180,7 @@ impl From<Signature> for AlloyRpcSignature {
             r: value.r.into(),
             s: value.s.into(),
             v: value.v.into(),
-            y_parity: None
+            y_parity: value.y_parity.map(Into::into)
         }
     }
 }
@@ -188,6 +191,7 @@ impl From<AlloyRpcSignature> for Signature {
             r: value.r.into(),
             s: value.s.into(),
             v: value.v.into(),
+            y_parity: value.y_parity.map(Into::into)
         }
     }
 }
@@ -212,7 +216,7 @@ pub fn rpc_signature_to_alloy_primitives(value: AlloyRpcSignature) -> Result<All
 /// Type that represents the signature parity byte, meant for use in RPC.
 ///
 /// This will be serialized as "0x0" if false, and "0x1" if true.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, CandidType)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Parity(
     #[serde(serialize_with = "serialize_parity", deserialize_with = "deserialize_parity")] pub bool,
 );
@@ -223,11 +227,42 @@ impl From<bool> for Parity {
     }
 }
 
+impl From<Parity> for bool {
+    fn from(parity: Parity) -> Self {
+        parity.0
+    }
+}
+
+impl From<alloy_rpc_types::Parity> for Parity {
+    fn from(parity: alloy_rpc_types::Parity) -> Self {
+        Self(parity.0)
+    }
+}
+
+impl From<Parity> for alloy_rpc_types::Parity {
+    fn from(parity: Parity) -> Self {
+        Self(parity.0)
+    }
+}
+
 fn serialize_parity<S>(parity: &bool, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
     serializer.serialize_str(if *parity { "0x1" } else { "0x0" })
+}
+
+impl CandidType for Parity {
+    fn _ty() -> candid::types::Type {
+        Type(Rc::new(TypeInner::Text))
+    }
+
+    fn idl_serialize<S>(&self, serializer: S) -> Result<(), S::Error>
+    where
+        S: candid::types::Serializer,
+    {
+        serializer.serialize_text(if self.0 { "0x1" } else { "0x0" })
+    }
 }
 
 /// This implementation disallows serialization of the y parity bit that are not `"0x0"` or `"0x1"`.
@@ -245,6 +280,8 @@ where
         ))),
     }
 }
+
+
 
 impl Signature {
     /// Upper limit for signature S field.
@@ -325,6 +362,10 @@ pub struct Transaction {
     /// ECDSA signature s
     pub s: U256,
 
+    /// ECDSA signature y parity. This is only used for typed (non-legacy) transactions.
+    #[serde(default, rename = "yParity", skip_serializing_if = "Option::is_none")]
+    pub y_parity: Option<Parity>,
+
     // EIP2718
     /// Transaction type, Some(2) for EIP-1559 transaction,
     /// Some(1) for AccessList transaction, None for Legacy
@@ -388,6 +429,7 @@ impl From<AlloyTransaction> for Transaction {
             v: signature.v.into(),
             r: signature.r.into(),
             s: signature.s.into(),
+            y_parity: signature.y_parity.map(Into::into),
             transaction_type: tx.transaction_type.and_then(|val| val.to_u64()).map(Into::into),
             access_list: tx.access_list.map(Into::into),
             max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
@@ -404,6 +446,7 @@ impl From<Transaction> for AlloyTransaction {
             v: tx.v,
             r: tx.r,
             s: tx.s,
+            y_parity: tx.y_parity,
         };
 
         Self {
@@ -826,11 +869,10 @@ impl From<Bloom> for alloy_primitives::Bloom {
 mod test {
     use std::str::FromStr;
 
-    use alloy_consensus::{SignableTransaction, TxEnvelope, TypedTransaction};
-    use alloy_network::TransactionBuilder;
+    use alloy_consensus::TxEnvelope;
     use candid::{Decode, Encode};
     use ic_stable_structures::Storable;
-    use rand::Rng;
+    use rand::{random, Rng};
 
     use super::*;
     use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
@@ -1055,6 +1097,43 @@ mod test {
         test_candid_roundtrip(&block);
     }
 
+
+    #[test]
+    fn signature_encoding_roundtrip() {
+        {
+            let signature = Signature {
+                r: U256::from(random::<u64>()),
+                s: U256::from(random::<u64>()),
+                v: U256::from(random::<u64>()),
+                y_parity: Some(Parity(true)),
+            };
+            test_json_roundtrip(&signature);
+            test_candid_roundtrip(&signature);
+        }
+
+        {
+            let signature = Signature {
+                r: U256::from(random::<u64>()),
+                s: U256::from(random::<u64>()),
+                v: U256::from(random::<u64>()),
+                y_parity: Some(Parity(false)),
+            };
+            test_json_roundtrip(&signature);
+            test_candid_roundtrip(&signature);
+        }
+
+        {
+            let signature = Signature {
+                r: U256::from(random::<u64>()),
+                s: U256::from(random::<u64>()),
+                v: U256::from(random::<u64>()),
+                y_parity: None,
+            };
+            test_json_roundtrip(&signature);
+            test_candid_roundtrip(&signature);
+        }
+    }
+
     #[test]
     fn test_parse_real_transactions_from_ethereum() {
         let jsons = read_all_files_to_json("./tests/resources/json/transaction");
@@ -1235,6 +1314,7 @@ mod test {
             r: U256::max_value(),
             s: U256::max_value() - U256::from(1u64),
             v: U256::max_value(),
+            y_parity: Some(Parity(true)),
         };
         let ethers_signature = AlloyRpcSignature::from(signature.clone());
         let roundtrip_signature = Signature::from(ethers_signature);
