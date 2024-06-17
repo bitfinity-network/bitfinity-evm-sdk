@@ -21,8 +21,21 @@ pub struct Icrc2Burn {
     /// Address of the Wrapped token recipient.
     pub recipient_address: H160,
 
+    /// If user want's mint operation to approve minted tokens,
+    /// he can use this field.
+    pub approve_after_mint: Option<ApproveAfterMint>,
+
     /// Address from which fee should be charged for mint transaction
     /// performed by minter canister.
     /// If None, mint transaction will not be sent and user can send it by himself.
     pub fee_payer: Option<H160>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct ApproveAfterMint {
+    /// Approve minted tokens using this address as a spender.
+    pub approve_spender: H160,
+
+    /// Amount to approve.
+    pub approve_amount: U256,
 }
