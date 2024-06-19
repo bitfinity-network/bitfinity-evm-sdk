@@ -15,6 +15,9 @@ pub struct Icrc2Burn {
     /// Principal of ICRC-2 token to burn.
     pub icrc2_token_principal: Principal,
 
+    /// Address of the ERC20 token to mint.
+    pub erc20_token_address: H160,
+
     /// Subaccount of the ICRC-2 token from which amount will be burned.
     pub from_subaccount: Option<Subaccount>,
 
