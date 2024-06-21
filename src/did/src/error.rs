@@ -4,6 +4,7 @@ use candid::{CandidType, Deserialize};
 use jsonrpc_core::{Error, ErrorCode};
 use rlp::DecoderError;
 use serde::Serialize;
+use serde_json::error;
 use thiserror::Error;
 
 use crate::transaction::BlockId;
@@ -63,6 +64,8 @@ pub enum EvmError {
 
     #[error("The transaction has been reverted: {0}")]
     TransactionReverted(String),
+    #[error("Transaction Input Error {0}")]
+    TransactionInputError(String),
 }
 
 /// Variant of `TransactionPool` error
