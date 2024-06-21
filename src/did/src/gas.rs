@@ -61,6 +61,16 @@ pub struct TransactionInput {
 }
 
 impl TransactionInput {
+    /// Creates a new instance with the given input data.
+    pub const fn new(data: Bytes) -> Self {
+        Self::maybe_input(Some(data))
+    }
+
+    /// Creates a new instance with the given input data.
+    pub const fn maybe_input(input: Option<Bytes>) -> Self {
+        Self { input, data: None }
+    }
+
     /// Consumes the type and returns the optional input data.
     #[inline]
     pub fn into_input(self) -> Option<Bytes> {

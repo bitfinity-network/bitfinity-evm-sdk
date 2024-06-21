@@ -4,7 +4,6 @@ use candid::{CandidType, Deserialize};
 use jsonrpc_core::{Error, ErrorCode};
 use rlp::DecoderError;
 use serde::Serialize;
-use serde_json::error;
 use thiserror::Error;
 
 use crate::transaction::BlockId;
