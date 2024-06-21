@@ -78,17 +78,11 @@ impl TransactionInput {
     }
 
     /// Returns the optional input data.
-    #[inline]
-    pub fn input(&self) -> Option<&Bytes> {
-        self.input.as_ref().or(self.data.as_ref())
-    }
-
-    /// Returns the optional input data.
     ///
     /// Returns an error if both `data` and `input` fields are set and not equal.
     #[inline]
-    pub fn unique_input(&self) -> Result<Option<&Bytes>> {
-        self.check_unique_input().map(|()| self.input())
+    pub fn unique_input(self) -> Result<Option<Bytes>> {
+        self.check_unique_input().map(|()| self.into_input())
     }
 
     fn check_unique_input(&self) -> Result<()> {
