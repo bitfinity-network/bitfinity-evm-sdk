@@ -208,7 +208,7 @@ pub enum HaltError {
 
     /// Aux data overflow, new aux data is larger tha u16 max size.
     EofAuxDataOverflow,
-    /// Aud data is smaller then already present data size.
+    /// Aux data is smaller then already present data size.
     EofAuxDataTooSmall,
     /// EOF Subroutine stack overflow
     EOFFunctionStackOverflow,
