@@ -27,7 +27,7 @@ pub struct EstimateGasRequest {
     pub max_priority_fee_per_gas: Option<U256>,
     pub gas: Option<U256>,
     pub value: Option<U256>,
-    #[serde(default, flatten, alias = "data")]
+    #[serde(default, alias = "data", skip_serializing_if = "Option::is_none")]
     pub input: Option<Bytes>,
     pub nonce: Option<U256>,
     #[serde(rename = "chainId", default, skip_serializing_if = "Option::is_none")]
