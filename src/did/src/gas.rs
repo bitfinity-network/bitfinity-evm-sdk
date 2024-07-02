@@ -1,10 +1,10 @@
 use candid::CandidType;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::transaction::AccessList;
 use crate::{Bytes, H160, U256};
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, CandidType, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, CandidType, Deserialize)]
 /// The `estimate_gas` method parameters
 pub struct EstimateGasRequest {
     pub from: Option<H160>,
@@ -27,7 +27,8 @@ pub struct EstimateGasRequest {
     pub max_priority_fee_per_gas: Option<U256>,
     pub gas: Option<U256>,
     pub value: Option<U256>,
-    pub data: Option<Bytes>,
+    #[serde(default, alias = "data", skip_serializing_if = "Option::is_none")]
+    pub input: Option<Bytes>,
     pub nonce: Option<U256>,
     #[serde(rename = "chainId", default, skip_serializing_if = "Option::is_none")]
     pub chain_id: Option<U256>,

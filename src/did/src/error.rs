@@ -63,6 +63,8 @@ pub enum EvmError {
 
     #[error("The transaction has been reverted: {0}")]
     TransactionReverted(String),
+    #[error("Transaction Input Error {0}")]
+    TransactionInputError(String),
 }
 
 /// Variant of `TransactionPool` error
