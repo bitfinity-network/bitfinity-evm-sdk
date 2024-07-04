@@ -1,6 +1,7 @@
 use std::fmt;
 
 use candid::{CandidType, Principal};
+use ethers_core::k256::ecdsa::{RecoveryId, VerifyingKey};
 use ethers_core::k256::elliptic_curve::sec1::ToEncodedPoint;
 use ethers_core::k256::PublicKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
@@ -30,6 +31,8 @@ pub enum IcSignerError {
 
     #[error(transparent)]
     SignatureError(#[from] SignatureError),
+    #[error("signing failed")]
+    ICSigningFailed,
 }
 
 /// Signing key which will be used by management canister.
@@ -114,7 +117,7 @@ impl IcSigner {
                 name: key_id.to_string(),
             },
             message_hash: digest.to_vec(),
-            derivation_path,
+            derivation_path: derivation_path.clone(),
         };
         let signature_data = virtual_canister_call!(
             Principal::management_canister(),
@@ -130,22 +133,24 @@ impl IcSigner {
         let r = ethers_core::types::U256::from_big_endian(&signature_data[0..32]);
         let s = ethers_core::types::U256::from_big_endian(&signature_data[32..64]);
 
-        // Signature malleability check is not required, because DFinity uses `k256` crate
-        // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
-        // Link: https://github.com/dfinity/ic/blob/master/rs/crypto/ecdsa_secp256k1/src/lib.rs
-
         // IC doesn't support recovery id signature parameter, so set it manually.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         let mut signature = Signature { r, s, v: 0 };
 
-        // Recovery id value may be increased by one, depending on internal
-        // signing parameter we don't know.
-        // The only thing we can do: try to recover address and, if failed,
-        // assume that recovery id should be increased.
-        let recovered = signature.recover(digest)?;
-        if &recovered != canister_address {
-            signature.v += 1;
-        };
+        let public_key = self.public_key(key_id, derivation_path.clone()).await?;
+        // fetch recovery id from the signature.
+
+        let pub_key = VerifyingKey::from_sec1_bytes(public_key.as_slice())
+            .map_err(|_| IcSignerError::InvalidPublicKey)?;
+
+        let signature_rec = ethers_core::k256::ecdsa::Signature::from_slice(&signature_data)
+            .map_err(|_| IcSignerError::ICSigningFailed)?;
+
+        let recovery_id =
+            RecoveryId::trial_recovery_from_prehash(&pub_key, &digest, &signature_rec)
+                .map_err(|_| IcSignerError::ICSigningFailed)?;
+
+        signature.v = recovery_id.is_y_odd() as u64 * 27;
 
         Ok(signature)
     }
@@ -193,6 +198,8 @@ impl IcSigner {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use candid::Principal;
     use ethers_core::k256::ecdsa::SigningKey;
     use ethers_core::types::transaction::eip2718::TypedTransaction;
