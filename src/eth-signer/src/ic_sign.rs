@@ -97,7 +97,7 @@ impl IcSigner {
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         signature.v = match tx.chain_id() {
             Some(chain_id) => chain_id.as_u64() * 2 + 35,
-            None => signature.v,
+            None => 27,
         };
 
         Ok(signature)
