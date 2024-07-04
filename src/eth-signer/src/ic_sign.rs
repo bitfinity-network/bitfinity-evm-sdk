@@ -150,7 +150,7 @@ impl IcSigner {
             RecoveryId::trial_recovery_from_prehash(&pub_key, &digest, &signature_rec)
                 .map_err(|_| IcSignerError::ICSigningFailed)?;
 
-        signature.v = recovery_id.is_y_odd() as u64 * 27;
+        signature.v = recovery_id.is_y_odd() as u64 + 27;
 
         Ok(signature)
     }
