@@ -95,9 +95,9 @@ impl IcSigner {
 
         // For non-legacy transactions recovery id should be updated.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
-        signature.v += match tx.chain_id() {
+        signature.v = match tx.chain_id() {
             Some(chain_id) => chain_id.as_u64() * 2 + 35,
-            None => 27,
+            None => signature.v,
         };
 
         Ok(signature)
