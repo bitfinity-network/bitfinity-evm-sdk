@@ -1,7 +1,7 @@
 use std::fmt;
 
 use candid::{CandidType, Principal};
-use ethers_core::k256::ecdsa::{RecoveryId, VerifyingKey};
+use ethers_core::k256::ecdsa::{self, RecoveryId, VerifyingKey};
 use ethers_core::k256::elliptic_curve::sec1::ToEncodedPoint;
 use ethers_core::k256::PublicKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
@@ -31,8 +31,9 @@ pub enum IcSignerError {
 
     #[error(transparent)]
     SignatureError(#[from] SignatureError),
-    #[error("signing failed")]
-    ICSigningFailed,
+
+    #[error("internal error occurred : {0}")]
+    Internal(String),
 }
 
 /// Signing key which will be used by management canister.
@@ -88,10 +89,7 @@ impl IcSigner {
     ) -> Result<Signature, IcSignerError> {
         let hash = tx.sighash();
         let digest = hash.as_fixed_bytes();
-        let tx_from = tx.from().ok_or(IcSignerError::FromAddressNotPresent)?;
-        let mut signature = Self
-            .sign_digest(tx_from, *digest, key_id, derivation_path)
-            .await?;
+        let mut signature = Self.sign_digest(*digest, key_id, derivation_path).await?;
 
         // For non-legacy transactions recovery id should be updated.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
@@ -106,7 +104,6 @@ impl IcSigner {
     /// Signs the digest using `ManagementCanister::sign_with_ecdsa()` call.
     pub async fn sign_digest(
         &self,
-        canister_address: &H160,
         digest: [u8; 32],
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
@@ -138,17 +135,15 @@ impl IcSigner {
         let mut signature = Signature { r, s, v: 0 };
 
         let public_key = self.public_key(key_id, derivation_path.clone()).await?;
-        // fetch recovery id from the signature.
-
         let pub_key = VerifyingKey::from_sec1_bytes(public_key.as_slice())
             .map_err(|_| IcSignerError::InvalidPublicKey)?;
 
-        let signature_rec = ethers_core::k256::ecdsa::Signature::from_slice(&signature_data)
-            .map_err(|_| IcSignerError::ICSigningFailed)?;
+        let sec_signature = ecdsa::Signature::from_slice(&signature_data)
+            .map_err(|e| IcSignerError::Internal(e.to_string()))?;
 
         let recovery_id =
-            RecoveryId::trial_recovery_from_prehash(&pub_key, &digest, &signature_rec)
-                .map_err(|_| IcSignerError::ICSigningFailed)?;
+            RecoveryId::trial_recovery_from_prehash(&pub_key, &digest, &sec_signature)
+                .map_err(|e| IcSignerError::Internal(e.to_string()))?;
 
         signature.v = recovery_id.is_y_odd() as u64 + 27;
 
@@ -198,7 +193,6 @@ impl IcSigner {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
 
     use candid::Principal;
     use ethers_core::k256::ecdsa::SigningKey;
@@ -268,5 +262,13 @@ mod tests {
 
         let recovered_from = signature.recover(tx.sighash()).unwrap();
         assert_eq!(recovered_from, from);
+    }
+
+    #[test]
+    fn test_pubkey_to_address() {
+        let wallet = init_context();
+        let pubkey = wallet.signer.verifying_key().to_encoded_point(true);
+        let address = IcSigner.pubkey_to_address(&pubkey.to_bytes()).unwrap();
+        assert_eq!(address, wallet.address);
     }
 }

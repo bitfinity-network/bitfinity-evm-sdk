@@ -234,8 +234,8 @@ mod ic_sign {
     #[derive(CandidType, Serialize, Deserialize, Clone)]
     pub struct ManagementCanisterSigner {
         pub(super) key_id: SigningKeyId,
-        pub(super) cached_address: RefCell<Option<H160>>,
         pub(super) derivation_path: DerivationPath,
+        pub(super) cached_address: RefCell<Option<H160>>,
     }
 
     impl ManagementCanisterSigner {
@@ -280,14 +280,8 @@ mod ic_sign {
         }
 
         async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature, TransactionSignerError> {
-            let address = self.get_address().await?;
             IcSigner {}
-                .sign_digest(
-                    &address.into(),
-                    digest,
-                    self.key_id.clone(),
-                    self.derivation_path.clone(),
-                )
+                .sign_digest(digest, self.key_id.clone(), self.derivation_path.clone())
                 .await
                 .map_err(TransactionSignerError::IcSignError)
                 .map(Into::into)
