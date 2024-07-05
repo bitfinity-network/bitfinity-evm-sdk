@@ -344,8 +344,9 @@ mod ic_sign {
 
 #[cfg(test)]
 mod test {
-    use rand::thread_rng;
     use std::cell::RefCell;
+
+    use rand::thread_rng;
 
     use super::*;
 

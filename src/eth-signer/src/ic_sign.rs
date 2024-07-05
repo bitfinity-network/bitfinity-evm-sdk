@@ -1,6 +1,7 @@
 use std::fmt;
 
 use candid::{CandidType, Principal};
+use ethereum_types::U256;
 use ethers_core::k256::ecdsa::{self, RecoveryId, VerifyingKey};
 use ethers_core::k256::elliptic_curve::sec1::ToEncodedPoint;
 use ethers_core::k256::PublicKey;
@@ -94,11 +95,13 @@ impl IcSigner {
             .sign_digest(*digest, pubkey, key_id, derivation_path)
             .await?;
 
+        let v = signature.v;
+
         // For non-legacy transactions recovery id should be updated.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         signature.v = match tx.chain_id() {
-            Some(chain_id) => chain_id.as_u64() * 2 + 35,
-            None => signature.v,
+            Some(chain_id) => chain_id.as_u64() * (2 + 35) + (v - 27),
+            None => v,
         };
 
         Ok(signature)
@@ -131,8 +134,8 @@ impl IcSigner {
         .map_err(|(code, msg)| IcSignerError::SigningFailed(code, msg))?
         .signature;
 
-        let r = ethers_core::types::U256::from_big_endian(&signature_data[0..32]);
-        let s = ethers_core::types::U256::from_big_endian(&signature_data[32..64]);
+        let r = U256::from_big_endian(&signature_data[0..32]);
+        let s = U256::from_big_endian(&signature_data[32..64]);
 
         // IC doesn't support recovery id signature parameter, so set it manually.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
