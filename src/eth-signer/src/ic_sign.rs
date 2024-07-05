@@ -80,6 +80,33 @@ impl fmt::Display for SigningKeyId {
 pub struct IcSigner;
 
 impl IcSigner {
+    /// Compute the recovery ID for the given digest, public key and signature.
+    ///
+    /// # Arguments
+    /// * `digest`: The digest to recover the signature from.
+    /// * `pubkey`: The public key that was used to sign the digest.
+    /// * `signature`: The signature to recover.
+    ///
+    /// # Returns
+    /// The recovery ID.
+    pub fn compute_recovery_id(
+        digest: &[u8],
+        pubkey: &[u8],
+        signature: &[u8],
+    ) -> Result<RecoveryId, IcSignerError> {
+        let pub_key =
+            VerifyingKey::from_sec1_bytes(pubkey).map_err(|_| IcSignerError::InvalidPublicKey)?;
+
+        let sec_signature = ecdsa::Signature::from_slice(&signature)
+            .map_err(|e| IcSignerError::Internal(e.to_string()))?;
+
+        let recovery_id =
+            RecoveryId::trial_recovery_from_prehash(&pub_key, &digest, &sec_signature)
+                .map_err(|e| IcSignerError::Internal(e.to_string()))?;
+
+        Ok(recovery_id)
+    }
+
     /// Signs the transaction using `ManagementCanister::sign_with_ecdsa()` call.
     /// The `tx.from` expected to be set to the canister address.
     pub async fn sign_transaction(
@@ -137,19 +164,14 @@ impl IcSigner {
         let r = U256::from_big_endian(&signature_data[0..32]);
         let s = U256::from_big_endian(&signature_data[32..64]);
 
-        // IC doesn't support recovery id signature parameter, so set it manually.
+        // Signature malleability check is not required, because dfinity uses `k256` crate
+        // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
+        // Link: https://github.com/dfinity/ic/blob/master/rs/crypto/ecdsa_secp256k1/src/lib.rs
+        // IC doesn't support recovery id signature parameter, so we
+        // use the public key with the signature to calculate the recovery id.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         let mut signature = Signature { r, s, v: 0 };
-
-        let pub_key =
-            VerifyingKey::from_sec1_bytes(&pub_key).map_err(|_| IcSignerError::InvalidPublicKey)?;
-
-        let sec_signature = ecdsa::Signature::from_slice(&signature_data)
-            .map_err(|e| IcSignerError::Internal(e.to_string()))?;
-
-        let recovery_id =
-            RecoveryId::trial_recovery_from_prehash(&pub_key, &digest, &sec_signature)
-                .map_err(|e| IcSignerError::Internal(e.to_string()))?;
+        let recovery_id = Self::compute_recovery_id(&digest, pub_key, &signature_data)?;
 
         signature.v = recovery_id.is_y_odd() as u64 + 27;
 
