@@ -101,7 +101,6 @@ impl FromStr for Wallet<'static, SigningKey> {
 
 impl TryFrom<&str> for Wallet<'static, SigningKey> {
     type Error = WalletError;
-
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         value.parse()
     }
@@ -109,7 +108,6 @@ impl TryFrom<&str> for Wallet<'static, SigningKey> {
 
 impl TryFrom<String> for Wallet<'static, SigningKey> {
     type Error = WalletError;
-
     fn try_from(value: String) -> Result<Self, Self::Error> {
         value.parse()
     }
