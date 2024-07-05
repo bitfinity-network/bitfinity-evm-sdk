@@ -7,7 +7,7 @@ use ethers_core::k256::elliptic_curve::sec1::ToEncodedPoint;
 use ethers_core::k256::PublicKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::{Signature, SignatureError, H160};
-use ethers_core::utils;
+use ethers_core::utils::{self, public_key_to_address};
 use ic_canister::virtual_canister_call;
 use ic_exports::ic_cdk::api::call::RejectionCode;
 use ic_exports::ic_cdk::api::management_canister::ecdsa::{
@@ -97,18 +97,27 @@ impl IcSigner {
         let pub_key =
             VerifyingKey::from_sec1_bytes(pubkey).map_err(|_| IcSignerError::InvalidPublicKey)?;
 
-        let sec_signature = ecdsa::Signature::from_slice(&signature)
-            .map_err(|e| IcSignerError::Internal(e.to_string()))?;
+        let sec_signature = ecdsa::Signature::from_slice(&signature).map_err(|e| {
+            IcSignerError::Internal(format!(
+                "failed to parse ECDSA signature: {}",
+                e.to_string(),
+            ))
+        })?;
 
-        let recovery_id =
-            RecoveryId::trial_recovery_from_prehash(&pub_key, &digest, &sec_signature)
-                .map_err(|e| IcSignerError::Internal(e.to_string()))?;
+        let recovery_id = RecoveryId::trial_recovery_from_prehash(
+            &pub_key,
+            &digest,
+            &sec_signature,
+        )
+        .map_err(|e| {
+            IcSignerError::Internal(format!("failed to compute recovery ID: {}", e.to_string()))
+        })?;
 
         Ok(recovery_id)
     }
 
-    /// Signs the transaction using `ManagementCanister::sign_with_ecdsa()` call.
-    /// The `tx.from` expected to be set to the canister address.
+    /// Signs the transaction using `ManagementCanister::sign_with_ecdsa()`
+    /// call.
     pub async fn sign_transaction(
         &self,
         tx: &TypedTransaction,
@@ -150,6 +159,7 @@ impl IcSigner {
             message_hash: digest.to_vec(),
             derivation_path: derivation_path.clone(),
         };
+
         let signature_data = virtual_canister_call!(
             Principal::management_canister(),
             "sign_with_ecdsa",
@@ -161,19 +171,19 @@ impl IcSigner {
         .map_err(|(code, msg)| IcSignerError::SigningFailed(code, msg))?
         .signature;
 
+        // IC doesn't support recovery id signature parameter, so we
+        // use the public key with the signature to compute the recovery id.
+        // Details: https://eips.ethereum.org/EIPS/eip-155.
+        let recovery_id = Self::compute_recovery_id(&digest, pub_key, &signature_data)?;
+
         let r = U256::from_big_endian(&signature_data[0..32]);
         let s = U256::from_big_endian(&signature_data[32..64]);
+        let v = recovery_id.is_y_odd() as u64 + 27;
 
         // Signature malleability check is not required, because dfinity uses `k256` crate
         // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
         // Link: https://github.com/dfinity/ic/blob/master/rs/crypto/ecdsa_secp256k1/src/lib.rs
-        // IC doesn't support recovery id signature parameter, so we
-        // use the public key with the signature to calculate the recovery id.
-        // Details: https://eips.ethereum.org/EIPS/eip-155.
-        let mut signature = Signature { r, s, v: 0 };
-        let recovery_id = Self::compute_recovery_id(&digest, pub_key, &signature_data)?;
-
-        signature.v = recovery_id.is_y_odd() as u64 + 27;
+        let signature = Signature { r, s, v };
 
         Ok(signature)
     }
@@ -205,17 +215,10 @@ impl IcSigner {
 
     /// Convert public key to ethereum address.
     pub fn pubkey_to_address(&self, pubkey: &[u8]) -> Result<H160, IcSignerError> {
-        let uncompressed_public_key =
-            PublicKey::from_sec1_bytes(pubkey).map_err(|_| IcSignerError::InvalidPublicKey)?;
+        let key =
+            VerifyingKey::from_sec1_bytes(pubkey).map_err(|_| IcSignerError::InvalidPublicKey)?;
 
-        let public_key = uncompressed_public_key.to_encoded_point(false);
-        let public_key = public_key.as_bytes();
-        debug_assert_eq!(public_key[0], 0x04);
-        let hash = utils::keccak256(&public_key[1..]);
-
-        let mut bytes = [0u8; 20];
-        bytes.copy_from_slice(&hash[12..]);
-        Ok(H160::from_slice(&bytes))
+        Ok(public_key_to_address(&key))
     }
 }
 
@@ -251,9 +254,8 @@ mod tests {
                 let hash = args.0.message_hash;
                 let h256 = H256::from_slice(&hash);
                 let signature = wallet_to_sign.sign_hash(h256).unwrap();
-                SignWithEcdsaResponse {
-                    signature: signature.to_vec(),
-                }
+                let signature: Vec<u8> = signature.to_vec().into_iter().take(64).collect();
+                SignWithEcdsaResponse { signature }
             },
         );
 
