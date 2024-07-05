@@ -84,12 +84,15 @@ impl IcSigner {
     pub async fn sign_transaction(
         &self,
         tx: &TypedTransaction,
+        pubkey: &[u8],
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
     ) -> Result<Signature, IcSignerError> {
         let hash = tx.sighash();
         let digest = hash.as_fixed_bytes();
-        let mut signature = Self.sign_digest(*digest, key_id, derivation_path).await?;
+        let mut signature = Self
+            .sign_digest(*digest, pubkey, key_id, derivation_path)
+            .await?;
 
         // For non-legacy transactions recovery id should be updated.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
@@ -105,6 +108,7 @@ impl IcSigner {
     pub async fn sign_digest(
         &self,
         digest: [u8; 32],
+        pub_key: &[u8],
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
     ) -> Result<Signature, IcSignerError> {
@@ -134,9 +138,8 @@ impl IcSigner {
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         let mut signature = Signature { r, s, v: 0 };
 
-        let public_key = self.public_key(key_id, derivation_path.clone()).await?;
-        let pub_key = VerifyingKey::from_sec1_bytes(public_key.as_slice())
-            .map_err(|_| IcSignerError::InvalidPublicKey)?;
+        let pub_key =
+            VerifyingKey::from_sec1_bytes(&pub_key).map_err(|_| IcSignerError::InvalidPublicKey)?;
 
         let sec_signature = ecdsa::Signature::from_slice(&signature_data)
             .map_err(|e| IcSignerError::Internal(e.to_string()))?;
@@ -255,8 +258,15 @@ mod tests {
             .gas(53000)
             .into();
 
+        let pub_key = wallet.signer.verifying_key().to_encoded_point(true);
+
         let signature = IcSigner
-            .sign_transaction(&tx, SigningKeyId::Dfx, DerivationPath::default())
+            .sign_transaction(
+                &tx,
+                &pub_key.to_bytes(),
+                SigningKeyId::Dfx,
+                DerivationPath::default(),
+            )
             .await
             .unwrap();
 
