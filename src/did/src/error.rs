@@ -63,8 +63,9 @@ pub enum EvmError {
 
     #[error("The transaction has been reverted: {0}")]
     TransactionReverted(String),
-    #[error("Transaction Input Error {0}")]
-    TransactionInputError(String),
+
+    #[error("Precompile: {0}")]
+    Precompile(String),
 }
 
 /// Variant of `TransactionPool` error
@@ -204,6 +205,13 @@ pub enum HaltError {
     CreateInitcodeSizeLimit,
     InvalidChainId,
     StateChangeDuringStaticCall,
+
+    /// Aux data overflow, new aux data is larger tha u16 max size.
+    EofAuxDataOverflow,
+    /// Aux data is smaller then already present data size.
+    EofAuxDataTooSmall,
+    /// EOF Subroutine stack overflow
+    EOFFunctionStackOverflow,
 }
 
 #[derive(
