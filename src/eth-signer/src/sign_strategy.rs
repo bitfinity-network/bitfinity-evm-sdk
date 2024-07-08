@@ -272,9 +272,7 @@ mod ic_sign {
 
         /// Lazily compute the public key
         async fn get_or_compute_pubkey(&self) -> Result<Vec<u8>, TransactionSignerError> {
-            let mut cached_pubkey = self.cached_pubkey.borrow_mut();
-
-            if let Some(pubkey) = cached_pubkey.as_ref() {
+            if let Some(pubkey) = self.cached_pubkey.borrow().as_ref() {
                 return Ok(pubkey.clone());
             }
 
@@ -282,7 +280,7 @@ mod ic_sign {
                 .public_key(self.key_id.clone(), self.derivation_path.clone())
                 .await?;
 
-            *cached_pubkey = Some(new_pubkey.clone());
+            *self.cached_pubkey.borrow_mut() = Some(new_pubkey.clone());
 
             Ok(new_pubkey)
         }

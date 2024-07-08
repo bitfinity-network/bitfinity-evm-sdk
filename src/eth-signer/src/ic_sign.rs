@@ -3,11 +3,9 @@ use std::fmt;
 use candid::{CandidType, Principal};
 use ethereum_types::U256;
 use ethers_core::k256::ecdsa::{self, RecoveryId, VerifyingKey};
-use ethers_core::k256::elliptic_curve::sec1::ToEncodedPoint;
-use ethers_core::k256::PublicKey;
 use ethers_core::types::transaction::eip2718::TypedTransaction;
 use ethers_core::types::{Signature, SignatureError, H160};
-use ethers_core::utils::{self, public_key_to_address};
+use ethers_core::utils::public_key_to_address;
 use ic_canister::virtual_canister_call;
 use ic_exports::ic_cdk::api::call::RejectionCode;
 use ic_exports::ic_cdk::api::management_canister::ecdsa::{
@@ -97,21 +95,12 @@ impl IcSigner {
         let pub_key =
             VerifyingKey::from_sec1_bytes(pubkey).map_err(|_| IcSignerError::InvalidPublicKey)?;
 
-        let sec_signature = ecdsa::Signature::from_slice(&signature).map_err(|e| {
-            IcSignerError::Internal(format!(
-                "failed to parse ECDSA signature: {}",
-                e.to_string(),
-            ))
+        let sec_signature = ecdsa::Signature::from_slice(signature).map_err(|e| {
+            IcSignerError::Internal(format!("failed to parse ECDSA signature: {e}"))
         })?;
 
-        let recovery_id = RecoveryId::trial_recovery_from_prehash(
-            &pub_key,
-            &digest,
-            &sec_signature,
-        )
-        .map_err(|e| {
-            IcSignerError::Internal(format!("failed to compute recovery ID: {}", e.to_string()))
-        })?;
+        let recovery_id = RecoveryId::trial_recovery_from_prehash(&pub_key, digest, &sec_signature)
+            .map_err(|e| IcSignerError::Internal(format!("failed to compute recovery ID: {e}")))?;
 
         Ok(recovery_id)
     }
