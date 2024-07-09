@@ -43,6 +43,9 @@ pub trait TransactionSigner {
 
     /// Sign the given digest
     async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature>;
+
+    /// Get the public key for the given identity
+    async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>>;
 }
 
 /// Signing strategy for signing EVM transactions
@@ -139,6 +142,14 @@ impl TransactionSigner for TxSigner {
             Self::ManagementCanister(signer) => signer.sign_digest(digest).await,
         }
     }
+
+    async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
+        match self {
+            Self::Local(signer) => signer.get_public_key().await,
+            #[cfg(feature = "ic_sign")]
+            Self::ManagementCanister(signer) => signer.get_public_key().await,
+        }
+    }
 }
 
 /// Local private key implementation
@@ -175,6 +186,16 @@ impl TransactionSigner for LocalTxSigner {
             .sign_hash(ethereum_types::H256(digest))
             .map_err(TransactionSignerError::WalletError)
             .map(Into::into)
+    }
+
+    async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
+        Ok(self
+            .wallet
+            .signer
+            .verifying_key()
+            .to_encoded_point(false)
+            .to_bytes()
+            .to_vec())
     }
 }
 
@@ -234,32 +255,48 @@ mod ic_sign {
     #[derive(CandidType, Serialize, Deserialize, Clone)]
     pub struct ManagementCanisterSigner {
         pub(super) key_id: SigningKeyId,
-        pub(super) cached_address: RefCell<Option<H160>>,
         pub(super) derivation_path: DerivationPath,
+        pub(super) cached_address: RefCell<Option<H160>>,
+        pub(super) cached_pubkey: RefCell<Option<Vec<u8>>>,
     }
 
     impl ManagementCanisterSigner {
         pub fn new(key_id: SigningKeyId, derivation_path: DerivationPath) -> Self {
             Self {
                 key_id,
-                cached_address: RefCell::new(None),
                 derivation_path,
+                cached_address: RefCell::new(None),
+                cached_pubkey: RefCell::new(None),
             }
+        }
+
+        /// Lazily compute the public key
+        async fn get_or_compute_pubkey(&self) -> Result<Vec<u8>, TransactionSignerError> {
+            if let Some(pubkey) = self.cached_pubkey.borrow().as_ref() {
+                return Ok(pubkey.clone());
+            }
+
+            let new_pubkey = IcSigner
+                .public_key(self.key_id.clone(), self.derivation_path.clone())
+                .await?;
+
+            *self.cached_pubkey.borrow_mut() = Some(new_pubkey.clone());
+
+            Ok(new_pubkey)
         }
     }
 
     #[async_trait(?Send)]
     impl TransactionSigner for ManagementCanisterSigner {
         async fn get_address(&self) -> Result<H160, TransactionSignerError> {
-            if let Some(address) = &*self.cached_address.borrow() {
-                return Ok(address.clone());
+            if let Some(address) = self.cached_address.borrow().as_ref() {
+                return Ok(address.0.into());
             }
 
-            let pubkey = IcSigner {}
-                .public_key(self.key_id.clone(), self.derivation_path.clone())
-                .await?;
+            let pubkey = self.get_or_compute_pubkey().await?;
+
             let address: H160 = IcSigner.pubkey_to_address(&pubkey)?.into();
-            *self.cached_address.borrow_mut() = Some(address.clone());
+            *self.cached_address.borrow_mut() = Some(address.0.into());
 
             Ok(address)
         }
@@ -268,9 +305,12 @@ mod ic_sign {
             &self,
             transaction: &TypedTransaction,
         ) -> Result<Signature, TransactionSignerError> {
-            IcSigner {}
+            let pub_key = self.get_or_compute_pubkey().await?;
+
+            IcSigner
                 .sign_transaction(
                     transaction,
+                    &pub_key,
                     self.key_id.clone(),
                     self.derivation_path.clone(),
                 )
@@ -280,11 +320,12 @@ mod ic_sign {
         }
 
         async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature, TransactionSignerError> {
-            let address = self.get_address().await?;
-            IcSigner {}
+            let pub_key = self.get_or_compute_pubkey().await?;
+
+            IcSigner
                 .sign_digest(
-                    &address.into(),
                     digest,
+                    &pub_key,
                     self.key_id.clone(),
                     self.derivation_path.clone(),
                 )
@@ -292,11 +333,17 @@ mod ic_sign {
                 .map_err(TransactionSignerError::IcSignError)
                 .map(Into::into)
         }
+
+        async fn get_public_key(&self) -> Result<Vec<u8>, TransactionSignerError> {
+            self.get_or_compute_pubkey().await
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::cell::RefCell;
+
     use rand::thread_rng;
 
     use super::*;
@@ -348,8 +395,9 @@ mod test {
     fn test_management_canister_signer_roundtrip() {
         let management_canister_signer = ManagementCanisterSigner {
             key_id: crate::ic_sign::SigningKeyId::Dfx,
-            cached_address: std::cell::RefCell::new(Some(H160::from_slice(&[3; 20]))),
+            cached_address: RefCell::new(Some(H160::from_slice(&[3; 20]))),
             derivation_path: vec![vec![1, 2], vec![3]],
+            cached_pubkey: RefCell::new(Some(vec![42; 32])),
         };
         let signer: TxSigner = storable_roundtrip(&TxSigner::ManagementCanister(
             management_canister_signer.clone(),
@@ -358,11 +406,13 @@ mod test {
             key_id,
             cached_address,
             derivation_path,
+            cached_pubkey,
         }) = signer
         {
             assert!(matches!(key_id, crate::ic_sign::SigningKeyId::Dfx));
             assert_eq!(cached_address, management_canister_signer.cached_address);
             assert_eq!(derivation_path, management_canister_signer.derivation_path);
+            assert_eq!(cached_pubkey, management_canister_signer.cached_pubkey)
         } else {
             panic!("roundtrip failed");
         }
@@ -396,11 +446,13 @@ mod test {
             key_id,
             cached_address,
             derivation_path,
+            cached_pubkey,
         }) = signer
         {
             assert_eq!(key_id, crate::ic_sign::SigningKeyId::Test);
             assert_eq!(derivation_path, vec![chain_id.to_be_bytes().to_vec()]);
             assert_eq!(*cached_address.borrow(), None);
+            assert_eq!(*cached_pubkey.borrow(), None);
         } else {
             panic!("invalid signer")
         }

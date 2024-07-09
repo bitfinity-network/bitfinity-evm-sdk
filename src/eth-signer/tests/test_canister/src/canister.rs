@@ -1,7 +1,8 @@
 use candid::Principal;
 use eth_signer::ic_sign::{DerivationPath, IcSigner, SigningKeyId};
 use ethers_core::types::transaction::eip2718::TypedTransaction;
-use ethers_core::types::{TransactionRequest, H160};
+use ethers_core::types::{Transaction, TransactionRequest, H160};
+use ethers_core::utils::rlp::{Decodable, Rlp};
 use ic_canister::{generate_idl, update, Canister, Idl, PreUpdate};
 
 #[derive(Canister)]
@@ -33,12 +34,23 @@ impl TestCanister {
             .into();
 
         let signature = IcSigner
-            .sign_transaction(&tx, SigningKeyId::PocketIc, DerivationPath::default())
+            .sign_transaction(
+                &tx,
+                &pubkey,
+                SigningKeyId::PocketIc,
+                DerivationPath::default(),
+            )
             .await
             .unwrap();
 
         let recovered_from = signature.recover(tx.sighash()).unwrap();
         assert_eq!(recovered_from, from);
+
+        // Assert the chain ID is correctly encoded in the signature
+        let tx_bytes = tx.rlp_signed(&signature);
+
+        let decoded_tx = Transaction::decode(&Rlp::new(&tx_bytes)).unwrap();
+        assert_eq!(decoded_tx.chain_id.unwrap().as_u64(), 355113);
 
         let tx: TypedTransaction = TransactionRequest::new()
             .from(from)
@@ -51,7 +63,12 @@ impl TestCanister {
             .into();
 
         let signature = IcSigner
-            .sign_transaction(&tx, SigningKeyId::PocketIc, DerivationPath::default())
+            .sign_transaction(
+                &tx,
+                &pubkey,
+                SigningKeyId::PocketIc,
+                DerivationPath::default(),
+            )
             .await
             .unwrap();
 
@@ -61,8 +78,8 @@ impl TestCanister {
         let digest = [42u8; 32];
         let signature = IcSigner
             .sign_digest(
-                &from,
                 digest,
+                &pubkey,
                 SigningKeyId::PocketIc,
                 DerivationPath::default(),
             )
@@ -75,8 +92,8 @@ impl TestCanister {
         let digest = [43u8; 32];
         let signature = IcSigner
             .sign_digest(
-                &from,
                 digest,
+                &pubkey,
                 SigningKeyId::PocketIc,
                 DerivationPath::default(),
             )
