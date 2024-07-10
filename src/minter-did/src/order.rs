@@ -8,7 +8,7 @@ use eth_signer::sign_strategy::TransactionSigner;
 use ethers_core::utils::keccak256;
 use ic_stable_structures::{Bound, Storable};
 use serde::de::Visitor;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 use crate::id256::Id256;
@@ -218,6 +218,15 @@ impl<'v> Visitor<'v> for SignedMintOrderVisitor {
             v.try_into()
                 .map_err(|_| E::invalid_length(v.len(), &Self))?,
         ))
+    }
+}
+
+impl Serialize for SignedMintOrder {
+    fn serialize<S>(&self, serializer: S) -> std::prelude::v1::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
     }
 }
 
