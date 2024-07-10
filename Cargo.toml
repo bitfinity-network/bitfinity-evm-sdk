@@ -24,9 +24,7 @@ homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.27.0"
-
-
+version = "0.28.0"
 
 [workspace.dependencies]
 alloy-primitives = { version = "0.7", default-features = false }
@@ -81,7 +79,6 @@ testcontainers = { package = "testcontainers-modules", version = "0.7", features
 thiserror = "1.0"
 tokio = { version = "1.24", features = ["macros", "rt", "signal"] }
 url = "2.5"
-
 
 [profile.dev]
 debug = false
