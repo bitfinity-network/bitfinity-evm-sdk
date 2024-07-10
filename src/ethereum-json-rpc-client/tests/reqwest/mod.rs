@@ -12,6 +12,11 @@ const ETHEREUM_JSON_API_ENDPOINTS: &[&str] = &[
     "https://cloudflare-eth.com/",
     "https://ethereum.publicnode.com",
     "https://rpc.ankr.com/eth",
+    "https://nodes.mewapi.io/rpc/eth",
+    "https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79",
+    "https://eth-mainnet.nodereal.io/v1/1659dfb40aa24bbb8153a677b98064d7",
+    "https://eth.llamarpc.com",
+    "https://eth-mainnet.public.blastapi.io",
 ];
 const MAX_BATCH_SIZE: usize = 5;
 
