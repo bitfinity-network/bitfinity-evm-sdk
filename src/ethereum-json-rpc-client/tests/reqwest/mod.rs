@@ -340,6 +340,8 @@ async fn should_get_logs() {
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
+
+    panic!("Failed to get logs");
 }
 
 #[tokio::test]
