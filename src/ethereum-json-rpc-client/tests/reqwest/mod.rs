@@ -328,13 +328,12 @@ async fn should_get_logs() {
 #[tokio::test]
 #[serial]
 async fn should_get_transaction_receipts() {
-    let block = reqwest_client()
-        .get_block_by_number(BlockNumber::Number(11588465.into()))
-        .await
-        .unwrap();
-
     // this test is flaky for some reasons, so we try multiple times
     for _ in 0..3 {
+        let block = reqwest_client()
+            .get_block_by_number(BlockNumber::Number(11588465.into()))
+            .await
+            .unwrap();
         if let Ok(receipts) = reqwest_client()
             .get_receipts_by_hash(
                 vec![block.transactions[0], block.transactions[1]],
@@ -346,7 +345,7 @@ async fn should_get_transaction_receipts() {
             assert_eq!(receipts[1].gas_used, Some(52358.into()));
             return;
         } else {
-            tokio::time::sleep(Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
 
