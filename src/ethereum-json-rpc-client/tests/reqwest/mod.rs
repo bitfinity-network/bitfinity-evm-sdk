@@ -21,10 +21,14 @@ fn to_hash(string: &str) -> H256 {
     )
 }
 
+/// This client randomly shuffle RPC providers and tries to send the request to each one of them
+/// until it gets a successful response.
+///
+/// This was necessary because some RPC providers have rate limits and running the CI was more like a nightmare.
 #[derive(Clone)]
-pub struct WrappedReqwestClient;
+pub struct MultiRpcReqwestClient;
 
-impl Client for WrappedReqwestClient {
+impl Client for MultiRpcReqwestClient {
     fn send_rpc_request(
         &self,
         request: jsonrpc_core::Request,
@@ -53,6 +57,7 @@ impl Client for WrappedReqwestClient {
                     }
                     Ok(result) => {
                         println!("call failed: {result:?}");
+                        err = Some(anyhow::anyhow!("call failed: {result:?}"));
                     }
                     Err(e) => {
                         println!("call failed: {e}");
@@ -66,8 +71,8 @@ impl Client for WrappedReqwestClient {
     }
 }
 
-fn reqwest_client() -> EthJsonRpcClient<WrappedReqwestClient> {
-    EthJsonRpcClient::new(WrappedReqwestClient)
+fn reqwest_client() -> EthJsonRpcClient<MultiRpcReqwestClient> {
+    EthJsonRpcClient::new(MultiRpcReqwestClient)
 }
 
 #[tokio::test]
