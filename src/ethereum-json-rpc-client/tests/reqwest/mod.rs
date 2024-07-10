@@ -1,10 +1,16 @@
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
+use ethereum_json_rpc_client::{Client, EthGetLogsParams, EthJsonRpcClient};
 use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
 use ethers_core::types::{BlockNumber, Log, TransactionRequest, H160, H256, U256};
+use jsonrpc_core::{Output, Response};
+use rand::SeedableRng as _;
 use serial_test::serial;
 
-const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
+const ETHEREUM_JSON_API_ENDPOINTS: &[&str] = &[
+    "https://cloudflare-eth.com/",
+    "https://ethereum.publicnode.com",
+    "https://rpc.ankr.com/eth",
+];
 const MAX_BATCH_SIZE: usize = 5;
 
 fn to_hash(string: &str) -> H256 {
@@ -15,8 +21,53 @@ fn to_hash(string: &str) -> H256 {
     )
 }
 
-fn reqwest_client() -> EthJsonRpcClient<ReqwestClient> {
-    EthJsonRpcClient::new(ReqwestClient::new(ETHEREUM_JSON_API_URL.to_string()))
+#[derive(Clone)]
+pub struct WrappedReqwestClient;
+
+impl Client for WrappedReqwestClient {
+    fn send_rpc_request(
+        &self,
+        request: jsonrpc_core::Request,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>,
+    > {
+        Box::pin(async move {
+            let mut rng = rand::rngs::StdRng::from_entropy();
+
+            use rand::seq::SliceRandom;
+            let mut err = None;
+            let mut endpoints = ETHEREUM_JSON_API_ENDPOINTS.to_vec();
+            endpoints.shuffle(&mut rng);
+            for rpc_endpoint in endpoints {
+                let client = ReqwestClient::new(rpc_endpoint.to_string());
+                let result = client.send_rpc_request(request.clone()).await;
+
+                match result {
+                    Ok(Response::Single(Output::Success(_))) => return result,
+                    Ok(Response::Batch(batch))
+                        if batch
+                            .iter()
+                            .all(|output| matches!(output, Output::Success(_))) =>
+                    {
+                        return Ok(Response::Batch(batch))
+                    }
+                    Ok(result) => {
+                        println!("call failed: {result:?}");
+                    }
+                    Err(e) => {
+                        println!("call failed: {e}");
+                        err = Some(e);
+                    }
+                }
+            }
+
+            Err(err.unwrap())
+        })
+    }
+}
+
+fn reqwest_client() -> EthJsonRpcClient<WrappedReqwestClient> {
+    EthJsonRpcClient::new(WrappedReqwestClient)
 }
 
 #[tokio::test]
