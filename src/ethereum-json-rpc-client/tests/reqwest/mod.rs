@@ -2,6 +2,7 @@ use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
 use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
 use ethers_core::types::{BlockNumber, Log, TransactionRequest, H160, H256, U256};
+use serial_test::serial;
 
 const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
 const MAX_BATCH_SIZE: usize = 5;
@@ -19,12 +20,14 @@ fn reqwest_client() -> EthJsonRpcClient<ReqwestClient> {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_block_number() {
     let result = reqwest_client().get_block_number().await.unwrap();
     assert!(result > 16896634);
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_balance() {
     let erc_1820_deployer_address = "0xa990077c3205cbDf861e17Fa532eeB069cE9fF96"
         .parse()
@@ -37,12 +40,14 @@ async fn should_get_balance() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_gas_price() {
     let price = reqwest_client().gas_price().await.unwrap();
     assert!(price > U256::zero());
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_code() {
     let erc_1820_address = "0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24"
         .parse()
@@ -60,6 +65,7 @@ async fn should_get_code() {
 ///     function getManager(address _addr) public view returns(address)
 ///```
 #[tokio::test]
+#[serial]
 async fn should_perform_eth_call() {
     let erc_1820_address = "0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24"
         .parse::<H160>()
@@ -114,6 +120,7 @@ async fn should_perform_eth_call() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_transaction_count() {
     let erc_1820_deployer_address = "0xa990077c3205cbDf861e17Fa532eeB069cE9fF96"
         .parse()
@@ -126,6 +133,7 @@ async fn should_get_transaction_count() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_block_by_number() {
     let result = reqwest_client()
         .get_block_by_number(BlockNumber::Number(11588465.into()))
@@ -143,6 +151,7 @@ async fn should_get_block_by_number() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_full_block_by_number() {
     let result = reqwest_client()
         .get_full_block_by_number(BlockNumber::Number(11588465.into()))
@@ -165,6 +174,7 @@ async fn should_get_full_block_by_number() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_full_blocks_by_number() {
     let result = reqwest_client()
         .get_full_blocks_by_number(
@@ -205,6 +215,7 @@ async fn should_get_full_blocks_by_number() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_logs() {
     let params = EthGetLogsParams {
         address: Some(vec!["0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907"
@@ -257,6 +268,7 @@ async fn should_get_logs() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_transaction_receipts() {
     let block = reqwest_client()
         .get_block_by_number(BlockNumber::Number(11588465.into()))
