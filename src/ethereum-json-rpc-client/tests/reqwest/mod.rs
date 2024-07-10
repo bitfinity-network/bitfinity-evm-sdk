@@ -50,7 +50,13 @@ impl Client for MultiRpcReqwestClient {
             let mut endpoints = ETHEREUM_JSON_API_ENDPOINTS.to_vec();
             endpoints.shuffle(&mut rng);
             for rpc_endpoint in endpoints {
-                let client = ReqwestClient::new(rpc_endpoint.to_string());
+                let client = ReqwestClient::new_with_client(
+                    rpc_endpoint.to_string(),
+                    reqwest::ClientBuilder::new()
+                        .timeout(Duration::from_secs(10))
+                        .build()
+                        .unwrap(),
+                );
                 let result = client.send_rpc_request(request.clone()).await;
 
                 match result {
