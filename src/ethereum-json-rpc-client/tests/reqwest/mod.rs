@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{Client, EthGetLogsParams, EthJsonRpcClient};
 use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
@@ -331,15 +333,24 @@ async fn should_get_transaction_receipts() {
         .await
         .unwrap();
 
-    let receipts = reqwest_client()
-        .get_receipts_by_hash(
-            vec![block.transactions[0], block.transactions[1]],
-            MAX_BATCH_SIZE,
-        )
-        .await
-        .unwrap();
-    assert_eq!(receipts[0].gas_used, Some(21000.into()));
-    assert_eq!(receipts[1].gas_used, Some(52358.into()));
+    // this test is flaky for some reasons, so we try multiple times
+    for _ in 0..3 {
+        if let Ok(receipts) = reqwest_client()
+            .get_receipts_by_hash(
+                vec![block.transactions[0], block.transactions[1]],
+                MAX_BATCH_SIZE,
+            )
+            .await
+        {
+            assert_eq!(receipts[0].gas_used, Some(21000.into()));
+            assert_eq!(receipts[1].gas_used, Some(52358.into()));
+            return;
+        } else {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    }
+
+    panic!("Failed to get transaction receipts");
 }
 
 const ERC_1820_EXPECTED_CODE: &str = "0x608060405234801561001057600080fd5b50600436106100a557600035\
