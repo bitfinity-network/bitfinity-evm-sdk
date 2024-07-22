@@ -31,5 +31,6 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
+hex = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }

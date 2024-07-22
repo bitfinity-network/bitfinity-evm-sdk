@@ -1,9 +1,23 @@
+use std::time::Duration;
+
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
+use ethereum_json_rpc_client::{Client, EthGetLogsParams, EthJsonRpcClient};
 use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
 use ethers_core::types::{BlockNumber, Log, TransactionRequest, H160, H256, U256};
+use jsonrpc_core::{Output, Response};
+use rand::SeedableRng as _;
+use serial_test::serial;
 
-const ETHEREUM_JSON_API_URL: &str = "https://cloudflare-eth.com/";
+const ETHEREUM_JSON_API_ENDPOINTS: &[&str] = &[
+    "https://cloudflare-eth.com/",
+    "https://ethereum.publicnode.com",
+    "https://rpc.ankr.com/eth",
+    "https://nodes.mewapi.io/rpc/eth",
+    "https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79",
+    "https://eth-mainnet.nodereal.io/v1/1659dfb40aa24bbb8153a677b98064d7",
+    "https://eth.llamarpc.com",
+    "https://eth-mainnet.public.blastapi.io",
+];
 const MAX_BATCH_SIZE: usize = 5;
 
 fn to_hash(string: &str) -> H256 {
@@ -14,17 +28,75 @@ fn to_hash(string: &str) -> H256 {
     )
 }
 
-fn reqwest_client() -> EthJsonRpcClient<ReqwestClient> {
-    EthJsonRpcClient::new(ReqwestClient::new(ETHEREUM_JSON_API_URL.to_string()))
+/// This client randomly shuffle RPC providers and tries to send the request to each one of them
+/// until it gets a successful response.
+///
+/// This was necessary because some RPC providers have rate limits and running the CI was more like a nightmare.
+#[derive(Clone)]
+pub struct MultiRpcReqwestClient;
+
+impl Client for MultiRpcReqwestClient {
+    fn send_rpc_request(
+        &self,
+        request: jsonrpc_core::Request,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>,
+    > {
+        Box::pin(async move {
+            let mut rng = rand::rngs::StdRng::from_entropy();
+
+            use rand::seq::SliceRandom;
+            let mut err = None;
+            let mut endpoints = ETHEREUM_JSON_API_ENDPOINTS.to_vec();
+            endpoints.shuffle(&mut rng);
+            for rpc_endpoint in endpoints {
+                let client = ReqwestClient::new_with_client(
+                    rpc_endpoint.to_string(),
+                    reqwest::ClientBuilder::new()
+                        .timeout(Duration::from_secs(10))
+                        .build()
+                        .unwrap(),
+                );
+                let result = client.send_rpc_request(request.clone()).await;
+
+                match result {
+                    Ok(Response::Single(Output::Success(_))) => return result,
+                    Ok(Response::Batch(batch))
+                        if batch
+                            .iter()
+                            .all(|output| matches!(output, Output::Success(_))) =>
+                    {
+                        return Ok(Response::Batch(batch))
+                    }
+                    Ok(result) => {
+                        println!("call failed: {result:?}");
+                        err = Some(anyhow::anyhow!("call failed: {result:?}"));
+                    }
+                    Err(e) => {
+                        println!("call failed: {e}");
+                        err = Some(e);
+                    }
+                }
+            }
+
+            Err(err.unwrap())
+        })
+    }
+}
+
+fn reqwest_client() -> EthJsonRpcClient<MultiRpcReqwestClient> {
+    EthJsonRpcClient::new(MultiRpcReqwestClient)
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_block_number() {
     let result = reqwest_client().get_block_number().await.unwrap();
     assert!(result > 16896634);
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_balance() {
     let erc_1820_deployer_address = "0xa990077c3205cbDf861e17Fa532eeB069cE9fF96"
         .parse()
@@ -37,12 +109,14 @@ async fn should_get_balance() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_gas_price() {
     let price = reqwest_client().gas_price().await.unwrap();
     assert!(price > U256::zero());
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_code() {
     let erc_1820_address = "0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24"
         .parse()
@@ -60,6 +134,7 @@ async fn should_get_code() {
 ///     function getManager(address _addr) public view returns(address)
 ///```
 #[tokio::test]
+#[serial]
 async fn should_perform_eth_call() {
     let erc_1820_address = "0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24"
         .parse::<H160>()
@@ -114,6 +189,7 @@ async fn should_perform_eth_call() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_transaction_count() {
     let erc_1820_deployer_address = "0xa990077c3205cbDf861e17Fa532eeB069cE9fF96"
         .parse()
@@ -126,6 +202,7 @@ async fn should_get_transaction_count() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_block_by_number() {
     let result = reqwest_client()
         .get_block_by_number(BlockNumber::Number(11588465.into()))
@@ -143,6 +220,7 @@ async fn should_get_block_by_number() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_full_block_by_number() {
     let result = reqwest_client()
         .get_full_block_by_number(BlockNumber::Number(11588465.into()))
@@ -165,6 +243,7 @@ async fn should_get_full_block_by_number() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_full_blocks_by_number() {
     let result = reqwest_client()
         .get_full_blocks_by_number(
@@ -205,35 +284,37 @@ async fn should_get_full_blocks_by_number() {
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_logs() {
-    let params = EthGetLogsParams {
-        address: Some(vec!["0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907"
-            .parse()
-            .unwrap()]),
-        from_block: "0x429d3b".parse().unwrap(),
-        to_block: BlockNumber::Latest,
-        topics: Some(vec![
-            vec![
-                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-                    .parse()
-                    .unwrap(),
-            ],
-            vec![
-                "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75"
-                    .parse()
-                    .unwrap(),
-            ],
-            vec![
-                "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078"
-                    .parse()
-                    .unwrap(),
-            ],
-        ]),
-    };
+    // this test is flaky for some reasons, so we try multiple times
+    for _ in 0..3 {
+        let params = EthGetLogsParams {
+            address: Some(vec!["0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907"
+                .parse()
+                .unwrap()]),
+            from_block: "0x429d3b".parse().unwrap(),
+            to_block: BlockNumber::Latest,
+            topics: Some(vec![
+                vec![
+                    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+                        .parse()
+                        .unwrap(),
+                ],
+                vec![
+                    "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75"
+                        .parse()
+                        .unwrap(),
+                ],
+                vec![
+                    "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078"
+                        .parse()
+                        .unwrap(),
+                ],
+            ]),
+        };
 
-    let result = reqwest_client().get_logs(params).await.unwrap();
-
-    let expected_result: Vec<Log> = serde_json::from_str(
+        if let Ok(result) = reqwest_client().get_logs(params).await {
+            let expected_result: Vec<Log> = serde_json::from_str(
         r#"[
             {
                 "address": "0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907",
@@ -253,25 +334,41 @@ async fn should_get_logs() {
         ]"#
     ).unwrap();
 
-    assert_eq!(result, expected_result);
+            assert_eq!(result, expected_result);
+            return;
+        } else {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        }
+    }
+
+    panic!("Failed to get logs");
 }
 
 #[tokio::test]
+#[serial]
 async fn should_get_transaction_receipts() {
-    let block = reqwest_client()
-        .get_block_by_number(BlockNumber::Number(11588465.into()))
-        .await
-        .unwrap();
+    // this test is flaky for some reasons, so we try multiple times
+    for _ in 0..3 {
+        let block = reqwest_client()
+            .get_block_by_number(BlockNumber::Number(11588465.into()))
+            .await
+            .unwrap();
+        if let Ok(receipts) = reqwest_client()
+            .get_receipts_by_hash(
+                vec![block.transactions[0], block.transactions[1]],
+                MAX_BATCH_SIZE,
+            )
+            .await
+        {
+            assert_eq!(receipts[0].gas_used, Some(21000.into()));
+            assert_eq!(receipts[1].gas_used, Some(52358.into()));
+            return;
+        } else {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        }
+    }
 
-    let receipts = reqwest_client()
-        .get_receipts_by_hash(
-            vec![block.transactions[0], block.transactions[1]],
-            MAX_BATCH_SIZE,
-        )
-        .await
-        .unwrap();
-    assert_eq!(receipts[0].gas_used, Some(21000.into()));
-    assert_eq!(receipts[1].gas_used, Some(52358.into()));
+    panic!("Failed to get transaction receipts");
 }
 
 const ERC_1820_EXPECTED_CODE: &str = "0x608060405234801561001057600080fd5b50600436106100a557600035\

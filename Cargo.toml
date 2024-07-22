@@ -24,9 +24,7 @@ homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.27.0"
-
-
+version = "0.28.0"
 
 [workspace.dependencies]
 alloy-primitives = { version = "0.7", default-features = false }
@@ -62,6 +60,7 @@ port_check = "0.2"
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
 reqwest = { version = "0.12", default-features = false }
 rlp = "0.5"
+serial_test = "3"
 serde = "1.0"
 serde_bytes = "0.11"
 serde_json = "1.0"
@@ -81,7 +80,6 @@ testcontainers = { package = "testcontainers-modules", version = "0.7", features
 thiserror = "1.0"
 tokio = { version = "1.24", features = ["macros", "rt", "signal"] }
 url = "2.5"
-
 
 [profile.dev]
 debug = false
