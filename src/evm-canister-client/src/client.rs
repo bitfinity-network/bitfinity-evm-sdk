@@ -230,7 +230,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     /// * `hash` - The hash of the block
     /// * `include_transactions` - Whether to include the transactions in the
-    /// block
+    ///   block
     /// # Returns
     /// The block at the given hash
     pub async fn eth_get_block_by_hash(
@@ -249,7 +249,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     /// * `block_number` - The block number or tag
     /// * `include_transactions` - Whether to include the transactions in the
-    /// block
+    ///   block
     ///
     /// # Returns
     ///
@@ -273,7 +273,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// * `from` - The index of the first block
     /// * `count` - Number of blocks to return
     /// * `include_transactions` - Whether to include the transactions in the
-    /// block
+    ///   block
     ///
     /// # Returns
     ///
@@ -414,15 +414,15 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ///
     /// This is two step process:
     /// 1. Send a transaction using the `send_raw_transaction` method,
-    /// attaching the principal that should be reserved as input
+    ///    attaching the principal that should be reserved as input
     ///
     /// 2. Call this method with the principal and the transaction hash from
-    /// the previous step
+    ///    the previous step
     ///
     /// # Arguments
     /// * `principal` - The principal to reserve address for
     /// * `tx_hash` - The transaction hash of the transaction that reserved the
-    /// address
+    ///   address
     pub async fn reserve_address(
         &self,
         principal: Principal,
