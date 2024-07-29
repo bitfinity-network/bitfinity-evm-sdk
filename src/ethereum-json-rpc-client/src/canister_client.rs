@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
@@ -12,7 +11,7 @@ use serde_bytes::ByteBuf;
 
 use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
 
-impl<T: CanisterClient + Sync + 'static> Client for Arc<T> {
+impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(
         &self,
         request: Request,
