@@ -54,9 +54,9 @@ impl<'a> ReservationService<'a> {
     ///
     /// Two steps:
     /// 1. Send a transaction to the ic-agent canister to reserve the address
-    /// with the ic-agent attached to the transaction as an input
+    ///    with the ic-agent attached to the transaction as an input
     /// 2. Call the reserve_address method on the ic-agent canister with the
-    /// transaction hash in the step 1
+    ///    transaction hash in the step 1
     ///
     async fn reserve_ic_agent(&self) -> Result<()> {
         info!("reserving ic-agent {}", self.reserve_canister_id);
