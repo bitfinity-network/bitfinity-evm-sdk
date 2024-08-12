@@ -5,19 +5,8 @@ use ethereum_json_rpc_client::{Client, EthGetLogsParams, EthJsonRpcClient};
 use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
 use ethers_core::types::{BlockNumber, TransactionRequest, H160, H256, U256};
 use jsonrpc_core::{Output, Response};
-use rand::SeedableRng as _;
 use serial_test::serial;
 
-const ETHEREUM_JSON_API_ENDPOINTS: &[&str] = &[
-    "https://cloudflare-eth.com/",
-    "https://ethereum.publicnode.com",
-    "https://rpc.ankr.com/eth",
-    "https://nodes.mewapi.io/rpc/eth",
-    "https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79",
-    "https://eth-mainnet.nodereal.io/v1/1659dfb40aa24bbb8153a677b98064d7",
-    "https://eth.llamarpc.com",
-    "https://eth-mainnet.public.blastapi.io",
-];
 const MAX_BATCH_SIZE: usize = 5;
 
 fn to_hash(string: &str) -> H256 {
@@ -33,59 +22,66 @@ fn to_hash(string: &str) -> H256 {
 ///
 /// This was necessary because some RPC providers have rate limits and running the CI was more like a nightmare.
 #[derive(Clone)]
-pub struct MultiRpcReqwestClient;
+pub struct AlchemyRpcReqwestClient {
+    apikey: String,
+}
 
-impl Client for MultiRpcReqwestClient {
+impl AlchemyRpcReqwestClient {
+    /// Get endpoint for Alchemy API
+    #[inline]
+    fn endpoint(&self) -> String {
+        format!(
+            "https://eth-mainnet.alchemyapi.io/v2/{apikey}",
+            apikey = self.apikey
+        )
+    }
+}
+
+impl Client for AlchemyRpcReqwestClient {
     fn send_rpc_request(
         &self,
         request: jsonrpc_core::Request,
     ) -> std::pin::Pin<
         Box<dyn std::future::Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>,
     > {
+        let endpoint = self.endpoint();
+
         Box::pin(async move {
-            let mut rng = rand::rngs::StdRng::from_entropy();
+            let client = ReqwestClient::new_with_client(
+                endpoint,
+                reqwest::ClientBuilder::new()
+                    .timeout(Duration::from_secs(10))
+                    .build()
+                    .unwrap(),
+            );
+            let result = client.send_rpc_request(request.clone()).await;
 
-            use rand::seq::SliceRandom;
-            let mut err = None;
-            let mut endpoints = ETHEREUM_JSON_API_ENDPOINTS.to_vec();
-            endpoints.shuffle(&mut rng);
-            for rpc_endpoint in endpoints {
-                let client = ReqwestClient::new_with_client(
-                    rpc_endpoint.to_string(),
-                    reqwest::ClientBuilder::new()
-                        .timeout(Duration::from_secs(10))
-                        .build()
-                        .unwrap(),
-                );
-                let result = client.send_rpc_request(request.clone()).await;
-
-                match result {
-                    Ok(Response::Single(Output::Success(_))) => return result,
+            match result {
+                Ok(Response::Single(Output::Success(_))) => result,
+                Ok(Response::Batch(batch))
+                    if batch
+                        .iter()
+                        .all(|output| matches!(output, Output::Success(_))) =>
+                {
                     Ok(Response::Batch(batch))
-                        if batch
-                            .iter()
-                            .all(|output| matches!(output, Output::Success(_))) =>
-                    {
-                        return Ok(Response::Batch(batch))
-                    }
-                    Ok(result) => {
-                        println!("call failed: {result:?}");
-                        err = Some(anyhow::anyhow!("call failed: {result:?}"));
-                    }
-                    Err(e) => {
-                        println!("call failed: {e}");
-                        err = Some(e);
-                    }
+                }
+                Ok(result) => {
+                    println!("call failed: {result:?}");
+                    anyhow::bail!("call failed: {result:?}")
+                }
+                Err(e) => {
+                    println!("call failed: {e}");
+                    anyhow::bail!("call failed: {e}")
                 }
             }
-
-            Err(err.unwrap())
         })
     }
 }
 
-fn reqwest_client() -> EthJsonRpcClient<MultiRpcReqwestClient> {
-    EthJsonRpcClient::new(MultiRpcReqwestClient)
+fn reqwest_client() -> EthJsonRpcClient<AlchemyRpcReqwestClient> {
+    let apikey = std::env::var("ALCHEMY_API_KEY").expect("ALCHEMY_API_KEY is not set");
+
+    EthJsonRpcClient::new(AlchemyRpcReqwestClient { apikey })
 }
 
 #[tokio::test]
