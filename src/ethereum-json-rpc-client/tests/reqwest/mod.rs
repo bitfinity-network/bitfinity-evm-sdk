@@ -1,10 +1,11 @@
+mod rpc_client;
+
 use std::time::Duration;
 
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{Client, EthGetLogsParams, EthJsonRpcClient};
+use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
 use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
 use ethers_core::types::{BlockNumber, TransactionRequest, H160, H256, U256};
-use jsonrpc_core::{Output, Response};
+use rpc_client::RpcReqwestClient;
 use serial_test::serial;
 
 const MAX_BATCH_SIZE: usize = 5;
@@ -17,71 +18,13 @@ fn to_hash(string: &str) -> H256 {
     )
 }
 
-/// This client randomly shuffle RPC providers and tries to send the request to each one of them
-/// until it gets a successful response.
-///
-/// This was necessary because some RPC providers have rate limits and running the CI was more like a nightmare.
-#[derive(Clone)]
-pub struct AlchemyRpcReqwestClient {
-    apikey: String,
-}
+fn reqwest_client() -> EthJsonRpcClient<RpcReqwestClient> {
+    let rpc_client = match std::env::var("ALCHEMY_API_KEY").ok() {
+        Some(apikey) => RpcReqwestClient::alchemy(apikey),
+        None => RpcReqwestClient::public(),
+    };
 
-impl AlchemyRpcReqwestClient {
-    /// Get endpoint for Alchemy API
-    #[inline]
-    fn endpoint(&self) -> String {
-        format!(
-            "https://eth-mainnet.alchemyapi.io/v2/{apikey}",
-            apikey = self.apikey
-        )
-    }
-}
-
-impl Client for AlchemyRpcReqwestClient {
-    fn send_rpc_request(
-        &self,
-        request: jsonrpc_core::Request,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>,
-    > {
-        let endpoint = self.endpoint();
-
-        Box::pin(async move {
-            let client = ReqwestClient::new_with_client(
-                endpoint,
-                reqwest::ClientBuilder::new()
-                    .timeout(Duration::from_secs(10))
-                    .build()
-                    .unwrap(),
-            );
-            let result = client.send_rpc_request(request.clone()).await;
-
-            match result {
-                Ok(Response::Single(Output::Success(_))) => result,
-                Ok(Response::Batch(batch))
-                    if batch
-                        .iter()
-                        .all(|output| matches!(output, Output::Success(_))) =>
-                {
-                    Ok(Response::Batch(batch))
-                }
-                Ok(result) => {
-                    println!("call failed: {result:?}");
-                    anyhow::bail!("call failed: {result:?}")
-                }
-                Err(e) => {
-                    println!("call failed: {e}");
-                    anyhow::bail!("call failed: {e}")
-                }
-            }
-        })
-    }
-}
-
-fn reqwest_client() -> EthJsonRpcClient<AlchemyRpcReqwestClient> {
-    let apikey = std::env::var("ALCHEMY_API_KEY").expect("ALCHEMY_API_KEY is not set");
-
-    EthJsonRpcClient::new(AlchemyRpcReqwestClient { apikey })
+    EthJsonRpcClient::new(rpc_client)
 }
 
 #[tokio::test]
