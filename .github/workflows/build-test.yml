@@ -1,16 +1,16 @@
-name: 'Build Test'
+name: "Build Test"
 
 on:
   pull_request:
     branches: [main]
     paths-ignore:
-      - '**/README.md'
+      - "**/README.md"
   push:
     branches: [main]
     tags:
-      - 'v*'
+      - "v*"
     paths-ignore:
-      - '**/README.md'
+      - "**/README.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,12 +42,16 @@ jobs:
           cargo install ic-wasm
           ./scripts/build.sh
           ./scripts/test.sh
-          
+        env:
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+
       - name: test i686-unknown-linux-gnu
         run: |
           sudo apt update
           sudo apt install gcc-multilib
           ./scripts/test.sh --target i686-unknown-linux-gnu
+        env:
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
 
   release-binaries:
     if: ${{github.ref_type == 'tag'}}
@@ -86,14 +90,14 @@ jobs:
           target: ${{ matrix.platform.target }}
           command: build
           strip: true
-          args: '--release -p register_evm_agent'
+          args: "--release -p register_evm_agent"
 
       - name: Prepare artifact files
         run: |
           mkdir -p ./target/artifact
           mv target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} ./target/artifact/${{ matrix.platform.bin }}
 
-      - name: 'Uploading artifact'
+      - name: "Uploading artifact"
         uses: actions/upload-artifact@v3
         with:
           if-no-files-found: error
@@ -106,25 +110,25 @@ jobs:
     needs: [release-binaries]
     runs-on: ubuntu-latest
     steps:
-      - name: 'Artifact Linux'
+      - name: "Artifact Linux"
         uses: actions/download-artifact@v3
         with:
           name: Linux-x86_64
           path: ./linux
 
-      - name: 'Artifact MacOs'
+      - name: "Artifact MacOs"
         uses: actions/download-artifact@v3
         with:
           name: MacOS-x86_64
           path: ./macos
 
-      - name: 'Artifact MacOs M1'
+      - name: "Artifact MacOs M1"
         uses: actions/download-artifact@v3
         with:
           name: MacOS-M1
           path: ./macos-m1
 
-      - name: 'Artifact Windows'
+      - name: "Artifact Windows"
         uses: actions/download-artifact@v3
         with:
           name: Windows-x86_64

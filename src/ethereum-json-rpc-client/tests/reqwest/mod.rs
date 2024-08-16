@@ -1,23 +1,13 @@
+mod rpc_client;
+
 use std::time::Duration;
 
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{Client, EthGetLogsParams, EthJsonRpcClient};
+use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
 use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
 use ethers_core::types::{BlockNumber, TransactionRequest, H160, H256, U256};
-use jsonrpc_core::{Output, Response};
-use rand::SeedableRng as _;
+use rpc_client::RpcReqwestClient;
 use serial_test::serial;
 
-const ETHEREUM_JSON_API_ENDPOINTS: &[&str] = &[
-    "https://cloudflare-eth.com/",
-    "https://ethereum.publicnode.com",
-    "https://rpc.ankr.com/eth",
-    "https://nodes.mewapi.io/rpc/eth",
-    "https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79",
-    "https://eth-mainnet.nodereal.io/v1/1659dfb40aa24bbb8153a677b98064d7",
-    "https://eth.llamarpc.com",
-    "https://eth-mainnet.public.blastapi.io",
-];
 const MAX_BATCH_SIZE: usize = 5;
 
 fn to_hash(string: &str) -> H256 {
@@ -28,64 +18,19 @@ fn to_hash(string: &str) -> H256 {
     )
 }
 
-/// This client randomly shuffle RPC providers and tries to send the request to each one of them
-/// until it gets a successful response.
-///
-/// This was necessary because some RPC providers have rate limits and running the CI was more like a nightmare.
-#[derive(Clone)]
-pub struct MultiRpcReqwestClient;
+fn reqwest_client() -> EthJsonRpcClient<RpcReqwestClient> {
+    let rpc_client = match std::env::var("ALCHEMY_API_KEY").ok() {
+        Some(apikey) => {
+            log::info!("ALCHEMY_API_KEY set, using Alchemy RPC endpoint");
+            RpcReqwestClient::alchemy(apikey)
+        }
+        None => {
+            log::warn!("ALCHEMY_API_KEY not set, using public RPC endpoint");
+            RpcReqwestClient::public()
+        }
+    };
 
-impl Client for MultiRpcReqwestClient {
-    fn send_rpc_request(
-        &self,
-        request: jsonrpc_core::Request,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>,
-    > {
-        Box::pin(async move {
-            let mut rng = rand::rngs::StdRng::from_entropy();
-
-            use rand::seq::SliceRandom;
-            let mut err = None;
-            let mut endpoints = ETHEREUM_JSON_API_ENDPOINTS.to_vec();
-            endpoints.shuffle(&mut rng);
-            for rpc_endpoint in endpoints {
-                let client = ReqwestClient::new_with_client(
-                    rpc_endpoint.to_string(),
-                    reqwest::ClientBuilder::new()
-                        .timeout(Duration::from_secs(10))
-                        .build()
-                        .unwrap(),
-                );
-                let result = client.send_rpc_request(request.clone()).await;
-
-                match result {
-                    Ok(Response::Single(Output::Success(_))) => return result,
-                    Ok(Response::Batch(batch))
-                        if batch
-                            .iter()
-                            .all(|output| matches!(output, Output::Success(_))) =>
-                    {
-                        return Ok(Response::Batch(batch))
-                    }
-                    Ok(result) => {
-                        println!("call failed: {result:?}");
-                        err = Some(anyhow::anyhow!("call failed: {result:?}"));
-                    }
-                    Err(e) => {
-                        println!("call failed: {e}");
-                        err = Some(e);
-                    }
-                }
-            }
-
-            Err(err.unwrap())
-        })
-    }
-}
-
-fn reqwest_client() -> EthJsonRpcClient<MultiRpcReqwestClient> {
-    EthJsonRpcClient::new(MultiRpcReqwestClient)
+    EthJsonRpcClient::new(rpc_client)
 }
 
 #[tokio::test]
