@@ -20,8 +20,14 @@ fn to_hash(string: &str) -> H256 {
 
 fn reqwest_client() -> EthJsonRpcClient<RpcReqwestClient> {
     let rpc_client = match std::env::var("ALCHEMY_API_KEY").ok() {
-        Some(apikey) => RpcReqwestClient::alchemy(apikey),
-        None => RpcReqwestClient::public(),
+        Some(apikey) => {
+            log::info!("ALCHEMY_API_KEY set, using Alchemy RPC endpoint");
+            RpcReqwestClient::alchemy(apikey)
+        }
+        None => {
+            log::warn!("ALCHEMY_API_KEY not set, using public RPC endpoint");
+            RpcReqwestClient::public()
+        }
     };
 
     EthJsonRpcClient::new(rpc_client)
