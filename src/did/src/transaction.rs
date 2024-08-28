@@ -721,7 +721,7 @@ impl Decodable for Bloom {
 
 impl std::fmt::LowerHex for Bloom {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        self.0.fmt(f)
+        std::fmt::LowerHex::fmt(&self.0, f)
     }
 }
 

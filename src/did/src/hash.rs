@@ -304,19 +304,19 @@ impl From<NameOrAddress> for H160 {
 
 impl fmt::LowerHex for H64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        fmt::LowerHex::fmt(&self.0, f)
     }
 }
 
 impl fmt::LowerHex for H160 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        fmt::LowerHex::fmt(&self.0, f)
     }
 }
 
 impl fmt::LowerHex for H256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        fmt::LowerHex::fmt(&self.0, f)
     }
 }
 

@@ -21,5 +21,4 @@ ic-agent-client = ["ic-canister-client/ic-agent-client"]
 candid = { workspace = true }
 did = { path = "../did" }
 ic-canister-client = { workspace = true }
-ic-cdk = { workspace = true }
 ic-log = { workspace = true }
