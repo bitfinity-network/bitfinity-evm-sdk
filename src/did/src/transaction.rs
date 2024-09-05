@@ -564,7 +564,8 @@ impl From<StorableExecutionResult> for TransactionReceipt {
             output: exe_data.output,
             contract_address: exe_data.contract_address,
             cumulative_gas_used: tx_receipt.cumulative_gas_used,
-            ..Default::default()
+            root: None,
+            effective_gas_price: tx_receipt.gas_price,
         }
     }
 }
