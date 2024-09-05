@@ -564,7 +564,8 @@ impl From<StorableExecutionResult> for TransactionReceipt {
             output: exe_data.output,
             contract_address: exe_data.contract_address,
             cumulative_gas_used: tx_receipt.cumulative_gas_used,
-            ..Default::default()
+            root: None,
+            effective_gas_price: tx_receipt.gas_price,
         }
     }
 }
@@ -623,6 +624,7 @@ pub struct StorableExecutionResult {
     pub transaction_type: Option<U64>,
     pub cumulative_gas_used: U256,
     pub max_fee_per_gas: Option<U256>,
+    /// The effective gas price paid by the transaction
     pub gas_price: Option<U256>,
     pub max_priority_fee_per_gas: Option<U256>,
     pub timestamp: u64,
@@ -1022,9 +1024,9 @@ mod test {
             block_number: rand::random::<u64>().into(),
             from: H160::from(ethereum_types::H160::random()),
             to: Some(H160::from(ethereum_types::H160::random())),
-            transaction_type: Default::default(),
+            transaction_type: Some(rand::random::<u64>().into()),
             cumulative_gas_used: rand::random::<u64>().into(),
-            gas_price: Default::default(),
+            gas_price: Some(rand::random::<u64>().into()),
             max_fee_per_gas: Default::default(),
             max_priority_fee_per_gas: Default::default(),
             timestamp: 0,
@@ -1037,6 +1039,8 @@ mod test {
         assert_eq!(receipt.contract_address, None);
         assert_eq!(receipt.block_hash, exe_result.block_hash);
         assert_eq!(receipt.cumulative_gas_used, exe_result.cumulative_gas_used);
+        assert_eq!(receipt.effective_gas_price, exe_result.gas_price);
+        assert_eq!(receipt.transaction_type, exe_result.transaction_type);
     }
 
     #[test]
