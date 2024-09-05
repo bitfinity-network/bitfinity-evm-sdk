@@ -624,6 +624,7 @@ pub struct StorableExecutionResult {
     pub transaction_type: Option<U64>,
     pub cumulative_gas_used: U256,
     pub max_fee_per_gas: Option<U256>,
+    /// The effective gas price paid by the transaction
     pub gas_price: Option<U256>,
     pub max_priority_fee_per_gas: Option<U256>,
     pub timestamp: u64,
@@ -1040,7 +1041,6 @@ mod test {
         assert_eq!(receipt.cumulative_gas_used, exe_result.cumulative_gas_used);
         assert_eq!(receipt.effective_gas_price, exe_result.gas_price);
         assert_eq!(receipt.transaction_type, exe_result.transaction_type);
-
     }
 
     #[test]
