@@ -1257,7 +1257,6 @@ mod test {
             let receipt: TransactionReceipt = exe_result.into();
             assert_eq!(receipt.transaction_type, Some(2u64.into()));
         }
-
     }
 
     #[test]
@@ -1283,12 +1282,11 @@ mod test {
 
     #[test]
     fn test_type_convertion_from_ether_tx_to_to() {
-
         // ----------------------------
         // test type Some(1)
         // ----------------------------
 
-        let ether_tx_type_some = ethers_core::types::Transaction{
+        let ether_tx_type_some = ethers_core::types::Transaction {
             transaction_type: Some(1u64.into()),
             ..Default::default()
         };
@@ -1300,7 +1298,7 @@ mod test {
         // test type None
         // ----------------------------
 
-        let ether_tx_type_none = ethers_core::types::Transaction{
+        let ether_tx_type_none = ethers_core::types::Transaction {
             transaction_type: None,
             ..Default::default()
         };
@@ -1308,7 +1306,5 @@ mod test {
         let tx: Transaction = ether_tx_type_none.into();
         // Transaction type should be Some(0) after convertion
         assert_eq!(tx.transaction_type, Some(0u64.into()));
-
     }
-
 }
