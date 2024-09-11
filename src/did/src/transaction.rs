@@ -768,7 +768,7 @@ mod test {
     use super::*;
     use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
     use crate::transaction::{AccessList, AccessListItem};
-    use crate::BlockNumber;
+    use crate::{BlockNumber, HaltError};
 
     fn make_log_1() -> TransactionExecutionLog {
         TransactionExecutionLog {
@@ -910,6 +910,61 @@ mod test {
         assert_eq!(exe_result, deserialized);
     }
 
+    #[test]
+    fn test_candid_storable_exe_result() {
+        let exe_result = StorableExecutionResult {
+            exe_result: ExeResult::Halt {
+                error: HaltError::CallTooDeep,
+                gas_used: Default::default(),
+            },
+            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_index: rand::random::<u64>().into(),
+            block_hash: H256::from(ethereum_types::H256::random()),
+            block_number: rand::random::<u64>().into(),
+            from: H160::from(ethereum_types::H160::random()),
+            to: Some(H160::from(ethereum_types::H160::random())),
+            transaction_type: Default::default(),
+            cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
+        };
+
+        let res0 = Encode!(&exe_result).unwrap();
+        let res = Decode!(res0.as_slice(), StorableExecutionResult).unwrap();
+
+        assert_eq!(exe_result, res);
+    }
+
+    #[test]
+    fn test_serde_storable_exe_result() {
+        let exe_result = StorableExecutionResult {
+            exe_result: ExeResult::Revert {
+                revert_message: Default::default(),
+                gas_used: Default::default(),
+                output: Default::default(),
+            },
+            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_index: rand::random::<u64>().into(),
+            block_hash: H256::from(ethereum_types::H256::random()),
+            block_number: rand::random::<u64>().into(),
+            from: H160::from(ethereum_types::H160::random()),
+            to: Some(H160::from(ethereum_types::H160::random())),
+            transaction_type: Default::default(),
+            cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
+        };
+
+        let encoded_value = serde_json::json!(&exe_result);
+        let decoded_value: StorableExecutionResult = serde_json::from_value(encoded_value).unwrap();
+
+        assert_eq!(exe_result, decoded_value);
+    }
+    
     #[test]
     fn test_hardcoded_bloom() {
         let logs = vec![make_log_1(), make_log_2()];
