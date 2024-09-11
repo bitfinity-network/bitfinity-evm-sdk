@@ -330,7 +330,7 @@ impl From<ethers_core::types::Transaction> for Transaction {
             v: tx.v.into(),
             r: tx.r.into(),
             s: tx.s.into(),
-            transaction_type: Some(tx.transaction_type.unwrap_or_default().into()),
+git             transaction_type: Some(tx.transaction_type.unwrap_or_default().into()),
             access_list: tx.access_list.map(Into::into),
             max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
             max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
@@ -964,7 +964,7 @@ mod test {
 
         assert_eq!(exe_result, decoded_value);
     }
-    
+
     #[test]
     fn test_hardcoded_bloom() {
         let logs = vec![make_log_1(), make_log_2()];
