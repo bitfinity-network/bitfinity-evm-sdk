@@ -1,7 +1,9 @@
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
-use crate::constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930};
+use crate::constant::{
+    TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
+};
 use crate::transaction::StorableExecutionResult;
 use crate::{Transaction, U256, U64};
 
@@ -58,7 +60,9 @@ pub trait FeeCalculation {
     fn gas_cost(&self) -> U256 {
         match self.transaction_type().map(u64::from) {
             Some(TRANSACTION_TYPE_EIP1559) => self.max_fee_per_gas().unwrap_or_default(),
-            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price().unwrap_or_default(),
+            Some(TRANSACTION_TYPE_EIP2930) | Some(TRANSACTION_TYPE_LEGACY) | None => {
+                self.gas_price().unwrap_or_default()
+            }
             _ => panic!("invalid transaction type"),
         }
     }
@@ -67,7 +71,9 @@ pub trait FeeCalculation {
     fn max_priority_fee_or_gas_price(&self) -> U256 {
         match self.transaction_type().map(u64::from) {
             Some(TRANSACTION_TYPE_EIP1559) => self.max_priority_fee_per_gas().unwrap_or_default(),
-            Some(TRANSACTION_TYPE_EIP2930) | None => self.gas_price().unwrap_or_default(),
+            Some(TRANSACTION_TYPE_EIP2930) | Some(TRANSACTION_TYPE_LEGACY) | None => {
+                self.gas_price().unwrap_or_default()
+            }
             _ => panic!("invalid transaction type"),
         }
     }
