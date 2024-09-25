@@ -330,7 +330,7 @@ impl From<ethers_core::types::Transaction> for Transaction {
             v: tx.v.into(),
             r: tx.r.into(),
             s: tx.s.into(),
-            transaction_type: tx.transaction_type.map(Into::into),
+            transaction_type: Some(tx.transaction_type.unwrap_or_default().into()),
             access_list: tx.access_list.map(Into::into),
             max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
             max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
@@ -374,7 +374,9 @@ impl Storable for Transaction {
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        codec::decode(&bytes)
+        let mut tx: Self = codec::decode(&bytes);
+        tx.transaction_type = tx.transaction_type.or(Some(U64::zero()));
+        tx
     }
 }
 
@@ -541,7 +543,7 @@ impl From<StorableExecutionResult> for TransactionReceipt {
             block_number: tx_receipt.block_number,
             from: tx_receipt.from,
             to: tx_receipt.to,
-            transaction_type: tx_receipt.transaction_type,
+            transaction_type: Some(tx_receipt.transaction_type.unwrap_or_default()),
             gas_used: Some(exe_data.gas_used),
             logs: exe_data
                 .logs
@@ -638,7 +640,9 @@ impl Storable for StorableExecutionResult {
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        codec::decode(&bytes)
+        let mut ser: Self = codec::decode(&bytes);
+        ser.transaction_type = ser.transaction_type.or(Some(U64::zero()));
+        ser
     }
 }
 
@@ -764,7 +768,7 @@ mod test {
     use super::*;
     use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
     use crate::transaction::{AccessList, AccessListItem};
-    use crate::BlockNumber;
+    use crate::{BlockNumber, HaltError};
 
     fn make_log_1() -> TransactionExecutionLog {
         TransactionExecutionLog {
@@ -804,12 +808,32 @@ mod test {
                 address: ethereum_types::H160::random().into(),
                 storage_keys: vec![ethereum_types::H256::random().into()],
             }])),
+            transaction_type: Some(1u64.into()),
             ..Default::default()
         };
 
         let serialized = tx.to_bytes();
         let deserialized = Transaction::from_bytes(serialized);
 
+        assert_eq!(tx, deserialized);
+    }
+
+    #[test]
+    fn test_storable_transaction_without_tx_type() {
+        let mut tx = Transaction {
+            access_list: Some(AccessList(vec![AccessListItem {
+                address: ethereum_types::H160::random().into(),
+                storage_keys: vec![ethereum_types::H256::random().into()],
+            }])),
+            transaction_type: None,
+            ..Default::default()
+        };
+
+        let serialized = tx.to_bytes();
+        let deserialized = Transaction::from_bytes(serialized);
+
+        // Transaction type should be Some(0) after deserialization
+        tx.transaction_type = Some(U64::zero());
         assert_eq!(tx, deserialized);
     }
 
@@ -826,6 +850,119 @@ mod test {
         let res0 = Encode!(&tx).unwrap();
         let res = Decode!(res0.as_slice(), Transaction).unwrap();
         assert_eq!(tx, res);
+    }
+
+    #[test]
+    fn test_storable_storable_execution_result() {
+        let exe_result = StorableExecutionResult {
+            exe_result: ExeResult::Revert {
+                revert_message: None,
+                gas_used: rand::random::<u64>().into(),
+                output: vec![1, 2, 3].into(),
+            },
+            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_index: rand::random::<u64>().into(),
+            block_hash: H256::from(ethereum_types::H256::random()),
+            block_number: rand::random::<u64>().into(),
+            from: H160::from(ethereum_types::H160::random()),
+            to: Some(H160::from(ethereum_types::H160::random())),
+            transaction_type: Some(rand::random::<u64>().into()),
+            cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Some(rand::random::<u64>().into()),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
+        };
+
+        let serialized = exe_result.to_bytes();
+        let deserialized = StorableExecutionResult::from_bytes(serialized);
+
+        assert_eq!(exe_result, deserialized);
+    }
+
+    #[test]
+    fn test_storable_storable_execution_result_without_tx_type() {
+        let mut exe_result = StorableExecutionResult {
+            exe_result: ExeResult::Revert {
+                revert_message: None,
+                gas_used: rand::random::<u64>().into(),
+                output: vec![1, 2, 3].into(),
+            },
+            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_index: rand::random::<u64>().into(),
+            block_hash: H256::from(ethereum_types::H256::random()),
+            block_number: rand::random::<u64>().into(),
+            from: H160::from(ethereum_types::H160::random()),
+            to: Some(H160::from(ethereum_types::H160::random())),
+            transaction_type: None,
+            cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Some(rand::random::<u64>().into()),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
+        };
+
+        let serialized = exe_result.to_bytes();
+        let deserialized = StorableExecutionResult::from_bytes(serialized);
+
+        // Transaction type should be Some(0) after deserialization
+        exe_result.transaction_type = Some(U64::zero());
+        assert_eq!(exe_result, deserialized);
+    }
+
+    #[test]
+    fn test_candid_storable_exe_result() {
+        let exe_result = StorableExecutionResult {
+            exe_result: ExeResult::Halt {
+                error: HaltError::CallTooDeep,
+                gas_used: Default::default(),
+            },
+            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_index: rand::random::<u64>().into(),
+            block_hash: H256::from(ethereum_types::H256::random()),
+            block_number: rand::random::<u64>().into(),
+            from: H160::from(ethereum_types::H160::random()),
+            to: Some(H160::from(ethereum_types::H160::random())),
+            transaction_type: Default::default(),
+            cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
+        };
+
+        let res0 = Encode!(&exe_result).unwrap();
+        let res = Decode!(res0.as_slice(), StorableExecutionResult).unwrap();
+
+        assert_eq!(exe_result, res);
+    }
+
+    #[test]
+    fn test_serde_storable_exe_result() {
+        let exe_result = StorableExecutionResult {
+            exe_result: ExeResult::Revert {
+                revert_message: Default::default(),
+                gas_used: Default::default(),
+                output: Default::default(),
+            },
+            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_index: rand::random::<u64>().into(),
+            block_hash: H256::from(ethereum_types::H256::random()),
+            block_number: rand::random::<u64>().into(),
+            from: H160::from(ethereum_types::H160::random()),
+            to: Some(H160::from(ethereum_types::H160::random())),
+            transaction_type: Default::default(),
+            cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
+        };
+
+        let encoded_value = serde_json::json!(&exe_result);
+        let decoded_value: StorableExecutionResult = serde_json::from_value(encoded_value).unwrap();
+
+        assert_eq!(exe_result, decoded_value);
     }
 
     #[test]
@@ -1141,6 +1278,43 @@ mod test {
     }
 
     #[test]
+    fn test_transaction_type_from_exe_result_to_transaction_receipt() {
+        let mut exe_result = StorableExecutionResult {
+            exe_result: ExeResult::Halt {
+                gas_used: rand::random::<u64>().into(),
+                error: crate::HaltError::PriorityFeeGreaterThanMaxFee,
+            },
+            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_index: rand::random::<u64>().into(),
+            block_hash: H256::from(ethereum_types::H256::random()),
+            block_number: rand::random::<u64>().into(),
+            from: H160::from(ethereum_types::H160::random()),
+            to: Some(H160::from(ethereum_types::H160::random())),
+            transaction_type: None,
+            cumulative_gas_used: rand::random::<u64>().into(),
+            gas_price: Default::default(),
+            max_fee_per_gas: Default::default(),
+            max_priority_fee_per_gas: Default::default(),
+            timestamp: 0,
+        };
+
+        // Legacy TX type
+        {
+            let mut exe_result = exe_result.clone();
+            exe_result.transaction_type = None;
+            let receipt: TransactionReceipt = exe_result.into();
+            assert_eq!(receipt.transaction_type, Some(U64::zero()));
+        }
+
+        // TX type 2
+        {
+            exe_result.transaction_type = Some(2u64.into());
+            let receipt: TransactionReceipt = exe_result.into();
+            assert_eq!(receipt.transaction_type, Some(2u64.into()));
+        }
+    }
+
+    #[test]
     fn signature_conversion_roundtrip() {
         let signature = Signature {
             r: U256::max_value(),
@@ -1159,5 +1333,33 @@ mod test {
 
         // If signature S field exceeds the limit, it should return an error.
         Signature::check_malleability(&(s + U256::one())).unwrap_err();
+    }
+
+    #[test]
+    fn test_type_convertion_from_ether_tx_to_to() {
+        // ----------------------------
+        // test type Some(1)
+        // ----------------------------
+
+        let ether_tx_type_some = ethers_core::types::Transaction {
+            transaction_type: Some(1u64.into()),
+            ..Default::default()
+        };
+
+        let tx: Transaction = ether_tx_type_some.into();
+        assert_eq!(tx.transaction_type, Some(1u64.into()));
+
+        // ----------------------------
+        // test type None
+        // ----------------------------
+
+        let ether_tx_type_none = ethers_core::types::Transaction {
+            transaction_type: None,
+            ..Default::default()
+        };
+
+        let tx: Transaction = ether_tx_type_none.into();
+        // Transaction type should be Some(0) after convertion
+        assert_eq!(tx.transaction_type, Some(0u64.into()));
     }
 }
