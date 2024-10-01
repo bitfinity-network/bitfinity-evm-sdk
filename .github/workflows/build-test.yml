@@ -42,6 +42,10 @@ jobs:
           sudo apt update
           sudo apt install gcc-multilib
 
+      - name: check rust code style
+        run: |
+          just check_code
+          
       - name: build
         run: |
           just build
