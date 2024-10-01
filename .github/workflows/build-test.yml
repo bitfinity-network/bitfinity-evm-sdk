@@ -29,6 +29,14 @@ jobs:
           components: clippy, rustfmt
           targets: wasm32-unknown-unknown, i686-unknown-linux-gnu
 
+      - name: Install Just command runner
+        uses: extractions/setup-just@v1
+        
+      - name: install ic-wasm
+        run: |
+          wget https://github.com/dfinity/ic-wasm/releases/download/0.8.1/ic-wasm-linux64 -O /usr/local/bin/ic-wasm
+          chmod +x /usr/local/bin/ic-wasm
+
       - name: rustfmt
         run: |
           cargo fmt --all --check
@@ -39,7 +47,6 @@ jobs:
 
       - name: test
         run: |
-          cargo install ic-wasm
           ./scripts/build.sh
           ./scripts/test.sh
         env:
