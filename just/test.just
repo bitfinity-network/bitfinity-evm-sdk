@@ -1,9 +1,4 @@
 
-# Run all unit tests and integration tests
-[group('test')]
-test_all: test integration_test
-
-
 # Run all unit tests
 [group('test')]
 test test_name="":

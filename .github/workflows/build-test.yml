@@ -31,34 +31,33 @@ jobs:
 
       - name: Install Just command runner
         uses: extractions/setup-just@v1
-        
+
       - name: install ic-wasm
         run: |
           wget https://github.com/dfinity/ic-wasm/releases/download/0.8.1/ic-wasm-linux64 -O /usr/local/bin/ic-wasm
           chmod +x /usr/local/bin/ic-wasm
 
-      - name: rustfmt
-        run: |
-          cargo fmt --all --check
-
-      - name: clippy
-        run: |
-          cargo clippy --all-features --all-targets -- -D warnings
-
-      - name: test
-        run: |
-          ./scripts/build.sh
-          ./scripts/test.sh
-        env:
-          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-
-      - name: test i686-unknown-linux-gnu
+      - name: setup environment
         run: |
           sudo apt update
           sudo apt install gcc-multilib
-          ./scripts/test.sh --target i686-unknown-linux-gnu
+
+      - name: build
+        run: |
+          just build
+
+      - name: test
+        run: |
+          just test
         env:
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+
+      - name: 32bits test
+        run: |
+          just test_i686
+        env:
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+
 
   release-binaries:
     if: ${{github.ref_type == 'tag'}}
