@@ -205,13 +205,13 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Mint Native to an address
     /// Note: This works on the testnet only
-    pub async fn mint_native_tokens(
+    pub async fn admin_mint_native_tokens(
         &self,
         address: H160,
         amount: U256,
     ) -> CanisterClientResult<EvmResult<(H256, U256)>> {
         self.client
-            .update("mint_native_tokens", (address, amount))
+            .update("admin_mint_native_tokens", (address, amount))
             .await
     }
 
