@@ -22,7 +22,7 @@ homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.32.0"
+version = "0.33.0"
 
 [workspace.dependencies]
 alloy-primitives = { version = "0.7", default-features = false }
@@ -69,7 +69,7 @@ sqlx = { version = "0.8.1", default-features = false, features = [
     "runtime-tokio",
 ] }
 tempfile = "3"
-testcontainers = { package = "testcontainers-modules", version = "0.9", features = [
+testcontainers = { package = "testcontainers-modules", version = "0.11", features = [
     "postgres",
 ] }
 thiserror = "1.0"

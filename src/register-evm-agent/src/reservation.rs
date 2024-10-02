@@ -131,7 +131,7 @@ impl<'a> ReservationService<'a> {
         info!("minting EVM native tokens to {address}");
 
         self.client
-            .mint_native_tokens(address, did::U256::from(amount_to_mint))
+            .admin_mint_native_tokens(address, did::U256::from(amount_to_mint))
             .await??;
 
         info!("tokens minted successfully");
