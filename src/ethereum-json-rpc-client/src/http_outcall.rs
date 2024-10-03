@@ -2,7 +2,6 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
-use ic_exports::ic_cdk::api::call;
 use ic_exports::ic_cdk::api::management_canister::http_request::{
     self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
 };
