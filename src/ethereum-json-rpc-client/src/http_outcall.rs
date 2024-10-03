@@ -2,7 +2,6 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
-use ic_exports::ic_cdk::api::call;
 use ic_exports::ic_cdk::api::management_canister::http_request::{
     self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
 };
@@ -84,9 +83,9 @@ impl Client for HttpOutcallClient {
 
             let cost = http_request_required_cycles(&request);
 
-            let cycles_available = call::msg_cycles_available128();
+            let cycles_available = ic_exports::ic_cdk::api::canister_balance128();
             if cycles_available < cost {
-                anyhow::bail!("Too few cycles, expected: {cost}, received: {cycles_available}");
+                anyhow::bail!("Too few cycles, expected: {cost}, available: {cycles_available}");
             }
 
             let http_response = http_request::http_request(request, cost)
