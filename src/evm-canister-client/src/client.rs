@@ -786,4 +786,26 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn ic_stats(&self) -> CanisterClientResult<Result<EvmStats>> {
         self.client.query("ic_stats", ()).await
     }
+
+    /// Sets the request header that will be checked to obtain the IP address of the caller.
+    /// If None, the header check will be disabled.
+    /// Only for testnet.
+    pub async fn admin_set_testnet_request_ip_header(
+        &self,
+        header: Option<String>,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_testnet_request_ip_header", (header,))
+            .await
+    }
+
+    /// Returns the request header that will be checked to obtain the IP address of the caller.
+    /// Only for testnet.
+    pub async fn admin_get_testnet_request_ip_header(
+        &self,
+    ) -> CanisterClientResult<Result<Option<String>>> {
+        self.client
+            .query("admin_get_testnet_request_ip_header", ())
+            .await
+    }
 }
