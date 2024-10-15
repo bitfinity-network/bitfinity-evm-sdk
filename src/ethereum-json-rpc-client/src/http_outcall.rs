@@ -2,12 +2,13 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
-use ic_exports::ic_cdk;
-use ic_cdk::api::management_canister::http_request::{self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext};
+use ic_cdk::api::management_canister::http_request::{
+    self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
+};
 #[cfg(feature = "sanitize-http-outcall")]
-use ic_cdk::api::management_canister::http_request::{TransformArgs, HttpResponse};
+use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
+use ic_exports::ic_cdk;
 use jsonrpc_core::Request;
-
 
 use crate::Client;
 
@@ -77,7 +78,10 @@ impl HttpOutcallClient {
         Self {
             url,
             max_response_bytes: None,
-            transform_context: Some(TransformContext::from_name("sanitize_http_response".into(), vec![])),
+            transform_context: Some(TransformContext::from_name(
+                "sanitize_http_response".into(),
+                vec![],
+            )),
         }
     }
 
@@ -99,7 +103,9 @@ impl HttpOutcallClient {
 fn sanitize_http_response(raw_response: TransformArgs) -> HttpResponse {
     const USE_HEADERS: &[&str] = &["content-encoding", "content-length", "content-type", "host"];
     let TransformArgs { mut response, .. } = raw_response;
-    response.headers.retain(|header| USE_HEADERS.iter().any(|v| v == &header.name.to_lowercase()));
+    response
+        .headers
+        .retain(|header| USE_HEADERS.iter().any(|v| v == &header.name.to_lowercase()));
 
     response
 }
@@ -159,7 +165,12 @@ impl Client for HttpOutcallClient {
                     anyhow::format_err!(format!("RejectionCode: {r:?}, Error: {m}"))
                 })?;
 
-            log::trace!("CanisterClient - Response from http_outcall'. Response: {} {:?}. Body: {}", http_response.status, http_response.headers, String::from_utf8_lossy(&http_response.body));
+            log::trace!(
+                "CanisterClient - Response from http_outcall'. Response: {} {:?}. Body: {}",
+                http_response.status,
+                http_response.headers,
+                String::from_utf8_lossy(&http_response.body)
+            );
 
             let response = serde_json::from_slice(&http_response.body)
                 .context("failed to deserialize RPC response")?;
@@ -191,6 +202,7 @@ pub fn http_request_required_cycles(arg: &CanisterHttpRequestArgument) -> u128 {
 #[cfg(test)]
 mod tests {
     use candid::Nat;
+
     use super::*;
 
     #[cfg(feature = "sanitize-http-outcall")]
@@ -200,10 +212,22 @@ mod tests {
             response: HttpResponse {
                 status: 200u128.into(),
                 headers: vec![
-                    HttpHeader { name: "content-type".to_string(), value: "application/json".to_string() },
-                    HttpHeader { name: "content-length".to_string(), value: "42".to_string() },
-                    HttpHeader { name: "content-encoding".to_string(), value: "gzip".to_string() },
-                    HttpHeader { name: "date".to_string(), value: "Fri, 11 Oct 2024 10:25:08 GMT".to_string() },
+                    HttpHeader {
+                        name: "content-type".to_string(),
+                        value: "application/json".to_string(),
+                    },
+                    HttpHeader {
+                        name: "content-length".to_string(),
+                        value: "42".to_string(),
+                    },
+                    HttpHeader {
+                        name: "content-encoding".to_string(),
+                        value: "gzip".to_string(),
+                    },
+                    HttpHeader {
+                        name: "date".to_string(),
+                        value: "Fri, 11 Oct 2024 10:25:08 GMT".to_string(),
+                    },
                 ],
                 body: vec![],
             },
@@ -213,7 +237,10 @@ mod tests {
         let sanitized: HttpResponse = sanitize_http_response(transform_args);
         assert_eq!(sanitized.headers.len(), 3);
         assert_eq!(sanitized.status, Nat::from(200u128));
-        assert!(sanitized.headers.iter().any(|header| header.name == "content-type"));
+        assert!(sanitized
+            .headers
+            .iter()
+            .any(|header| header.name == "content-type"));
         assert!(!sanitized.headers.iter().any(|header| header.name == "date"));
     }
 }
