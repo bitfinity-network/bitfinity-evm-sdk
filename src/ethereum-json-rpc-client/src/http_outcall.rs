@@ -148,7 +148,7 @@ impl Client for HttpOutcallClient {
                 method: HttpMethod::POST,
                 headers,
                 body: Some(body),
-                transform: None,
+                transform: self.transform_context.clone(),
             };
 
             let cost = http_request_required_cycles(&request);
