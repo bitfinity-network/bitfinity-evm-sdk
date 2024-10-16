@@ -2,14 +2,14 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
-use did::certified::CertifiedResult;
-use did::transaction::StorableExecutionResult;
-use ethers_core::types::{
+pub use did::certified::CertifiedResult;
+pub use did::transaction::StorableExecutionResult;
+pub use ethers_core::types::{
     Block, BlockNumber, Log, Transaction, TransactionReceipt, TransactionRequest, H160, H256, U256,
     U64,
 };
 use itertools::Itertools;
-use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
+pub use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
