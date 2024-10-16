@@ -14,7 +14,8 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloy-primitives = { workspace = true }
+alloy-primitives-07 = { workspace = true, optional = true }
+alloy-primitives-08 = { workspace = true, optional = true }
 bincode = { workspace = true }
 bytes = { workspace = true }
 candid = { workspace = true }
@@ -40,3 +41,7 @@ thiserror = { workspace = true }
 eth-signer = { path = "../eth-signer" }
 rand = { workspace = true }
 tokio = { workspace = true }
+
+[features]
+"alloy-primitives-07" = ["dep:alloy-primitives-07"]
+"alloy-primitives-08" = ["dep:alloy-primitives-08"]

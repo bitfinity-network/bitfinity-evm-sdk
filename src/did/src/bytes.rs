@@ -108,18 +108,6 @@ impl<'de> Deserialize<'de> for Bytes {
     }
 }
 
-impl From<alloy_primitives::Bytes> for Bytes {
-    fn from(value: alloy_primitives::Bytes) -> Self {
-        Bytes(value.0)
-    }
-}
-
-impl From<Bytes> for alloy_primitives::Bytes {
-    fn from(value: Bytes) -> Self {
-        alloy_primitives::Bytes(value.0)
-    }
-}
-
 #[cfg(test)]
 mod tests {
 
@@ -167,17 +155,4 @@ mod tests {
         assert_eq!(value, decoded_value);
     }
 
-    #[test]
-    fn test_alloy_bytes_roundtrip() {
-        let value = Bytes(bytes::Bytes::from(vec![
-            rand::random::<u8>(),
-            rand::random::<u8>(),
-            rand::random::<u8>(),
-        ]));
-
-        let alloy_bytes = alloy_primitives::Bytes::from(value.clone());
-        let decoded_value = Bytes::from(alloy_bytes);
-
-        assert_eq!(value, decoded_value);
-    }
 }

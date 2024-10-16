@@ -3,6 +3,8 @@
 [group('test')]
 test test_name="":
   cargo test {{test_name}}
+  cargo test {{test_name}} -p did --features "alloy-primitives-07"
+  cargo test {{test_name}} -p did --features "alloy-primitives-08"
   cargo test {{test_name}} --all-features
 
 
