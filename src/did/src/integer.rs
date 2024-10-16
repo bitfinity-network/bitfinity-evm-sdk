@@ -712,5 +712,4 @@ mod tests {
 
         assert_eq!(value, decoded_value);
     }
-
 }

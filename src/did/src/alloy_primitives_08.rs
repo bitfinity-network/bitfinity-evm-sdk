@@ -1,7 +1,4 @@
-use crate::Bytes;
-use crate::H160;
-use crate::H256;
-use crate::H64;
+use crate::{Bytes, H160, H256, H64};
 
 impl From<alloy_primitives_08::Bytes> for Bytes {
     fn from(value: alloy_primitives_08::Bytes) -> Self {
@@ -51,20 +48,19 @@ impl From<H256> for alloy_primitives_08::B256 {
     }
 }
 
-// Enabled only if the feature "alloy-primitives-07" is not enabled, otherwise the 
+// Enabled only if the feature "alloy-primitives-07" is not enabled, otherwise the
 // compilation fails as the trait is already implemented in the other module.
 #[cfg(not(feature = "alloy-primitives-07"))]
 mod utypes_conversion {
 
-    use crate::U256;
-    use crate::U64;
+    use crate::{U256, U64};
 
     impl From<alloy_primitives_08::U256> for U256 {
         fn from(value: alloy_primitives_08::U256) -> Self {
             U256::from_little_endian(value.as_le_slice())
         }
     }
-    
+
     impl From<U256> for alloy_primitives_08::U256 {
         fn from(value: U256) -> Self {
             let mut bytes = [0u8; U256::BYTE_SIZE];
@@ -72,13 +68,13 @@ mod utypes_conversion {
             alloy_primitives_08::U256::from_le_bytes(bytes)
         }
     }
-    
+
     impl From<alloy_primitives_08::U64> for U64 {
         fn from(value: alloy_primitives_08::U64) -> Self {
             U64::from_little_endian(value.as_le_slice())
         }
     }
-    
+
     impl From<U64> for alloy_primitives_08::U64 {
         fn from(value: U64) -> Self {
             let mut bytes = [0u8; U64::BYTE_SIZE];
@@ -92,8 +88,7 @@ mod utypes_conversion {
 mod test {
 
     use super::*;
-    use crate::U256;
-    use crate::U64;
+    use crate::{U256, U64};
 
     #[test]
     fn test_alloy_bytes_roundtrip() {
@@ -158,5 +153,4 @@ mod test {
 
         assert_eq!(value, decoded_value);
     }
-
 }

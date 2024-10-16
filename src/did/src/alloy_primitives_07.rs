@@ -1,9 +1,4 @@
-use crate::Bytes;
-use crate::H160;
-use crate::H256;
-use crate::H64;
-use crate::U256;
-use crate::U64;
+use crate::{Bytes, H160, H256, H64, U256, U64};
 
 impl From<alloy_primitives_07::Bytes> for Bytes {
     fn from(value: alloy_primitives_07::Bytes) -> Self {
@@ -149,5 +144,4 @@ mod test {
 
         assert_eq!(value, decoded_value);
     }
-
 }
