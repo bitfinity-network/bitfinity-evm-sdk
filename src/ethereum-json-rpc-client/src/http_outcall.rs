@@ -32,7 +32,6 @@ use crate::Client;
 pub struct HttpOutcallClient {
     url: String,
     max_response_bytes: Option<u64>,
-    #[allow(dead_code)]
     transform_context: Option<TransformContext>,
 }
 
