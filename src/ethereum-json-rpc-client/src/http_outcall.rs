@@ -119,6 +119,7 @@ impl Client for HttpOutcallClient {
         let max_response_bytes = self.max_response_bytes;
         let body = serde_json::to_vec(&request).expect("failed to serialize body");
 
+        let transform = self.transform_context.clone();
         Box::pin(async move {
             log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
 
@@ -148,7 +149,7 @@ impl Client for HttpOutcallClient {
                 method: HttpMethod::POST,
                 headers,
                 body: Some(body),
-                transform: self.transform_context.clone(),
+                transform,
             };
 
             let cost = http_request_required_cycles(&request);
