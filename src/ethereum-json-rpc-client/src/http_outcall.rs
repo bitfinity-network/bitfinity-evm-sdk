@@ -48,40 +48,32 @@ impl HttpOutcallClient {
         }
     }
 
-    /// Creates a new client.
+    /// Sets transform context for the client.
     ///
-    /// You can use [`new_sanitized`] method to use default transform context. (Available with
+    /// Transform context is used to sanitize HTTP responses before checking for consensus.
+    ///
+    /// You can use [`sanitized`] method to set up default transform context. (Available with
     /// Cargo feature `sanitize-http-outcall`)
     ///
     /// # Arguments
-    /// * `url` - the url of the RPC service to connect to.
     /// * `transform_context` - method to use to sanitize HTTP response
-    pub fn new_with_transform(url: String, transform_context: TransformContext) -> Self {
-        Self {
-            url,
-            max_response_bytes: None,
-            transform_context: Some(transform_context),
-        }
+    pub fn with_transform(mut self, transform_context: TransformContext) -> Self {
+        self.transform_context = Some(transform_context);
+        self
     }
 
-    /// Creates a new client with default sanitize method.
+    /// Sets default transform context for the client.
     ///
     /// The default sanitize drops most of HTTP headers that may prevent consensus on the response.
     ///
     /// Only available with Cargo feature `sanitize-http-outcall`.
-    ///
-    /// # Arguments
-    /// * `url` - the url of the RPC service to connect to.
     #[cfg(feature = "sanitize-http-outcall")]
-    pub fn new_sanitized(url: String) -> Self {
-        Self {
-            url,
-            max_response_bytes: None,
-            transform_context: Some(TransformContext::from_name(
-                "sanitize_http_response".into(),
-                vec![],
-            )),
-        }
+    pub fn sanitized(mut self) -> Self {
+        self.transform_context = Some(TransformContext::from_name(
+            "sanitize_http_response".into(),
+            vec![],
+        ));
+        self
     }
 
     /// The maximal size of the response in bytes. If None, 2MiB will be the
