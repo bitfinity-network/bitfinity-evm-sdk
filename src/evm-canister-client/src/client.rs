@@ -787,25 +787,21 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("ic_stats", ()).await
     }
 
-    /// Sets the request header that will be checked to obtain the IP address of the caller.
-    /// If None, the header check will be disabled.
-    /// Only for testnet.
-    pub async fn admin_set_testnet_request_ip_header(
+    /// Disable/Enable the transaction pre-execution 
+    pub async fn admin_disable_tx_pre_execution(
         &self,
-        header: Option<String>,
+        value: bool,
     ) -> CanisterClientResult<Result<()>> {
         self.client
-            .update("admin_set_testnet_request_ip_header", (header,))
+            .update("admin_disable_tx_pre_execution", (value,))
             .await
     }
 
-    /// Returns the request header that will be checked to obtain the IP address of the caller.
-    /// Only for testnet.
-    pub async fn admin_get_testnet_request_ip_header(
-        &self,
-    ) -> CanisterClientResult<Result<Option<String>>> {
+    /// Returns whether the transaction pre-execution is disabled.
+    pub async fn is_tx_pre_execution_disabled(&self) -> CanisterClientResult<bool> {
         self.client
-            .query("admin_get_testnet_request_ip_header", ())
+            .query("is_tx_pre_execution_disabled", ())
             .await
     }
+
 }
