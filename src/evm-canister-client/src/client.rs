@@ -792,7 +792,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("ic_stats", ()).await
     }
 
-    /// Disable/Enable the transaction pre-execution 
+    /// Disable/Enable the transaction pre-execution
     pub async fn admin_disable_tx_pre_execution(
         &self,
         value: bool,
@@ -804,9 +804,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Returns whether the transaction pre-execution is disabled.
     pub async fn is_tx_pre_execution_disabled(&self) -> CanisterClientResult<bool> {
-        self.client
-            .query("is_tx_pre_execution_disabled", ())
-            .await
+        self.client.query("is_tx_pre_execution_disabled", ()).await
     }
-
 }
