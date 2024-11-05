@@ -761,6 +761,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Returns the current blockchain size limit for transactions, receipts, and blocks.
+    pub async fn get_blockchain_size_limit(&self) -> CanisterClientResult<BlockchainStorageLimits> {
+        self.client.query("get_blockchain_size_limit", ()).await
+    }
+
     /// Sets the block size limit.
     pub async fn admin_set_block_size_limit(
         &self,
