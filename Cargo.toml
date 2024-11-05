@@ -51,7 +51,6 @@ jsonrpsee = { version = "0.24", features = ["server", "macros"] }
 lightspeed_scheduler = "0.59"
 log = "0.4"
 num = "0.4"
-once_cell = "1.16"
 port_check = "0.2"
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
 reqwest = { version = "0.12", default-features = false }
