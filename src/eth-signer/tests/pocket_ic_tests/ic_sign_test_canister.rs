@@ -17,7 +17,6 @@ async fn test_canister_sign_and_check() {
         )
         .await;
 
-    println!("{:?}", result);
     assert!(result.is_ok());
 }
 
