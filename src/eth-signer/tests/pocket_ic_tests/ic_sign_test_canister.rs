@@ -5,7 +5,7 @@ use crate::pocket_ic_tests::wasm_utils::get_test_canister_bytecode;
 
 #[tokio::test]
 async fn test_canister_sign_and_check() {
-    let env = pocket_ic::init_pocket_ic().await;
+    let env = pocket_ic::init_pocket_ic().await.build_async().await;
     let canister = deploy_canister(&env).await;
 
     let result = env
@@ -16,6 +16,8 @@ async fn test_canister_sign_and_check() {
             Encode!(&()).unwrap(),
         )
         .await;
+
+    println!("{:?}", result);
     assert!(result.is_ok());
 }
 
