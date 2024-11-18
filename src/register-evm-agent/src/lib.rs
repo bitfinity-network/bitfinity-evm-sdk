@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate log;
 
-pub mod agent;
 pub mod cli;
 mod constant;
 mod error;

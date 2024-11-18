@@ -1,29 +1,36 @@
+use std::time::Duration;
+
 use candid::Principal;
 use did::{H160, H256, U256};
 use eth_signer::transaction::{SigningMethod, TransactionBuilder};
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use evm_canister_client::{CanisterClient, EvmCanisterClient};
+use log::*;
 
-use crate::cli::DEFAULT_CHAIN_ID;
 use crate::error::{Error, Result};
+use crate::TimeWaiter;
 
-pub struct ReservationService<'a, C: CanisterClient> {
+pub struct ReservationService<'a, C: CanisterClient, W: TimeWaiter> {
     client: EvmCanisterClient<C>,
     amount_to_mint: Option<u64>,
     gas_price: U256,
     reserve_canister_id: Principal,
     wallet: Wallet<'a, SigningKey>,
+    chain_id: u64,
+    time_waiter: W,
 }
 
-impl<'a, C: CanisterClient> ReservationService<'a, C> {
+impl<'a, C: CanisterClient, W: TimeWaiter> ReservationService<'a, C, W> {
     pub async fn new(
         client: EvmCanisterClient<C>,
         amount_to_mint: Option<u64>,
         gas_price: U256,
         reserve_canister_id: Principal,
         wallet: Wallet<'a, SigningKey>,
-    ) -> Result<ReservationService<'a, C>> {
+        chain_id: u64,
+        time_waiter: W,
+    ) -> Result<ReservationService<'a, C, W>> {
 
         Ok(Self {
             client,
@@ -31,6 +38,8 @@ impl<'a, C: CanisterClient> ReservationService<'a, C> {
             gas_price,
             reserve_canister_id,
             wallet,
+            chain_id,
+            time_waiter,
         })
     }
 
@@ -76,7 +85,7 @@ impl<'a, C: CanisterClient> ReservationService<'a, C> {
             gas_price: Some(self.gas_price.clone()),
             input: self.reserve_canister_id.as_slice().to_vec(),
             signature: SigningMethod::SigningKey(self.wallet.signer()),
-            chain_id: DEFAULT_CHAIN_ID,
+            chain_id: self.chain_id,
         }
         .calculate_hash_and_build()?;
 
@@ -135,7 +144,7 @@ impl<'a, C: CanisterClient> ReservationService<'a, C> {
 
         for _ in 0..MAX_RETRIES {
             info!("waiting for transaction to be finalized...");
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            self.time_waiter.wait(Duration::from_secs(2)).await;
 
             let tx_receipt = self
                 .client

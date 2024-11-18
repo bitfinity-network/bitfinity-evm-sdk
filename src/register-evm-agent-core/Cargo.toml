@@ -1,5 +1,5 @@
 [package]
-name = "register_evm_agent"
+name = "register_evm_agent_core"
 categories = []
 description = ""
 include = ["src/**/*", "README.md"]
@@ -15,28 +15,19 @@ repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[[bin]]
-name = "register-evm-agent"
-path = "src/main.rs"
-
 [dependencies]
-anyhow = { workspace = true }
 candid = { workspace = true }
-clap = { workspace = true }
 did = { path = "../did" }
-env_logger = { workspace = true }
 eth-signer = { path = "../eth-signer" }
 ethers-core = { workspace = true }
-evm-canister-client = { path = "../evm-canister-client", features = [
-    "ic-agent-client",
-] }
-register_evm_agent_core = { path = "../register-evm-agent-core", features = ["tokio"] }
-hex = { workspace = true }
-ic-exports = { workspace = true }
+evm-canister-client = { path = "../evm-canister-client" }
 log = { workspace = true }
-rand = { workspace = true }
-rlp = { workspace = true }
+# rand = { workspace = true }
+# rlp = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, optional = true }
+
+[features]
+tokio = ["dep:tokio"]

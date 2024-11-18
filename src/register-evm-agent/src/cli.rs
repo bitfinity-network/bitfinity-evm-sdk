@@ -7,6 +7,7 @@ use did::H160;
 use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use evm_canister_client::agent::identity::init_agent;
+use evm_canister_client::{EvmCanisterClient, IcAgentClient};
 
 use super::reservation::ReservationService;
 use crate::error::Error;
@@ -79,11 +80,12 @@ impl ReserveArgs {
         let network = network_url(&self.network);
         let agent = init_agent(&self.identity, network, None).await?;
 
+        let client = EvmCanisterClient::new(IcAgentClient::with_agent(self.evm, agent));
+        
         match ReservationService::new(
-            agent,
+            client,
             self.amount_to_mint,
             self.gas_price.into(),
-            self.evm,
             self.reserve_canister_id,
             wallet,
         )
@@ -101,11 +103,10 @@ impl ReserveArgs {
 
                 Ok(())
             }
-            Err(Error::AlreadyReserved(principal)) => {
+            Err(Error::AlreadyReserved) => {
                 println!(
-                    "Already reserved:\n\tWallet Address = {}\n\tPrincipal = {}",
+                    "Already reserved:\n\tWallet Address = {}\n\t",
                     H160::from(address).to_hex_str(),
-                    principal
                 );
                 Ok(())
             }
