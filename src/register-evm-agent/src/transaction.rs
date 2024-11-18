@@ -9,10 +9,10 @@ use ethers_core::k256::ecdsa::SigningKey;
 use ethers_core::types::{H160, U256};
 use evm_canister_client::agent::identity::init_agent;
 use evm_canister_client::{EvmCanisterClient, IcAgentClient};
+use register_evm_agent_core::error::Result;
 
-use crate::cli::{get_wallet, network_url, DEFAULT_CHAIN_ID, NETWORK_LOCAL};
-use crate::constant::DEFAULT_GAS_LIMIT;
-use crate::error::Result;
+use crate::cli::{get_wallet, network_url};
+use crate::constant::{DEFAULT_CHAIN_ID, DEFAULT_GAS_LIMIT, NETWORK_LOCAL};
 
 type EvmCanisterAgentClient = EvmCanisterClient<IcAgentClient>;
 

@@ -1,4 +1,3 @@
-use candid::Principal;
 use did::error::EvmError;
 use did::H256;
 use eth_signer::WalletError;
@@ -12,10 +11,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("IPC agent error: {0}")]
     Agent(AgentError),
-    #[error("address is already reserved: {0}")]
-    AlreadyReserved(Principal),
-    #[error("failed to get agent principal: {0}")]
-    CouldNotGetPrincipal(String),
+    #[error("address is already reserved")]
+    AlreadyReserved,
     #[error("EVM error: {0}")]
     Evm(EvmError),
     #[error("canister client error: {0}")]

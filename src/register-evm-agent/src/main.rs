@@ -5,11 +5,8 @@ use cli::{generate_wallet, Commands, ReserveMinterCli};
 #[macro_use]
 extern crate log;
 
-mod agent;
 mod cli;
 mod constant;
-mod error;
-mod reservation;
 mod transaction;
 
 #[tokio::main]
