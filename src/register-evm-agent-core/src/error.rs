@@ -1,7 +1,6 @@
 use did::error::EvmError;
 use did::H256;
 use eth_signer::WalletError;
-use evm_canister_client::ic_agent::AgentError;
 use evm_canister_client::CanisterClientError;
 use thiserror::Error;
 
@@ -9,8 +8,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[cfg(feature = "ic-agent-client")]
     #[error("IPC agent error: {0}")]
-    Agent(AgentError),
+    Agent(evm_canister_client::ic_agent::AgentError),
     #[error("address is already reserved")]
     AlreadyReserved,
     #[error("EVM error: {0}")]
@@ -28,8 +28,9 @@ pub enum Error {
     TransactionFailed,
 }
 
-impl From<AgentError> for Error {
-    fn from(err: AgentError) -> Self {
+#[cfg(feature = "ic-agent-client")]
+impl From<evm_canister_client::ic_agent::AgentError> for Error {
+    fn from(err: evm_canister_client::ic_agent::AgentError) -> Self {
         Self::Agent(err)
     }
 }

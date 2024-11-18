@@ -29,3 +29,4 @@ tokio = { workspace = true, optional = true }
 
 [features]
 tokio = ["dep:tokio"]
+ic-agent-client = ["evm-canister-client/ic-agent-client"]
