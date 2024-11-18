@@ -31,7 +31,6 @@ impl<'a, C: CanisterClient, W: TimeWaiter> ReservationService<'a, C, W> {
         chain_id: u64,
         time_waiter: W,
     ) -> Result<ReservationService<'a, C, W>> {
-
         Ok(Self {
             client,
             amount_to_mint,

@@ -1,5 +1,5 @@
-mod error;
-mod reservation;
+pub mod error;
+pub mod reservation;
 
 use std::time::Duration;
 
@@ -7,7 +7,6 @@ pub use error::{Error, Result};
 pub use reservation::ReservationService;
 
 pub trait TimeWaiter {
-
     /// Wait for the given duration
     fn wait(&self, duration: Duration) -> impl std::future::Future<Output = ()> + Send;
 }
@@ -20,17 +19,14 @@ pub mod tokio_waiter {
     pub struct TokioTimeWaiter;
 
     impl TokioTimeWaiter {
-
         pub fn new() -> Self {
             Self
         }
     }
 
     impl super::TimeWaiter for TokioTimeWaiter {
-
         async fn wait(&self, duration: Duration) {
             tokio::time::sleep(duration).await;
         }
     }
-
 }

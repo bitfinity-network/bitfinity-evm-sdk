@@ -8,16 +8,12 @@ use eth_signer::{Signer, Wallet};
 use ethers_core::k256::ecdsa::SigningKey;
 use evm_canister_client::agent::identity::init_agent;
 use evm_canister_client::{EvmCanisterClient, IcAgentClient};
+use register_evm_agent_core::error::Error;
+use register_evm_agent_core::reservation::ReservationService;
+use register_evm_agent_core::tokio_waiter::TokioTimeWaiter;
 
-use super::reservation::ReservationService;
-use crate::error::Error;
+use crate::constant::{DEFAULT_CHAIN_ID, NETWORK_IC, NETWORK_LOCAL};
 use crate::transaction::SignTransactionArgs;
-
-pub(crate) const DEFAULT_CHAIN_ID: u64 = 355113;
-/// network name for production
-const NETWORK_IC: &str = "ic";
-/// network name for local replica
-pub(crate) const NETWORK_LOCAL: &str = "local";
 
 /// CLI tool for generating wallet & reserving EVM addresses to IC principals
 #[derive(Parser)]
@@ -81,13 +77,15 @@ impl ReserveArgs {
         let agent = init_agent(&self.identity, network, None).await?;
 
         let client = EvmCanisterClient::new(IcAgentClient::with_agent(self.evm, agent));
-        
+
         match ReservationService::new(
             client,
             self.amount_to_mint,
             self.gas_price.into(),
             self.reserve_canister_id,
             wallet,
+            DEFAULT_CHAIN_ID,
+            TokioTimeWaiter,
         )
         .await
         .map_err(|e| anyhow::anyhow!("{e}"))?
