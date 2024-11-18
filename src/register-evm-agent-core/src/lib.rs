@@ -18,6 +18,12 @@ pub mod tokio_waiter {
     /// A time waiter that uses tokio's sleep function
     pub struct TokioTimeWaiter;
 
+    impl Default for TokioTimeWaiter {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl TokioTimeWaiter {
         pub fn new() -> Self {
             Self
