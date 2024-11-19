@@ -813,7 +813,10 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Appends a new block to the blockchain.
-    pub async fn append_block(&self, block: Block<Transaction>) -> CanisterClientResult<Result<()>> {
+    pub async fn append_block(
+        &self,
+        block: Block<Transaction>,
+    ) -> CanisterClientResult<Result<()>> {
         self.client.update("append_block", (block,)).await
     }
 }
