@@ -7,7 +7,7 @@ use did::permission::{Permission, PermissionList};
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::{
-    BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
+    Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
     TransactionReceipt, H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
@@ -452,6 +452,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Returns the current logger filter
+    pub async fn get_logger_filter(&self) -> CanisterClientResult<Option<String>> {
+        self.client.query("get_logger_filter", ()).await
+    }
+
     /// Updates the runtime configuration of the logger with a new filter in the same form as the `RUST_LOG`
     /// environment variable.
     /// Example of valid filters:
@@ -805,5 +810,13 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Returns whether the transaction pre-execution is disabled.
     pub async fn is_tx_pre_execution_disabled(&self) -> CanisterClientResult<bool> {
         self.client.query("is_tx_pre_execution_disabled", ()).await
+    }
+
+    /// Appends a new block to the blockchain.
+    pub async fn append_block(
+        &self,
+        block: Block<Transaction>,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client.update("append_block", (block,)).await
     }
 }
