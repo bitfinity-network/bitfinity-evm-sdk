@@ -7,7 +7,8 @@ use did::permission::{Permission, PermissionList};
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::{
-    Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction, TransactionReceipt, H160, H256, U256, U64
+    Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
+    TransactionReceipt, H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
