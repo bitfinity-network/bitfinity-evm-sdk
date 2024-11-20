@@ -486,6 +486,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.update("admin_disable_evm", (disabled,)).await
     }
 
+    /// Returns whether the EVM is disabled
+    pub async fn is_evm_disabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_evm_disabled", ()).await
+    }
+
     /// Adds permissions to a principal and returns the principal permissions
     pub async fn admin_ic_permissions_add(
         &self,
