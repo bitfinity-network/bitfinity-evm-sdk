@@ -838,7 +838,10 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ///   is preserved.
     /// * [`EvmError::BadRequest`] if given arguments do not match actual values expected by the
     ///   EVM.
-    pub async fn revert_to_block(&self, args: RevertToBlockArgs) -> CanisterClientResult<Result<()>> {
+    pub async fn revert_to_block(
+        &self,
+        args: RevertToBlockArgs,
+    ) -> CanisterClientResult<Result<()>> {
         self.client.update("revert_to_block", (args,)).await
     }
 }
