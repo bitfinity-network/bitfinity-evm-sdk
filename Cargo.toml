@@ -23,7 +23,7 @@ homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.36.0"
+version = "0.36.1"
 
 [workspace.dependencies]
 alloy-primitives-07 = { package = "alloy-primitives", version = "0.7", default-features = false }

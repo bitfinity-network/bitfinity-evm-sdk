@@ -14,10 +14,12 @@ pub enum Permission {
     Admin,
     /// Allows calling the endpoints to read the logs and get runtime statistics
     ReadLogs,
-    /// Allows calling the endpoints to set the logs configuration
-    UpdateLogsConfiguration,
     /// Allows caller to reset the EVM state
     ResetEvmState,
+    /// Allows calling the endpoints to set the logs configuration
+    UpdateLogsConfiguration,
+    /// Allows calling the endpoints to set the EVM configuration
+    ValidateUnconfirmedBlocks,
 }
 
 #[derive(Debug, Clone, Default, CandidType, Deserialize, PartialEq, Eq, serde::Serialize)]
