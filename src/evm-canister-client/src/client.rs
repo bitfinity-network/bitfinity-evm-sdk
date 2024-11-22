@@ -4,6 +4,7 @@ use did::build::BuildData;
 use did::error::Result;
 use did::evm_reset_state::EvmResetState;
 use did::permission::{Permission, PermissionList};
+use did::revert_blocks::RevertToBlockArgs;
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::{
@@ -823,5 +824,24 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         block: Block<Transaction>,
     ) -> CanisterClientResult<Result<()>> {
         self.client.update("append_block", (block,)).await
+    }
+
+    /// Drops all blocks up to the `block_number`.
+    ///
+    /// Only the blocks for which state history is preserved can be reverted.
+    ///
+    /// # Errors
+    ///
+    /// * [`EvmError::BlockDoesNotExist`] if given block number is higher than the tip of the
+    ///   chain.
+    /// * [`EvmError::NoHistoryDataForBlock`] if trying to revert to a block for which no history
+    ///   is preserved.
+    /// * [`EvmError::BadRequest`] if given arguments do not match actual values expected by the
+    ///   EVM.
+    pub async fn revert_to_block(
+        &self,
+        args: RevertToBlockArgs,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client.update("revert_to_block", (args,)).await
     }
 }
