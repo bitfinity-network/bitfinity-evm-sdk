@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_candid_type_bytes() {
-        let value = Bytes(bytes::Bytes::from(vec![
+        let value = Bytes(alloy::primitives::Bytes::from(vec![
             rand::random::<u8>(),
             rand::random::<u8>(),
             rand::random::<u8>(),
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_bytes_fmt_lower_hex() {
-        let value = Bytes(bytes::Bytes::from(vec![
+        let value = Bytes(alloy::primitives::Bytes::from(vec![
             rand::random::<u8>(),
             rand::random::<u8>(),
             rand::random::<u8>(),
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_bytes_serde_serialization() {
-        let value = Bytes(bytes::Bytes::from(vec![
+        let value = Bytes(alloy::primitives::Bytes::from(vec![
             rand::random::<u8>(),
             rand::random::<u8>(),
             rand::random::<u8>(),

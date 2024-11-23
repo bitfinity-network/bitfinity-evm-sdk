@@ -165,7 +165,7 @@ mod tests {
         let expected_filter = LogFilter {
             block_filter: Some(BlockFilter::Bounded {
                 from_block: Some(BlockNumber::Earliest),
-                to_block: Some(BlockNumber::Number(U64::one())),
+                to_block: Some(BlockNumber::Number(U64::from(1u64))),
             }),
             ..Default::default()
         };

@@ -602,7 +602,7 @@ mod test {
     #[test]
     fn test_storable_block() {
         let mut block = Block {
-            author: ethereum_types::H160::random().into(),
+            author: alloy::primitives::Address::random().into(),
             number: rand::random::<u64>().into(),
             ..Default::default()
         };
@@ -640,46 +640,46 @@ mod test {
 
             let calculated_block_hash = calculate_block_hash(&block);
             assert_eq!(
-                ethereum_types::H256::from_str(&hash).unwrap(),
+                alloy::primitives::B256::from_str(&hash).unwrap(),
                 calculated_block_hash.0
             );
         }
     }
 
     fn create_transaction(gas_price: Option<U256>, chain_id: u64) -> Transaction {
-        let mut tx = ethers_core::types::Transaction {
-            from: ethereum_types::H160::from_slice(&[0u8; 20]),
+        let mut tx = Transaction {
+            from: alloy::primitives::Address::from_slice(&[0u8; 20]).into(),
             to: None,
-            nonce: ethereum_types::U256::zero(),
-            value: ethereum_types::U256::zero(),
+            nonce: U256::zero(),
+            value: U256::zero(),
             gas: 20u64.into(),
-            gas_price: gas_price.map(Into::into),
+            gas_price: gas_price,
             input: vec![].into(),
             chain_id: Some(chain_id.into()),
             ..Default::default()
         };
-        tx.hash = tx.hash();
+        tx.hash = alloy::primitives::B256::random().into();
         tx.into()
     }
 
     #[test]
     fn test_block_result() {
         let block = Block::<Transaction> {
-            author: ethereum_types::H160::random().into(),
+            author: alloy::primitives::Address::random().into(),
             number: U64::from(rand::random::<u64>()),
-            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
-            nonce: ethereum_types::H64::random().into(),
+            logs_bloom: Bloom(alloy::primitives::Bloom::from_slice(&[4u8; 256])),
+            nonce: alloy::primitives::B64::random().into(),
             transactions: vec![create_transaction(
                 Some(U256::from(rand::random::<u64>())),
                 1,
             )],
-            mix_hash: ethereum_types::H256::random().into(),
+            mix_hash: alloy::primitives::B256::random().into(),
             hash: Default::default(),
-            parent_hash: ethereum_types::H256::random().into(),
-            uncles_hash: ethereum_types::H256::random().into(),
-            state_root: ethereum_types::H256::random().into(),
-            transactions_root: ethereum_types::H256::random().into(),
-            receipts_root: ethereum_types::H256::random().into(),
+            parent_hash: alloy::primitives::B256::random().into(),
+            uncles_hash: alloy::primitives::B256::random().into(),
+            state_root: alloy::primitives::B256::random().into(),
+            transactions_root: alloy::primitives::B256::random().into(),
+            receipts_root: alloy::primitives::B256::random().into(),
             gas_used: U256::from(rand::random::<u64>()),
             gas_limit: U256::from(rand::random::<u64>()),
             extra_data: Default::default(),
@@ -705,11 +705,11 @@ mod test {
     fn should_calc_block_base_fee_when_gas_used_eq_gas_target() {
         assert_eq!(
             calculate_next_block_base_fee(
-                &U256::new(2_u64.into()),
-                &U256::new(4_u64.into()), // gas target 2
-                &U256::new(1_u64.into())
+                &2_u64.into(),
+                &4_u64.into(), // gas target 2
+                &1_u64.into()
             ),
-            U256::one()
+            U256::from(1u64)
         );
     }
 
@@ -717,22 +717,22 @@ mod test {
     fn should_calc_block_base_fee_when_gas_used_is_gt_gas_target() {
         assert_eq!(
             calculate_next_block_base_fee(
-                &U256::new(10_u64.into()),
-                &U256::new(4_u64.into()), // gas target 2
-                &U256::new(1_u64.into())
+                &10_u64.into(),
+                &4_u64.into(), // gas target 2
+                &1_u64.into()
             ),
-            U256::new(2_u64.into())
+            U256::from(2_u64)
         );
     }
 
     #[test]
     fn should_calc_block_base_fee_eq_to_base_fee_when_gas_used_is_lt_gas_target_and_sub_overflows()
     {
-        let base_fee = U256::new(100_u64.into());
+        let base_fee = U256::from(100_u64);
         assert_eq!(
             calculate_next_block_base_fee(
-                &U256::new(4_u64.into()),
-                &U256::new(10_u64.into()), // gas target 5
+                &4_u64.into(),
+                &10_u64.into(), // gas target 5
                 &base_fee
             ),
             U256::from(98u64) // = 100 - 0.125 * ((5-4) / 5) * 100
@@ -741,9 +741,9 @@ mod test {
 
     #[test]
     fn should_calc_block_base_fee_eq_to_sum_of_one_and_base_fee_when_gas_limit_is_zero() {
-        let gas_used = U256::new(5_u64.into());
-        let base_fee = U256::new(100_u64.into());
-        let expected = &U256::one() + &base_fee;
+        let gas_used = U256::from(5_u64);
+        let base_fee = U256::from(100_u64);
+        let expected = &U256::from(1u64) + &base_fee;
         assert_eq!(
             calculate_next_block_base_fee(
                 &gas_used,
@@ -756,8 +756,8 @@ mod test {
 
     #[test]
     fn should_calc_base_fee_for_zero_used_gas() {
-        let gas_used = U256::new(0_u64.into());
-        let base_fee = U256::new(100_u64.into());
+        let gas_used = U256::from(0_u64);
+        let base_fee = U256::from(100_u64);
         let expected = U256::from(88u64); // 100 - 0.125 * 100
         assert_eq!(
             calculate_next_block_base_fee(
@@ -771,9 +771,9 @@ mod test {
 
     #[test]
     fn should_calc_base_fee_with_arithmetic_overflow() {
-        let gas_used = U256::new(2000_u64.into());
-        let gas_limit = U256::new(2010_u64.into());
-        let mut base_fee = U256::new(100_u64.into());
+        let gas_used = U256::from(2000_u64);
+        let gas_limit = U256::from(2010_u64);
+        let mut base_fee = U256::from(100_u64);
 
         for _ in 0..10000 {
             base_fee = calculate_next_block_base_fee(&gas_used, &gas_limit, &base_fee);
@@ -813,18 +813,18 @@ mod test {
             .collect::<Vec<_>>();
 
         let block = Block::<H256> {
-            author: ethereum_types::H160::random().into(),
+            author: alloy::primitives::Address::random().into(),
             number: U64::from(rand::random::<u64>()),
-            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
-            nonce: ethereum_types::H64::random().into(),
+            logs_bloom: Bloom(alloy::primitives::Bloom::from_slice(&[4u8; 256])),
+            nonce: alloy::primitives::B64::random().into(),
             transactions: tx_hashes,
-            mix_hash: ethereum_types::H256::random().into(),
+            mix_hash: alloy::primitives::B256::random().into(),
             hash: Default::default(),
-            parent_hash: ethereum_types::H256::random().into(),
-            uncles_hash: ethereum_types::H256::random().into(),
-            state_root: ethereum_types::H256::random().into(),
-            transactions_root: ethereum_types::H256::random().into(),
-            receipts_root: ethereum_types::H256::random().into(),
+            parent_hash: alloy::primitives::B256::random().into(),
+            uncles_hash: alloy::primitives::B256::random().into(),
+            state_root: alloy::primitives::B256::random().into(),
+            transactions_root: alloy::primitives::B256::random().into(),
+            receipts_root: alloy::primitives::B256::random().into(),
             gas_used: U256::from(rand::random::<u64>()),
             gas_limit: U256::from(rand::random::<u64>()),
             extra_data: Default::default(),
@@ -858,18 +858,18 @@ mod test {
             .collect::<Vec<_>>();
 
         let block = Block::<H256> {
-            author: ethereum_types::H160::random().into(),
+            author: alloy::primitives::Address::random().into(),
             number: U64::from(rand::random::<u64>()),
-            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
-            nonce: ethereum_types::H64::random().into(),
+            logs_bloom: Bloom(alloy::primitives::Bloom::from_slice(&[4u8; 256])),
+            nonce: alloy::primitives::B64::random().into(),
             transactions: tx_hashes,
-            mix_hash: ethereum_types::H256::random().into(),
+            mix_hash: alloy::primitives::B256::random().into(),
             hash: Default::default(),
-            parent_hash: ethereum_types::H256::random().into(),
-            uncles_hash: ethereum_types::H256::random().into(),
-            state_root: ethereum_types::H256::random().into(),
-            transactions_root: ethereum_types::H256::random().into(),
-            receipts_root: ethereum_types::H256::random().into(),
+            parent_hash: alloy::primitives::B256::random().into(),
+            uncles_hash: alloy::primitives::B256::random().into(),
+            state_root: alloy::primitives::B256::random().into(),
+            transactions_root: alloy::primitives::B256::random().into(),
+            receipts_root: alloy::primitives::B256::random().into(),
             gas_used: U256::from(rand::random::<u64>()),
             gas_limit: U256::from(rand::random::<u64>()),
             extra_data: Default::default(),
