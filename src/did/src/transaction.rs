@@ -7,7 +7,7 @@ use ic_stable_structures::{Bound, Storable};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
 use sha3::Keccak256;
-
+use alloy::consensus::Transaction as TransactionTrait;
 use super::hash::{H160, H256};
 use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
@@ -309,22 +309,11 @@ pub struct Transaction {
     pub chain_id: Option<U256>,
 }
 
-use alloy::consensus::{Transaction as TransactionTrait, TypedTransaction};
-
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
 
         let inner = tx.inner; 
-
-        // let (v, r, s) = match tx.signature {
-        //     Some(sig) => {
-        //         let v = U64::from(sig.v);
-        //         let r = U256::from_big_endian(&sig.r);
-        //         let s = U256::from_big_endian(&sig.s);
-        //         (v, r, s)
-        //     }
-        //     None => (U64::zero(), U256::zero(), U256::zero()),
-        // };
+        let signature = inner.signature();
 
         Self {
             hash: inner.tx_hash().clone().into(),
@@ -338,9 +327,9 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
             gas_price: inner.gas_price().map(Into::into),
             gas: inner.gas_limit().into(),
             input: inner.input().clone().into(),
-            v: tx.v.into(),
-            r: tx.r.into(),
-            s: tx.s.into(),
+            v: (signature.v() as u64).into(),
+            r: signature.r().into(),
+            s: signature.s().into(),
             transaction_type: Some((inner.tx_type() as u64).into()),
             access_list: inner.access_list().cloned().map(Into::into),
             max_priority_fee_per_gas: inner.max_priority_fee_per_gas().map(Into::into),
