@@ -6,7 +6,7 @@ use candid::CandidType;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct Bytes(pub alloy::primitives::Bytes);
+pub struct Bytes(pub bytes::Bytes);
 
 impl Bytes {
     pub fn from_hex_str(mut s: &str) -> Result<Self, hex::FromHexError> {
@@ -14,7 +14,7 @@ impl Bytes {
             s = &s[2..]
         }
         let bytes = hex::decode(s)?;
-        Ok(Self(alloy::primitives::Bytes::from(bytes)))
+        Ok(Self(bytes::Bytes::from(bytes)))
     }
 
     pub fn to_hex_str(&self) -> String {
@@ -30,13 +30,13 @@ impl alloy::rlp::Encodable for Bytes {
 
 impl alloy::rlp::Decodable for Bytes {
     fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
-        Ok(Self(alloy::primitives::Bytes::decode(buf)?))
+        Ok(Self(bytes::Bytes::decode(buf)?))
     }
 }
 
 impl From<Bytes> for bytes::Bytes {
     fn from(value: Bytes) -> Self {
-        value.0.0
+        value.0
     }
 }
 
@@ -60,13 +60,13 @@ impl From<Bytes> for Vec<u8> {
 
 impl From<Bytes> for alloy::primitives::Bytes {
     fn from(value: Bytes) -> Self {
-        value.0
+        value.0.into()
     }
 }
 
 impl From<alloy::primitives::Bytes> for Bytes {
     fn from(value: alloy::primitives::Bytes) -> Self {
-        Bytes(value)
+        Bytes(value.0)
     }
 }
 
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_candid_type_bytes() {
-        let value = Bytes(alloy::primitives::Bytes::from(vec![
+        let value = Bytes(bytes::Bytes::from(vec![
             rand::random::<u8>(),
             rand::random::<u8>(),
             rand::random::<u8>(),
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_bytes_fmt_lower_hex() {
-        let value = Bytes(alloy::primitives::Bytes::from(vec![
+        let value = Bytes(bytes::Bytes::from(vec![
             rand::random::<u8>(),
             rand::random::<u8>(),
             rand::random::<u8>(),
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_bytes_serde_serialization() {
-        let value = Bytes(alloy::primitives::Bytes::from(vec![
+        let value = Bytes(bytes::Bytes::from(vec![
             rand::random::<u8>(),
             rand::random::<u8>(),
             rand::random::<u8>(),

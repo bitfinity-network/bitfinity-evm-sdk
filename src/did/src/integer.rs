@@ -55,10 +55,7 @@ impl U256 {
         Self(alloy::primitives::U256::MAX)
     }
 
-    pub fn from_hex_str(mut s: &str) -> Result<Self, String> {
-        if s.starts_with("0x") || s.starts_with("0X") {
-            s = &s[2..]
-        }
+    pub fn from_hex_str(s: &str) -> Result<Self, String> {
         alloy::primitives::U256::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
@@ -89,7 +86,7 @@ impl U256 {
     }
 
     pub fn from_little_endian(slice: &[u8]) -> Self {
-        Self(alloy::primitives::U256::from_be_slice(slice))
+        Self(alloy::primitives::U256::from_le_slice(slice))
     }
 
     pub fn checked_add(&self, rhs: &Self) -> Option<Self> {
@@ -120,10 +117,7 @@ impl U64 {
         Self(alloy::primitives::U64::MAX)
     }
 
-    pub fn from_hex_str(mut s: &str) -> Result<Self, String> {
-        if s.starts_with("0x") || s.starts_with("0X") {
-            s = &s[2..]
-        }
+    pub fn from_hex_str(s: &str) -> Result<Self, String> {
         alloy::primitives::U64::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
@@ -493,7 +487,7 @@ mod tests {
     #[test]
     fn test_u256_from_hex_should_fail_long_length() {
         assert!(U256::from_hex_str(
-            "18201820182018201820182018201820182018201820182018201820182018212"
+            "0x18201820182018201820182018201820182018201820182018201820182018212"
         )
         .is_err());
     }
@@ -516,21 +510,21 @@ mod tests {
 
     #[test]
     fn test_u256_from_hex_should_succeed() {
-        assert_eq!(U256::from(0u64), U256::from_hex_str("00").unwrap());
-        assert_eq!(U256::from(1u64), U256::from_hex_str("01").unwrap());
-        assert_eq!(U256::from(255u64), U256::from_hex_str("ff").unwrap());
+        assert_eq!(U256::from(0u64), U256::from_hex_str("0x00").unwrap());
+        assert_eq!(U256::from(1u64), U256::from_hex_str("0x01").unwrap());
+        assert_eq!(U256::from(255u64), U256::from_hex_str("0xff").unwrap());
         assert_eq!(
             U256::from(2074343815918867987178857765017879333u128),
-            U256::from_hex_str("18F810BD8895AA66364CBDD91A20325").unwrap()
+            U256::from_hex_str("0x18F810BD8895AA66364CBDD91A20325").unwrap()
         );
 
         assert_eq!(
             U256::from(0x0123456789abcdefu128),
-            U256::from_hex_str("0123456789abcdef").unwrap()
+            U256::from_hex_str("0x0123456789abcdef").unwrap()
         );
         assert_eq!(
             U256::MAX,
-            U256::from_hex_str("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+            U256::from_hex_str("0Xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
                 .unwrap()
         );
     }
@@ -650,17 +644,17 @@ mod tests {
 
     #[test]
     fn test_u64_from_hex_should_succeed() {
-        assert_eq!(U64::from(0u64), U64::from_hex_str("00").unwrap());
+        assert_eq!(U64::from(0u64), U64::from_hex_str("0x00").unwrap());
         assert_eq!(U64::from(1u64), U64::from_hex_str("0x01").unwrap());
-        assert_eq!(U64::from(255u64), U64::from_hex_str("ff").unwrap());
+        assert_eq!(U64::from(255u64), U64::from_hex_str("0xff").unwrap());
         assert_eq!(
             U64::from(72057594037927936u64),
-            U64::from_hex_str("100000000000000").unwrap()
+            U64::from_hex_str("0x100000000000000").unwrap()
         );
 
         assert_eq!(
             U64::from(0x0123456789abcdefu64),
-            U64::from_hex_str("0123456789abcdef").unwrap()
+            U64::from_hex_str("0x0123456789abcdef").unwrap()
         );
         assert_eq!(
             U64::MAX,

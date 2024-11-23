@@ -380,7 +380,7 @@ impl<T> From<&Block<T>> for alloy::consensus::Header {
             gas_limit: value.gas_limit.0.to(),
             gas_used: value.gas_used.0.to(),
             timestamp: value.timestamp.0.to(),
-            extra_data: value.extra_data.0.clone(),
+            extra_data: value.extra_data.0.clone().into(),
             mix_hash: value.mix_hash.0.into(),
             nonce: value.nonce.0.into(),
             base_fee_per_gas: value.base_fee_per_gas.as_ref().map(|val| val.0.to()),
