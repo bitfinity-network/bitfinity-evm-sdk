@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use candid::{CandidType, Deserialize};
 use jsonrpc_core::{Error, ErrorCode};
-use rlp::DecoderError;
+use alloy_rlp::Error as DecoderError;
 use serde::Serialize;
 use thiserror::Error;
 

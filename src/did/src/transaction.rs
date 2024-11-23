@@ -7,7 +7,6 @@ use derive_more::{Display, From};
 use ethers_core::types::transaction::eip2930;
 use ethers_core::types::Signature as EthersSignature;
 use ic_stable_structures::{Bound, Storable};
-use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
 use sha3::Keccak256;

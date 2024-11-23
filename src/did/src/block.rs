@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use candid::{CandidType, Deserialize};
 use alloy_primitives::Log as AlloyLog;
 use ic_stable_structures::{Bound, Storable};
-use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::Serialize;
 use serde_json::{json, Value};
 

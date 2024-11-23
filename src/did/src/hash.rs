@@ -186,41 +186,41 @@ impl CandidType for H256 {
     }
 }
 
-// impl rlp::Encodable for H64 {
-//     fn rlp_append(&self, s: &mut rlp::RlpStream) {
-//         self.0.rlp_append(s);
-//     }
-// }
+impl alloy_rlp::Encodable for H64 {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        self.0.encode(out);
+    }
+}
 
-// impl rlp::Decodable for H64 {
-//     fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-//         alloy_primitives::B64::decode(rlp).map(Into::into)
-//     }
-// }
+impl alloy_rlp::Decodable for H64 {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        Ok(Self(alloy_primitives::B64::decode(buf)?))
+    }
+}
 
-// impl rlp::Encodable for H160 {
-//     fn rlp_append(&self, s: &mut rlp::RlpStream) {
-//         self.0.rlp_append(s);
-//     }
-// }
+impl alloy_rlp::Encodable for H160 {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        self.0.encode(out);
+    }
+}
 
-// impl rlp::Decodable for H160 {
-//     fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-//         alloy_primitives::Address::decode(rlp).map(Into::into)
-//     }
-// }
+impl alloy_rlp::Decodable for H160 {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        Ok(Self(alloy_primitives::Address::decode(buf)?))
+    }
+}
 
-// impl rlp::Encodable for H256 {
-//     fn rlp_append(&self, s: &mut rlp::RlpStream) {
-//         self.0.rlp_append(s);
-//     }
-// }
+impl alloy_rlp::Encodable for H256 {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        self.0.encode(out);
+    }
+}
 
-// impl rlp::Decodable for H256 {
-//     fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-//         alloy_primitives::B256::decode(rlp).map(Into::into)
-//     }
-// }
+impl alloy_rlp::Decodable for H256 {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        Ok(Self(alloy_primitives::B256::decode(buf)?))
+    }
+}
 
 impl Bounded for H64 {
     const MIN: H64 = Hash::<alloy_primitives::B64>(alloy_primitives::B64::new([u8::MIN; 8]));
@@ -324,7 +324,7 @@ mod tests {
     use candid::{Decode, Encode};
     use ethers_core::types::NameOrAddress;
     use ic_stable_structures::Storable;
-    use rlp::Encodable;
+    use alloy_rlp::Encodable;
 
     use super::*;
 
@@ -442,11 +442,11 @@ mod tests {
     fn test_rlp_encoding_decoding_h256() {
         let (hex_val, _) = generate_hex_str(32);
         let value = H256::from_slice(&hex_val);
-        let mut stream = rlp::RlpStream::new();
+        let mut stream = alloy_rlp::RlpStream::new();
         value.rlp_append(&mut stream);
         let encoded = stream.out();
 
-        let decoded = rlp::decode::<H256>(&encoded).unwrap();
+        let decoded = alloy_rlp::decode::<H256>(&encoded).unwrap();
         assert_eq!(value, decoded);
     }
 
@@ -454,11 +454,11 @@ mod tests {
     fn test_rlp_encoding_decoding_h160() {
         let (hex_val, _) = generate_hex_str(20);
         let value = H160::from_slice(&hex_val);
-        let mut stream = rlp::RlpStream::new();
+        let mut stream = alloy_rlp::RlpStream::new();
         value.rlp_append(&mut stream);
         let encoded = stream.out();
 
-        let decoded = rlp::decode::<H160>(&encoded).unwrap();
+        let decoded = alloy_rlp::decode::<H160>(&encoded).unwrap();
         assert_eq!(value, decoded);
     }
 
@@ -466,11 +466,11 @@ mod tests {
     fn test_rlp_encoding_decoding_h64() {
         let (hex_val, _) = generate_hex_str(8);
         let value = H64::from_slice(&hex_val);
-        let mut stream = rlp::RlpStream::new();
+        let mut stream = alloy_rlp::RlpStream::new();
         value.rlp_append(&mut stream);
         let encoded = stream.out();
 
-        let decoded = rlp::decode::<H64>(&encoded).unwrap();
+        let decoded = alloy_rlp::decode::<H64>(&encoded).unwrap();
         assert_eq!(value, decoded);
     }
 

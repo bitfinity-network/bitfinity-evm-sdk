@@ -1,4 +1,4 @@
-use rlp::Encodable;
+use alloy_rlp::Encodable;
 use sha2::Digest;
 use sha3::Keccak256;
 
@@ -27,7 +27,7 @@ pub const KECCAK_EMPTY_LIST_RLP: H256 = Hash::<alloy_primitives::B256>(alloy_pri
 
 /// Calculate the Keccak hash of an encoded rlp stream
 pub fn keccak_hash_rlp<E: Encodable>(data: &E) -> H256 {
-    keccak_hash(&rlp::encode(data))
+    keccak_hash(&alloy_rlp::encode(data))
 }
 
 /// Calculate the Keccak hash

@@ -22,15 +22,15 @@ impl Bytes {
     }
 }
 
-impl rlp::Encodable for Bytes {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.rlp_append(s);
+impl alloy_rlp::Encodable for Bytes {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        self.0.encode(out);
     }
 }
 
-impl rlp::Decodable for Bytes {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        bytes::Bytes::decode(rlp).map(Into::into)
+impl alloy_rlp::Decodable for Bytes {
+    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
+        Ok(Self(alloy_primitives::Bytes::decode(buf)?))
     }
 }
 
