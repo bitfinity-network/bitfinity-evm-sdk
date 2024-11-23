@@ -166,25 +166,25 @@ pub struct Signature {
     pub s: U256,
 }
 
-impl From<Signature> for EthersSignature {
-    fn from(value: Signature) -> Self {
-        Self {
-            r: value.r.into(),
-            s: value.s.into(),
-            v: value.v.into(),
-        }
-    }
-}
+// impl From<Signature> for EthersSignature {
+//     fn from(value: Signature) -> Self {
+//         Self {
+//             r: value.r.into(),
+//             s: value.s.into(),
+//             v: value.v.into(),
+//         }
+//     }
+// }
 
-impl From<EthersSignature> for Signature {
-    fn from(value: EthersSignature) -> Self {
-        Self {
-            r: value.r.into(),
-            s: value.s.into(),
-            v: value.v.into(),
-        }
-    }
-}
+// impl From<EthersSignature> for Signature {
+//     fn from(value: EthersSignature) -> Self {
+//         Self {
+//             r: value.r.into(),
+//             s: value.s.into(),
+//             v: value.v.into(),
+//         }
+//     }
+// }
 
 impl Signature {
     /// Upper limit for signature S field.
@@ -310,8 +310,11 @@ pub struct Transaction {
     pub chain_id: Option<U256>,
 }
 
+use alloy::consensus::Transaction as TransactionTrait;
+
 impl From<alloy::rpc::types::eth::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::eth::Transaction) -> Self {
+
         Self {
             hash: tx.hash().into(),
             nonce: tx.nonce.into(),

@@ -1,6 +1,4 @@
 use alloy::rlp::Encodable;
-use sha2::Digest;
-use sha3::Keccak256;
 
 use crate::hash::Hash;
 use crate::H256;
@@ -26,15 +24,18 @@ pub const KECCAK_EMPTY_LIST_RLP: H256 = Hash::<alloy::primitives::B256>(alloy::p
 ]));
 
 /// Calculate the Keccak hash of an encoded rlp stream
+#[inline]
 pub fn keccak_hash_rlp<E: Encodable>(data: &E) -> H256 {
     keccak_hash(&alloy::rlp::encode(data))
 }
 
 /// Calculate the Keccak hash
+#[inline]
 pub fn keccak_hash(data: &[u8]) -> H256 {
-    let mut out = [0; 32];
-    let mut hash = Keccak256::new();
-    hash.update(data);
-    out.copy_from_slice(hash.finalize().as_slice());
-    out.into()
+    alloy::primitives::keccak256(data).into()
+    // let mut out = [0; 32];
+    // let mut hash = Keccak256::new();
+    // hash.update(data);
+    // out.copy_from_slice(hash.finalize().as_slice());
+    // out.into()
 }
