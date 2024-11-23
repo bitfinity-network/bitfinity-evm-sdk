@@ -1,13 +1,8 @@
-//! This crate contains our implementation of some of the `ethers_core::types` type.
+//! This crate contains our implementation of some of the `alloy_primitives` type.
 //! We have derived `candid::CandidType` for all of the types required, and implemented `From` and `Into` for all for easy conversion between the two.
 //! This is required because of `ic` Canisters required all types that are used in `update` and `query` methods to have `candid::CandidType` derived.
 //! This module contains submodules for each of the types that we have implemented.
 
-#[cfg(feature = "alloy-primitives-07")]
-mod alloy_primitives_07;
-
-#[cfg(feature = "alloy-primitives-08")]
-mod alloy_primitives_08;
 
 pub mod block;
 pub mod build;

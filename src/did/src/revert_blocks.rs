@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use candid::CandidType;
-use ethers_core::utils::hex::ToHexExt;
 use serde::{Deserialize, Serialize};
 
 use crate::H256;
@@ -31,9 +30,32 @@ impl Display for RevertToBlockArgs {
             f,
             "{{from_block_number: {}, from_block_hash: {}, to_block_number: {}, to_block_hash: {}}}",
             self.from_block_number,
-            self.from_block_hash.0.encode_hex_with_prefix(),
+            self.from_block_hash,
             self.to_block_number,
-            self.to_block_hash.0.encode_hex_with_prefix()
+            self.to_block_hash
         )
     }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use candid::Encode;
+    use serde_json::json;
+
+    #[test]
+    fn test_revert_to_block_args_println() {
+        let args = RevertToBlockArgs {
+            from_block_number: 1,
+            from_block_hash: H256::from([1; 32]),
+            to_block_number: 2,
+            to_block_hash: H256::from([2; 32]),
+        };
+
+        println!("args: {}", args);
+
+        assert!(false)
+    }
+
 }

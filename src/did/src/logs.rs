@@ -1,10 +1,9 @@
-use ethers_core::types::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::formats::PreferOne;
 use serde_with::{serde_as, OneOrMany};
 
-use crate::{BlockNumber, H160, H256, U256, U64};
+use crate::{BlockNumber, Bytes, H160, H256, U256, U64};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]

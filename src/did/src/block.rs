@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use candid::{CandidType, Deserialize};
-use ethers_core::types::Log as EthersLog;
+use alloy_primitives::Log as AlloyLog;
 use ic_stable_structures::{Bound, Storable};
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::Serialize;
@@ -196,100 +196,100 @@ impl From<Block<Transaction>> for Block<H256> {
     }
 }
 
-impl Encodable for Block<Transaction> {
-    fn rlp_append(&self, s: &mut RlpStream) {
-        s.begin_list(3); // block header, transactions, other block headers
+// impl Encodable for Block<Transaction> {
+//     fn rlp_append(&self, s: &mut RlpStream) {
+//         s.begin_list(3); // block header, transactions, other block headers
 
-        // Block header
-        block_header_rlp(self, s);
+//         // Block header
+//         block_header_rlp(self, s);
 
-        // Block transactions
-        s.begin_list(self.transactions.len());
-        for transaction in &self.transactions {
-            let transaction = ethers_core::types::Transaction::from(transaction.clone());
-            s.append_raw(&transaction.rlp(), 1);
-        }
+//         // Block transactions
+//         s.begin_list(self.transactions.len());
+//         for transaction in &self.transactions {
+//             let transaction = ethers_core::types::Transaction::from(transaction.clone());
+//             s.append_raw(&transaction.rlp(), 1);
+//         }
 
-        // Uncles block headers. Currently not supported
-        {
-            s.begin_list(0);
-        }
-    }
-}
+//         // Uncles block headers. Currently not supported
+//         {
+//             s.begin_list(0);
+//         }
+//     }
+// }
 
-fn block_header_rlp<T>(block: &Block<T>, s: &mut RlpStream) {
-    // Block header
-    let len = 15 + (block.base_fee_per_gas.is_some() as usize);
+// fn block_header_rlp<T>(block: &Block<T>, s: &mut RlpStream) {
+//     // Block header
+//     let len = 15 + (block.base_fee_per_gas.is_some() as usize);
 
-    s.begin_list(len);
-    s.append(&block.parent_hash);
-    s.append(&block.uncles_hash);
-    s.append(&block.author);
-    s.append(&block.state_root);
-    s.append(&block.transactions_root);
-    s.append(&block.receipts_root);
-    s.append(&block.logs_bloom);
-    s.append(&block.difficulty);
-    s.append(&block.number);
-    s.append(&block.gas_limit);
-    s.append(&block.gas_used);
-    s.append(&block.timestamp);
-    s.append(&block.extra_data);
-    s.append(&block.mix_hash);
-    s.append(&block.nonce);
+//     s.begin_list(len);
+//     s.append(&block.parent_hash);
+//     s.append(&block.uncles_hash);
+//     s.append(&block.author);
+//     s.append(&block.state_root);
+//     s.append(&block.transactions_root);
+//     s.append(&block.receipts_root);
+//     s.append(&block.logs_bloom);
+//     s.append(&block.difficulty);
+//     s.append(&block.number);
+//     s.append(&block.gas_limit);
+//     s.append(&block.gas_used);
+//     s.append(&block.timestamp);
+//     s.append(&block.extra_data);
+//     s.append(&block.mix_hash);
+//     s.append(&block.nonce);
 
-    if let Some(base_fee) = block.base_fee_per_gas.as_ref() {
-        s.append(base_fee);
-    }
-}
+//     if let Some(base_fee) = block.base_fee_per_gas.as_ref() {
+//         s.append(base_fee);
+//     }
+// }
 
-impl Decodable for Block<Transaction> {
-    fn decode(r: &Rlp) -> Result<Self, DecoderError> {
-        let header = r.at(0)?;
-        let item_count = header.item_count()?;
+// impl Decodable for Block<Transaction> {
+//     fn decode(r: &Rlp) -> Result<Self, DecoderError> {
+//         let header = r.at(0)?;
+//         let item_count = header.item_count()?;
 
-        let mut block = Self {
-            parent_hash: header.val_at(0)?,
-            uncles_hash: header.val_at(1)?,
-            author: header.val_at(2)?,
-            state_root: header.val_at(3)?,
-            transactions_root: header.val_at(4)?,
-            receipts_root: header.val_at(5)?,
-            logs_bloom: header.val_at(6)?,
-            difficulty: header.val_at(7)?,
-            number: header.val_at(8)?,
-            gas_limit: header.val_at(9)?,
-            gas_used: header.val_at(10)?,
-            timestamp: header.val_at(11)?,
-            extra_data: header.val_at::<Vec<_>>(12)?.into(),
-            mix_hash: header.val_at(13)?,
-            nonce: header.val_at(14)?,
-            hash: Default::default(),
-            total_difficulty: Default::default(),
-            seal_fields: Vec::new(),
-            uncles: Vec::new(),
-            transactions: Vec::new(),
-            size: None,
-            base_fee_per_gas: if item_count > 15 {
-                Some(header.val_at(15)?)
-            } else {
-                None
-            },
-        };
+//         let mut block = Self {
+//             parent_hash: header.val_at(0)?,
+//             uncles_hash: header.val_at(1)?,
+//             author: header.val_at(2)?,
+//             state_root: header.val_at(3)?,
+//             transactions_root: header.val_at(4)?,
+//             receipts_root: header.val_at(5)?,
+//             logs_bloom: header.val_at(6)?,
+//             difficulty: header.val_at(7)?,
+//             number: header.val_at(8)?,
+//             gas_limit: header.val_at(9)?,
+//             gas_used: header.val_at(10)?,
+//             timestamp: header.val_at(11)?,
+//             extra_data: header.val_at::<Vec<_>>(12)?.into(),
+//             mix_hash: header.val_at(13)?,
+//             nonce: header.val_at(14)?,
+//             hash: Default::default(),
+//             total_difficulty: Default::default(),
+//             seal_fields: Vec::new(),
+//             uncles: Vec::new(),
+//             transactions: Vec::new(),
+//             size: None,
+//             base_fee_per_gas: if item_count > 15 {
+//                 Some(header.val_at(15)?)
+//             } else {
+//                 None
+//             },
+//         };
 
-        let transactions = r.at(1)?;
-        let transactions_count = transactions.item_count()?;
-        block.transactions.reserve(transactions_count);
-        for i in 0..transactions_count {
-            let transaction_rlp = transactions.at(i)?;
-            let tx = ethers_core::types::Transaction::decode(&transaction_rlp)?;
+//         let transactions = r.at(1)?;
+//         let transactions_count = transactions.item_count()?;
+//         block.transactions.reserve(transactions_count);
+//         for i in 0..transactions_count {
+//             let transaction_rlp = transactions.at(i)?;
+//             let tx = ethers_core::types::Transaction::decode(&transaction_rlp)?;
 
-            block.transactions.push(tx.into());
-        }
+//             block.transactions.push(tx.into());
+//         }
 
-        Ok(block)
-    }
-}
+//         Ok(block)
+//     }
+// }
 
 /// Calculate the hash of a block
 pub fn calculate_block_hash<T>(block: &Block<T>) -> H256 {
@@ -304,7 +304,7 @@ pub fn calculate_block_size<'a>(
     transactions: impl Iterator<Item = &'a Transaction>,
 ) -> U256 {
     let block_size = block.to_bytes().len();
-    let transactions_size: usize = transactions.map(|x| x.to_bytes().len()).sum();
+    let transactions_size = transactions.map(|x| x.to_bytes().len()).sum();
 
     // If `size` is still `None` we need to consider the size it would take once set for block
     let size_field_size = match block.size {
@@ -343,7 +343,7 @@ pub fn calculate_next_block_base_fee(
         .unwrap_or_default();
 
     if parent_gas_used > &gas_target {
-        let base_fee_delta = std::cmp::max(U256::one(), base_fee_per_gas_delta);
+        let base_fee_delta = std::cmp::max(U256::from(1u64), base_fee_per_gas_delta);
         parent_base_fee + &base_fee_delta
     } else {
         parent_base_fee
@@ -443,17 +443,17 @@ pub struct TransactionExecutionLog {
     pub data: Bytes,
 }
 
-impl rlp::Encodable for TransactionExecutionLog {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        s.begin_list(3);
-        s.append(&self.address);
-        s.append_list(&self.topics);
-        s.append(&self.data.0);
-    }
-}
+// impl rlp::Encodable for TransactionExecutionLog {
+//     fn rlp_append(&self, s: &mut rlp::RlpStream) {
+//         s.begin_list(3);
+//         s.append(&self.address);
+//         s.append_list(&self.topics);
+//         s.append(&self.data.0);
+//     }
+// }
 
-impl From<EthersLog> for TransactionExecutionLog {
-    fn from(log: EthersLog) -> Self {
+impl From<AlloyLog> for TransactionExecutionLog {
+    fn from(log: AlloyLog) -> Self {
         Self {
             address: log.address.into(),
             topics: log.topics.into_iter().map(|h| h.into()).collect(),
