@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::rc::Rc;
+use std::str::FromStr;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
@@ -646,8 +647,15 @@ impl Storable for StorableExecutionResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Bloom(pub alloy::primitives::Bloom);
+
+impl<'de> serde::Deserialize<'de> for Bloom {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok(Bloom::from_hex_str(&s).unwrap())
+    }
+}
 
 impl Bloom {
     pub const FILTER_LENGTH_BYTES: usize = 256;
@@ -658,6 +666,12 @@ impl Bloom {
 
     pub fn to_hex_str(&self) -> String {
         format!("0x{self:x}")
+    }
+
+    pub fn from_hex_str(s: &str) -> Result<Self, String> {
+        alloy::primitives::Bloom::from_str(s)
+            .map_err(|e| e.to_string())
+            .map(Into::into)
     }
 
     pub fn from_logs<'a>(logs: impl IntoIterator<Item = &'a TransactionExecutionLog>) -> Bloom {

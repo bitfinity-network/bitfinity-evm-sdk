@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use candid::types::{Type, TypeInner};
-use candid::{CandidType, Deserialize, Nat};
+use candid::{CandidType, Nat};
 use derive_more::{From, Into};
 use ic_stable_structures::{Bound, Bounded, Storable};
 use num::BigUint;

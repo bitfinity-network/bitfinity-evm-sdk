@@ -41,8 +41,7 @@ impl Display for RevertToBlockArgs {
 mod test {
 
     use super::*;
-    use candid::Encode;
-    use serde_json::json;
+
 
     #[test]
     fn test_revert_to_block_args_println() {
@@ -53,9 +52,11 @@ mod test {
             to_block_hash: H256::from([2; 32]),
         };
 
-        println!("args: {}", args);
+        assert_eq!(
+            "{from_block_number: 1, from_block_hash: 0x0101010101010101010101010101010101010101010101010101010101010101, to_block_number: 2, to_block_hash: 0x0202020202020202020202020202020202020202020202020202020202020202}",
+            format!("{}", args)
+        );
 
-        assert!(false)
     }
 
 }

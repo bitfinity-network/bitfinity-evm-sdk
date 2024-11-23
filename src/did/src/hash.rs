@@ -3,7 +3,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use candid::types::{Type, TypeInner};
-use candid::{CandidType, Deserialize};
+use candid::CandidType;
 use derive_more::Display;
 use ic_stable_structures::{Bound, Bounded, Storable};
 use serde::Serialize;
@@ -345,7 +345,6 @@ mod tests {
     use candid::{Decode, Encode};
     // use ethers_core::types::NameOrAddress;
     use ic_stable_structures::Storable;
-    use alloy::rlp::Encodable;
 
     use super::*;
 
