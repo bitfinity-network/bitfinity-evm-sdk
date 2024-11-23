@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::rc::Rc;
-
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
@@ -310,31 +309,43 @@ pub struct Transaction {
     pub chain_id: Option<U256>,
 }
 
-use alloy::consensus::Transaction as TransactionTrait;
+use alloy::consensus::{Transaction as TransactionTrait, TypedTransaction};
 
-impl From<alloy::rpc::types::eth::Transaction> for Transaction {
-    fn from(tx: alloy::rpc::types::eth::Transaction) -> Self {
+impl From<alloy::rpc::types::Transaction> for Transaction {
+    fn from(tx: alloy::rpc::types::Transaction) -> Self {
+
+        let inner = tx.inner; 
+
+        // let (v, r, s) = match tx.signature {
+        //     Some(sig) => {
+        //         let v = U64::from(sig.v);
+        //         let r = U256::from_big_endian(&sig.r);
+        //         let s = U256::from_big_endian(&sig.s);
+        //         (v, r, s)
+        //     }
+        //     None => (U64::zero(), U256::zero(), U256::zero()),
+        // };
 
         Self {
-            hash: tx.hash().into(),
-            nonce: tx.nonce.into(),
+            hash: inner.tx_hash().clone().into(),
+            nonce: inner.nonce().into(),
             block_hash: tx.block_hash.map(Into::into),
             block_number: tx.block_number.map(Into::into),
             transaction_index: tx.transaction_index.map(Into::into),
             from: tx.from.into(),
-            to: tx.to.map(Into::into),
-            value: tx.value.into(),
-            gas_price: tx.gas_price.map(Into::into),
-            gas: tx.gas.into(),
-            input: tx.input.into(),
+            to: inner.to().map(Into::into),
+            value: inner.value().into(),
+            gas_price: inner.gas_price().map(Into::into),
+            gas: inner.gas_limit().into(),
+            input: inner.input().clone().into(),
             v: tx.v.into(),
             r: tx.r.into(),
             s: tx.s.into(),
-            transaction_type: Some(tx.transaction_type.unwrap_or_default().into()),
-            access_list: tx.access_list.map(Into::into),
-            max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
-            max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
-            chain_id: tx.chain_id.map(Into::into),
+            transaction_type: Some((inner.tx_type() as u64).into()),
+            access_list: inner.access_list().cloned().map(Into::into),
+            max_priority_fee_per_gas: inner.max_priority_fee_per_gas().map(Into::into),
+            max_fee_per_gas: Some(inner.max_fee_per_gas().into()),
+            chain_id: inner.chain_id().map(Into::into),
         }
     }
 }
