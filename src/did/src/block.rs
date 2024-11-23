@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use candid::{CandidType, Deserialize};
-use alloy_primitives::Log as AlloyLog;
+use alloy::primitives::Log as AlloyLog;
 use ic_stable_structures::{Bound, Storable};
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -455,7 +455,7 @@ impl From<AlloyLog> for TransactionExecutionLog {
     fn from(log: AlloyLog) -> Self {
         Self {
             address: log.address.into(),
-            topics: log.topics.into_iter().map(|h| h.into()).collect(),
+            topics: log.topics().iter().map(|h| h.into()).collect(),
             data: log.data.0.into(),
         }
     }

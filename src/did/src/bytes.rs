@@ -6,7 +6,7 @@ use candid::CandidType;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub struct Bytes(pub alloy_primitives::Bytes);
+pub struct Bytes(pub alloy::primitives::Bytes);
 
 impl Bytes {
     pub fn from_hex_str(mut s: &str) -> Result<Self, hex::FromHexError> {
@@ -14,7 +14,7 @@ impl Bytes {
             s = &s[2..]
         }
         let bytes = hex::decode(s)?;
-        Ok(Self(alloy_primitives::Bytes::from(bytes)))
+        Ok(Self(alloy::primitives::Bytes::from(bytes)))
     }
 
     pub fn to_hex_str(&self) -> String {
@@ -22,15 +22,15 @@ impl Bytes {
     }
 }
 
-impl alloy_rlp::Encodable for Bytes {
+impl alloy::rlp::Encodable for Bytes {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         self.0.encode(out);
     }
 }
 
-impl alloy_rlp::Decodable for Bytes {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        Ok(Self(alloy_primitives::Bytes::decode(buf)?))
+impl alloy::rlp::Decodable for Bytes {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::Bytes::decode(buf)?))
     }
 }
 
@@ -58,14 +58,14 @@ impl From<Bytes> for Vec<u8> {
     }
 }
 
-impl From<Bytes> for alloy_primitives::Bytes {
+impl From<Bytes> for alloy::primitives::Bytes {
     fn from(value: Bytes) -> Self {
         value.0
     }
 }
 
-impl From<alloy_primitives::Bytes> for Bytes {
-    fn from(value: alloy_primitives::Bytes) -> Self {
+impl From<alloy::primitives::Bytes> for Bytes {
+    fn from(value: alloy::primitives::Bytes) -> Self {
         Bytes(value)
     }
 }

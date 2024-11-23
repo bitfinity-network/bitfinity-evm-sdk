@@ -14,8 +14,7 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloy-primitives = { workspace = true }
-alloy-rlp = { workspace = true }
+alloy = { workspace = true }
 bincode = { workspace = true }
 bytes = { workspace = true }
 candid = { workspace = true }

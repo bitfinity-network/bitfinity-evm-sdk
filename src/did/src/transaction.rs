@@ -312,7 +312,7 @@ pub struct Transaction {
     pub chain_id: Option<U256>,
 }
 
-impl From<ethers_core::types::Transaction> for Transaction {
+impl From<alloy_consensus::Transaction> for Transaction {
     fn from(tx: ethers_core::types::Transaction) -> Self {
         Self {
             hash: tx.hash.into(),

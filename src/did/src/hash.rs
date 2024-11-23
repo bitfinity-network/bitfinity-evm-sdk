@@ -15,11 +15,11 @@ use serde::Serialize;
 pub struct Hash<T>(pub T);
 
 ///Fixed-size uninterpreted hash type with 8 bytes (64 bits) size.
-pub type H64 = Hash<alloy_primitives::B64>;
+pub type H64 = Hash<alloy::primitives::B64>;
 ///Fixed-size uninterpreted hash type with 20 bytes (160 bits) size.
-pub type H160 = Hash<alloy_primitives::Address>;
+pub type H160 = Hash<alloy::primitives::Address>;
 ///Fixed-size uninterpreted hash type with 32 bytes (256 bits) size.
-pub type H256 = Hash<alloy_primitives::B256>;
+pub type H256 = Hash<alloy::primitives::B256>;
 
 pub fn from_hex_str<const SIZE: usize>(mut s: &str) -> Result<[u8; SIZE], hex::FromHexError> {
     if s.starts_with("0x") || s.starts_with("0X") {
@@ -33,16 +33,16 @@ pub fn from_hex_str<const SIZE: usize>(mut s: &str) -> Result<[u8; SIZE], hex::F
 impl H64 {
     pub const BYTE_SIZE: usize = 8;
 
-    pub fn new(value: alloy_primitives::B64) -> Self {
+    pub fn new(value: alloy::primitives::B64) -> Self {
         Self(value)
     }
 
     pub fn from_slice(slice: &[u8]) -> Self {
-        Self(alloy_primitives::B64::from_slice(slice))
+        Self(alloy::primitives::B64::from_slice(slice))
     }
 
     pub fn from_hex_str(s: &str) -> Result<Self, hex::FromHexError> {
-        Ok(Self(alloy_primitives::B64::from(from_hex_str::<8>(s)?)))
+        Ok(Self(alloy::primitives::B64::from(from_hex_str::<8>(s)?)))
     }
 
     pub fn to_hex_str(&self) -> String {
@@ -50,23 +50,23 @@ impl H64 {
     }
 
     pub const fn zero() -> Self {
-        Self(alloy_primitives::B64::ZERO)
+        Self(alloy::primitives::B64::ZERO)
     }
 }
 
 impl H160 {
     pub const BYTE_SIZE: usize = 20;
 
-    pub fn new(value: alloy_primitives::Address) -> Self {
+    pub fn new(value: alloy::primitives::Address) -> Self {
         Self(value)
     }
 
     pub fn from_slice(slice: &[u8]) -> Self {
-        Self(alloy_primitives::Address::from_slice(slice))
+        Self(alloy::primitives::Address::from_slice(slice))
     }
 
     pub fn from_hex_str(s: &str) -> Result<Self, hex::FromHexError> {
-        Ok(Self(alloy_primitives::Address::from(from_hex_str::<20>(s)?)))
+        Ok(Self(alloy::primitives::Address::from(from_hex_str::<20>(s)?)))
     }
 
     pub fn to_hex_str(&self) -> String {
@@ -74,23 +74,23 @@ impl H160 {
     }
 
     pub const fn zero() -> Self {
-        Self(alloy_primitives::Address::ZERO)
+        Self(alloy::primitives::Address::ZERO)
     }
 }
 
 impl H256 {
     pub const BYTE_SIZE: usize = 32;
 
-    pub fn new(value: alloy_primitives::B256) -> Self {
+    pub fn new(value: alloy::primitives::B256) -> Self {
         Self(value)
     }
 
     pub fn from_slice(slice: &[u8]) -> Self {
-        Self(alloy_primitives::B256::from_slice(slice))
+        Self(alloy::primitives::B256::from_slice(slice))
     }
 
     pub fn from_hex_str(s: &str) -> Result<Self, hex::FromHexError> {
-        Ok(Self(alloy_primitives::B256::from(from_hex_str::<32>(s)?)))
+        Ok(Self(alloy::primitives::B256::from(from_hex_str::<32>(s)?)))
     }
 
     pub fn to_hex_str(&self) -> String {
@@ -98,7 +98,7 @@ impl H256 {
     }
 
     pub const fn zero() -> Self {
-        Self(alloy_primitives::B256::ZERO)
+        Self(alloy::primitives::B256::ZERO)
     }
 }
 
@@ -108,7 +108,7 @@ impl Storable for H64 {
     }
     
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        Self(alloy_primitives::B64::from_slice(bytes.as_ref()))
+        Self(alloy::primitives::B64::from_slice(bytes.as_ref()))
     }
 
     const BOUND: Bound = Bound::Bounded {
@@ -123,7 +123,7 @@ impl Storable for H160 {
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        Self(alloy_primitives::Address::from_slice(bytes.as_ref()))
+        Self(alloy::primitives::Address::from_slice(bytes.as_ref()))
     }
 
     const BOUND: Bound = Bound::Bounded {
@@ -138,7 +138,7 @@ impl Storable for H256 {
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        Self(alloy_primitives::B256::from_slice(bytes.as_ref()))
+        Self(alloy::primitives::B256::from_slice(bytes.as_ref()))
     }
 
     const BOUND: Bound = Bound::Bounded {
@@ -186,89 +186,89 @@ impl CandidType for H256 {
     }
 }
 
-impl alloy_rlp::Encodable for H64 {
+impl alloy::rlp::Encodable for H64 {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         self.0.encode(out);
     }
 }
 
-impl alloy_rlp::Decodable for H64 {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        Ok(Self(alloy_primitives::B64::decode(buf)?))
+impl alloy::rlp::Decodable for H64 {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::B64::decode(buf)?))
     }
 }
 
-impl alloy_rlp::Encodable for H160 {
+impl alloy::rlp::Encodable for H160 {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         self.0.encode(out);
     }
 }
 
-impl alloy_rlp::Decodable for H160 {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        Ok(Self(alloy_primitives::Address::decode(buf)?))
+impl alloy::rlp::Decodable for H160 {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::Address::decode(buf)?))
     }
 }
 
-impl alloy_rlp::Encodable for H256 {
+impl alloy::rlp::Encodable for H256 {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         self.0.encode(out);
     }
 }
 
-impl alloy_rlp::Decodable for H256 {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        Ok(Self(alloy_primitives::B256::decode(buf)?))
+impl alloy::rlp::Decodable for H256 {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::B256::decode(buf)?))
     }
 }
 
 impl Bounded for H64 {
-    const MIN: H64 = Hash::<alloy_primitives::B64>(alloy_primitives::B64::new([u8::MIN; 8]));
-    const MAX: H64 = Hash::<alloy_primitives::B64>(alloy_primitives::B64::new([u8::MAX; 8]));
+    const MIN: H64 = Hash::<alloy::primitives::B64>(alloy::primitives::B64::new([u8::MIN; 8]));
+    const MAX: H64 = Hash::<alloy::primitives::B64>(alloy::primitives::B64::new([u8::MAX; 8]));
 }
 
 impl Bounded for H160 {
-    const MIN: H160 = Hash::<alloy_primitives::Address>(alloy_primitives::Address::new([u8::MIN; 20]));
-    const MAX: H160 = Hash::<alloy_primitives::Address>(alloy_primitives::Address::new([u8::MAX; 20]));
+    const MIN: H160 = Hash::<alloy::primitives::Address>(alloy::primitives::Address::new([u8::MIN; 20]));
+    const MAX: H160 = Hash::<alloy::primitives::Address>(alloy::primitives::Address::new([u8::MAX; 20]));
 }
 
 impl Bounded for H256 {
-    const MIN: H256 = Hash::<alloy_primitives::B256>(alloy_primitives::B256::new([u8::MIN; 32]));
-    const MAX: H256 = Hash::<alloy_primitives::B256>(alloy_primitives::B256::new([u8::MAX; 32]));
+    const MIN: H256 = Hash::<alloy::primitives::B256>(alloy::primitives::B256::new([u8::MIN; 32]));
+    const MAX: H256 = Hash::<alloy::primitives::B256>(alloy::primitives::B256::new([u8::MAX; 32]));
 }
 
-impl From<H64> for alloy_primitives::B64 {
+impl From<H64> for alloy::primitives::B64 {
     fn from(value: H64) -> Self {
         value.0
     }
 }
 
-impl From<H160> for alloy_primitives::Address {
+impl From<H160> for alloy::primitives::Address {
     fn from(value: H160) -> Self {
         value.0
     }
 }
 
-impl From<H256> for alloy_primitives::B256 {
+impl From<H256> for alloy::primitives::B256 {
     fn from(value: H256) -> Self {
         value.0
     }
 }
 
-impl From<alloy_primitives::B64> for H64 {
-    fn from(value: alloy_primitives::B64) -> Self {
+impl From<alloy::primitives::B64> for H64 {
+    fn from(value: alloy::primitives::B64) -> Self {
         Hash(value)
     }
 }
 
-impl From<alloy_primitives::Address> for H160 {
-    fn from(value: alloy_primitives::Address) -> Self {
+impl From<alloy::primitives::Address> for H160 {
+    fn from(value: alloy::primitives::Address) -> Self {
         Hash(value)
     }
 }
 
-impl From<alloy_primitives::B256> for H256 {
-    fn from(value: alloy_primitives::B256) -> Self {
+impl From<alloy::primitives::B256> for H256 {
+    fn from(value: alloy::primitives::B256) -> Self {
         Hash(value)
     }
 }
@@ -324,7 +324,7 @@ mod tests {
     use candid::{Decode, Encode};
     use ethers_core::types::NameOrAddress;
     use ic_stable_structures::Storable;
-    use alloy_rlp::Encodable;
+    use alloy::rlp::Encodable;
 
     use super::*;
 
@@ -442,11 +442,11 @@ mod tests {
     fn test_rlp_encoding_decoding_h256() {
         let (hex_val, _) = generate_hex_str(32);
         let value = H256::from_slice(&hex_val);
-        let mut stream = alloy_rlp::RlpStream::new();
+        let mut stream = alloy::rlp::RlpStream::new();
         value.rlp_append(&mut stream);
         let encoded = stream.out();
 
-        let decoded = alloy_rlp::decode::<H256>(&encoded).unwrap();
+        let decoded = alloy::rlp::decode::<H256>(&encoded).unwrap();
         assert_eq!(value, decoded);
     }
 
@@ -454,11 +454,11 @@ mod tests {
     fn test_rlp_encoding_decoding_h160() {
         let (hex_val, _) = generate_hex_str(20);
         let value = H160::from_slice(&hex_val);
-        let mut stream = alloy_rlp::RlpStream::new();
+        let mut stream = alloy::rlp::RlpStream::new();
         value.rlp_append(&mut stream);
         let encoded = stream.out();
 
-        let decoded = alloy_rlp::decode::<H160>(&encoded).unwrap();
+        let decoded = alloy::rlp::decode::<H160>(&encoded).unwrap();
         assert_eq!(value, decoded);
     }
 
@@ -466,18 +466,18 @@ mod tests {
     fn test_rlp_encoding_decoding_h64() {
         let (hex_val, _) = generate_hex_str(8);
         let value = H64::from_slice(&hex_val);
-        let mut stream = alloy_rlp::RlpStream::new();
+        let mut stream = alloy::rlp::RlpStream::new();
         value.rlp_append(&mut stream);
         let encoded = stream.out();
 
-        let decoded = alloy_rlp::decode::<H64>(&encoded).unwrap();
+        let decoded = alloy::rlp::decode::<H64>(&encoded).unwrap();
         assert_eq!(value, decoded);
     }
 
     #[test]
     fn test_h160_from_address() {
         let (hex_val, hex_string) = generate_hex_str(20);
-        let address = NameOrAddress::Address(alloy_primitives::Address::from_slice(&hex_val));
+        let address = NameOrAddress::Address(alloy::primitives::Address::from_slice(&hex_val));
         let h160 = H160::from_hex_str(&hex_string).unwrap();
         assert_eq!(h160, address.into());
     }
@@ -517,7 +517,7 @@ mod tests {
 
     #[test]
     fn test_serde_h64() {
-        let h64 = H64::new(alloy_primitives::B64::random());
+        let h64 = H64::new(alloy::primitives::B64::random());
 
         let encoded = serde_json::json!(&h64);
         let decoded = serde_json::from_value(encoded).unwrap();
@@ -527,7 +527,7 @@ mod tests {
 
     #[test]
     fn test_serde_h160() {
-        let h160 = H160::new(alloy_primitives::Address::random());
+        let h160 = H160::new(alloy::primitives::Address::random());
 
         let encoded = serde_json::json!(&h160);
         let decoded = serde_json::from_value(encoded).unwrap();
@@ -537,7 +537,7 @@ mod tests {
 
     #[test]
     fn test_serde_h256() {
-        let h256 = H256::new(alloy_primitives::B256::random());
+        let h256 = H256::new(alloy::primitives::B256::random());
 
         let encoded = serde_json::json!(&h256);
         let decoded = serde_json::from_value(encoded).unwrap();
@@ -547,7 +547,7 @@ mod tests {
 
     #[test]
     fn test_h64_fmt_lower_hex() {
-        let value: H64 = alloy_primitives::B64::random().into();
+        let value: H64 = alloy::primitives::B64::random().into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(value, H64::from_hex_str(&lower_hex).unwrap());
@@ -555,7 +555,7 @@ mod tests {
 
     #[test]
     fn test_h160_fmt_lower_hex() {
-        let value: H160 = alloy_primitives::Address::random().into();
+        let value: H160 = alloy::primitives::Address::random().into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(value, H160::from_hex_str(&lower_hex).unwrap());
@@ -563,7 +563,7 @@ mod tests {
 
     #[test]
     fn test_h256_fmt_lower_hex() {
-        let value: H256 = alloy_primitives::B256::random().into();
+        let value: H256 = alloy::primitives::B256::random().into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(value, H256::from_hex_str(&lower_hex).unwrap());
@@ -571,10 +571,10 @@ mod tests {
 
     #[test]
     fn test_h64_transparent_serde_serialization() {
-        let value: H64 = alloy_primitives::B64::random().into();
+        let value: H64 = alloy::primitives::B64::random().into();
 
         let encoded_value = serde_json::json!(&value);
-        let decoded_primitive: alloy_primitives::B64 = serde_json::from_value(encoded_value).unwrap();
+        let decoded_primitive: alloy::primitives::B64 = serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: H64 = serde_json::from_value(encoded_primitive).unwrap();
 
@@ -583,10 +583,10 @@ mod tests {
 
     #[test]
     fn test_h160_transparent_serde_serialization() {
-        let value: H160 = alloy_primitives::Address::random().into();
+        let value: H160 = alloy::primitives::Address::random().into();
 
         let encoded_value = serde_json::json!(&value);
-        let decoded_primitive: alloy_primitives::Address =
+        let decoded_primitive: alloy::primitives::Address =
             serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: H160 = serde_json::from_value(encoded_primitive).unwrap();
@@ -596,10 +596,10 @@ mod tests {
 
     #[test]
     fn test_h256_transparent_serde_serialization() {
-        let value: H256 = alloy_primitives::B256::random().into();
+        let value: H256 = alloy::primitives::B256::random().into();
 
         let encoded_value = serde_json::json!(&value);
-        let decoded_primitive: alloy_primitives::B256 =
+        let decoded_primitive: alloy::primitives::B256 =
             serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: H256 = serde_json::from_value(encoded_primitive).unwrap();

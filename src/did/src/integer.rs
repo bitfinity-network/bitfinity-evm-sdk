@@ -14,7 +14,7 @@ use serde::Serialize;
     Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into,
 )]
 #[serde(transparent)]
-pub struct U256(pub alloy_primitives::U256);
+pub struct U256(pub alloy::primitives::U256);
 
 #[derive(
     Debug,
@@ -32,34 +32,34 @@ pub struct U256(pub alloy_primitives::U256);
     Into,
 )]
 #[serde(transparent)]
-pub struct U64(pub alloy_primitives::U64);
+pub struct U64(pub alloy::primitives::U64);
 
 impl Bounded for U256 {
-    const MIN: U256 = U256(alloy_primitives::U256::ZERO);
-    const MAX: U256 = U256(alloy_primitives::U256::MAX);
+    const MIN: U256 = U256(alloy::primitives::U256::ZERO);
+    const MAX: U256 = U256(alloy::primitives::U256::MAX);
 }
 
 impl Bounded for U64 {
-    const MIN: U64 = U64(alloy_primitives::U64::ZERO);
-    const MAX: U64 = U64(alloy_primitives::U64::MAX);
+    const MIN: U64 = U64(alloy::primitives::U64::ZERO);
+    const MAX: U64 = U64(alloy::primitives::U64::MAX);
 }
 
 impl U256 {
     pub const BYTE_SIZE: usize = 32;
 
-    pub fn new(value: alloy_primitives::U256) -> Self {
+    pub fn new(value: alloy::primitives::U256) -> Self {
         Self(value)
     }
 
     pub fn max_value() -> Self {
-        Self(alloy_primitives::U256::MAX)
+        Self(alloy::primitives::U256::MAX)
     }
 
     pub fn from_hex_str(mut s: &str) -> Result<Self, String> {
         if s.starts_with("0x") || s.starts_with("0X") {
             s = &s[2..]
         }
-        alloy_primitives::U256::from_str(s)
+        alloy::primitives::U256::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
     }
@@ -69,7 +69,7 @@ impl U256 {
     }
 
     pub const fn zero() -> Self {
-        Self(alloy_primitives::U256::ZERO)
+        Self(alloy::primitives::U256::ZERO)
     }
 
     pub fn is_zero(&self) -> bool {
@@ -81,7 +81,7 @@ impl U256 {
     }
 
     pub fn from_big_endian(slice: &[u8]) -> Self {
-        Self(alloy_primitives::U256::from_be_slice(slice))
+        Self(alloy::primitives::U256::from_be_slice(slice))
     }
 
     pub fn to_little_endian(&self) -> Vec<u8> {
@@ -89,7 +89,7 @@ impl U256 {
     }
 
     pub fn from_little_endian(slice: &[u8]) -> Self {
-        Self(alloy_primitives::U256::from_be_slice(slice))
+        Self(alloy::primitives::U256::from_be_slice(slice))
     }
 
     pub fn checked_add(&self, rhs: &Self) -> Option<Self> {
@@ -112,19 +112,19 @@ impl U256 {
 impl U64 {
     pub const BYTE_SIZE: usize = 8;
 
-    pub fn new(value: alloy_primitives::U64) -> Self {
+    pub fn new(value: alloy::primitives::U64) -> Self {
         Self(value)
     }
 
     pub fn max_value() -> Self {
-        Self(alloy_primitives::U64::MAX)
+        Self(alloy::primitives::U64::MAX)
     }
 
     pub fn from_hex_str(mut s: &str) -> Result<Self, String> {
         if s.starts_with("0x") || s.starts_with("0X") {
             s = &s[2..]
         }
-        alloy_primitives::U64::from_str(s)
+        alloy::primitives::U64::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
     }
@@ -134,7 +134,7 @@ impl U64 {
     }
 
     pub const fn zero() -> Self {
-        Self(alloy_primitives::U64::ZERO)
+        Self(alloy::primitives::U64::ZERO)
     }
 
     pub fn is_zero(&self) -> bool {
@@ -146,7 +146,7 @@ impl U64 {
     }
 
     pub fn from_big_endian(slice: &[u8]) -> Self {
-        Self(alloy_primitives::U64::from_be_slice(slice))
+        Self(alloy::primitives::U64::from_be_slice(slice))
     }
 
     pub fn to_little_endian(&self) -> Vec<u8> {
@@ -154,7 +154,7 @@ impl U64 {
     }
 
     pub fn from_little_endian(slice: &[u8]) -> Self {
-        Self(alloy_primitives::U64::from_le_slice(slice))
+        Self(alloy::primitives::U64::from_le_slice(slice))
     }
 }
 
@@ -179,7 +179,7 @@ impl From<&U256> for Nat {
 
 impl From<u64> for U64 {
     fn from(value: u64) -> Self {
-        Self(alloy_primitives::U64::from(value))
+        Self(alloy::primitives::U64::from(value))
     }
 }
 impl From<U64> for u64 {
@@ -191,25 +191,25 @@ impl From<U64> for u64 {
 
 impl From<u64> for U256 {
     fn from(value: u64) -> Self {
-        Self(alloy_primitives::U256::from(value))
+        Self(alloy::primitives::U256::from(value))
     }
 }
 
 impl From<u128> for U256 {
     fn from(value: u128) -> Self {
-        Self(alloy_primitives::U256::from(value))
+        Self(alloy::primitives::U256::from(value))
     }
 }
 
 // impl From<[u64; 4]> for U256 {
 //     fn from(value: [u64; 4]) -> Self {
-//         Self(alloy_primitives::U256::from(value))
+//         Self(alloy::primitives::U256::from(value))
 //     }
 // }
 
 // impl From<&[u64; 4]> for U256 {
 //     fn from(value: &[u64; 4]) -> Self {
-//         Self(alloy_primitives::U256(*value))
+//         Self(alloy::primitives::U256(*value))
 //     }
 // }
 
@@ -297,15 +297,15 @@ impl Sub for U64 {
     }
 }
 
-impl alloy_rlp::Encodable for U256 {
+impl alloy::rlp::Encodable for U256 {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         self.0.encode(out);
     }
 }
 
-impl alloy_rlp::Decodable for U256 {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        Ok(Self(alloy_primitives::U256::decode(buf)?))
+impl alloy::rlp::Decodable for U256 {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::U256::decode(buf)?))
     }
 }
 
@@ -321,15 +321,15 @@ impl fmt::LowerHex for U256 {
     }
 }
 
-impl alloy_rlp::Encodable for U64 {
+impl alloy::rlp::Encodable for U64 {
     fn encode(&self, out: &mut dyn bytes::BufMut) {
         self.0.encode(out);
     }
 }
 
-impl alloy_rlp::Decodable for U64 {
-    fn decode(buf: &mut &[u8]) -> alloy_rlp::Result<Self> {
-        Ok(Self(alloy_primitives::U64::decode(buf)?))
+impl alloy::rlp::Decodable for U64 {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::U64::decode(buf)?))
     }
 }
 
@@ -395,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_storable_u256() {
-        let value = alloy_primitives::U256::from(rand::random::<u128>());
+        let value = alloy::primitives::U256::from(rand::random::<u128>());
         let u256: U256 = value.into();
 
         let serialized = u256.to_bytes();
@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_candid_type_u64() {
-        let value = alloy_primitives::U64::from(rand::random::<u64>());
+        let value = alloy::primitives::U64::from(rand::random::<u64>());
         let u64: U64 = value.into();
 
         let encoded = Encode!(&u64).unwrap();
@@ -481,7 +481,7 @@ mod tests {
 
     #[test]
     fn test_candid_type_u256() {
-        let value = alloy_primitives::U256::from(rand::random::<u128>());
+        let value = alloy::primitives::U256::from(rand::random::<u128>());
         let u256: U256 = value.into();
 
         let encoded = Encode!(&u256).unwrap();
@@ -508,7 +508,7 @@ mod tests {
 
     #[test]
     fn test_u256_fmt_lower_hex() {
-        let value: U256 = alloy_primitives::U256::from(rand::random::<u128>()).into();
+        let value: U256 = alloy::primitives::U256::from(rand::random::<u128>()).into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(value, U256::from_hex_str(&lower_hex).unwrap());
@@ -595,20 +595,20 @@ mod tests {
     fn test_u256_conversion() {
         assert_eq!(
             U256::from([1u64, 2u64, 3u64, 4u64]),
-            U256(alloy_primitives::U256([1u64, 2u64, 3u64, 4u64]))
+            U256(alloy::primitives::U256([1u64, 2u64, 3u64, 4u64]))
         );
         assert_eq!(
             U256::from(&[1u64, 2u64, 3u64, 4u64]),
-            U256(alloy_primitives::U256([1u64, 2u64, 3u64, 4u64]))
+            U256(alloy::primitives::U256([1u64, 2u64, 3u64, 4u64]))
         );
     }
 
     #[test]
     fn test_u256_transparent_serde_serialization() {
-        let value: U256 = alloy_primitives::U256::from(rand::random::<u128>()).into();
+        let value: U256 = alloy::primitives::U256::from(rand::random::<u128>()).into();
 
         let encoded_value = serde_json::json!(&value);
-        let decoded_primitive: alloy_primitives::U256 =
+        let decoded_primitive: alloy::primitives::U256 =
             serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: U256 = serde_json::from_value(encoded_primitive).unwrap();
@@ -642,7 +642,7 @@ mod tests {
 
     #[test]
     fn test_u64_fmt_lower_hex() {
-        let value: U64 = alloy_primitives::U64::from(rand::random::<u64>()).into();
+        let value: U64 = alloy::primitives::U64::from(rand::random::<u64>()).into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(value, U64::from_hex_str(&lower_hex).unwrap());
@@ -670,10 +670,10 @@ mod tests {
 
     #[test]
     fn test_u64_transparent_serde_serialization() {
-        let value: U64 = alloy_primitives::U64::from(rand::random::<u64>()).into();
+        let value: U64 = alloy::primitives::U64::from(rand::random::<u64>()).into();
 
         let encoded_value = serde_json::json!(&value);
-        let decoded_primitive: alloy_primitives::U64 = serde_json::from_value(encoded_value).unwrap();
+        let decoded_primitive: alloy::primitives::U64 = serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: U64 = serde_json::from_value(encoded_primitive).unwrap();
 
