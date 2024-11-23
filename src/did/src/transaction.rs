@@ -4,8 +4,6 @@ use std::rc::Rc;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
-use ethers_core::types::transaction::eip2930;
-use ethers_core::types::Signature as EthersSignature;
 use ic_stable_structures::{Bound, Storable};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
@@ -312,10 +310,10 @@ pub struct Transaction {
     pub chain_id: Option<U256>,
 }
 
-impl From<alloy_consensus::Transaction> for Transaction {
-    fn from(tx: ethers_core::types::Transaction) -> Self {
+impl From<alloy::rpc::types::eth::Transaction> for Transaction {
+    fn from(tx: alloy::rpc::types::eth::Transaction) -> Self {
         Self {
-            hash: tx.hash.into(),
+            hash: tx.hash().into(),
             nonce: tx.nonce.into(),
             block_hash: tx.block_hash.map(Into::into),
             block_number: tx.block_number.map(Into::into),
@@ -338,32 +336,32 @@ impl From<alloy_consensus::Transaction> for Transaction {
     }
 }
 
-impl From<Transaction> for ethers_core::types::Transaction {
-    fn from(tx: Transaction) -> Self {
-        Self {
-            hash: tx.hash.into(),
-            nonce: tx.nonce.into(),
-            block_hash: tx.block_hash.map(Into::into),
-            block_number: tx.block_number.map(Into::into),
-            transaction_index: tx.transaction_index.map(Into::into),
-            from: tx.from.into(),
-            to: tx.to.map(Into::into),
-            value: tx.value.into(),
-            gas_price: tx.gas_price.map(Into::into),
-            gas: tx.gas.into(),
-            input: tx.input.into(),
-            v: tx.v.into(),
-            r: tx.r.into(),
-            s: tx.s.into(),
-            transaction_type: tx.transaction_type.map(Into::into),
-            access_list: tx.access_list.map(Into::into),
-            max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
-            max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
-            chain_id: tx.chain_id.map(Into::into),
-            other: ethers_core::types::OtherFields::default(),
-        }
-    }
-}
+// impl From<Transaction> for ethers_core::types::Transaction {
+//     fn from(tx: Transaction) -> Self {
+//         Self {
+//             hash: tx.hash.into(),
+//             nonce: tx.nonce.into(),
+//             block_hash: tx.block_hash.map(Into::into),
+//             block_number: tx.block_number.map(Into::into),
+//             transaction_index: tx.transaction_index.map(Into::into),
+//             from: tx.from.into(),
+//             to: tx.to.map(Into::into),
+//             value: tx.value.into(),
+//             gas_price: tx.gas_price.map(Into::into),
+//             gas: tx.gas.into(),
+//             input: tx.input.into(),
+//             v: tx.v.into(),
+//             r: tx.r.into(),
+//             s: tx.s.into(),
+//             transaction_type: tx.transaction_type.map(Into::into),
+//             access_list: tx.access_list.map(Into::into),
+//             max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
+//             max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
+//             chain_id: tx.chain_id.map(Into::into),
+//             other: ethers_core::types::OtherFields::default(),
+//         }
+//     }
+// }
 
 impl Storable for Transaction {
     const BOUND: Bound = Bound::Unbounded;
@@ -389,8 +387,8 @@ pub struct AccessListItem {
 #[derive(Clone, Serialize, Deserialize, Default, PartialEq, Eq, Debug, CandidType)]
 pub struct AccessList(pub Vec<AccessListItem>);
 
-impl From<eip2930::AccessList> for AccessList {
-    fn from(access_list: eip2930::AccessList) -> Self {
+impl From<alloy::rpc::types::AccessList> for AccessList {
+    fn from(access_list: alloy::rpc::types::AccessList) -> Self {
         AccessList(
             access_list
                 .0
@@ -407,13 +405,13 @@ impl From<eip2930::AccessList> for AccessList {
         )
     }
 }
-impl From<AccessList> for eip2930::AccessList {
+impl From<AccessList> for alloy::rpc::types::AccessList {
     fn from(access_list: AccessList) -> Self {
-        eip2930::AccessList(
+        alloy::rpc::types::AccessList(
             access_list
                 .0
                 .into_iter()
-                .map(|access_list| eip2930::AccessListItem {
+                .map(|access_list| alloy::rpc::types::AccessListItem {
                     address: access_list.address.into(),
                     storage_keys: access_list
                         .storage_keys
@@ -507,7 +505,7 @@ impl From<StorableExecutionResult> for TransactionReceipt {
                 };
 
                 ExeResultData {
-                    status: U64::one(),
+                    status: U64::from(1u64),
                     gas_used,
                     logs,
                     logs_bloom: *logs_bloom,
@@ -557,7 +555,7 @@ impl From<StorableExecutionResult> for TransactionReceipt {
                     block_hash: tx_receipt.block_hash.clone(),
                     transaction_index: tx_receipt.transaction_index,
                     removed: false,
-                    log_index: U256::from(i),
+                    log_index: U256::from(i as u64),
                 })
                 .collect(),
             logs_bloom: exe_data.logs_bloom,
@@ -646,13 +644,13 @@ impl Storable for StorableExecutionResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Bloom(pub ethereum_types::Bloom);
+pub struct Bloom(pub alloy::primitives::Bloom);
 
 impl Bloom {
     pub const FILTER_LENGTH_BYTES: usize = 256;
 
     pub fn zeros() -> Bloom {
-        Bloom(ethereum_types::Bloom::zero())
+        Bloom(alloy::primitives::Bloom::ZERO)
     }
 
     pub fn to_hex_str(&self) -> String {
@@ -681,11 +679,11 @@ impl Bloom {
     }
 
     fn process_log(log: &TransactionExecutionLog, f: &mut impl FnMut(usize, u8) -> bool) -> bool {
-        Bloom::process_data(log.address.0.as_bytes(), f)
+        Bloom::process_data(log.address.0.as_slice(), f)
             && log
                 .topics
                 .iter()
-                .all(|t| Bloom::process_data(t.0.as_bytes(), f))
+                .all(|t| Bloom::process_data(t.0.as_slice(), f))
     }
 
     fn process_data(data: &[u8], f: &mut impl FnMut(usize, u8) -> bool) -> bool {
@@ -712,15 +710,15 @@ impl Default for Bloom {
     }
 }
 
-impl Encodable for Bloom {
-    fn rlp_append(&self, s: &mut RlpStream) {
-        self.0.rlp_append(s);
+impl alloy::rlp::Encodable for Bloom {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        self.0.encode(out);
     }
 }
 
-impl Decodable for Bloom {
-    fn decode(r: &Rlp) -> Result<Self, DecoderError> {
-        Ok(Bloom(ethereum_types::Bloom::decode(r)?))
+impl alloy::rlp::Decodable for Bloom {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::Bloom::decode(buf)?))
     }
 }
 
@@ -743,13 +741,13 @@ impl CandidType for Bloom {
     }
 }
 
-impl From<ethereum_types::Bloom> for Bloom {
-    fn from(bloom: ethereum_types::Bloom) -> Self {
+impl From<alloy::primitives::Bloom> for Bloom {
+    fn from(bloom: alloy::primitives::Bloom) -> Self {
         Bloom(bloom)
     }
 }
 
-impl From<Bloom> for ethereum_types::Bloom {
+impl From<Bloom> for alloy::primitives::Bloom {
     fn from(bloom: Bloom) -> Self {
         bloom.0
     }
