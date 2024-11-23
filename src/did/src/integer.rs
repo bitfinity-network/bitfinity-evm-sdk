@@ -11,7 +11,7 @@ use ic_stable_structures::{Bound, Bounded, Storable};
 use num::BigUint;
 use serde::Serialize;
 #[derive(
-    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into,
+    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Hash, From, Into,
 )]
 #[serde(transparent)]
 pub struct U256(pub alloy::primitives::U256);
@@ -26,13 +26,26 @@ pub struct U256(pub alloy::primitives::U256);
     PartialOrd,
     Ord,
     Serialize,
-    Deserialize,
     Hash,
     From,
     Into,
 )]
 #[serde(transparent)]
 pub struct U64(pub alloy::primitives::U64);
+
+impl<'de> serde::Deserialize<'de> for U64 {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok(U64::from_hex_str(&s).unwrap())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for U256 {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok(U256::from_hex_str(&s).unwrap())
+    }
+}
 
 impl Bounded for U256 {
     const MIN: U256 = U256(alloy::primitives::U256::ZERO);

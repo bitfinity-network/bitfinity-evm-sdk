@@ -9,7 +9,7 @@ use ic_stable_structures::{Bound, Bounded, Storable};
 use serde::Serialize;
 
 #[derive(
-    Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize, Display, Hash,
+    Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Serialize, Display, Hash,
 )]
 #[serde(transparent)]
 pub struct Hash<T>(pub T);
@@ -28,6 +28,27 @@ pub fn from_hex_str<const SIZE: usize>(mut s: &str) -> Result<[u8; SIZE], hex::F
 
     let mut result = [0u8; SIZE];
     hex::decode_to_slice(s, &mut result).and(Ok(result))
+}
+
+impl<'de> serde::Deserialize<'de> for H64 {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok(H64::from_hex_str(&s).unwrap())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for H160 {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok(H160::from_hex_str(&s).unwrap())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for H256 {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok(H256::from_hex_str(&s).unwrap())
+    }
 }
 
 impl H64 {
