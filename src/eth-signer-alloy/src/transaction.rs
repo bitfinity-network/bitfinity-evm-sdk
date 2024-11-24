@@ -1,14 +1,13 @@
 use std::borrow::Cow;
 
+use alloy::signers::k256::ecdsa::SigningKey;
 use did::error::EvmError;
 use did::hash::H160;
 use did::integer::U256;
+use did::transaction::Signature as DidSignature;
 use did::Transaction;
-use ethers_core::k256::ecdsa::SigningKey;
-use ethers_core::types::transaction::eip2718::TypedTransaction;
-use ethers_core::types::Signature as EthersSignature;
 
-use crate::Wallet;
+use crate::LocalWallet;
 
 /// Method to create a transaction signature
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,7 +17,7 @@ pub enum SigningMethod<'a> {
     None,
     // Precalculated signature
     // Could be used only for the cases when the transaction is executed ReadOnly
-    Signature(EthersSignature),
+    Signature(DidSignature),
     /// Use signing key to generate signature in `calculate_hash_and_build` method
     SigningKey(&'a SigningKey),
 }

@@ -225,10 +225,10 @@ mod tests {
     use crate::ic_sign::SigningKeyId;
     use crate::LocalWallet;
 
-    fn init_context() -> Wallet<'static, SigningKey> {
+    fn init_context() -> LocalWallet {
         MockContext::new().inject();
 
-        let wallet = Wallet::new(&mut rand::thread_rng());
+        let wallet = LocalWallet::random_with(&mut rand::thread_rng());
         let pubkey = wallet.signer.verifying_key().to_encoded_point(true);
 
         let wallet_to_sign = wallet.clone();
