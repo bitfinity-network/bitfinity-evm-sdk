@@ -1,6 +1,6 @@
 use std::fmt;
 
-use alloy::consensus::{SignableTransaction, TypedTransaction};
+use alloy::consensus::SignableTransaction;
 use alloy::primitives::{Address, PrimitiveSignature, SignatureError, U256};
 use alloy::signers::k256::ecdsa::{RecoveryId, Signature as EcsaSignature, VerifyingKey};
 use alloy::signers::utils::public_key_to_address;

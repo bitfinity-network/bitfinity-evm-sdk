@@ -168,7 +168,7 @@ pub struct Signature {
 }
 
 impl TryFrom<Signature> for alloy::primitives::Signature {
-    
+
     type Error = EvmError;
     
     fn try_from(value: Signature) -> Result<Self, Self::Error> {
@@ -182,6 +182,27 @@ impl From<alloy::primitives::Signature> for Signature {
     fn from(value: alloy::primitives::Signature) -> Self {
         Self {
             v: U64::from(value.v().to_u64()),
+            r: value.r().into(),
+            s: value.s().into(),
+        }
+    }
+}
+
+impl TryFrom<Signature> for alloy::primitives::PrimitiveSignature {
+
+    type Error = EvmError;
+    
+    fn try_from(value: Signature) -> Result<Self, Self::Error> {
+        let parity = Parity::try_from(value.v.0.to::<u64>())
+            .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))?;
+        Ok(alloy::primitives::PrimitiveSignature::new(value.r.into(), value.s.into(), parity.y_parity()))
+    }
+}
+
+impl From<alloy::primitives::PrimitiveSignature> for Signature {
+    fn from(value: alloy::primitives::PrimitiveSignature) -> Self {
+        Self {
+            v: U64::from(value.v() as u64),
             r: value.r().into(),
             s: value.s().into(),
         }
@@ -798,7 +819,7 @@ mod test {
 
     use candid::{Decode, Encode};
     use ic_stable_structures::Storable;
-    use rand::Rng;
+    use rand::{random, Rng};
 
     use super::*;
     use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
@@ -1359,6 +1380,17 @@ mod test {
         let ethers_signature = alloy::primitives::Signature::try_from(signature.clone()).unwrap();
         let roundtrip_signature = Signature::from(ethers_signature);
         assert_eq!(signature, roundtrip_signature);
+    }
+
+    #[test]
+    fn primitive_signature_roundtrip() {
+        let signature = alloy::primitives::PrimitiveSignature::new(
+            alloy::primitives::U256::from(random::<u64>()),
+            alloy::primitives::U256::from(random::<u64>()),
+            random()
+        );
+        let roundtrip_signature = Signature::from(signature.clone());
+        assert_eq!(signature, alloy::primitives::PrimitiveSignature::try_from(roundtrip_signature).unwrap());
     }
 
     #[test]
