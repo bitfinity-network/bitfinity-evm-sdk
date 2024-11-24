@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
 
+use alloy::hex::FromHexError;
 use candid::types::{Type, TypeInner};
 use candid::CandidType;
 use derive_more::Display;
@@ -21,13 +22,13 @@ pub type H160 = Hash<alloy::primitives::Address>;
 ///Fixed-size uninterpreted hash type with 32 bytes (256 bits) size.
 pub type H256 = Hash<alloy::primitives::B256>;
 
-pub fn from_hex_str<const SIZE: usize>(mut s: &str) -> Result<[u8; SIZE], hex::FromHexError> {
+pub fn from_hex_str<const SIZE: usize>(mut s: &str) -> Result<[u8; SIZE], FromHexError> {
     if s.starts_with("0x") || s.starts_with("0X") {
         s = &s[2..];
     }
 
     let mut result = [0u8; SIZE];
-    hex::decode_to_slice(s, &mut result).and(Ok(result))
+    alloy::hex::decode_to_slice(s, &mut result).and(Ok(result))
 }
 
 impl<'de> serde::Deserialize<'de> for H64 {
@@ -62,7 +63,7 @@ impl H64 {
         Self(alloy::primitives::B64::from_slice(slice))
     }
 
-    pub fn from_hex_str(s: &str) -> Result<Self, hex::FromHexError> {
+    pub fn from_hex_str(s: &str) -> Result<Self, FromHexError> {
         Ok(Self(alloy::primitives::B64::from(from_hex_str::<8>(s)?)))
     }
 
@@ -86,7 +87,7 @@ impl H160 {
         Self(alloy::primitives::Address::from_slice(slice))
     }
 
-    pub fn from_hex_str(s: &str) -> Result<Self, hex::FromHexError> {
+    pub fn from_hex_str(s: &str) -> Result<Self, FromHexError> {
         Ok(Self(alloy::primitives::Address::from(from_hex_str::<20>(s)?)))
     }
 
@@ -110,7 +111,7 @@ impl H256 {
         Self(alloy::primitives::B256::from_slice(slice))
     }
 
-    pub fn from_hex_str(s: &str) -> Result<Self, hex::FromHexError> {
+    pub fn from_hex_str(s: &str) -> Result<Self, FromHexError> {
         Ok(Self(alloy::primitives::B256::from(from_hex_str::<32>(s)?)))
     }
 
@@ -451,11 +452,11 @@ mod tests {
     fn test_hex_from_str_returns_error() {
         let (_, str_val) = generate_hex_str(31);
         let val = H256::from_hex_str(&str_val);
-        assert_eq!(val.unwrap_err(), hex::FromHexError::InvalidStringLength);
+        assert_eq!(val.unwrap_err(), FromHexError::InvalidStringLength);
 
         let (_, str_val) = generate_hex_str(50);
         let val = H256::from_hex_str(&str_val);
-        assert_eq!(val.unwrap_err(), hex::FromHexError::InvalidStringLength);
+        assert_eq!(val.unwrap_err(), FromHexError::InvalidStringLength);
     }
 
     #[test]

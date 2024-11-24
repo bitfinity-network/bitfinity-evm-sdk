@@ -191,7 +191,7 @@ impl From<u64> for U64 {
 }
 impl From<U64> for u64 {
     fn from(value: U64) -> Self {
-        value.0.saturating_to()
+        value.0.to()
     }
 }
 

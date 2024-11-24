@@ -2,6 +2,7 @@
 members = [
     "src/icrc-client",
     "src/did",
+    "src/eth-signer-alloy",
     "src/eth-signer",
     "src/eth-signer/tests/test_canister",
     "src/ethereum-json-rpc-client",

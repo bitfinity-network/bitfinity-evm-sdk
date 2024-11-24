@@ -9,11 +9,11 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 pub struct Bytes(pub bytes::Bytes);
 
 impl Bytes {
-    pub fn from_hex_str(mut s: &str) -> Result<Self, hex::FromHexError> {
+    pub fn from_hex_str(mut s: &str) -> Result<Self, alloy::hex::FromHexError> {
         if s.starts_with("0x") || s.starts_with("0X") {
             s = &s[2..]
         }
-        let bytes = hex::decode(s)?;
+        let bytes = alloy::hex::decode(s)?;
         Ok(Self(bytes::Bytes::from(bytes)))
     }
 

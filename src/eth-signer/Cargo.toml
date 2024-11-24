@@ -15,6 +15,7 @@ repository.workspace = true
 ic_sign = ["ic-canister", "ic-exports"]
 
 [dependencies]
+alloy = { workspace = true }
 async-trait = { workspace = true }
 candid = { workspace = true }
 did = { path = "../did" }

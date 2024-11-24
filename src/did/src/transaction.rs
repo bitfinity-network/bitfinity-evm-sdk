@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::rc::Rc;
 use std::str::FromStr;
+use alloy::primitives::Parity;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
@@ -164,6 +165,27 @@ pub struct Signature {
     pub v: U64,
     pub r: U256,
     pub s: U256,
+}
+
+impl TryFrom<Signature> for alloy::primitives::Signature {
+    
+    type Error = EvmError;
+    
+    fn try_from(value: Signature) -> Result<Self, Self::Error> {
+        Parity::try_from(value.v.0.to::<u64>())
+            .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))
+            .map(|parity| alloy::primitives::Signature::new(value.r.into(), value.s.into(), parity))
+    }
+}
+
+impl From<alloy::primitives::Signature> for Signature {
+    fn from(value: alloy::primitives::Signature) -> Self {
+        Self {
+            v: U64::from(value.v().to_u64()),
+            r: value.r().into(),
+            s: value.s().into(),
+        }
+    }
 }
 
 // impl From<Signature> for EthersSignature {
@@ -1327,17 +1349,17 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn signature_conversion_roundtrip() {
-    //     let signature = Signature {
-    //         r: U256::max_value(),
-    //         s: U256::max_value() - U256::from(1u64),
-    //         v: U64::max_value(),
-    //     };
-    //     let ethers_signature = EthersSignature::from(signature.clone());
-    //     let roundtrip_signature = Signature::from(ethers_signature);
-    //     assert_eq!(signature, roundtrip_signature);
-    // }
+    #[test]
+    fn signature_conversion_roundtrip() {
+        let signature = Signature {
+            r: U256::max_value(),
+            s: U256::max_value() - U256::from(1u64),
+            v: U64::max_value(),
+        };
+        let ethers_signature = alloy::primitives::Signature::try_from(signature.clone()).unwrap();
+        let roundtrip_signature = Signature::from(ethers_signature);
+        assert_eq!(signature, roundtrip_signature);
+    }
 
     #[test]
     fn test_signature_malleability_check() {

@@ -2,7 +2,7 @@
 categories = ["cryptography::cryptocurrencies"]
 description = "API types definition for EVM canister"
 include = ["src/**/*", "../../LICENSE", "../../README.md"]
-name = "did"
+name = "eth-signer-alloy"
 
 authors.workspace = true
 homepage.workspace = true
@@ -11,29 +11,25 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+ic_sign = ["ic-canister", "ic-exports"]
 
 [dependencies]
-alloy = { workspace = true }
-bincode = { workspace = true }
-bytes = { workspace = true }
+alloy = { workspace = true, features = ["network", "signer-local"]}
+async-trait = { workspace = true }
 candid = { workspace = true }
-derive_more = { workspace = true }
-# hex = { workspace = true }
-ic-log = { workspace = true }
+did = { path = "../did" }
+hex = { workspace = true }
 ic-stable-structures = { workspace = true }
-jsonrpc-core = { workspace = true }
-log = { workspace = true }
-num = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
-serde_with = { workspace = true }
 sha2 = { workspace = true }
-sha3 = { workspace = true }
 thiserror = { workspace = true }
 
+# Dependencies for ic-siginig
+ic-exports = { workspace = true, optional = true }
+ic-canister = { workspace = true, optional = true }
+
 [dev-dependencies]
-alloy = { workspace = true, features = ["rand"]}
-# eth-signer = { path = "../eth-signer" }
+ic-exports = { workspace = true, features = ["pocket-ic-tests"]}
 rand = { workspace = true }
 tokio = { workspace = true }
