@@ -214,9 +214,6 @@ impl IcSigner {
 mod tests {
 
     use candid::Principal;
-    use ethers_core::k256::ecdsa::SigningKey;
-    use ethers_core::types::transaction::eip2718::TypedTransaction;
-    use ethers_core::types::{TransactionRequest, H160, H256};
     use ic_canister::register_virtual_responder;
     use ic_exports::ic_cdk::api::management_canister::ecdsa::{
         EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
@@ -226,7 +223,7 @@ mod tests {
 
     use super::{IcSigner, *};
     use crate::ic_sign::SigningKeyId;
-    use crate::Wallet;
+    use crate::LocalWallet;
 
     fn init_context() -> Wallet<'static, SigningKey> {
         MockContext::new().inject();

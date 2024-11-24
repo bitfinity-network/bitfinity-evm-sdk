@@ -6,7 +6,7 @@ use alloy::signers::k256::ecdsa::{self, SigningKey};
 use alloy::signers::{Signer, utils::secret_key_to_address};
 use async_trait::async_trait;
 use candid::CandidType;
-use did::transaction::Signature;
+use did::transaction::Signature as DidSignature;
 use did::{codec, H160};
 // use ethers_core::k256::ecdsa::{self, SigningKey};
 // use ethers_core::types::transaction::eip2718::TypedTransaction;
@@ -82,24 +82,24 @@ impl Storable for SigningStrategy {
 }
 
 /// Transaction signer
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Clone)]
 pub enum TxSigner {
     Local(LocalTxSigner),
     #[cfg(feature = "ic_sign")]
     ManagementCanister(ManagementCanisterSigner),
 }
 
-impl Storable for TxSigner {
-    fn to_bytes(&self) -> Cow<[u8]> {
-        codec::bincode_encode(self).into()
-    }
+// impl Storable for TxSigner {
+//     fn to_bytes(&self) -> Cow<[u8]> {
+//         codec::bincode_encode(self).into()
+//     }
 
-    fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        codec::bincode_decode(&bytes)
-    }
+//     fn from_bytes(bytes: Cow<[u8]>) -> Self {
+//         codec::bincode_decode(&bytes)
+//     }
 
-    const BOUND: Bound = Bound::Unbounded;
-}
+//     const BOUND: Bound = Bound::Unbounded;
+// }
 
 impl TxSigner {
     pub async fn get_address(&self) -> TransactionSignerResult<H160> {
@@ -113,17 +113,17 @@ impl TxSigner {
     async fn sign_transaction(
         &self,
         transaction: &mut dyn SignableTransaction<PrimitiveSignature>,
-    ) -> TransactionSignerResult<PrimitiveSignature> {
+    ) -> TransactionSignerResult<DidSignature> {
         match self {
-            Self::Local(signer) => signer.sign_transaction(transaction).await,
+            Self::Local(signer) => signer.sign_transaction(transaction).await.map(Into::into),
             #[cfg(feature = "ic_sign")]
             Self::ManagementCanister(signer) => signer.sign_transaction(transaction).await,
         }
     }
 
-    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<PrimitiveSignature> {
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<DidSignature> {
         match self {
-            Self::Local(signer) => signer.sign_digest(digest).await,
+            Self::Local(signer) => signer.sign_digest(digest).await.map(Into::into),
             #[cfg(feature = "ic_sign")]
             Self::ManagementCanister(signer) => signer.sign_digest(digest).await,
         }
@@ -288,7 +288,7 @@ mod ic_sign {
         pub async fn sign_transaction(
             &self,
             transaction: &mut dyn SignableTransaction<PrimitiveSignature>,
-        ) -> TransactionSignerResult<PrimitiveSignature> {
+        ) -> TransactionSignerResult<DidSignature> {
             let pub_key = self.get_or_compute_pubkey().await?;
 
             IcSigner
@@ -303,7 +303,7 @@ mod ic_sign {
                 .map(Into::into)
         }
 
-        pub async fn sign_digest(&self, digest: [u8; 32]) -> Result<PrimitiveSignature, TransactionSignerError> {
+        pub async fn sign_digest(&self, digest: [u8; 32]) -> Result<DidSignature, TransactionSignerError> {
             let pub_key = self.get_or_compute_pubkey().await?;
 
             IcSigner
