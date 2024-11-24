@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use alloy::consensus::TypedTransaction;
-use alloy::primitives::Signature as PrimitivesSignature;
+use alloy::primitives::PrimitiveSignature;
 use alloy::signers::k256::ecdsa::{self, SigningKey};
 use alloy::signers::{Signer, utils::secret_key_to_address};
 use async_trait::async_trait;
@@ -180,28 +180,24 @@ impl LocalTxSigner {
 
     async fn sign_transaction(
         &self,
-        transaction: &mut dyn SignableTransaction<PrimitivesSignature>,
-    ) -> TransactionSignerResult<Signature> {
-        let sign = self.wallet
+        transaction: &mut dyn SignableTransaction<PrimitiveSignature>,
+    ) -> TransactionSignerResult<PrimitiveSignature> {
+        self.wallet
             .sign_transaction(transaction)
             .await
-            .map_err(TransactionSignerError::WalletError)?;
-
-        todo!()
-
+            .map_err(TransactionSignerError::WalletError)
     }
 
-    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature> {
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<PrimitiveSignature> {
         self.wallet
-            .sign_hash(ethereum_types::H256(digest))
+            .sign_hash(&alloy::primitives::B256::from_slice(&digest))
+            .await
             .map_err(TransactionSignerError::WalletError)
-            .map(Into::into)
     }
 
     async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
         Ok(self
             .wallet
-            .signer
             .verifying_key()
             .to_encoded_point(false)
             .to_bytes()
