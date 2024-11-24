@@ -35,25 +35,6 @@ pub enum TransactionSignerError {
 
 pub type TransactionSignerResult<T> = std::result::Result<T, TransactionSignerError>;
 
-/// A trait that abstracts out the transaction signing component
-// #[async_trait(?Send)]
-// pub trait TransactionSigner {
-//     /// Returns the `sender` address for the given identity
-//     async fn get_address(&self) -> TransactionSignerResult<H160>;
-
-//     /// Sign the created transaction
-//     async fn sign_transaction(
-//         &self,
-//         transaction: &TypedTransaction,
-//     ) -> TransactionSignerResult<Signature>;
-
-//     /// Sign the given digest
-//     async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature>;
-
-//     /// Get the public key for the given identity
-//     async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>>;
-// }
-
 /// Signing strategy for signing EVM transactions
 #[derive(CandidType, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SigningStrategy {
@@ -74,7 +55,7 @@ impl SigningStrategy {
                 let signer = SigningKey::from_slice(&private_key)?;
                 let address = secret_key_to_address(&signer);
                 let wallet = LocalWallet::new_with_credential(signer, address, Some(chain_id));
-                Ok(TxSigner::Local(LocalTxSigner::new(wallet)))
+                Ok(TxSigner::Local(LocalTxSigner::new(private_key.clone(), wallet)))
             }
             #[cfg(feature = "ic_sign")]
             SigningStrategy::ManagementCanister { key_id } => {
@@ -120,8 +101,6 @@ impl Storable for TxSigner {
     const BOUND: Bound = Bound::Unbounded;
 }
 
-// #[async_trait(?Send)]
-// impl TransactionSigner for TxSigner {
 impl TxSigner {
     pub async fn get_address(&self) -> TransactionSignerResult<H160> {
         match self {
@@ -133,8 +112,8 @@ impl TxSigner {
 
     async fn sign_transaction(
         &self,
-        transaction: &TypedTransaction,
-    ) -> TransactionSignerResult<Signature> {
+        transaction: &mut dyn SignableTransaction<PrimitiveSignature>,
+    ) -> TransactionSignerResult<PrimitiveSignature> {
         match self {
             Self::Local(signer) => signer.sign_transaction(transaction).await,
             #[cfg(feature = "ic_sign")]
@@ -142,7 +121,7 @@ impl TxSigner {
         }
     }
 
-    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<Signature> {
+    async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<PrimitiveSignature> {
         match self {
             Self::Local(signer) => signer.sign_digest(digest).await,
             #[cfg(feature = "ic_sign")]
@@ -150,29 +129,28 @@ impl TxSigner {
         }
     }
 
-    async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
-        match self {
-            Self::Local(signer) => signer.get_public_key().await,
-            #[cfg(feature = "ic_sign")]
-            Self::ManagementCanister(signer) => signer.get_public_key().await,
-        }
-    }
+    // async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
+    //     match self {
+    //         Self::Local(signer) => signer.get_public_key().await,
+    //         #[cfg(feature = "ic_sign")]
+    //         Self::ManagementCanister(signer) => signer.get_public_key().await,
+    //     }
+    // }
 }
 
 /// Local private key implementation
 #[derive(Clone)]
 pub struct LocalTxSigner {
+    private_key: [u8; 32],
     wallet: LocalWallet,
 }
 
 impl LocalTxSigner {
-    fn new(wallet: LocalWallet) -> LocalTxSigner {
-        Self { wallet }
+    fn new(private_key: [u8; 32], wallet: LocalWallet) -> LocalTxSigner {
+        Self { private_key, wallet }
     }
 }
 
-// #[async_trait(?Send)]
-// impl TransactionSigner for LocalTxSigner {
 impl LocalTxSigner {
     async fn get_address(&self) -> TransactionSignerResult<H160> {
         Ok(self.wallet.address().into())
@@ -195,60 +173,60 @@ impl LocalTxSigner {
             .map_err(TransactionSignerError::WalletError)
     }
 
-    async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
-        Ok(self
-            .wallet
-            .verifying_key()
-            .to_encoded_point(false)
-            .to_bytes()
-            .to_vec())
-    }
+    // async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
+    //     Ok(self
+    //         .wallet
+    //         .verifying_key()
+    //         .to_encoded_point(false)
+    //         .to_bytes()
+    //         .to_vec())
+    // }
 }
 
-/// A helper struct for serializing/deserializing `LocalTxSigner`
-#[derive(Serialize, Deserialize)]
-struct WalletSerializationData<'a> {
-    signing_key_bytes: &'a [u8],
-    address_bytes: &'a [u8],
-    chain_id: u64,
-}
+// /// A helper struct for serializing/deserializing `LocalTxSigner`
+// #[derive(Serialize, Deserialize)]
+// struct WalletSerializationData<'a> {
+//     signing_key_bytes: &'a [u8],
+//     address_bytes: &'a [u8],
+//     chain_id: u64,
+// }
 
-impl Serialize for LocalTxSigner {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let signing_key_bytes = &self.wallet.credentials().to_bytes();
-        let address = &self.wallet.address();
-        let chain_id = &self.wallet.chain_id();
-        let serialization_data = WalletSerializationData {
-            signing_key_bytes: &signing_key_bytes,
-            address_bytes: address.as_bytes(),
-            chain_id,
-        };
+// impl Serialize for LocalTxSigner {
+//     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+//     where
+//         S: serde::Serializer,
+//     {
+//         let signing_key_bytes = &self.private_key;
+//         let address = self.wallet.address();
+//         let chain_id = self.wallet.chain_id().unwrap_or_default();
+//         let serialization_data = WalletSerializationData {
+//             signing_key_bytes: signing_key_bytes,
+//             address_bytes: address.as_bytes(),
+//             chain_id,
+//         };
 
-        serialization_data.serialize(serializer)
-    }
-}
+//         serialization_data.serialize(serializer)
+//     }
+// }
 
-impl<'de> Deserialize<'de> for LocalTxSigner {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::Error;
+// impl<'de> Deserialize<'de> for LocalTxSigner {
+//     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+//     where
+//         D: serde::Deserializer<'de>,
+//     {
+//         use serde::de::Error;
 
-        let val = WalletSerializationData::deserialize(deserializer)?;
-        let signing_key = SigningKey::from_slice(val.signing_key_bytes)
-            .map_err(|e| D::Error::custom(format!("failed to decode signing key: {e}")))?;
-        let address = H160::from_slice(val.address_bytes);
-        Ok(LocalTxSigner::new(Wallet::new_with_signer(
-            Cow::Owned(signing_key),
-            address.into(),
-            val.chain_id,
-        )))
-    }
-}
+//         let val = WalletSerializationData::deserialize(deserializer)?;
+//         let signing_key = SigningKey::from_slice(val.signing_key_bytes)
+//             .map_err(|e| D::Error::custom(format!("failed to decode signing key: {e}")))?;
+//         let address = H160::from_slice(val.address_bytes);
+//         Ok(LocalTxSigner::new(Wallet::new_with_signer(
+//             Cow::Owned(signing_key),
+//             address.into(),
+//             val.chain_id,
+//         )))
+//     }
+// }
 
 #[cfg(feature = "ic_sign")]
 mod ic_sign {
@@ -292,9 +270,9 @@ mod ic_sign {
         }
     }
 
-    #[async_trait(?Send)]
-    impl TransactionSigner for ManagementCanisterSigner {
-        async fn get_address(&self) -> Result<H160, TransactionSignerError> {
+    impl ManagementCanisterSigner {
+
+        pub async fn get_address(&self) -> Result<H160, TransactionSignerError> {
             if let Some(address) = self.cached_address.borrow().as_ref() {
                 return Ok(address.0.into());
             }
@@ -307,10 +285,10 @@ mod ic_sign {
             Ok(address)
         }
 
-        async fn sign_transaction(
+        pub async fn sign_transaction(
             &self,
-            transaction: &TypedTransaction,
-        ) -> Result<Signature, TransactionSignerError> {
+            transaction: &mut dyn SignableTransaction<PrimitiveSignature>,
+        ) -> TransactionSignerResult<PrimitiveSignature> {
             let pub_key = self.get_or_compute_pubkey().await?;
 
             IcSigner
@@ -325,7 +303,7 @@ mod ic_sign {
                 .map(Into::into)
         }
 
-        async fn sign_digest(&self, digest: [u8; 32]) -> Result<Signature, TransactionSignerError> {
+        pub async fn sign_digest(&self, digest: [u8; 32]) -> Result<PrimitiveSignature, TransactionSignerError> {
             let pub_key = self.get_or_compute_pubkey().await?;
 
             IcSigner

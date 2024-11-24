@@ -1,10 +1,11 @@
 use std::fmt;
 
-use alloy::consensus::TypedTransaction;
-use alloy::primitives::{Address, SignatureError, U256};
-use alloy::signers::k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
+use alloy::consensus::{SignableTransaction, TypedTransaction};
+use alloy::primitives::{Address, PrimitiveSignature, SignatureError, U256};
+use alloy::signers::k256::ecdsa::{RecoveryId, Signature as EcsaSignature, VerifyingKey};
 use alloy::signers::utils::public_key_to_address;
 use candid::{CandidType, Principal};
+use did::transaction::Signature as DidSignature;
 use ic_canister::virtual_canister_call;
 use ic_exports::ic_cdk::api::call::RejectionCode;
 use ic_exports::ic_cdk::api::management_canister::ecdsa::{
@@ -94,7 +95,7 @@ impl IcSigner {
         let pub_key =
             VerifyingKey::from_sec1_bytes(pubkey).map_err(|_| IcSignerError::InvalidPublicKey)?;
 
-        let sec_signature = Signature::from_slice(signature).map_err(|e| {
+        let sec_signature = EcsaSignature::from_slice(signature).map_err(|e| {
             IcSignerError::Internal(format!("failed to parse ECDSA signature: {e}"))
         })?;
 
@@ -108,24 +109,23 @@ impl IcSigner {
     /// call.
     pub async fn sign_transaction(
         &self,
-        tx: &TypedTransaction,
+        tx: &mut dyn SignableTransaction<PrimitiveSignature>,
         pubkey: &[u8],
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
-    ) -> Result<Signature, IcSignerError> {
-        let hash = tx.sighash();
-        let digest = hash.as_fixed_bytes();
+    ) -> Result<DidSignature, IcSignerError> {
+        let hash = tx.signature_hash();
         let mut signature = Self
-            .sign_digest(*digest, pubkey, key_id, derivation_path)
+            .sign_digest(*hash, pubkey, key_id, derivation_path)
             .await?;
 
-        let v = signature.v;
+        let v: u64 = signature.v.0.to();
 
         // For non-legacy transactions recovery id should be updated.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         signature.v = match tx.chain_id() {
-            Some(chain_id) => chain_id.as_u64() * 2 + 35 + (v - 27),
-            None => v,
+            Some(chain_id) => (chain_id * 2 + 35 + (v - 27)).into(),
+            None => v.into(),
         };
 
         Ok(signature)
@@ -138,7 +138,7 @@ impl IcSigner {
         pub_key: &[u8],
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
-    ) -> Result<Signature, IcSignerError> {
+    ) -> Result<DidSignature, IcSignerError> {
         let request = SignWithEcdsaArgument {
             key_id: EcdsaKeyId {
                 curve: EcdsaCurve::Secp256k1,
@@ -171,7 +171,7 @@ impl IcSigner {
         // Signature malleability check is not required, because dfinity uses `k256` crate
         // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
         // Link: https://github.com/dfinity/ic/blob/master/rs/crypto/ecdsa_secp256k1/src/lib.rs
-        let signature = Signature { r, s, v };
+        let signature = DidSignature { r: r.into(), s: s.into(), v: v.into() };
 
         Ok(signature)
     }
