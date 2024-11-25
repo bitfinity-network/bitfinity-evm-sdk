@@ -1,11 +1,13 @@
 use std::borrow::Cow;
 
+use alloy::consensus::SignableTransaction;
+use alloy::network::{TransactionBuilder as AlloyTransactionBuilder, TxSignerSync};
+use alloy::rpc::types::{Transaction as AlloyRpcTransaction, TransactionRequest};
 use alloy::signers::k256::ecdsa::SigningKey;
 use did::error::EvmError;
 use did::hash::H160;
 use did::integer::U256;
-use did::transaction::Signature as DidSignature;
-use did::Transaction;
+use did::transaction::{Signature as DidSignature, Transaction as DidTransaction};
 
 use crate::LocalWallet;
 
@@ -37,19 +39,19 @@ pub struct TransactionBuilder<'a, 'b> {
 
 impl<'a, 'b> TransactionBuilder<'a, 'b> {
     /// Creates a new transaction with the expected hash
-    pub fn calculate_hash_and_build(self) -> Result<Transaction, EvmError> {
+    pub fn calculate_hash_and_build(self) -> Result<DidTransaction, EvmError> {
         // NOTE: we intentionally do not set chain id here since chain ID shouldn't be present in
         // legacy transaction RLP encoding
-        let mut transaction = ethers_core::types::Transaction {
-            from: self.from.0,
-            to: self.to.map(Into::into),
-            nonce: self.nonce.0,
-            value: self.value.0,
-            gas: self.gas.0,
-            gas_price: self.gas_price.map(Into::into),
-            input: self.input.into(),
+
+        let mut transaction = TransactionRequest {
+            to: self.to.map(|to| to.0.into()),
+            gas_price: self.gas_price.map(|price| price.0.to()),
             ..Default::default()
-        };
+        }.with_from(self.from.0)
+        .with_nonce(self.nonce.0.to())
+        .with_value(self.value.0)
+        .with_gas_limit(self.gas.0.to())
+        .with_input(self.input.into());
 
         match self.signature {
             SigningMethod::None => {}
@@ -60,18 +62,35 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
             }
             SigningMethod::SigningKey(key) => {
                 let wallet =
-                    Wallet::new_with_signer(Cow::Borrowed(key), transaction.from, self.chain_id);
+                    LocalWallet::new_with_credential(*key, self.from.0, Some(self.chain_id));
 
-                // NOTE: we can avoid cloning input here by re-implementing code that calculates
-                // transaction signature hash
-                let typed_tx: TypedTransaction = (&transaction).into();
-                let signature = wallet
-                    .sign_transaction_sync(&typed_tx)
-                    .map_err(|e| EvmError::TransactionSignature(e.to_string()))?;
+                    let mut tx = transaction.build_consensus_tx().unwrap();
+                    let mut tx = tx.legacy().cloned().unwrap();
+                    let signature = wallet.sign_transaction_sync(&mut tx).unwrap();
 
-                transaction.r = signature.r;
-                transaction.s = signature.s;
-                transaction.v = signature.v.into();
+                    let WHAT_ABOUT_CHAIN_ID = false;
+
+                    let signed = tx.into_signed(signature);
+                    let transaction: AlloyRpcTransaction = AlloyRpcTransaction{
+                        inner: signed.into(),
+                        from: self.from.0,
+                        block_hash: None,
+                        block_number: None,
+                        transaction_index: None,
+                        effective_gas_price: None,
+                    };
+                    
+
+                // // NOTE: we can avoid cloning input here by re-implementing code that calculates
+                // // transaction signature hash
+                // let typed_tx: TypedTransaction = (&transaction).into();
+                // let signature = wallet
+                //     .sign_transaction_sync(&typed_tx)
+                //     .map_err(|e| EvmError::TransactionSignature(e.to_string()))?;
+
+                // transaction.r = signature.r;
+                // transaction.s = signature.s;
+                // transaction.v = signature.v.into();
             }
         }
 

@@ -209,26 +209,6 @@ impl From<alloy::primitives::PrimitiveSignature> for Signature {
     }
 }
 
-// impl From<Signature> for EthersSignature {
-//     fn from(value: Signature) -> Self {
-//         Self {
-//             r: value.r.into(),
-//             s: value.s.into(),
-//             v: value.v.into(),
-//         }
-//     }
-// }
-
-// impl From<EthersSignature> for Signature {
-//     fn from(value: EthersSignature) -> Self {
-//         Self {
-//             r: value.r.into(),
-//             s: value.s.into(),
-//             v: value.v.into(),
-//         }
-//     }
-// }
-
 impl Signature {
     /// Upper limit for signature S field.
     /// See comment to `Signature::check_malleability()` for more details.
