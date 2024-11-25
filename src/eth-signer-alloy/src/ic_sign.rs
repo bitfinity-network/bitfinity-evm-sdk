@@ -213,7 +213,9 @@ impl IcSigner {
 #[cfg(test)]
 mod tests {
 
+    use alloy::signers::SignerSync;
     use candid::Principal;
+    use did::H256;
     use ic_canister::register_virtual_responder;
     use ic_exports::ic_cdk::api::management_canister::ecdsa::{
         EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
@@ -229,7 +231,7 @@ mod tests {
         MockContext::new().inject();
 
         let wallet = LocalWallet::random_with(&mut rand::thread_rng());
-        let pubkey = wallet.signer.verifying_key().to_encoded_point(true);
+        let pubkey = wallet.credential().verifying_key().to_encoded_point(true);
 
         let wallet_to_sign = wallet.clone();
         register_virtual_responder(
@@ -238,8 +240,8 @@ mod tests {
             move |args: (SignWithEcdsaArgument,)| {
                 let hash = args.0.message_hash;
                 let h256 = H256::from_slice(&hash);
-                let signature = wallet_to_sign.sign_hash(h256).unwrap();
-                let signature: Vec<u8> = signature.to_vec().into_iter().take(64).collect();
+                let signature = wallet_to_sign.sign_hash_sync(&h256.0).unwrap();
+                let signature: Vec<u8> = signature.as_bytes().into_iter().take(64).collect();
                 SignWithEcdsaResponse { signature }
             },
         );
@@ -259,7 +261,7 @@ mod tests {
     #[tokio::test]
     async fn should_sign_transactions() {
         let wallet = init_context();
-        let from = wallet.address;
+        let from = wallet.address();
         let tx: TypedTransaction = TransactionRequest::new()
             .from(from)
             .to(H160::zero())
@@ -270,7 +272,7 @@ mod tests {
             .gas(53000)
             .into();
 
-        let pub_key = wallet.signer.verifying_key().to_encoded_point(true);
+        let pub_key = wallet.credential().verifying_key().to_encoded_point(true);
 
         let signature = IcSigner
             .sign_transaction(
@@ -289,8 +291,8 @@ mod tests {
     #[test]
     fn test_pubkey_to_address() {
         let wallet = init_context();
-        let pubkey = wallet.signer.verifying_key().to_encoded_point(true);
+        let pubkey = wallet.credential().verifying_key().to_encoded_point(true);
         let address = IcSigner.pubkey_to_address(&pubkey.to_bytes()).unwrap();
-        assert_eq!(address, wallet.address);
+        assert_eq!(address, wallet.address());
     }
 }

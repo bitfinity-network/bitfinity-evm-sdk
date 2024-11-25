@@ -110,8 +110,8 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
 #[cfg(test)]
 mod test {
 
+    use alloy::signers::utils::secret_key_to_address;
     use did::U64;
-    use ethers_core::utils;
 
     use super::*;
     use crate::LocalWallet;
@@ -147,10 +147,10 @@ mod test {
             gas: 10_000u64.into(),
             gas_price: Some(20_000u64.into()),
             input: Vec::new(),
-            signature: SigningMethod::Signature(EthersSignature {
+            signature: SigningMethod::Signature(DidSignature {
                 r: 1u64.into(),
                 s: 2u64.into(),
-                v: 3u64,
+                v: 3u64.into(),
             }),
             chain_id: 31541,
         };
@@ -165,7 +165,7 @@ mod test {
     #[test]
     fn test_build_transaction_with_signing_key() {
         let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
-        let from = utils::secret_key_to_address(&key);
+        let from = secret_key_to_address(&key);
         let chain_id = 31540;
         let transaction_builder = TransactionBuilder {
             from: &from.into(),
@@ -179,10 +179,9 @@ mod test {
             chain_id,
         };
 
-        let tx: ethers_core::types::Transaction = transaction_builder
+        let tx = transaction_builder
             .calculate_hash_and_build()
-            .unwrap()
-            .into();
+            .unwrap();
         let typed_tx: TypedTransaction = (&tx).into();
         let wallet = LocalWallet::new_with_signer(Cow::Borrowed(&key), from, chain_id);
         let signature = wallet.sign_transaction_sync(&typed_tx).unwrap();
@@ -196,7 +195,7 @@ mod test {
     #[test]
     fn test_build_transaction_with_signing_key_should_include_chain_id() {
         let key = SigningKey::from_slice(&[3u8; 32]).unwrap();
-        let from = utils::secret_key_to_address(&key);
+        let from = secret_key_to_address(&key);
         let chain_id = 31540;
         let transaction_builder = TransactionBuilder {
             from: &from.into(),
