@@ -1,11 +1,11 @@
 use std::fmt;
 
+use alloy::consensus::SignableTransaction;
+use alloy::primitives::{Address, PrimitiveSignature, SignatureError, U256};
+use alloy::signers::k256::ecdsa::{RecoveryId, Signature as EcsaSignature, VerifyingKey};
+use alloy::signers::utils::public_key_to_address;
 use candid::{CandidType, Principal};
-use ethereum_types::U256;
-use ethers_core::k256::ecdsa::{self, RecoveryId, VerifyingKey};
-use ethers_core::types::transaction::eip2718::TypedTransaction;
-use ethers_core::types::{Signature, SignatureError, H160};
-use ethers_core::utils::public_key_to_address;
+use did::transaction::Signature as DidSignature;
 use ic_canister::virtual_canister_call;
 use ic_exports::ic_cdk::api::call::RejectionCode;
 use ic_exports::ic_cdk::api::management_canister::ecdsa::{
@@ -95,7 +95,7 @@ impl IcSigner {
         let pub_key =
             VerifyingKey::from_sec1_bytes(pubkey).map_err(|_| IcSignerError::InvalidPublicKey)?;
 
-        let sec_signature = ecdsa::Signature::from_slice(signature).map_err(|e| {
+        let sec_signature = EcsaSignature::from_slice(signature).map_err(|e| {
             IcSignerError::Internal(format!("failed to parse ECDSA signature: {e}"))
         })?;
 
@@ -109,24 +109,23 @@ impl IcSigner {
     /// call.
     pub async fn sign_transaction(
         &self,
-        tx: &TypedTransaction,
+        tx: &mut dyn SignableTransaction<PrimitiveSignature>,
         pubkey: &[u8],
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
-    ) -> Result<Signature, IcSignerError> {
-        let hash = tx.sighash();
-        let digest = hash.as_fixed_bytes();
+    ) -> Result<DidSignature, IcSignerError> {
+        let hash = tx.signature_hash();
         let mut signature = Self
-            .sign_digest(*digest, pubkey, key_id, derivation_path)
+            .sign_digest(*hash, pubkey, key_id, derivation_path)
             .await?;
 
-        let v = signature.v;
+        let v: u64 = signature.v.0.to();
 
         // For non-legacy transactions recovery id should be updated.
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         signature.v = match tx.chain_id() {
-            Some(chain_id) => chain_id.as_u64() * 2 + 35 + (v - 27),
-            None => v,
+            Some(chain_id) => (chain_id * 2 + 35 + (v - 27)).into(),
+            None => v.into(),
         };
 
         Ok(signature)
@@ -139,7 +138,7 @@ impl IcSigner {
         pub_key: &[u8],
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
-    ) -> Result<Signature, IcSignerError> {
+    ) -> Result<DidSignature, IcSignerError> {
         let request = SignWithEcdsaArgument {
             key_id: EcdsaKeyId {
                 curve: EcdsaCurve::Secp256k1,
@@ -165,14 +164,14 @@ impl IcSigner {
         // Details: https://eips.ethereum.org/EIPS/eip-155.
         let recovery_id = Self::compute_recovery_id(&digest, pub_key, &signature_data)?;
 
-        let r = U256::from_big_endian(&signature_data[0..32]);
-        let s = U256::from_big_endian(&signature_data[32..64]);
+        let r = U256::from_be_slice(&signature_data[0..32]);
+        let s = U256::from_be_slice(&signature_data[32..64]);
         let v = recovery_id.is_y_odd() as u64 + 27;
 
         // Signature malleability check is not required, because dfinity uses `k256` crate
         // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
         // Link: https://github.com/dfinity/ic/blob/master/rs/crypto/ecdsa_secp256k1/src/lib.rs
-        let signature = Signature { r, s, v };
+        let signature = DidSignature { r: r.into(), s: s.into(), v: v.into() };
 
         Ok(signature)
     }
@@ -203,7 +202,7 @@ impl IcSigner {
     }
 
     /// Convert public key to ethereum address.
-    pub fn pubkey_to_address(&self, pubkey: &[u8]) -> Result<H160, IcSignerError> {
+    pub fn pubkey_to_address(&self, pubkey: &[u8]) -> Result<Address, IcSignerError> {
         let key =
             VerifyingKey::from_sec1_bytes(pubkey).map_err(|_| IcSignerError::InvalidPublicKey)?;
 
@@ -214,10 +213,13 @@ impl IcSigner {
 #[cfg(test)]
 mod tests {
 
+    use alloy::network::TransactionBuilder;
+    use alloy::primitives::{B160, B256};
+    use alloy::rpc::types::TransactionRequest;
+    use alloy::signers::k256::ecdsa::signature;
+    use alloy::signers::SignerSync;
     use candid::Principal;
-    use ethers_core::k256::ecdsa::SigningKey;
-    use ethers_core::types::transaction::eip2718::TypedTransaction;
-    use ethers_core::types::{TransactionRequest, H160, H256};
+    use did::H256;
     use ic_canister::register_virtual_responder;
     use ic_exports::ic_cdk::api::management_canister::ecdsa::{
         EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
@@ -227,13 +229,13 @@ mod tests {
 
     use super::{IcSigner, *};
     use crate::ic_sign::SigningKeyId;
-    use crate::Wallet;
+    use crate::LocalWallet;
 
-    fn init_context() -> Wallet<'static, SigningKey> {
+    fn init_context() -> LocalWallet {
         MockContext::new().inject();
 
-        let wallet = Wallet::new(&mut rand::thread_rng());
-        let pubkey = wallet.signer.verifying_key().to_encoded_point(true);
+        let wallet = LocalWallet::random_with(&mut rand::thread_rng());
+        let pubkey = wallet.credential().verifying_key().to_encoded_point(true);
 
         let wallet_to_sign = wallet.clone();
         register_virtual_responder(
@@ -242,8 +244,8 @@ mod tests {
             move |args: (SignWithEcdsaArgument,)| {
                 let hash = args.0.message_hash;
                 let h256 = H256::from_slice(&hash);
-                let signature = wallet_to_sign.sign_hash(h256).unwrap();
-                let signature: Vec<u8> = signature.to_vec().into_iter().take(64).collect();
+                let signature = wallet_to_sign.sign_hash_sync(&h256.0).unwrap();
+                let signature: Vec<u8> = signature.as_bytes().into_iter().take(64).collect();
                 SignWithEcdsaResponse { signature }
             },
         );
@@ -263,22 +265,23 @@ mod tests {
     #[tokio::test]
     async fn should_sign_transactions() {
         let wallet = init_context();
-        let from = wallet.address;
-        let tx: TypedTransaction = TransactionRequest::new()
-            .from(from)
-            .to(H160::zero())
-            .value(10)
-            .chain_id(355113)
-            .nonce(0)
-            .gas_price(10)
-            .gas(53000)
-            .into();
+        let from = wallet.address();
+        let tx = TransactionRequest::default()
+            .with_from(from)
+            .with_to(Address::ZERO)
+            .with_value(U256::from(10u64))
+            .with_chain_id(355113)
+            .with_nonce(0)
+            .with_gas_price(10)
+            .with_gas_limit(53000)
+            .build_consensus_tx().unwrap();
+        let mut tx = tx.legacy().cloned().unwrap();
 
-        let pub_key = wallet.signer.verifying_key().to_encoded_point(true);
+        let pub_key = wallet.credential().verifying_key().to_encoded_point(true);
 
         let signature = IcSigner
             .sign_transaction(
-                &tx,
+                &mut tx,
                 &pub_key.to_bytes(),
                 SigningKeyId::Dfx,
                 DerivationPath::default(),
@@ -286,15 +289,17 @@ mod tests {
             .await
             .unwrap();
 
-        let recovered_from = signature.recover(tx.sighash()).unwrap();
+            let primitive_signature = alloy::primitives::PrimitiveSignature::try_from(signature).unwrap();
+
+        let recovered_from = primitive_signature.recover_address_from_prehash(&tx.signature_hash()).unwrap();
         assert_eq!(recovered_from, from);
     }
 
     #[test]
     fn test_pubkey_to_address() {
         let wallet = init_context();
-        let pubkey = wallet.signer.verifying_key().to_encoded_point(true);
+        let pubkey = wallet.credential().verifying_key().to_encoded_point(true);
         let address = IcSigner.pubkey_to_address(&pubkey.to_bytes()).unwrap();
-        assert_eq!(address, wallet.address);
+        assert_eq!(address, wallet.address());
     }
 }
