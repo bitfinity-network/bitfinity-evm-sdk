@@ -65,6 +65,7 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
                     .with_gas_limit(self.gas.0.to())
                     .with_input(alloy::primitives::Bytes::from(self.input));
 
+                    let REMOVE_UNWRAP = 0;
                     let mut tx = transaction.build_consensus_tx().unwrap();
                     let mut tx = tx.legacy().cloned().unwrap();
                     let signature = wallet.sign_transaction_sync(&mut tx).unwrap();

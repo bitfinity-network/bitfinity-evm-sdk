@@ -213,6 +213,10 @@ impl IcSigner {
 #[cfg(test)]
 mod tests {
 
+    use alloy::network::TransactionBuilder;
+    use alloy::primitives::{B160, B256};
+    use alloy::rpc::types::TransactionRequest;
+    use alloy::signers::k256::ecdsa::signature;
     use alloy::signers::SignerSync;
     use candid::Principal;
     use did::H256;
@@ -262,21 +266,22 @@ mod tests {
     async fn should_sign_transactions() {
         let wallet = init_context();
         let from = wallet.address();
-        let tx: TypedTransaction = TransactionRequest::new()
-            .from(from)
-            .to(H160::zero())
-            .value(10)
-            .chain_id(355113)
-            .nonce(0)
-            .gas_price(10)
-            .gas(53000)
-            .into();
+        let tx = TransactionRequest::default()
+            .with_from(from)
+            .with_to(Address::ZERO)
+            .with_value(U256::from(10u64))
+            .with_chain_id(355113)
+            .with_nonce(0)
+            .with_gas_price(10)
+            .with_gas_limit(53000)
+            .build_consensus_tx().unwrap();
+        let mut tx = tx.legacy().cloned().unwrap();
 
         let pub_key = wallet.credential().verifying_key().to_encoded_point(true);
 
         let signature = IcSigner
             .sign_transaction(
-                &tx,
+                &mut tx,
                 &pub_key.to_bytes(),
                 SigningKeyId::Dfx,
                 DerivationPath::default(),
@@ -284,7 +289,9 @@ mod tests {
             .await
             .unwrap();
 
-        let recovered_from = signature.recover(tx.sighash()).unwrap();
+            let primitive_signature = alloy::primitives::PrimitiveSignature::try_from(signature).unwrap();
+
+        let recovered_from = primitive_signature.recover_address_from_prehash(&tx.signature_hash()).unwrap();
         assert_eq!(recovered_from, from);
     }
 
