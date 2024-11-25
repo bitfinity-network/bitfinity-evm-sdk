@@ -14,6 +14,7 @@ use super::hash::{H160, H256};
 use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
 use crate::error::EvmError;
+use crate::keccak::keccak_hash;
 use crate::{codec, Bytes};
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq)]
@@ -361,6 +362,23 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
             chain_id: inner.chain_id().map(Into::into),
         }
     }
+}
+
+impl From<&Transaction> for alloy::rpc::types::Transaction {
+    fn from(tx: &Transaction) -> Self {
+        // TODO: rewrite without serde
+        let REWRITE_WITHOUT_SERDE = true;
+        let encoded = serde_json::to_value(tx).unwrap();
+        serde_json::from_value(encoded).unwrap()
+    }
+}
+
+/// Calculate the hash of a transaction
+pub fn calculate_tx_hash(tx: &Transaction) -> H256 {
+    use alloy::eips::eip2718::Encodable2718;
+    let alloy_transaction: alloy::rpc::types::Transaction = tx.into();
+    let encoded = alloy_transaction.inner.encoded_2718();
+    keccak_hash(&encoded)
 }
 
 // impl From<Transaction> for ethers_core::types::Transaction {
@@ -802,6 +820,7 @@ mod test {
     use rand::{random, Rng};
 
     use super::*;
+    use crate::keccak::keccak_hash;
     use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
     use crate::transaction::{AccessList, AccessListItem};
     use crate::{BlockNumber, HaltError};
@@ -1168,17 +1187,14 @@ mod test {
             let transaction: Transaction =
                 serde_json::from_value(transaction_from_value.clone()).unwrap();
 
-            // let ethers_transaction: ethers_core::types::Transaction = transaction.clone().into();
-            // assert_eq!(
-            //     alloy::primitives::B256::from_str(&hash).unwrap(),
-            //     ethers_transaction.hash()
-            // );
+            assert_eq!(
+                alloy::primitives::B256::from_str(&hash).unwrap(),
+                calculate_tx_hash(&transaction).0
+            );
 
             let transaction_to_value = serde_json::to_value(transaction).unwrap();
             assert_eq!(transaction_from_value, transaction_to_value);
 
-            // let ethers_transaction_to_value = serde_json::to_value(ethers_transaction).unwrap();
-            // assert_eq!(transaction_from_value, ethers_transaction_to_value)
         }
     }
 
@@ -1382,32 +1398,4 @@ mod test {
         Signature::check_malleability(&(s + U256::from(1u64))).unwrap_err();
     }
 
-    // #[test]
-    // fn test_type_convertion_from_ether_tx_to_to() {
-    //     // ----------------------------
-    //     // test type Some(1)
-    //     // ----------------------------
-
-    //     let ether_tx_type_some = alloy::rpc::types::Transaction {
-    //         inner: 
-    //         transaction_type: Some(1u64.into()),
-    //         ..Default::default()
-    //     };
-
-    //     let tx: Transaction = ether_tx_type_some.into();
-    //     assert_eq!(tx.transaction_type, Some(1u64.into()));
-
-    //     // ----------------------------
-    //     // test type None
-    //     // ----------------------------
-
-    //     let ether_tx_type_none = ethers_core::types::Transaction {
-    //         transaction_type: None,
-    //         ..Default::default()
-    //     };
-
-    //     let tx: Transaction = ether_tx_type_none.into();
-    //     // Transaction type should be Some(0) after convertion
-    //     assert_eq!(tx.transaction_type, Some(0u64.into()));
-    // }
 }
