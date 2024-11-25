@@ -337,30 +337,37 @@ pub struct Transaction {
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
 
-        let inner = tx.inner; 
-        let signature = inner.signature();
+        let REWRITE_WITHOUT_SERDE = true;
+        let encoded = serde_json::to_value(tx).unwrap();
+        serde_json::from_value(encoded).unwrap()
 
-        Self {
-            hash: inner.tx_hash().clone().into(),
-            nonce: inner.nonce().into(),
-            block_hash: tx.block_hash.map(Into::into),
-            block_number: tx.block_number.map(Into::into),
-            transaction_index: tx.transaction_index.map(Into::into),
-            from: tx.from.into(),
-            to: inner.to().map(Into::into),
-            value: inner.value().into(),
-            gas_price: inner.gas_price().map(Into::into),
-            gas: inner.gas_limit().into(),
-            input: inner.input().clone().into(),
-            v: (signature.v() as u64).into(),
-            r: signature.r().into(),
-            s: signature.s().into(),
-            transaction_type: Some((inner.tx_type() as u64).into()),
-            access_list: inner.access_list().cloned().map(Into::into),
-            max_priority_fee_per_gas: inner.max_priority_fee_per_gas().map(Into::into),
-            max_fee_per_gas: Some(inner.max_fee_per_gas().into()),
-            chain_id: inner.chain_id().map(Into::into),
-        }
+        // The following code works, but it fails to set correctly fields linked to the transaction type,
+        // for example, in case of legacy TX, it sets the max_fee_per_gas while it should be none.
+
+        // let inner = tx.inner; 
+        // let signature = inner.signature();
+
+        // Self {
+        //     hash: inner.tx_hash().clone().into(),
+        //     nonce: inner.nonce().into(),
+        //     block_hash: tx.block_hash.map(Into::into),
+        //     block_number: tx.block_number.map(Into::into),
+        //     transaction_index: tx.transaction_index.map(Into::into),
+        //     from: tx.from.into(),
+        //     to: inner.to().map(Into::into),
+        //     value: inner.value().into(),
+        //     gas_price: inner.gas_price().map(Into::into),
+        //     gas: inner.gas_limit().into(),
+        //     input: inner.input().clone().into(),
+        //     v: (signature.v() as u64).into(),
+        //     r: signature.r().into(),
+        //     s: signature.s().into(),
+        //     transaction_type: Some((inner.tx_type() as u64).into()),
+        //     access_list: inner.access_list().cloned().map(Into::into),
+        //     max_priority_fee_per_gas: inner.max_priority_fee_per_gas().map(Into::into),
+        //     max_fee_per_gas: Some(inner.max_fee_per_gas().into()),
+        //     chain_id: inner.chain_id().map(Into::into),
+        // }
     }
 }
 
@@ -369,6 +376,7 @@ impl From<&Transaction> for alloy::rpc::types::Transaction {
         // TODO: rewrite without serde
         let REWRITE_WITHOUT_SERDE = true;
         let encoded = serde_json::to_value(tx).unwrap();
+        println!("{}", encoded);
         serde_json::from_value(encoded).unwrap()
     }
 }
