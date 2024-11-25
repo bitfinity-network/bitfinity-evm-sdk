@@ -94,23 +94,22 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
             to: self.to,
             from: self.from.clone(),
             nonce: self.nonce,
-            // value: self.value,
+            value: self.value,
             gas: self.gas,
             gas_price: Some(self.gas_price),
             input: self.input.into(),
-            // chain_id: Some(self.chain_id.into()),
+            chain_id: Some(self.chain_id.into()),
             transaction_type: Some(0u64.into()),
             r: signature.r,
             s: signature.s,
-            v: 0u64.into(),
-            // hash: H256::from([1; 32]),
+            v: signature.v,
             block_hash: None,
             block_number: None,
             transaction_index: None,
             access_list: None,
             max_priority_fee_per_gas: None,
             max_fee_per_gas: None,
-            ..Default::default()
+            hash: Default::default()
         };
         transaction.hash = calculate_tx_hash(&transaction);
         transaction
@@ -160,13 +159,13 @@ mod test {
             signature: SigningMethod::Signature(DidSignature {
                 r: 1u64.into(),
                 s: 2u64.into(),
-                v: 3u64.into(),
+                v: 0u64.into(),
             }),
             chain_id: 31541,
         };
         let tx = transaction_builder.calculate_hash_and_build().unwrap();
 
-        assert_eq!(tx.v, U64::from(3u64));
+        assert_eq!(tx.v, U64::from(0u64));
         assert_eq!(tx.r, U256::from(1u64));
         assert_eq!(tx.s, U256::from(2u64));
         assert_eq!(tx.chain_id, Some(31541u64.into()));
@@ -251,9 +250,9 @@ mod test {
             chain_id,
         };
 
-        let tx = alloy::rpc::types::Transaction::try_from(&transaction_builder
+        let tx = alloy::rpc::types::Transaction::from(transaction_builder
             .calculate_hash_and_build()
-            .unwrap()).unwrap();
+            .unwrap());
         // let recovered_from = primitive_signature.recover_address_from_prehash(&tx.signature_hash()).unwrap();
         // assert_eq!(recovered_from, from);
         let recovered_from = tx.inner.signature().recover_address_from_prehash(&tx.inner.signature_hash()).unwrap();

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::rc::Rc;
 use std::str::FromStr;
-use alloy::primitives::Parity;
+use alloy::primitives::{Parity, Sign};
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
@@ -9,7 +9,7 @@ use ic_stable_structures::{Bound, Storable};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
 use sha3::Keccak256;
-use alloy::consensus::Transaction as TransactionTrait;
+use alloy::consensus::{SignableTransaction, Transaction as TransactionTrait, TxLegacy};
 use super::hash::{H160, H256};
 use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
@@ -337,54 +337,80 @@ pub struct Transaction {
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
 
-        let REWRITE_WITHOUT_SERDE = true;
-        let encoded = serde_json::to_value(tx).unwrap();
-        serde_json::from_value(encoded).unwrap()
+        // let REWRITE_WITHOUT_SERDE = true;
+        // let encoded = serde_json::to_value(tx).unwrap();
+        // serde_json::from_value(encoded).unwrap()
 
         // The following code works, but it fails to set correctly fields linked to the transaction type,
         // for example, in case of legacy TX, it sets the max_fee_per_gas while it should be none.
 
-        // let inner = tx.inner; 
-        // let signature = inner.signature();
+        // Convert the transaction based on the transaction type
+        let TODO = 0;
 
-        // Self {
-        //     hash: inner.tx_hash().clone().into(),
-        //     nonce: inner.nonce().into(),
-        //     block_hash: tx.block_hash.map(Into::into),
-        //     block_number: tx.block_number.map(Into::into),
-        //     transaction_index: tx.transaction_index.map(Into::into),
-        //     from: tx.from.into(),
-        //     to: inner.to().map(Into::into),
-        //     value: inner.value().into(),
-        //     gas_price: inner.gas_price().map(Into::into),
-        //     gas: inner.gas_limit().into(),
-        //     input: inner.input().clone().into(),
-        //     v: (signature.v() as u64).into(),
-        //     r: signature.r().into(),
-        //     s: signature.s().into(),
-        //     transaction_type: Some((inner.tx_type() as u64).into()),
-        //     access_list: inner.access_list().cloned().map(Into::into),
-        //     max_priority_fee_per_gas: inner.max_priority_fee_per_gas().map(Into::into),
-        //     max_fee_per_gas: Some(inner.max_fee_per_gas().into()),
-        //     chain_id: inner.chain_id().map(Into::into),
-        // }
+        let inner = tx.inner; 
+        let signature = inner.signature();
+
+        Self {
+            hash: inner.tx_hash().clone().into(),
+            nonce: inner.nonce().into(),
+            block_hash: tx.block_hash.map(Into::into),
+            block_number: tx.block_number.map(Into::into),
+            transaction_index: tx.transaction_index.map(Into::into),
+            from: tx.from.into(),
+            to: inner.to().map(Into::into),
+            value: inner.value().into(),
+            gas_price: inner.gas_price().map(Into::into),
+            gas: inner.gas_limit().into(),
+            input: inner.input().clone().into(),
+            v: (signature.v() as u64).into(),
+            r: signature.r().into(),
+            s: signature.s().into(),
+            transaction_type: Some((inner.tx_type() as u64).into()),
+            access_list: inner.access_list().cloned().map(Into::into),
+            max_priority_fee_per_gas: inner.max_priority_fee_per_gas().map(Into::into),
+            max_fee_per_gas: Some(inner.max_fee_per_gas().into()),
+            chain_id: inner.chain_id().map(Into::into),
+        }
     }
 }
 
-impl From<&Transaction> for alloy::rpc::types::Transaction {
-    fn from(tx: &Transaction) -> Self {
+impl From<Transaction> for alloy::rpc::types::Transaction {
+    fn from(tx: Transaction) -> Self {
         // TODO: rewrite without serde
-        let REWRITE_WITHOUT_SERDE = true;
-        let encoded = serde_json::to_value(tx).unwrap();
-        println!("{}", encoded);
-        serde_json::from_value(encoded).unwrap()
+        // let REWRITE_WITHOUT_SERDE = true;
+        // let encoded = serde_json::to_value(tx).unwrap();
+        // serde_json::from_value(encoded).unwrap()
+
+        let signature = Signature {
+            v: tx.v,
+            r: tx.r,
+            s: tx.s,
+        };
+
+        alloy::rpc::types::Transaction{
+            inner: TxLegacy {
+                nonce: tx.nonce.0.to(),
+                gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
+                gas_limit: tx.gas.0.to(),
+                to: tx.to.map(|v| v.0).into(),
+                value: tx.value.into(),
+                input: tx.input.into(),
+                chain_id: tx.chain_id.map(|v| v.0.to()),
+            }.into_signed(alloy::primitives::PrimitiveSignature::try_from(signature).unwrap()).into(),
+            block_hash: tx.block_hash.map(Into::into),
+            block_number: tx.block_number.map(Into::into),
+            transaction_index: tx.transaction_index.map(Into::into),
+            effective_gas_price: None,
+            from: tx.from.into(),
+        }
+
     }
 }
 
 /// Calculate the hash of a transaction
 pub fn calculate_tx_hash(tx: &Transaction) -> H256 {
     use alloy::eips::eip2718::Encodable2718;
-    let alloy_transaction: alloy::rpc::types::Transaction = tx.into();
+    let alloy_transaction: alloy::rpc::types::Transaction = tx.clone().into();
     let encoded = alloy_transaction.inner.encoded_2718();
     keccak_hash(&encoded)
 }
