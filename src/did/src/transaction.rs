@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::rc::Rc;
 use std::str::FromStr;
 use alloy::primitives::{Parity, Sign};
+use alloy::rpc::types::transaction;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
@@ -9,10 +10,11 @@ use ic_stable_structures::{Bound, Storable};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
 use sha3::Keccak256;
-use alloy::consensus::{SignableTransaction, Transaction as TransactionTrait, TxLegacy};
+use alloy::consensus::{SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy};
 use super::hash::{H160, H256};
 use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
+use crate::constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY};
 use crate::error::EvmError;
 use crate::keccak::keccak_hash;
 use crate::{codec, Bytes};
@@ -337,71 +339,162 @@ pub struct Transaction {
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
 
-        // let REWRITE_WITHOUT_SERDE = true;
-        // let encoded = serde_json::to_value(tx).unwrap();
-        // serde_json::from_value(encoded).unwrap()
+        let signature: Signature = tx.inner.signature().clone().into();
 
-        // The following code works, but it fails to set correctly fields linked to the transaction type,
-        // for example, in case of legacy TX, it sets the max_fee_per_gas while it should be none.
+        match tx.inner {
+            alloy::consensus::TxEnvelope::Legacy(signed) => {
+                let inner_tx = signed.tx();
+                Self {
+                    hash: signed.hash().clone().into(),
+                    nonce: inner_tx.nonce.into(),
+                    to: inner_tx.to().map(Into::into),
+                    value: inner_tx.value.into(),
+                    gas_price: Some(inner_tx.gas_price.into()),
+                    gas: inner_tx.gas_limit.into(),
+                    input: inner_tx.input.clone().into(),
+                    chain_id: inner_tx.chain_id.map(Into::into),
+                    access_list: None,
+                    max_priority_fee_per_gas: None,
+                    max_fee_per_gas: None,
+                    block_hash: tx.block_hash.map(Into::into),
+                    block_number: tx.block_number.map(Into::into),
+                    transaction_index: tx.transaction_index.map(Into::into),
+                    from: tx.from.into(),
+                    v: signature.v,
+                    r: signature.r,
+                    s: signature.s,
+                    transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
+                }
+            },
+            alloy::consensus::TxEnvelope::Eip2930(signed) => {
+                let inner_tx = signed.tx();
+                Self {
+                    hash: signed.hash().clone().into(),
+                    nonce: inner_tx.nonce.into(),
+                    to: inner_tx.to().map(Into::into),
+                    value: inner_tx.value.into(),
+                    gas_price: Some(inner_tx.gas_price.into()),
+                    gas: inner_tx.gas_limit.into(),
+                    input: inner_tx.input.clone().into(),
+                    chain_id: Some(inner_tx.chain_id.into()),
+                    access_list: Some(inner_tx.access_list.clone().into()),
+                    max_priority_fee_per_gas: None,
+                    max_fee_per_gas: None,
+                    block_hash: tx.block_hash.map(Into::into),
+                    block_number: tx.block_number.map(Into::into),
+                    transaction_index: tx.transaction_index.map(Into::into),
+                    from: tx.from.into(),
+                    v: signature.v,
+                    r: signature.r,
+                    s: signature.s,
+                    transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
+                }
+            },
+            alloy::consensus::TxEnvelope::Eip1559(signed) => {
+                let inner_tx = signed.tx();
+                Self {
+                    hash: signed.hash().clone().into(),
+                    nonce: inner_tx.nonce.into(),
+                    to: inner_tx.to().map(Into::into),
+                    value: inner_tx.value.into(),
+                    gas_price: None,
+                    gas: inner_tx.gas_limit.into(),
+                    input: inner_tx.input.clone().into(),
+                    chain_id: Some(inner_tx.chain_id.into()),
+                    access_list: Some(inner_tx.access_list.clone().into()),
+                    max_priority_fee_per_gas: Some(inner_tx.max_priority_fee_per_gas.into()),
+                    max_fee_per_gas: Some(inner_tx.max_fee_per_gas.into()),
+                    block_hash: tx.block_hash.map(Into::into),
+                    block_number: tx.block_number.map(Into::into),
+                    transaction_index: tx.transaction_index.map(Into::into),
+                    from: tx.from.into(),
+                    v: signature.v,
+                    r: signature.r,
+                    s: signature.s,
+                    transaction_type: Some(TRANSACTION_TYPE_EIP1559.into()),
+                }
+            },
 
-        // Convert the transaction based on the transaction type
-        let TODO = 0;
-
-        let inner = tx.inner; 
-        let signature = inner.signature();
-
-        Self {
-            hash: inner.tx_hash().clone().into(),
-            nonce: inner.nonce().into(),
-            block_hash: tx.block_hash.map(Into::into),
-            block_number: tx.block_number.map(Into::into),
-            transaction_index: tx.transaction_index.map(Into::into),
-            from: tx.from.into(),
-            to: inner.to().map(Into::into),
-            value: inner.value().into(),
-            gas_price: inner.gas_price().map(Into::into),
-            gas: inner.gas_limit().into(),
-            input: inner.input().clone().into(),
-            v: (signature.v() as u64).into(),
-            r: signature.r().into(),
-            s: signature.s().into(),
-            transaction_type: Some((inner.tx_type() as u64).into()),
-            access_list: inner.access_list().cloned().map(Into::into),
-            max_priority_fee_per_gas: inner.max_priority_fee_per_gas().map(Into::into),
-            max_fee_per_gas: Some(inner.max_fee_per_gas().into()),
-            chain_id: inner.chain_id().map(Into::into),
+            _ => {
+                panic!("Unsupported transaction type");
+            }
         }
+
     }
 }
 
 impl From<Transaction> for alloy::rpc::types::Transaction {
     fn from(tx: Transaction) -> Self {
-        // TODO: rewrite without serde
-        // let REWRITE_WITHOUT_SERDE = true;
-        // let encoded = serde_json::to_value(tx).unwrap();
-        // serde_json::from_value(encoded).unwrap()
 
         let signature = Signature {
             v: tx.v,
             r: tx.r,
             s: tx.s,
         };
+        let signature = alloy::primitives::PrimitiveSignature::try_from(signature).unwrap();
 
-        alloy::rpc::types::Transaction{
-            inner: TxLegacy {
-                nonce: tx.nonce.0.to(),
-                gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
-                gas_limit: tx.gas.0.to(),
-                to: tx.to.map(|v| v.0).into(),
-                value: tx.value.into(),
-                input: tx.input.into(),
-                chain_id: tx.chain_id.map(|v| v.0.to()),
-            }.into_signed(alloy::primitives::PrimitiveSignature::try_from(signature).unwrap()).into(),
-            block_hash: tx.block_hash.map(Into::into),
-            block_number: tx.block_number.map(Into::into),
-            transaction_index: tx.transaction_index.map(Into::into),
-            effective_gas_price: None,
-            from: tx.from.into(),
+        let tx_type = tx.transaction_type.unwrap_or_default().0.to::<u64>();
+        match tx_type {
+            TRANSACTION_TYPE_LEGACY => {
+                alloy::rpc::types::Transaction{
+                    inner: TxLegacy {
+                        nonce: tx.nonce.0.to(),
+                        gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
+                        gas_limit: tx.gas.0.to(),
+                        to: tx.to.map(|v| v.0).into(),
+                        value: tx.value.into(),
+                        input: tx.input.into(),
+                        chain_id: tx.chain_id.map(|v| v.0.to()),
+                    }.into_signed(signature).into(),
+                    block_hash: tx.block_hash.map(Into::into),
+                    block_number: tx.block_number.map(Into::into),
+                    transaction_index: tx.transaction_index.map(Into::into),
+                    effective_gas_price: None,
+                    from: tx.from.into(),
+                }
+            },
+            TRANSACTION_TYPE_EIP2930 => {
+                alloy::rpc::types::Transaction{
+                    inner: TxEip2930 {
+                        nonce: tx.nonce.0.to(),
+                        gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
+                        gas_limit: tx.gas.0.to(),
+                        to: tx.to.map(|v| v.0).into(),
+                        value: tx.value.into(),
+                        input: tx.input.into(),
+                        chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
+                        access_list: tx.access_list.map(Into::into).unwrap_or_default(),
+                    }.into_signed(signature).into(),
+                    block_hash: tx.block_hash.map(Into::into),
+                    block_number: tx.block_number.map(Into::into),
+                    transaction_index: tx.transaction_index.map(Into::into),
+                    effective_gas_price: None,
+                    from: tx.from.into(),
+                }
+            },
+            TRANSACTION_TYPE_EIP1559 => {
+                alloy::rpc::types::Transaction{
+                    inner: TxEip1559 {
+                        nonce: tx.nonce.0.to(),
+                        gas_limit: tx.gas.0.to(),
+                        to: tx.to.map(|v| v.0).into(),
+                        value: tx.value.into(),
+                        input: tx.input.into(),
+                        chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
+                        max_fee_per_gas: tx.max_fee_per_gas.map(|v| v.0.to()).unwrap_or_default(),
+                        max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(|v| v.0.to()).unwrap_or_default(),
+                        access_list: tx.access_list.map(Into::into).unwrap_or_default(),
+                    }.into_signed(signature).into(),
+                    block_hash: tx.block_hash.map(Into::into),
+                    block_number: tx.block_number.map(Into::into),
+                    transaction_index: tx.transaction_index.map(Into::into),
+                    effective_gas_price: None,
+                    from: tx.from.into(),
+                }
+            },
+            _ => {
+                panic!("Unsupported transaction type: {}", tx_type);
+            }
         }
 
     }
@@ -414,33 +507,6 @@ pub fn calculate_tx_hash(tx: &Transaction) -> H256 {
     let encoded = alloy_transaction.inner.encoded_2718();
     keccak_hash(&encoded)
 }
-
-// impl From<Transaction> for ethers_core::types::Transaction {
-//     fn from(tx: Transaction) -> Self {
-//         Self {
-//             hash: tx.hash.into(),
-//             nonce: tx.nonce.into(),
-//             block_hash: tx.block_hash.map(Into::into),
-//             block_number: tx.block_number.map(Into::into),
-//             transaction_index: tx.transaction_index.map(Into::into),
-//             from: tx.from.into(),
-//             to: tx.to.map(Into::into),
-//             value: tx.value.into(),
-//             gas_price: tx.gas_price.map(Into::into),
-//             gas: tx.gas.into(),
-//             input: tx.input.into(),
-//             v: tx.v.into(),
-//             r: tx.r.into(),
-//             s: tx.s.into(),
-//             transaction_type: tx.transaction_type.map(Into::into),
-//             access_list: tx.access_list.map(Into::into),
-//             max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
-//             max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
-//             chain_id: tx.chain_id.map(Into::into),
-//             other: ethers_core::types::OtherFields::default(),
-//         }
-//     }
-// }
 
 impl Storable for Transaction {
     const BOUND: Bound = Bound::Unbounded;
