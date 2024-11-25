@@ -2,11 +2,6 @@ use std::error::Error;
 
 use alloy::signers::local::PrivateKeySigner;
 use async_trait::async_trait;
-// use ethers_core::types::transaction::eip2718::TypedTransaction;
-// use ethers_core::types::{Address, Signature};
-// pub use wallet::{Wallet, WalletError};
-
-// mod wallet;
 
 #[cfg(feature = "ic_sign")]
 pub mod ic_sign;

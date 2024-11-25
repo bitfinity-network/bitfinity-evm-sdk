@@ -129,13 +129,13 @@ impl TxSigner {
         }
     }
 
-    // async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
-    //     match self {
-    //         Self::Local(signer) => signer.get_public_key().await,
-    //         #[cfg(feature = "ic_sign")]
-    //         Self::ManagementCanister(signer) => signer.get_public_key().await,
-    //     }
-    // }
+    pub async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
+        match self {
+            Self::Local(signer) => signer.get_public_key().await,
+            #[cfg(feature = "ic_sign")]
+            Self::ManagementCanister(signer) => signer.get_public_key().await,
+        }
+    }
 }
 
 /// Local private key implementation
@@ -173,14 +173,15 @@ impl LocalTxSigner {
             .map_err(TransactionSignerError::WalletError)
     }
 
-    // async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
-    //     Ok(self
-    //         .wallet
-    //         .verifying_key()
-    //         .to_encoded_point(false)
-    //         .to_bytes()
-    //         .to_vec())
-    // }
+    async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
+        Ok(self
+            .wallet
+            .credential()
+            .verifying_key()
+            .to_encoded_point(false)
+            .to_bytes()
+            .to_vec())
+    }
 }
 
 // /// A helper struct for serializing/deserializing `LocalTxSigner`
@@ -318,7 +319,7 @@ mod ic_sign {
                 .map(Into::into)
         }
 
-        async fn get_public_key(&self) -> Result<Vec<u8>, TransactionSignerError> {
+        pub async fn get_public_key(&self) -> Result<Vec<u8>, TransactionSignerError> {
             self.get_or_compute_pubkey().await
         }
     }
