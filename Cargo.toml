@@ -26,6 +26,17 @@ repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 version = "0.36.0"
 
 [workspace.dependencies]
+did = { path = "src/did" }
+eth-signer = { path = "src/eth-signer" }
+icrc-client = { path = "src/icrc-client" }
+ethereum-json-rpc-client = { path = "src/ethereum-json-rpc-client" }
+evm-block-extractor = { path = "src/evm-block-extractor" }
+evm-canister-client = { path = "src/evm-canister-client" }
+evm-log-extractor = { path = "src/evm-log-extractor" }
+register-evm-agent-core = { path = "src/register-evm-agent-core" }
+register-evm-agent = { path = "src/register-evm-agent" }
+signature-verification-canister-client = { path = "src/signature-verification-canister-client" }
+
 alloy = { version = "0.6", features = ["consensus", "eips", "rpc-types-eth", "rlp", "serde"] }
 anyhow = "1.0"
 async-trait = "0.1"

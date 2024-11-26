@@ -1,5 +1,5 @@
 [package]
-name = "register_evm_agent_core"
+name = "register-evm-agent-core"
 categories = []
 description = ""
 include = ["src/**/*", "README.md"]
@@ -17,10 +17,10 @@ repository.workspace = true
 
 [dependencies]
 candid = { workspace = true }
-did = { path = "../did" }
-eth-signer = { path = "../eth-signer" }
+did = { workspace = true }
+eth-signer = { workspace = true }
 ethers-core = { workspace = true }
-evm-canister-client = { path = "../evm-canister-client" }
+evm-canister-client = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

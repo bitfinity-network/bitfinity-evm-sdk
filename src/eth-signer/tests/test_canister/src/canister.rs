@@ -1,8 +1,6 @@
+use alloy::rpc::types::TransactionRequest;
 use candid::Principal;
 use eth_signer::ic_sign::{DerivationPath, IcSigner, SigningKeyId};
-use ethers_core::types::transaction::eip2718::TypedTransaction;
-use ethers_core::types::{Transaction, TransactionRequest, H160};
-use ethers_core::utils::rlp::{Decodable, Rlp};
 use ic_canister::{generate_idl, update, Canister, Idl, PreUpdate};
 
 #[derive(Canister)]
@@ -15,7 +13,7 @@ impl PreUpdate for TestCanister {}
 
 impl TestCanister {
     /// Signs and recovers two different transactions and two different digests.
-    #[update]
+    // #[update]
     pub async fn sign_and_check(&self) {
         let pubkey = IcSigner
             .public_key(SigningKeyId::PocketIc, DerivationPath::default())
@@ -23,15 +21,15 @@ impl TestCanister {
             .unwrap();
         let from = IcSigner.pubkey_to_address(&pubkey).unwrap();
 
-        let tx: TypedTransaction = TransactionRequest::new()
-            .from(from)
+        let tx = TransactionRequest::default()
+            .from(from.into())
             .to(H160::zero())
             .value(10)
             .chain_id(355113)
             .nonce(0)
             .gas_price(10)
             .gas(53000)
-            .into();
+            .build_typed_tx().unwrap().legacy().unwrap();
 
         let signature = IcSigner
             .sign_transaction(

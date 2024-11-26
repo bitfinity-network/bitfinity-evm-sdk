@@ -8,9 +8,9 @@ edition = "2021"
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 clap = { workspace = true }
-did = { path = "../did" }
+did = { workspace = true }
 env_logger = { workspace = true }
-ethereum-json-rpc-client = { path = "../ethereum-json-rpc-client", features = [
+ethereum-json-rpc-client = { workspace = true, features = [
     "reqwest",
 ] }
 ethers-core = { workspace = true }

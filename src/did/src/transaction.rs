@@ -828,6 +828,10 @@ impl Bloom {
         result
     }
 
+    pub fn from_slice(slice: &[u8]) -> Bloom {
+        Bloom(alloy::primitives::Bloom::from_slice(slice))
+    }
+
     pub fn contains_log(&self, log: &TransactionExecutionLog) -> bool {
         Bloom::process_log(log, &mut |index, mask| self.0[index] & mask == mask)
     }

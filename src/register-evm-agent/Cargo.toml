@@ -19,14 +19,14 @@ repository.workspace = true
 anyhow = { workspace = true }
 candid = { workspace = true }
 clap = { workspace = true }
-did = { path = "../did" }
+did = { workspace = true }
 env_logger = { workspace = true }
-eth-signer = { path = "../eth-signer" }
+eth-signer = { workspace = true }
 ethers-core = { workspace = true }
-evm-canister-client = { path = "../evm-canister-client", features = [
+evm-canister-client = { workspace = true, features = [
     "ic-agent-client",
 ] }
-register_evm_agent_core = { path = "../register-evm-agent-core", features = ["tokio"] }
+register-evm-agent-core = { workspace = true, features = ["tokio"] }
 hex = { workspace = true }
 log = { workspace = true }
 rand = { workspace = true }

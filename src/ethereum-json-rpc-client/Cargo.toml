@@ -23,7 +23,7 @@ sanitize-http-outcall = []
 [dependencies]
 anyhow = { workspace = true }
 candid = { workspace = true }
-did = { path = "../did" }
+did = { workspace = true }
 ethers-core = { workspace = true }
 hex = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }

@@ -18,7 +18,7 @@ ic_sign = ["ic-canister", "ic-exports"]
 alloy = { workspace = true, features = ["network", "signer-local"]}
 async-trait = { workspace = true }
 candid = { workspace = true }
-did = { path = "../did" }
+did = { workspace = true }
 hex = { workspace = true }
 ic-stable-structures = { workspace = true }
 serde = { workspace = true }

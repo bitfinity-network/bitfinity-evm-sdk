@@ -19,6 +19,6 @@ ic-agent-client = ["ic-canister-client/ic-agent-client"]
 
 [dependencies]
 candid = { workspace = true }
-did = { path = "../did" }
+did = { workspace = true }
 ic-canister-client = { workspace = true }
 ic-log = { workspace = true }

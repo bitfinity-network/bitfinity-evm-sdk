@@ -34,6 +34,6 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 alloy = { workspace = true, features = ["rand"]}
-eth-signer = { path = "../eth-signer" }
+eth-signer = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }
