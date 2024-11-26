@@ -25,6 +25,7 @@ pub mod integer;
 pub mod keccak;
 pub mod logs;
 pub mod permission;
+pub mod revert_blocks;
 pub mod state;
 pub mod transaction;
 
