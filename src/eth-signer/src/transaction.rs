@@ -1,15 +1,11 @@
-use std::borrow::Cow;
-
 use alloy::consensus::SignableTransaction;
 use alloy::network::{TransactionBuilder as AlloyTransactionBuilder, TxSignerSync};
-use alloy::primitives::{Address};
-use alloy::rpc::types::{transaction, Transaction as AlloyRpcTransaction, TransactionRequest};
+use alloy::rpc::types::{Transaction as AlloyRpcTransaction, TransactionRequest};
 use alloy::signers::k256::ecdsa::SigningKey;
 use did::error::EvmError;
 use did::hash::H160;
 use did::integer::U256;
 use did::transaction::{calculate_tx_hash, Signature as DidSignature, Transaction as DidTransaction};
-use did::H256;
 
 use crate::LocalWallet;
 
@@ -54,15 +50,15 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
                 let wallet =
                     LocalWallet::new_with_credential((*key).clone(), self.from.0, Some(self.chain_id));
 
-                    let mut transaction = TransactionRequest::default()
-                    .with_from(self.from.0)
-                    .with_nonce(self.nonce.0.to())
-                    .with_gas_price(self.gas_price.0.to())
-                    .with_value(self.value.0)
-                    .with_gas_limit(self.gas.0.to())
-                    .with_chain_id(self.chain_id)
-                    .with_input(alloy::primitives::Bytes::from(self.input))
-                    .with_kind(self.to.map(|to| to.0.into()).into());
+                    let transaction = TransactionRequest::default()
+                        .with_from(self.from.0)
+                        .with_nonce(self.nonce.0.to())
+                        .with_gas_price(self.gas_price.0.to())
+                        .with_value(self.value.0)
+                        .with_gas_limit(self.gas.0.to())
+                        .with_chain_id(self.chain_id)
+                        .with_input(alloy::primitives::Bytes::from(self.input))
+                        .with_kind(self.to.map(|to| to.0.into()).into());
 
                     let REMOVE_UNWRAP = 0;
                     let tx = transaction.build_typed_tx().unwrap();
@@ -123,7 +119,6 @@ mod test {
     use did::U64;
 
     use super::*;
-    use crate::LocalWallet;
 
     #[test]
     fn test_build_transaction_with_empty_signature() {

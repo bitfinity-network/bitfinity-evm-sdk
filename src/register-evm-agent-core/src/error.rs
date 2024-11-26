@@ -1,6 +1,6 @@
 use did::error::EvmError;
 use did::H256;
-use eth_signer::WalletError;
+use eth_signer::SignerError;
 use evm_canister_client::CanisterClientError;
 use thiserror::Error;
 
@@ -19,8 +19,8 @@ pub enum Error {
     CanisterClient(CanisterClientError),
     #[error("parse error: {0}")]
     Parse(candid::Error),
-    #[error("wallet error: {0}")]
-    Wallet(WalletError),
+    #[error("signer error: {0}")]
+    Signer(SignerError),
 
     #[error("transaction not finalized {0}")]
     TransactionNotFinalized(H256),
@@ -41,9 +41,9 @@ impl From<candid::Error> for Error {
     }
 }
 
-impl From<WalletError> for Error {
-    fn from(err: WalletError) -> Self {
-        Self::Wallet(err)
+impl From<SignerError> for Error {
+    fn from(err: SignerError) -> Self {
+        Self::Signer(err)
     }
 }
 

@@ -1,4 +1,4 @@
-use alloy::{consensus::SignableTransaction, network::TransactionBuilder, primitives::{Address, B160, U256}, rpc::types::TransactionRequest};
+use alloy::{consensus::SignableTransaction, network::TransactionBuilder, primitives::{Address, U256}, rpc::types::TransactionRequest};
 use candid::Principal;
 use eth_signer::ic_sign::{DerivationPath, IcSigner, SigningKeyId};
 use ic_canister::{generate_idl, update, Canister, Idl, PreUpdate};

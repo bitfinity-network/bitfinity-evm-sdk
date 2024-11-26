@@ -1,29 +1,24 @@
 use std::borrow::Cow;
 
-use alloy::consensus::TypedTransaction;
 use alloy::primitives::PrimitiveSignature;
 use alloy::signers::k256::ecdsa::{self, SigningKey};
 use alloy::signers::{Signer, utils::secret_key_to_address};
-use async_trait::async_trait;
 use candid::CandidType;
 use did::transaction::Signature as DidSignature;
 use did::{codec, H160};
-// use ethers_core::k256::ecdsa::{self, SigningKey};
-// use ethers_core::types::transaction::eip2718::TypedTransaction;
-// use ethers_core::utils;
 #[cfg(feature = "ic_sign")]
 pub use ic_sign::{IcSigner, ManagementCanisterSigner, SigningKeyId};
 use ic_stable_structures::{Bound, Storable};
 use serde::{Deserialize, Serialize};
 use alloy::consensus::SignableTransaction;
-use alloy::network::{TxSigner as NetworkTxSigner, TxSignerSync as NetworkTxSignerSync};
+use alloy::network::TxSigner as NetworkTxSigner;
 
-use crate::{LocalWallet, WalletError};
+use crate::{LocalWallet, SignerError};
 
 #[derive(thiserror::Error, Debug)]
 pub enum TransactionSignerError {
-    #[error("wallet error: {0}")]
-    WalletError(#[from] WalletError),
+    #[error("signer error: {0}")]
+    SignerError(#[from] SignerError),
 
     #[cfg(feature = "ic_sign")]
     #[error("ic sign error: {0}")]
@@ -163,14 +158,14 @@ impl LocalTxSigner {
         self.wallet
             .sign_transaction(transaction)
             .await
-            .map_err(TransactionSignerError::WalletError)
+            .map_err(TransactionSignerError::SignerError)
     }
 
     async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<PrimitiveSignature> {
         self.wallet
             .sign_hash(&alloy::primitives::B256::from_slice(&digest))
             .await
-            .map_err(TransactionSignerError::WalletError)
+            .map_err(TransactionSignerError::SignerError)
     }
 
     async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
@@ -327,9 +322,6 @@ mod ic_sign {
 
 #[cfg(test)]
 mod test {
-    use std::cell::RefCell;
-
-    use rand::thread_rng;
 
     use super::*;
 

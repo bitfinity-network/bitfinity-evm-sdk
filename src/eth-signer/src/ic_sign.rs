@@ -214,9 +214,7 @@ impl IcSigner {
 mod tests {
 
     use alloy::network::TransactionBuilder;
-    use alloy::primitives::{B160, B256};
     use alloy::rpc::types::TransactionRequest;
-    use alloy::signers::k256::ecdsa::signature;
     use alloy::signers::SignerSync;
     use candid::Principal;
     use did::H256;
