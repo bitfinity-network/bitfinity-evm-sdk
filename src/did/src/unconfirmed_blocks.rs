@@ -1,5 +1,9 @@
+use candid::{CandidType, Deserialize};
+use serde::Serialize;
+
 use crate::H256;
 
+#[derive(CandidType, Serialize, Deserialize, Debug)]
 /// Arguments to `validate_unconfirmed_blocks` function.
 pub struct ValidateUnconfirmedBlocksArgs {
     pub block_number: u64,
