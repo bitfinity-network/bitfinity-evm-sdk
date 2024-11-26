@@ -566,7 +566,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ///
     /// Only those with [`did::permission::Permission::ValidateUnconfirmedBlocks`] can call this method.
     pub async fn validate_unconfirmed_block(
-        &mut self,
+        &self,
         args: ValidateUnconfirmedBlockArgs,
     ) -> CanisterClientResult<Result<()>> {
         self.client
