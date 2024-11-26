@@ -18,6 +18,8 @@ pub enum Permission {
     UpdateLogsConfiguration,
     /// Allows caller to reset the EVM state
     ResetEvmState,
+    /// Allows the caller to send transactions to the EVM
+    SendTransactions,
 }
 
 #[derive(Debug, Clone, Default, CandidType, Deserialize, PartialEq, Eq, serde::Serialize)]
