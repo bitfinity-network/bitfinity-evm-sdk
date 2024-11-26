@@ -27,6 +27,7 @@ pub mod logs;
 pub mod permission;
 pub mod state;
 pub mod transaction;
+pub mod unconfirmed_blocks;
 
 pub mod fees;
 #[cfg(test)]
