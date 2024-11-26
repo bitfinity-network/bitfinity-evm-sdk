@@ -6,6 +6,7 @@ use did::evm_reset_state::EvmResetState;
 use did::permission::{Permission, PermissionList};
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
+use did::unconfirmed_blocks::ValidateUnconfirmedBlockArgs;
 use did::{
     Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
     TransactionReceipt, H160, H256, U256, U64,
@@ -558,6 +559,18 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
                 "eth_get_unconfirmed_block_by_number",
                 (block_number, include_transactions),
             )
+            .await
+    }
+
+    /// Validate unconfirmed block on the EVM.
+    ///
+    /// Only those with [`did::permission::Permission::ValidateUnconfirmedBlocks`] can call this method.
+    pub async fn validate_unconfirmed_block(
+        &mut self,
+        args: ValidateUnconfirmedBlockArgs,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("validate_unconfirmed_block", (args,))
             .await
     }
 
