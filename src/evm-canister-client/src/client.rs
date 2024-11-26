@@ -845,7 +845,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.update("revert_to_block", (args,)).await
     }
 
-        /// Receive a batch of  Transactions and append them to the blockchain.
+    /// Receive a batch of  Transactions and append them to the blockchain.
     pub async fn receive_transactions(
         &self,
         transactions: Vec<Transaction>,
