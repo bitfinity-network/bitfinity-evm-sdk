@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use alloy::eips::BlockNumberOrTag;
+use did::BlockNumber;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRpcClient;
 use log::*;
@@ -16,7 +16,7 @@ pub async fn start_extractor(
     evm_client: Arc<EthJsonRpcClient<ReqwestClient>>,
 ) -> anyhow::Result<()> {
     let earliest_block = evm_client
-        .get_block_by_number(BlockNumberOrTag::Earliest)
+        .get_block_by_number(BlockNumber::Earliest)
         .await?;
 
     db_client
@@ -96,7 +96,7 @@ impl BlockExtractor {
 
             let block_numbers = blocks_batch
                 .into_iter()
-                .map(|block| ethers_core::types::BlockNumber::Number(block.into()));
+                .map(|block| BlockNumber::Number(block.into()));
 
             let evm_blocks = tokio::time::timeout(
                 Duration::from_secs(request_time_out_secs),
@@ -111,11 +111,6 @@ impl BlockExtractor {
                 .collect::<Vec<_>>();
 
             let blocks = evm_blocks
-                .into_iter()
-                .map(|block| block.into())
-                .collect::<Vec<ethers_core::types::Block<ethers_core::types::H256>>>();
-
-            let blocks = blocks
                 .into_iter()
                 .map(|block| block.into())
                 .collect::<Vec<did::Block<did::H256>>>();
