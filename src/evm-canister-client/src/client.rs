@@ -533,6 +533,16 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Enable or disable unconfirmed blocks. This function requires admin permissions.
+    pub async fn admin_enable_unconfirmed_blocks(
+        &self,
+        enabled: bool,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_enable_unconfirmed_blocks", (enabled,))
+            .await
+    }
+
     /// Returns the chain ID used for signing replay-protected transactions.
     /// See [eth_chainid] (https://eth.wiki/json-rpc/API#eth_chainid)
     ///
