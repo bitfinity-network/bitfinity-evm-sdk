@@ -208,26 +208,6 @@ impl From<u128> for U256 {
     }
 }
 
-// impl From<[u64; 4]> for U256 {
-//     fn from(value: [u64; 4]) -> Self {
-//         Self(alloy::primitives::U256::from(value))
-//     }
-// }
-
-// impl From<&[u64; 4]> for U256 {
-//     fn from(value: &[u64; 4]) -> Self {
-//         Self(alloy::primitives::U256(*value))
-//     }
-// }
-
-// impl TryFrom<U256> for u128 {
-//     type Error = &'static str;
-
-//     fn try_from(value: U256) -> Result<Self, Self::Error> {
-//         value.0.try_into()
-//     }
-// }
-
 // Implement manually because derive_more implementation does not work as expected
 impl Mul for U256 {
     type Output = Self;
@@ -597,18 +577,6 @@ mod tests {
         c += b;
         assert_eq!(add, c);
     }
-
-    // #[test]
-    // fn test_u256_conversion() {
-    //     assert_eq!(
-    //         U256::from([1u64, 2u64, 3u64, 4u64]),
-    //         U256(alloy::primitives::U256::from_limbs([1u64, 2u64, 3u64, 4u64]))
-    //     );
-    //     assert_eq!(
-    //         U256::from(&[1u64, 2u64, 3u64, 4u64]),
-    //         U256(alloy::primitives::U256([1u64, 2u64, 3u64, 4u64]))
-    //     );
-    // }
 
     #[test]
     fn test_u256_transparent_serde_serialization() {

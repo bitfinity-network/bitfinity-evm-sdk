@@ -313,16 +313,6 @@ impl From<[u8; 32]> for H256 {
     }
 }
 
-// impl From<NameOrAddress> for H160 {
-//     fn from(s: NameOrAddress) -> Self {
-//         match s {
-//             NameOrAddress::Address(a) => a.into(),
-//             // We don't have a way to resolve names to addresses, so we just return 0, I am not sure if we support names at all.
-//             NameOrAddress::Name(_) => H160::ZERO,
-//         }
-//     }
-// }
-
 impl fmt::LowerHex for H64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::LowerHex::fmt(&self.0, f)
@@ -344,7 +334,6 @@ impl fmt::LowerHex for H256 {
 #[cfg(test)]
 mod tests {
     use candid::{Decode, Encode};
-    // use ethers_core::types::NameOrAddress;
     use ic_stable_structures::Storable;
 
     use super::*;
@@ -464,9 +453,6 @@ mod tests {
         let (hex_val, _) = generate_hex_str(32);
         let value = H256::from_slice(&hex_val);
         let encoded = alloy::rlp::encode(&value);
-        // let mut stream = alloy::rlp::encodeRlpStream::new();
-        // value.rlp_append(&mut stream);
-        // let encoded = stream.out();
 
         let decoded = alloy::rlp::decode_exact::<H256>(&encoded).unwrap();
         assert_eq!(value, decoded);
@@ -477,9 +463,6 @@ mod tests {
         let (hex_val, _) = generate_hex_str(20);
         let value = H160::from_slice(&hex_val);
         let encoded = alloy::rlp::encode(&value);
-        // let mut stream = alloy::rlp::RlpStream::new();
-        // value.rlp_append(&mut stream);
-        // let encoded = stream.out();
 
         let decoded = alloy::rlp::decode_exact::<H160>(&encoded).unwrap();
         assert_eq!(value, decoded);
@@ -490,21 +473,10 @@ mod tests {
         let (hex_val, _) = generate_hex_str(8);
         let value = H64::from_slice(&hex_val);
         let encoded = alloy::rlp::encode(&value);
-        // let mut stream = alloy::rlp::RlpStream::new();
-        // value.rlp_append(&mut stream);
-        // let encoded = stream.out();
 
         let decoded = alloy::rlp::decode_exact::<H64>(&encoded).unwrap();
         assert_eq!(value, decoded);
     }
-
-    // #[test]
-    // fn test_h160_from_address() {
-    //     let (hex_val, hex_string) = generate_hex_str(20);
-    //     let address = NameOrAddress::Address(alloy::primitives::Address::from_slice(&hex_val));
-    //     let h160 = H160::from_hex_str(&hex_string).unwrap();
-    //     assert_eq!(h160, address.into());
-    // }
 
     #[test]
     fn test_candid_type_h64() {

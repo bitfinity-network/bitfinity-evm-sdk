@@ -33,9 +33,4 @@ pub fn keccak_hash_rlp<E: Encodable>(data: &E) -> H256 {
 #[inline]
 pub fn keccak_hash(data: &[u8]) -> H256 {
     alloy::primitives::keccak256(data).into()
-    // let mut out = [0; 32];
-    // let mut hash = Keccak256::new();
-    // hash.update(data);
-    // out.copy_from_slice(hash.finalize().as_slice());
-    // out.into()
 }
