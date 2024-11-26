@@ -543,6 +543,24 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Get the unconfirmed block by hash
+    ///
+    /// Only those with [`did::permission::Permission::ValidateUnconfirmedBlocks`] can call this method.
+    ///
+    /// Returns the block with the given hash.
+    pub async fn eth_get_unconfirmed_block_by_number(
+        &self,
+        block_number: u64,
+        include_transactions: bool,
+    ) -> CanisterClientResult<BlockResult> {
+        self.client
+            .query(
+                "eth_get_unconfirmed_block_by_number",
+                (block_number, include_transactions),
+            )
+            .await
+    }
+
     /// Returns the chain ID used for signing replay-protected transactions.
     /// See [eth_chainid] (https://eth.wiki/json-rpc/API#eth_chainid)
     ///
