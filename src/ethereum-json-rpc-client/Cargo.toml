@@ -21,10 +21,10 @@ http-outcall = ["dep:url"]
 sanitize-http-outcall = []
 
 [dependencies]
+alloy = { workspace = true }
 anyhow = { workspace = true }
 candid = { workspace = true }
 did = { workspace = true }
-ethers-core = { workspace = true }
 hex = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }
 ic-exports = { workspace = true }

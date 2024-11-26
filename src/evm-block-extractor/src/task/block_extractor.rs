@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use alloy::eips::BlockNumberOrTag;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRpcClient;
-use ethers_core::types::BlockNumber;
 use log::*;
 use tokio::time::Duration;
 
@@ -16,7 +16,7 @@ pub async fn start_extractor(
     evm_client: Arc<EthJsonRpcClient<ReqwestClient>>,
 ) -> anyhow::Result<()> {
     let earliest_block = evm_client
-        .get_block_by_number(BlockNumber::Earliest)
+        .get_block_by_number(BlockNumberOrTag::Earliest)
         .await?;
 
     db_client
