@@ -549,14 +549,14 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Only those with [`did::permission::Permission::ValidateUnconfirmedBlocks`] can call this method.
     ///
     /// Returns the block with the given hash.
-    pub async fn eth_get_unconfirmed_block_by_number(
+    pub async fn get_unconfirmed_block_by_number(
         &self,
         block_number: u64,
         include_transactions: bool,
-    ) -> CanisterClientResult<BlockResult> {
+    ) -> CanisterClientResult<Result<BlockResult>> {
         self.client
             .query(
-                "eth_get_unconfirmed_block_by_number",
+                "get_unconfirmed_block_by_number",
                 (block_number, include_transactions),
             )
             .await
