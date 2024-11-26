@@ -13,7 +13,7 @@ impl PreUpdate for TestCanister {}
 
 impl TestCanister {
     /// Signs and recovers two different transactions and two different digests.
-    // #[update]
+    #[update]
     pub async fn sign_and_check(&self) {
         let pubkey = IcSigner
             .public_key(SigningKeyId::PocketIc, DerivationPath::default())

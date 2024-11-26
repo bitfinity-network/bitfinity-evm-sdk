@@ -172,10 +172,7 @@ pub struct Signature {
 impl Signature {
 
     /// Recovers an [`Address`] from this signature and the given prehashed message.
-    /// e.g.:
-    /// ```
-    /// signature.recover_from(&tx.signature_hash()).unwrap()
-    /// ```
+    /// e.g.: signature.recover_from(&tx.signature_hash())
     pub fn recover_from(&self, signature_hash: &H256) -> Result<H160, EvmError> {
         let primitive_signature = alloy::primitives::PrimitiveSignature::try_from(self)?;
         let recovered_from = primitive_signature.recover_address_from_prehash(&signature_hash.0)
