@@ -19,7 +19,6 @@ bincode = { workspace = true }
 bytes = { workspace = true }
 candid = { workspace = true }
 derive_more = { workspace = true }
-# hex = { workspace = true }
 ic-log = { workspace = true }
 ic-stable-structures = { workspace = true }
 jsonrpc-core = { workspace = true }

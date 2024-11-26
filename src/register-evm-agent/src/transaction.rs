@@ -99,7 +99,7 @@ impl SignTransactionArgs {
             input: self
                 .data
                 .clone()
-                .map(|v| hex::decode(v).expect("data invalid"))
+                .map(|v| alloy::hex::decode(v).expect("data invalid"))
                 .unwrap_or_default(),
             signature: eth_signer::transaction::SigningMethod::SigningKey(wallet.credential()),
             chain_id: DEFAULT_CHAIN_ID,

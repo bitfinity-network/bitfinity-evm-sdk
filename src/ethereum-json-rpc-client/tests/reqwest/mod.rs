@@ -114,7 +114,7 @@ async fn should_get_code() {
 //         .unwrap();
 
 //     let result_address = func
-//         .decode_output(&hex::decode(result.trim_start_matches("0x")).unwrap())
+//         .decode_output(&alloy::hex::decode(result.trim_start_matches("0x")).unwrap())
 //         .unwrap()
 //         .first()
 //         .cloned()

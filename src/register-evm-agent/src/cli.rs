@@ -114,7 +114,7 @@ impl ReserveArgs {
 
 /// Parse an existing wallet
 pub fn get_wallet<'a>(signing_key: &str) -> Result<LocalWallet> {
-    let key_bytes = hex::decode(signing_key)?;
+    let key_bytes = alloy::hex::decode(signing_key)?;
     let wallet = LocalWallet::from_slice(&key_bytes)?;
     Ok(wallet)
 }
@@ -123,9 +123,9 @@ pub fn get_wallet<'a>(signing_key: &str) -> Result<LocalWallet> {
 pub fn generate_wallet<'a>() -> Result<LocalWallet> {
     let wallet = LocalWallet::random();
     let signer = wallet.credential();
-    let signer_hex = hex::encode(signer.to_bytes());
+    let signer_hex = alloy::hex::encode(signer.to_bytes());
     let public_key = wallet.credential().verifying_key();
-    let public_key_hex = hex::encode(public_key.to_sec1_bytes());
+    let public_key_hex = alloy::hex::encode(public_key.to_sec1_bytes());
     let address: H160 = wallet.address().into();
     println!(
         "Wallet:\n  Private Key = {}\n  Public Key = {}\n  Address = {}",

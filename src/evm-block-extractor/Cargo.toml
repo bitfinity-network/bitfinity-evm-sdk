@@ -15,7 +15,6 @@ ethereum-json-rpc-client = { workspace = true, features = [
     "reqwest",
 ] }
 futures = { workspace = true }
-hex = { workspace = true }
 jsonrpc-core = { workspace = true }
 jsonrpsee = { workspace = true }
 lightspeed_scheduler = { workspace = true }

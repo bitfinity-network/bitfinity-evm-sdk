@@ -47,10 +47,7 @@ clap = { version = "4", features = ["derive", "env"] }
 chrono = { version = "0.4", default-features = false }
 derive_more = { version = "1", features = ["display", "from", "into"] }
 env_logger = { version = "0.11.4", default-features = false }
-ethereum-types = "0.14"
-ethers-core = "2.0"
 futures = { version = "0.3", default-features = false }
-hex = "0.4"
 ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.23.x" }
 ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.23.x" }
 ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.23.x" }
@@ -65,7 +62,6 @@ num = "0.4"
 port_check = "0.2"
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
 reqwest = { version = "0.12", default-features = false }
-rlp = "0.5"
 serial_test = "3"
 serde = "1.0"
 serde_bytes = "0.11"

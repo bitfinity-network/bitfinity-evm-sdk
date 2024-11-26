@@ -27,7 +27,6 @@ evm-canister-client = { workspace = true, features = [
     "ic-agent-client",
 ] }
 register-evm-agent-core = { workspace = true, features = ["tokio"] }
-hex = { workspace = true }
 log = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
