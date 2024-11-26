@@ -1,8 +1,7 @@
 use std::borrow::Cow;
 use std::rc::Rc;
 use std::str::FromStr;
-use alloy::primitives::{Parity, Sign};
-use alloy::rpc::types::transaction;
+use alloy::primitives::Parity;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
@@ -170,14 +169,38 @@ pub struct Signature {
     pub s: U256,
 }
 
+impl Signature {
+
+    /// Recovers an [`Address`] from this signature and the given prehashed message.
+    /// e.g.:
+    /// ```
+    /// signature.recover_from(&tx.signature_hash()).unwrap()
+    /// ```
+    pub fn recover_from(&self, signature_hash: &H256) -> Result<H160, EvmError> {
+        let primitive_signature = alloy::primitives::PrimitiveSignature::try_from(self)?;
+        let recovered_from = primitive_signature.recover_address_from_prehash(&signature_hash.0)
+        .map_err(|err| EvmError::SignatureError(format!("{err:?}")))?;
+        Ok(recovered_from.into())
+    }
+}
+
 impl TryFrom<Signature> for alloy::primitives::Signature {
 
     type Error = EvmError;
     
     fn try_from(value: Signature) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
+impl TryFrom<&Signature> for alloy::primitives::Signature {
+
+    type Error = EvmError;
+    
+    fn try_from(value: &Signature) -> Result<Self, Self::Error> {
         Parity::try_from(value.v.0.to::<u64>())
             .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))
-            .map(|parity| alloy::primitives::Signature::new(value.r.into(), value.s.into(), parity))
+            .map(|parity| alloy::primitives::Signature::new(value.r.0, value.s.0, parity))
     }
 }
 
@@ -196,9 +219,18 @@ impl TryFrom<Signature> for alloy::primitives::PrimitiveSignature {
     type Error = EvmError;
     
     fn try_from(value: Signature) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
+impl TryFrom<&Signature> for alloy::primitives::PrimitiveSignature {
+
+    type Error = EvmError;
+    
+    fn try_from(value: &Signature) -> Result<Self, Self::Error> {
         let parity = Parity::try_from(value.v.0.to::<u64>())
             .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))?;
-        Ok(alloy::primitives::PrimitiveSignature::new(value.r.into(), value.s.into(), parity.y_parity()))
+        Ok(alloy::primitives::PrimitiveSignature::new(value.r.0, value.s.0, parity.y_parity()))
     }
 }
 
@@ -924,7 +956,6 @@ mod test {
     use rand::{random, Rng};
 
     use super::*;
-    use crate::keccak::keccak_hash;
     use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
     use crate::transaction::{AccessList, AccessListItem};
     use crate::{BlockNumber, HaltError};

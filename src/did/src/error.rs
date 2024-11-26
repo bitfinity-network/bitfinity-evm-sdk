@@ -69,6 +69,9 @@ pub enum EvmError {
 
     #[error("Signature Parity is invalid: {0}")]
     InvalidSignatureParity(String),
+
+    #[error("Signature error: {0}")]
+    SignatureError(String),
 }
 
 /// Variant of `TransactionPool` error
