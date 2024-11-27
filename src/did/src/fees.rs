@@ -63,7 +63,7 @@ pub trait FeeCalculation {
             Some(TRANSACTION_TYPE_EIP2930) | Some(TRANSACTION_TYPE_LEGACY) | None => {
                 self.gas_price().unwrap_or_default()
             }
-            _ => panic!("invalid transaction type"),
+            tx_type => panic!("invalid transaction type: {tx_type:?}"),
         }
     }
 
@@ -74,7 +74,7 @@ pub trait FeeCalculation {
             Some(TRANSACTION_TYPE_EIP2930) | Some(TRANSACTION_TYPE_LEGACY) | None => {
                 self.gas_price().unwrap_or_default()
             }
-            _ => panic!("invalid transaction type"),
+            tx_type => panic!("invalid transaction type: {tx_type:?}"),
         }
     }
 }
