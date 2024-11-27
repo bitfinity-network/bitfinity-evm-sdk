@@ -283,8 +283,8 @@ impl<T> From<&Block<T>> for alloy::consensus::Header {
             gas_used: value.gas_used.0.to(),
             timestamp: value.timestamp.0.to(),
             extra_data: value.extra_data.0.clone().into(),
-            mix_hash: value.mix_hash.0.into(),
-            nonce: value.nonce.0.into(),
+            mix_hash: value.mix_hash.0,
+            nonce: value.nonce.0,
             base_fee_per_gas: value.base_fee_per_gas.as_ref().map(|val| val.0.to()),
             withdrawals_root: None,
             blob_gas_used: None,
@@ -482,13 +482,13 @@ mod test {
             nonce: U256::zero(),
             value: U256::zero(),
             gas: 20u64.into(),
-            gas_price: gas_price,
+            gas_price,
             input: vec![].into(),
             chain_id: Some(chain_id.into()),
             ..Default::default()
         };
         tx.hash = alloy::primitives::B256::random().into();
-        tx.into()
+        tx
     }
 
     #[test]

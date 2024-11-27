@@ -92,8 +92,7 @@ impl SignTransactionArgs {
             gas: self
                 .gas
                 .map(U256::from)
-                .unwrap_or(DEFAULT_GAS_LIMIT.into())
-                .into(),
+                .unwrap_or(DEFAULT_GAS_LIMIT.into()),
             gas_price: self.gas_price.map(did::U256::from).unwrap_or_default(),
             input: self
                 .data

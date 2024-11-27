@@ -45,8 +45,8 @@ async fn test_extractor_collect_blocks() {
             let evmc_genesis_balances = evmc_genesis_balances
                 .into_iter()
                 .map(|(address, balance)| AccountBalance {
-                    address: address.into(),
-                    balance: balance.into(),
+                    address: address,
+                    balance: balance,
                 })
                 .collect::<Vec<_>>();
 

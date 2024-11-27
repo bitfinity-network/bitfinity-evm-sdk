@@ -35,8 +35,7 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
                 hash: H256::from(B256::random()),
                 transactions: vec![tx_hash],
                 ..Default::default()
-            }
-            .into();
+            };
 
             db_client
                 .insert_block_data(&[dummy_block], &[dummy_transaction])
@@ -169,8 +168,8 @@ async fn test_get_genesis_accounts() {
             let genesis_accounts: Vec<AccountBalance> = genesis_accounts
                 .into_iter()
                 .map(|account| AccountBalance {
-                    address: account.0.into(),
-                    balance: account.1.into(),
+                    address: account.0,
+                    balance: account.1,
                 })
                 .collect();
 
@@ -300,7 +299,7 @@ async fn test_get_last_certified_block() {
         // Assert
         assert_eq!(certified_block.certificate, vec![1, 2, 3]);
         assert_eq!(certified_block.witness, vec![5, 6, 7]);
-        assert_eq!(certified_block.data, block.into());
+        assert_eq!(certified_block.data, block);
 
         {
             handle.stop().unwrap();

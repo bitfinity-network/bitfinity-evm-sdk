@@ -20,7 +20,7 @@ pub async fn start_extractor(
         .await?;
 
     db_client
-        .init(Some(earliest_block.into()), config.reset_db_on_state_change)
+        .init(Some(earliest_block), config.reset_db_on_state_change)
         .await?;
 
     let mut extractor = BlockExtractor::new(
@@ -117,7 +117,6 @@ impl BlockExtractor {
 
             let all_transactions = all_transactions
                 .into_iter()
-                .map(|tx| tx.into())
                 .collect::<Vec<did::Transaction>>();
 
             self.blockchain
@@ -133,7 +132,7 @@ impl BlockExtractor {
         let certified_block = self.client.get_last_certified_block().await?;
         self.blockchain
             .insert_certified_block_data(CertifiedBlock {
-                data: certified_block.data.into(),
+                data: certified_block.data,
                 witness: certified_block.witness,
                 certificate: certified_block.certificate,
             })
@@ -156,8 +155,8 @@ impl BlockExtractor {
                 let genesis_balances = genesis_balances
                     .into_iter()
                     .map(|(address, balance)| AccountBalance {
-                        address: address.into(),
-                        balance: balance.into(),
+                        address,
+                        balance,
                     })
                     .collect::<Vec<_>>();
                 self.blockchain

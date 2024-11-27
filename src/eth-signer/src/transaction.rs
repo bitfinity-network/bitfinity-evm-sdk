@@ -58,7 +58,7 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
                     .with_gas_limit(self.gas.0.to())
                     .with_chain_id(self.chain_id)
                     .with_input(alloy::primitives::Bytes::from(self.input))
-                    .with_kind(self.to.map(|to| to.0.into()).into());
+                    .with_kind(self.to.map(|to| to.0).into());
 
                 let tx = transaction
                     .build_typed_tx()

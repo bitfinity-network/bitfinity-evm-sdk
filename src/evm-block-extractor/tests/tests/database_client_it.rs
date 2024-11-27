@@ -274,14 +274,12 @@ async fn test_deletion_and_clearing_of_database() {
                     number: U64::zero(),
                     hash: alloy::primitives::B256::random().into(),
                     ..Default::default()
-                }
-                .into()],
+                }],
                 &[Transaction {
                     block_number: Some(U64::zero()),
                     hash: alloy::primitives::B256::random().into(),
                     ..Default::default()
-                }
-                .into()],
+                }],
             )
             .await
             .unwrap();

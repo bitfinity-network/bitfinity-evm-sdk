@@ -27,7 +27,7 @@ impl TestCanister {
         let from = IcSigner.pubkey_to_address(&pubkey).unwrap();
 
         let mut tx = TransactionRequest::default()
-            .with_from(from.into())
+            .with_from(from)
             .with_to(Address::ZERO)
             .with_value(U256::from(10u64))
             .with_chain_id(355113)
@@ -56,7 +56,7 @@ impl TestCanister {
         assert_eq!(recovered_from.0, from);
 
         let mut tx = TransactionRequest::default()
-            .with_from(from.into())
+            .with_from(from)
             .with_to(Address::ZERO)
             .with_value(U256::from(10))
             .with_chain_id(355113)

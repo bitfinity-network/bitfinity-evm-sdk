@@ -371,13 +371,13 @@ pub struct Transaction {
 
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
-        let signature: Signature = tx.inner.signature().clone().into();
+        let signature: Signature = (*tx.inner.signature()).into();
 
         match tx.inner {
             alloy::consensus::TxEnvelope::Legacy(signed) => {
                 let inner_tx = signed.tx();
                 Self {
-                    hash: signed.hash().clone().into(),
+                    hash: (*signed.hash()).into(),
                     nonce: inner_tx.nonce.into(),
                     to: inner_tx.to().map(Into::into),
                     value: inner_tx.value.into(),
@@ -401,7 +401,7 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
             alloy::consensus::TxEnvelope::Eip2930(signed) => {
                 let inner_tx = signed.tx();
                 Self {
-                    hash: signed.hash().clone().into(),
+                    hash: (*signed.hash()).into(),
                     nonce: inner_tx.nonce.into(),
                     to: inner_tx.to().map(Into::into),
                     value: inner_tx.value.into(),
@@ -425,7 +425,7 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
             alloy::consensus::TxEnvelope::Eip1559(signed) => {
                 let inner_tx = signed.tx();
                 Self {
-                    hash: signed.hash().clone().into(),
+                    hash: (*signed.hash()).into(),
                     nonce: inner_tx.nonce.into(),
                     to: inner_tx.to().map(Into::into),
                     value: inner_tx.value.into(),
@@ -1530,7 +1530,7 @@ mod test {
             alloy::primitives::U256::from(random::<u64>()),
             random(),
         );
-        let roundtrip_signature = Signature::from(signature.clone());
+        let roundtrip_signature = Signature::from(signature);
         assert_eq!(
             signature,
             alloy::primitives::PrimitiveSignature::try_from(roundtrip_signature).unwrap()

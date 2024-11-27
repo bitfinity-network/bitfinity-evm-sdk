@@ -42,7 +42,7 @@ impl From<Bytes> for bytes::Bytes {
 
 impl From<bytes::Bytes> for Bytes {
     fn from(value: bytes::Bytes) -> Self {
-        Bytes(value.into())
+        Bytes(value)
     }
 }
 
