@@ -47,7 +47,9 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("admin_remove_access", (principal,)).await
+        self.client
+            .update("admin_remove_access", (principal,))
+            .await
     }
 
     /// Get the owner of the canister
@@ -78,7 +80,9 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("admin_add_evm_canister", (principal,)).await
+        self.client
+            .update("admin_add_evm_canister", (principal,))
+            .await
     }
 
     /// Remove evm canister from the access control list
