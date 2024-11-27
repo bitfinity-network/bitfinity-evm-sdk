@@ -7,7 +7,7 @@ use did::permission::{Permission, PermissionList};
 use did::revert_blocks::RevertToBlockArgs;
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
-use did::unconfirmed_blocks::ValidateUnconfirmedBlockArgs;
+use did::unsafe_blocks::ValidateUnsafeBlockArgs;
 use did::{
     Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
     TransactionReceipt, H160, H256, U256, U64,
@@ -535,44 +535,24 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
-    /// Enable or disable unconfirmed blocks. This function requires admin permissions.
-    pub async fn admin_enable_unconfirmed_blocks(
+    /// Enable or disable unsafe blocks. This function requires admin permissions.
+    pub async fn admin_enable_unsafe_blocks(
         &self,
         enabled: bool,
     ) -> CanisterClientResult<Result<()>> {
         self.client
-            .update("admin_enable_unconfirmed_blocks", (enabled,))
+            .update("admin_enable_unsafe_blocks", (enabled,))
             .await
     }
 
-    /// Get the unconfirmed block by hash
+    /// Validate unsafe block on the EVM.
     ///
-    /// Only those with [`did::permission::Permission::ValidateUnconfirmedBlocks`] can call this method.
-    ///
-    /// Returns the block with the given hash.
-    pub async fn get_unconfirmed_block_by_number(
+    /// Only those with [`did::permission::Permission::ValidateUnsafeBlocks`] can call this method.
+    pub async fn validate_unsafe_block(
         &self,
-        block_number: u64,
-        include_transactions: bool,
-    ) -> CanisterClientResult<Result<BlockResult>> {
-        self.client
-            .query(
-                "get_unconfirmed_block_by_number",
-                (block_number, include_transactions),
-            )
-            .await
-    }
-
-    /// Validate unconfirmed block on the EVM.
-    ///
-    /// Only those with [`did::permission::Permission::ValidateUnconfirmedBlocks`] can call this method.
-    pub async fn validate_unconfirmed_block(
-        &self,
-        args: ValidateUnconfirmedBlockArgs,
+        args: ValidateUnsafeBlockArgs,
     ) -> CanisterClientResult<Result<()>> {
-        self.client
-            .update("validate_unconfirmed_block", (args,))
-            .await
+        self.client.update("validate_unsafe_block", (args,)).await
     }
 
     /// Returns the chain ID used for signing replay-protected transactions.

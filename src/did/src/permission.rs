@@ -18,8 +18,8 @@ pub enum Permission {
     ResetEvmState,
     /// Allows calling the endpoints to set the logs configuration
     UpdateLogsConfiguration,
-    /// Allows calling the endpoints to set the EVM configuration
-    ValidateUnconfirmedBlocks,
+    /// Allows calling the endpoints to set validate unsafe blocks
+    ValidateUnsafeBlocks,
 }
 
 #[derive(Debug, Clone, Default, CandidType, Deserialize, PartialEq, Eq, serde::Serialize)]
