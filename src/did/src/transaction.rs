@@ -540,6 +540,17 @@ pub fn calculate_tx_hash(tx: &Transaction) -> H256 {
     keccak_hash(&encoded)
 }
 
+/// Encode the transaction according to [EIP-2718] rules. First a 1-byte
+/// type flag in the range 0x0-0x7f, then the body of the transaction.
+///
+/// This is a convenience method for encoding into a vec, and returning the
+/// vec.
+pub fn rlp_encoded_2718(tx: &Transaction) -> Vec<u8> {
+    use alloy::eips::eip2718::Encodable2718;
+    let alloy_transaction: alloy::rpc::types::Transaction = tx.clone().into();
+    alloy_transaction.inner.encoded_2718()
+}
+
 impl Storable for Transaction {
     const BOUND: Bound = Bound::Unbounded;
 

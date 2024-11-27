@@ -50,16 +50,10 @@ impl TestCanister {
             .await
             .unwrap();
 
+        let tx = tx.into_signed(signature.clone().try_into().unwrap());
+
         let recovered_from = signature.recover_from(&tx.signature_hash().into()).unwrap();
         assert_eq!(recovered_from.0, from);
-
-        // Assert the chain ID is correctly encoded in the signature
-        {
-            // let tx_bytes = tx.rlp_signed(&signature);
-
-            // let decoded_tx = Transaction::decode(&Rlp::new(&tx_bytes)).unwrap();
-            // assert_eq!(decoded_tx.chain_id.unwrap().as_u64(), 355113);
-        }
 
         let mut tx = TransactionRequest::default()
             .with_from(from.into())

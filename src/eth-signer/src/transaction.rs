@@ -268,15 +268,13 @@ mod test {
         let tx = alloy::rpc::types::Transaction::from(
             transaction_builder.calculate_hash_and_build().unwrap(),
         );
-        // let recovered_from = primitive_signature.recover_address_from_prehash(&tx.signature_hash()).unwrap();
-        // assert_eq!(recovered_from, from);
+
         let recovered_from = tx
             .inner
             .signature()
             .recover_address_from_prehash(&tx.inner.signature_hash())
             .unwrap();
 
-        // let recovered_from = tx.recover_from().unwrap();
         assert_eq!(from, recovered_from);
     }
 }
