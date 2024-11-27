@@ -113,14 +113,14 @@ impl ReserveArgs {
 }
 
 /// Parse an existing wallet
-pub fn get_wallet<'a>(signing_key: &str) -> Result<LocalWallet> {
+pub fn get_wallet(signing_key: &str) -> Result<LocalWallet> {
     let key_bytes = alloy::hex::decode(signing_key)?;
     let wallet = LocalWallet::from_slice(&key_bytes)?;
     Ok(wallet)
 }
 
 /// generate a brand new wallet
-pub fn generate_wallet<'a>() -> Result<LocalWallet> {
+pub fn generate_wallet() -> Result<LocalWallet> {
     let wallet = LocalWallet::random();
     let signer = wallet.credential();
     let signer_hex = alloy::hex::encode(signer.to_bytes());
