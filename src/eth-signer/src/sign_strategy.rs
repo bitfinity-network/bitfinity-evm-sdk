@@ -405,7 +405,7 @@ mod test {
         #[allow(irrefutable_let_patterns)]
         if let TxSigner::Local(LocalTxSigner { wallet }) = signer {
             assert_eq!(wallet.chain_id(), Some(42));
-            // assert_eq!(wallet.signer().to_bytes().as_slice(), &[2; 32]);
+            assert_eq!(wallet.credential().to_bytes().as_slice(), &[2; 32]);
         } else {
             panic!("invalid signer")
         }
