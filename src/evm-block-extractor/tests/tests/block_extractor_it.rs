@@ -44,10 +44,7 @@ async fn test_extractor_collect_blocks() {
 
             let evmc_genesis_balances = evmc_genesis_balances
                 .into_iter()
-                .map(|(address, balance)| AccountBalance {
-                    address,
-                    balance,
-                })
+                .map(|(address, balance)| AccountBalance { address, balance })
                 .collect::<Vec<_>>();
 
             assert_eq!(evmc_genesis_balances, db_genesis_balances);

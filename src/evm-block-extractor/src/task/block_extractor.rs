@@ -154,10 +154,7 @@ impl BlockExtractor {
             Ok(genesis_balances) => {
                 let genesis_balances = genesis_balances
                     .into_iter()
-                    .map(|(address, balance)| AccountBalance {
-                        address,
-                        balance,
-                    })
+                    .map(|(address, balance)| AccountBalance { address, balance })
                     .collect::<Vec<_>>();
                 self.blockchain
                     .insert_genesis_balances(&genesis_balances)

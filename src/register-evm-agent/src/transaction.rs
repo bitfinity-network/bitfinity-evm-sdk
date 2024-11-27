@@ -89,10 +89,7 @@ impl SignTransactionArgs {
                 .map(|address| H160::from_hex_str(&address).expect("address invalid")),
             nonce,
             value: self.value.map(U256::from).unwrap_or_default(),
-            gas: self
-                .gas
-                .map(U256::from)
-                .unwrap_or(DEFAULT_GAS_LIMIT.into()),
+            gas: self.gas.map(U256::from).unwrap_or(DEFAULT_GAS_LIMIT.into()),
             gas_price: self.gas_price.map(did::U256::from).unwrap_or_default(),
             input: self
                 .data
