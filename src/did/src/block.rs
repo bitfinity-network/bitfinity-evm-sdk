@@ -60,7 +60,7 @@ pub struct Block<TX> {
     #[serde(default)]
     pub difficulty: U256,
     /// Total difficulty
-    #[serde(rename = "totalDifficulty")]
+    #[serde(rename = "totalDifficulty", default)]
     pub total_difficulty: U256,
     /// Seal fields
     #[serde(default, rename = "sealFields")]

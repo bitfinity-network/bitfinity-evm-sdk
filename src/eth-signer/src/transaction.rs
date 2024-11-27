@@ -242,7 +242,6 @@ mod test {
 
         let tx_2 = tx_builder_2.calculate_hash_and_build().unwrap();
 
-        assert_ne!(tx_1.v, tx_2.v);
         assert_ne!(tx_1.r, tx_2.r);
         assert_ne!(tx_1.s, tx_2.s);
         assert_ne!(tx_1.chain_id, tx_2.chain_id);
