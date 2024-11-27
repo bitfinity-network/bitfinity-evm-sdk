@@ -38,7 +38,8 @@ async fn should_get_block_number() {
 #[tokio::test]
 #[serial]
 async fn should_get_balance() {
-    let erc_1820_deployer_address = H160::from_hex_str("0xa990077c3205cbDf861e17Fa532eeB069cE9fF96").unwrap();
+    let erc_1820_deployer_address =
+        H160::from_hex_str("0xa990077c3205cbDf861e17Fa532eeB069cE9fF96").unwrap();
     let result = reqwest_client()
         .get_balance(erc_1820_deployer_address, BlockNumber::Latest)
         .await
@@ -56,8 +57,8 @@ async fn should_get_gas_price() {
 #[tokio::test]
 #[serial]
 async fn should_get_code() {
-    let erc_1820_address = H160::from_hex_str("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24")
-        .unwrap();
+    let erc_1820_address =
+        H160::from_hex_str("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24").unwrap();
     let result = reqwest_client()
         .get_code(erc_1820_address, BlockNumber::Latest)
         .await
@@ -128,8 +129,8 @@ async fn should_get_code() {
 #[tokio::test]
 #[serial]
 async fn should_get_transaction_count() {
-    let erc_1820_deployer_address = H160::from_hex_str("0xa990077c3205cbDf861e17Fa532eeB069cE9fF96")
-        .unwrap();
+    let erc_1820_deployer_address =
+        H160::from_hex_str("0xa990077c3205cbDf861e17Fa532eeB069cE9fF96").unwrap();
     let result = reqwest_client()
         .get_transaction_count(erc_1820_deployer_address, BlockNumber::Latest)
         .await
@@ -196,9 +197,7 @@ async fn should_get_full_blocks_by_number() {
 
     assert_eq!(
         result[0].hash,
-        to_hash(
-            "0x719c3309fe7052a7adf34954418e1458c48d0e4b899d1d833d291ae6369f3500",
-        )
+        to_hash("0x719c3309fe7052a7adf34954418e1458c48d0e4b899d1d833d291ae6369f3500",)
     );
     assert_eq!(
         result[0].state_root,
@@ -208,9 +207,7 @@ async fn should_get_full_blocks_by_number() {
 
     assert_eq!(
         result[1].hash,
-        to_hash(
-            "0x78bc6c4e6a8628f4ffea4cc4d9413ed8a902a28ef7e4dd6332ead280abd77e61",
-        )
+        to_hash("0x78bc6c4e6a8628f4ffea4cc4d9413ed8a902a28ef7e4dd6332ead280abd77e61",)
     );
     assert_eq!(
         result[1].state_root,
@@ -223,23 +220,25 @@ async fn should_get_full_blocks_by_number() {
 #[serial]
 async fn should_get_logs() {
     let params = EthGetLogsParams {
-        address: Some(vec![H160::from_hex_str("0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907")
-            .unwrap()]),
+        address: Some(vec![H160::from_hex_str(
+            "0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907",
+        )
+        .unwrap()]),
         from_block: BlockNumber::Latest,
         to_block: BlockNumber::Latest,
         topics: Some(vec![
-            vec![
-                H256::from_hex_str("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
-                    .unwrap(),
-            ],
-            vec![
-                H256::from_hex_str("0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75")
-                    .unwrap(),
-            ],
-            vec![
-                H256::from_hex_str("0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078")
-                    .unwrap(),
-            ],
+            vec![H256::from_hex_str(
+                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+            )
+            .unwrap()],
+            vec![H256::from_hex_str(
+                "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75",
+            )
+            .unwrap()],
+            vec![H256::from_hex_str(
+                "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078",
+            )
+            .unwrap()],
         ]),
     };
 

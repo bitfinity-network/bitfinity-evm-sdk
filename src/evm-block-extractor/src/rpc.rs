@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use alloy::{eips::BlockNumberOrTag, primitives::{Address, U256, U64}};
+use alloy::{
+    eips::BlockNumberOrTag,
+    primitives::{Address, U256, U64},
+};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 
@@ -94,7 +97,7 @@ impl EthServer for EthImpl {
                     jsonrpsee::types::error::ErrorCode::InternalError
                 })?
                 .unwrap_or(0),
-                BlockNumberOrTag::Earliest => db.get_earliest_block_number().await.map_err(|e| {
+            BlockNumberOrTag::Earliest => db.get_earliest_block_number().await.map_err(|e| {
                 log::error!("Error getting earliest block number: {:?}", e);
                 jsonrpsee::types::error::ErrorCode::InternalError
             })?,

@@ -1,6 +1,15 @@
-use std::borrow::Cow;
-use std::rc::Rc;
-use std::str::FromStr;
+use super::hash::{H160, H256};
+use super::integer::{U256, U64};
+use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
+use crate::constant::{
+    TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
+};
+use crate::error::EvmError;
+use crate::keccak::keccak_hash;
+use crate::{codec, Bytes};
+use alloy::consensus::{
+    SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy,
+};
 use alloy::primitives::Parity;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
@@ -9,14 +18,9 @@ use ic_stable_structures::{Bound, Storable};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
 use sha3::Keccak256;
-use alloy::consensus::{SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy};
-use super::hash::{H160, H256};
-use super::integer::{U256, U64};
-use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
-use crate::constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY};
-use crate::error::EvmError;
-use crate::keccak::keccak_hash;
-use crate::{codec, Bytes};
+use std::borrow::Cow;
+use std::rc::Rc;
+use std::str::FromStr;
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq)]
 pub enum BlockNumber {
@@ -170,30 +174,28 @@ pub struct Signature {
 }
 
 impl Signature {
-
     /// Recovers an [`Address`] from this signature and the given prehashed message.
     /// e.g.: signature.recover_from(&tx.signature_hash())
     pub fn recover_from(&self, signature_hash: &H256) -> Result<H160, EvmError> {
         let primitive_signature = alloy::primitives::PrimitiveSignature::try_from(self)?;
-        let recovered_from = primitive_signature.recover_address_from_prehash(&signature_hash.0)
-        .map_err(|err| EvmError::SignatureError(format!("{err:?}")))?;
+        let recovered_from = primitive_signature
+            .recover_address_from_prehash(&signature_hash.0)
+            .map_err(|err| EvmError::SignatureError(format!("{err:?}")))?;
         Ok(recovered_from.into())
     }
 }
 
 impl TryFrom<Signature> for alloy::primitives::Signature {
-
     type Error = EvmError;
-    
+
     fn try_from(value: Signature) -> Result<Self, Self::Error> {
         Self::try_from(&value)
     }
 }
 
 impl TryFrom<&Signature> for alloy::primitives::Signature {
-
     type Error = EvmError;
-    
+
     fn try_from(value: &Signature) -> Result<Self, Self::Error> {
         Parity::try_from(value.v.0.to::<u64>())
             .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))
@@ -212,22 +214,24 @@ impl From<alloy::primitives::Signature> for Signature {
 }
 
 impl TryFrom<Signature> for alloy::primitives::PrimitiveSignature {
-
     type Error = EvmError;
-    
+
     fn try_from(value: Signature) -> Result<Self, Self::Error> {
         Self::try_from(&value)
     }
 }
 
 impl TryFrom<&Signature> for alloy::primitives::PrimitiveSignature {
-
     type Error = EvmError;
-    
+
     fn try_from(value: &Signature) -> Result<Self, Self::Error> {
         let parity = Parity::try_from(value.v.0.to::<u64>())
             .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))?;
-        Ok(alloy::primitives::PrimitiveSignature::new(value.r.0, value.s.0, parity.y_parity()))
+        Ok(alloy::primitives::PrimitiveSignature::new(
+            value.r.0,
+            value.s.0,
+            parity.y_parity(),
+        ))
     }
 }
 
@@ -367,7 +371,6 @@ pub struct Transaction {
 
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
-
         let signature: Signature = tx.inner.signature().clone().into();
 
         match tx.inner {
@@ -394,7 +397,7 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     s: signature.s,
                     transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
                 }
-            },
+            }
             alloy::consensus::TxEnvelope::Eip2930(signed) => {
                 let inner_tx = signed.tx();
                 Self {
@@ -418,7 +421,7 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     s: signature.s,
                     transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
                 }
-            },
+            }
             alloy::consensus::TxEnvelope::Eip1559(signed) => {
                 let inner_tx = signed.tx();
                 Self {
@@ -442,19 +445,17 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     s: signature.s,
                     transaction_type: Some(TRANSACTION_TYPE_EIP1559.into()),
                 }
-            },
+            }
 
             _ => {
                 panic!("Unsupported transaction type");
             }
         }
-
     }
 }
 
 impl From<Transaction> for alloy::rpc::types::Transaction {
     fn from(tx: Transaction) -> Self {
-
         let signature = Signature {
             v: tx.v,
             r: tx.r,
@@ -464,68 +465,70 @@ impl From<Transaction> for alloy::rpc::types::Transaction {
 
         let tx_type = tx.transaction_type.unwrap_or_default().0.to::<u64>();
         match tx_type {
-            TRANSACTION_TYPE_LEGACY => {
-                alloy::rpc::types::Transaction{
-                    inner: TxLegacy {
-                        nonce: tx.nonce.0.to(),
-                        gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
-                        gas_limit: tx.gas.0.to(),
-                        to: tx.to.map(|v| v.0).into(),
-                        value: tx.value.into(),
-                        input: tx.input.into(),
-                        chain_id: tx.chain_id.map(|v| v.0.to()),
-                    }.into_signed(signature).into(),
-                    block_hash: tx.block_hash.map(Into::into),
-                    block_number: tx.block_number.map(Into::into),
-                    transaction_index: tx.transaction_index.map(Into::into),
-                    effective_gas_price: None,
-                    from: tx.from.into(),
+            TRANSACTION_TYPE_LEGACY => alloy::rpc::types::Transaction {
+                inner: TxLegacy {
+                    nonce: tx.nonce.0.to(),
+                    gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
+                    gas_limit: tx.gas.0.to(),
+                    to: tx.to.map(|v| v.0).into(),
+                    value: tx.value.into(),
+                    input: tx.input.into(),
+                    chain_id: tx.chain_id.map(|v| v.0.to()),
                 }
+                .into_signed(signature)
+                .into(),
+                block_hash: tx.block_hash.map(Into::into),
+                block_number: tx.block_number.map(Into::into),
+                transaction_index: tx.transaction_index.map(Into::into),
+                effective_gas_price: None,
+                from: tx.from.into(),
             },
-            TRANSACTION_TYPE_EIP2930 => {
-                alloy::rpc::types::Transaction{
-                    inner: TxEip2930 {
-                        nonce: tx.nonce.0.to(),
-                        gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
-                        gas_limit: tx.gas.0.to(),
-                        to: tx.to.map(|v| v.0).into(),
-                        value: tx.value.into(),
-                        input: tx.input.into(),
-                        chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
-                        access_list: tx.access_list.map(Into::into).unwrap_or_default(),
-                    }.into_signed(signature).into(),
-                    block_hash: tx.block_hash.map(Into::into),
-                    block_number: tx.block_number.map(Into::into),
-                    transaction_index: tx.transaction_index.map(Into::into),
-                    effective_gas_price: None,
-                    from: tx.from.into(),
+            TRANSACTION_TYPE_EIP2930 => alloy::rpc::types::Transaction {
+                inner: TxEip2930 {
+                    nonce: tx.nonce.0.to(),
+                    gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
+                    gas_limit: tx.gas.0.to(),
+                    to: tx.to.map(|v| v.0).into(),
+                    value: tx.value.into(),
+                    input: tx.input.into(),
+                    chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
+                    access_list: tx.access_list.map(Into::into).unwrap_or_default(),
                 }
+                .into_signed(signature)
+                .into(),
+                block_hash: tx.block_hash.map(Into::into),
+                block_number: tx.block_number.map(Into::into),
+                transaction_index: tx.transaction_index.map(Into::into),
+                effective_gas_price: None,
+                from: tx.from.into(),
             },
-            TRANSACTION_TYPE_EIP1559 => {
-                alloy::rpc::types::Transaction{
-                    inner: TxEip1559 {
-                        nonce: tx.nonce.0.to(),
-                        gas_limit: tx.gas.0.to(),
-                        to: tx.to.map(|v| v.0).into(),
-                        value: tx.value.into(),
-                        input: tx.input.into(),
-                        chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
-                        max_fee_per_gas: tx.max_fee_per_gas.map(|v| v.0.to()).unwrap_or_default(),
-                        max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(|v| v.0.to()).unwrap_or_default(),
-                        access_list: tx.access_list.map(Into::into).unwrap_or_default(),
-                    }.into_signed(signature).into(),
-                    block_hash: tx.block_hash.map(Into::into),
-                    block_number: tx.block_number.map(Into::into),
-                    transaction_index: tx.transaction_index.map(Into::into),
-                    effective_gas_price: None,
-                    from: tx.from.into(),
+            TRANSACTION_TYPE_EIP1559 => alloy::rpc::types::Transaction {
+                inner: TxEip1559 {
+                    nonce: tx.nonce.0.to(),
+                    gas_limit: tx.gas.0.to(),
+                    to: tx.to.map(|v| v.0).into(),
+                    value: tx.value.into(),
+                    input: tx.input.into(),
+                    chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
+                    max_fee_per_gas: tx.max_fee_per_gas.map(|v| v.0.to()).unwrap_or_default(),
+                    max_priority_fee_per_gas: tx
+                        .max_priority_fee_per_gas
+                        .map(|v| v.0.to())
+                        .unwrap_or_default(),
+                    access_list: tx.access_list.map(Into::into).unwrap_or_default(),
                 }
+                .into_signed(signature)
+                .into(),
+                block_hash: tx.block_hash.map(Into::into),
+                block_number: tx.block_number.map(Into::into),
+                transaction_index: tx.transaction_index.map(Into::into),
+                effective_gas_price: None,
+                from: tx.from.into(),
             },
             _ => {
                 panic!("Unsupported transaction type: {}", tx_type);
             }
         }
-
     }
 }
 
@@ -1326,7 +1329,6 @@ mod test {
 
             let transaction_to_value = serde_json::to_value(transaction).unwrap();
             assert_eq!(transaction_from_value, transaction_to_value);
-
         }
     }
 
@@ -1515,10 +1517,13 @@ mod test {
         let signature = alloy::primitives::PrimitiveSignature::new(
             alloy::primitives::U256::from(random::<u64>()),
             alloy::primitives::U256::from(random::<u64>()),
-            random()
+            random(),
         );
         let roundtrip_signature = Signature::from(signature.clone());
-        assert_eq!(signature, alloy::primitives::PrimitiveSignature::try_from(roundtrip_signature).unwrap());
+        assert_eq!(
+            signature,
+            alloy::primitives::PrimitiveSignature::try_from(roundtrip_signature).unwrap()
+        );
     }
 
     #[test]
@@ -1529,5 +1534,4 @@ mod test {
         // If signature S field exceeds the limit, it should return an error.
         Signature::check_malleability(&(s + U256::from(1u64))).unwrap_err();
     }
-
 }

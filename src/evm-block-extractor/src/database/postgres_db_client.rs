@@ -145,7 +145,12 @@ impl DatabaseClient for PostgresDbClient {
             sqlx::query("INSERT INTO EVM_TRANSACTION (id, data, block_number) VALUES ($1, $2,$3)")
                 .bind(&hex_tx_hash)
                 .bind(serde_json::to_value(txn)?)
-                .bind(txn.block_number.expect("Block number not found").0.to::<u64>() as i64)
+                .bind(
+                    txn.block_number
+                        .expect("Block number not found")
+                        .0
+                        .to::<u64>() as i64,
+                )
                 .execute(&mut *tx)
                 .await?;
         }

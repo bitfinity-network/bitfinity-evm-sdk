@@ -3,7 +3,6 @@
 //! This is required because of `ic` Canisters required all types that are used in `update` and `query` methods to have `candid::CandidType` derived.
 //! This module contains submodules for each of the types that we have implemented.
 
-
 pub mod block;
 pub mod build;
 pub mod bytes;

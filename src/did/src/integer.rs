@@ -10,25 +10,12 @@ use derive_more::{From, Into};
 use ic_stable_structures::{Bound, Bounded, Storable};
 use num::BigUint;
 use serde::Serialize;
-#[derive(
-    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Hash, From, Into,
-)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Hash, From, Into)]
 #[serde(transparent)]
 pub struct U256(pub alloy::primitives::U256);
 
 #[derive(
-    Debug,
-    Default,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    Serialize,
-    Hash,
-    From,
-    Into,
+    Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Hash, From, Into,
 )]
 #[serde(transparent)]
 pub struct U64(pub alloy::primitives::U64);
@@ -194,7 +181,6 @@ impl From<U64> for u64 {
         value.0.to()
     }
 }
-
 
 impl From<u64> for U256 {
     fn from(value: u64) -> Self {
@@ -517,8 +503,10 @@ mod tests {
         );
         assert_eq!(
             U256::MAX,
-            U256::from_hex_str("0Xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-                .unwrap()
+            U256::from_hex_str(
+                "0Xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            )
+            .unwrap()
         );
     }
 
@@ -637,10 +625,7 @@ mod tests {
             U64::from(0x0123456789abcdefu64),
             U64::from_hex_str("0x0123456789abcdef").unwrap()
         );
-        assert_eq!(
-            U64::MAX,
-            U64::from_hex_str("0Xffffffffffffffff").unwrap()
-        );
+        assert_eq!(U64::MAX, U64::from_hex_str("0Xffffffffffffffff").unwrap());
     }
 
     #[test]
@@ -648,7 +633,8 @@ mod tests {
         let value: U64 = alloy::primitives::U64::from(rand::random::<u64>()).into();
 
         let encoded_value = serde_json::json!(&value);
-        let decoded_primitive: alloy::primitives::U64 = serde_json::from_value(encoded_value).unwrap();
+        let decoded_primitive: alloy::primitives::U64 =
+            serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: U64 = serde_json::from_value(encoded_primitive).unwrap();
 

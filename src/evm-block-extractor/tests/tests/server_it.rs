@@ -30,7 +30,7 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
                 block_number: Some(i.into()),
                 ..Default::default()
             };
-            let dummy_block  = Block::<H256> {
+            let dummy_block = Block::<H256> {
                 number: U64::from(i),
                 hash: H256::from(B256::random()),
                 transactions: vec![tx_hash],

@@ -42,7 +42,6 @@ mod test {
 
     use super::*;
 
-
     #[test]
     fn test_revert_to_block_args_println() {
         let args = RevertToBlockArgs {
@@ -56,7 +55,5 @@ mod test {
             "{from_block_number: 1, from_block_hash: 0x0101010101010101010101010101010101010101010101010101010101010101, to_block_number: 2, to_block_hash: 0x0202020202020202020202020202020202020202020202020202020202020202}",
             format!("{}", args)
         );
-
     }
-
 }

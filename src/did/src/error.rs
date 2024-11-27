@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
+use alloy::rlp::Error as DecoderError;
 use candid::{CandidType, Deserialize};
 use jsonrpc_core::{Error, ErrorCode};
-use alloy::rlp::Error as DecoderError;
 use serde::Serialize;
 use thiserror::Error;
 

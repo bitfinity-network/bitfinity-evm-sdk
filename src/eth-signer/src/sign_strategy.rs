@@ -1,8 +1,10 @@
 use std::borrow::Cow;
 
+use alloy::consensus::SignableTransaction;
+use alloy::network::TxSigner as NetworkTxSigner;
 use alloy::primitives::PrimitiveSignature;
 use alloy::signers::k256::ecdsa::{self, SigningKey};
-use alloy::signers::{Signer, utils::secret_key_to_address};
+use alloy::signers::{utils::secret_key_to_address, Signer};
 use candid::CandidType;
 use did::transaction::Signature as DidSignature;
 use did::{codec, H160};
@@ -10,8 +12,6 @@ use did::{codec, H160};
 pub use ic_sign::{IcSigner, ManagementCanisterSigner, SigningKeyId};
 use ic_stable_structures::{Bound, Storable};
 use serde::{Deserialize, Serialize};
-use alloy::consensus::SignableTransaction;
-use alloy::network::TxSigner as NetworkTxSigner;
 
 use crate::{LocalWallet, SignerError};
 
@@ -267,7 +267,6 @@ mod ic_sign {
     }
 
     impl ManagementCanisterSigner {
-
         pub async fn get_address(&self) -> Result<H160, TransactionSignerError> {
             if let Some(address) = self.cached_address.borrow().as_ref() {
                 return Ok(address.0.into());
@@ -299,7 +298,10 @@ mod ic_sign {
                 .map(Into::into)
         }
 
-        pub async fn sign_digest(&self, digest: [u8; 32]) -> Result<DidSignature, TransactionSignerError> {
+        pub async fn sign_digest(
+            &self,
+            digest: [u8; 32],
+        ) -> Result<DidSignature, TransactionSignerError> {
             let pub_key = self.get_or_compute_pubkey().await?;
 
             IcSigner
@@ -444,10 +446,11 @@ mod test {
         let digest = [42u8; 32];
         let signature = signer.sign_digest(digest).await.unwrap();
 
-        let recovered = alloy::primitives::PrimitiveSignature::try_from(signature).unwrap()
+        let recovered = alloy::primitives::PrimitiveSignature::try_from(signature)
+            .unwrap()
             .recover_address_from_prehash(&alloy::primitives::B256::from_slice(&digest))
             .unwrap();
-        
+
         assert_eq!(recovered, signer.get_address().await.unwrap().0);
     }
 }

@@ -1,4 +1,9 @@
-use alloy::{consensus::SignableTransaction, network::TransactionBuilder, primitives::{Address, U256}, rpc::types::TransactionRequest};
+use alloy::{
+    consensus::SignableTransaction,
+    network::TransactionBuilder,
+    primitives::{Address, U256},
+    rpc::types::TransactionRequest,
+};
 use candid::Principal;
 use eth_signer::ic_sign::{DerivationPath, IcSigner, SigningKeyId};
 use ic_canister::{generate_idl, update, Canister, Idl, PreUpdate};
@@ -29,7 +34,11 @@ impl TestCanister {
             .with_nonce(0)
             .with_gas_price(10)
             .with_gas_limit(53000)
-            .build_typed_tx().unwrap().legacy().cloned().unwrap();
+            .build_typed_tx()
+            .unwrap()
+            .legacy()
+            .cloned()
+            .unwrap();
 
         let signature = IcSigner
             .sign_transaction(
@@ -41,13 +50,13 @@ impl TestCanister {
             .await
             .unwrap();
 
-            let recovered_from = signature.recover_from(&tx.signature_hash().into()).unwrap();
-            assert_eq!(recovered_from.0, from);
+        let recovered_from = signature.recover_from(&tx.signature_hash().into()).unwrap();
+        assert_eq!(recovered_from.0, from);
 
         // Assert the chain ID is correctly encoded in the signature
         {
             // let tx_bytes = tx.rlp_signed(&signature);
-    
+
             // let decoded_tx = Transaction::decode(&Rlp::new(&tx_bytes)).unwrap();
             // assert_eq!(decoded_tx.chain_id.unwrap().as_u64(), 355113);
         }
@@ -60,7 +69,11 @@ impl TestCanister {
             .with_nonce(1)
             .with_gas_price(10)
             .with_gas_limit(53000)
-            .build_typed_tx().unwrap().legacy().cloned().unwrap();
+            .build_typed_tx()
+            .unwrap()
+            .legacy()
+            .cloned()
+            .unwrap();
 
         let signature = IcSigner
             .sign_transaction(

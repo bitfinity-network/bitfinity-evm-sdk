@@ -171,7 +171,11 @@ impl IcSigner {
         // Signature malleability check is not required, because dfinity uses `k256` crate
         // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
         // Link: https://github.com/dfinity/ic/blob/master/rs/crypto/ecdsa_secp256k1/src/lib.rs
-        let signature = DidSignature { r: r.into(), s: s.into(), v: v.into() };
+        let signature = DidSignature {
+            r: r.into(),
+            s: s.into(),
+            v: v.into(),
+        };
 
         Ok(signature)
     }
@@ -272,7 +276,8 @@ mod tests {
             .with_nonce(0)
             .with_gas_price(10)
             .with_gas_limit(53000)
-            .build_consensus_tx().unwrap();
+            .build_consensus_tx()
+            .unwrap();
         let mut tx = tx.legacy().cloned().unwrap();
 
         let pub_key = wallet.credential().verifying_key().to_encoded_point(true);
@@ -287,9 +292,12 @@ mod tests {
             .await
             .unwrap();
 
-        let primitive_signature = alloy::primitives::PrimitiveSignature::try_from(signature).unwrap();
+        let primitive_signature =
+            alloy::primitives::PrimitiveSignature::try_from(signature).unwrap();
 
-        let recovered_from = primitive_signature.recover_address_from_prehash(&tx.signature_hash()).unwrap();
+        let recovered_from = primitive_signature
+            .recover_address_from_prehash(&tx.signature_hash())
+            .unwrap();
         assert_eq!(recovered_from, from);
     }
 

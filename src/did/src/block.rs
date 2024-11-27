@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use candid::{CandidType, Deserialize};
 use alloy::primitives::Log as AlloyLog;
+use candid::{CandidType, Deserialize};
 use ic_stable_structures::{Bound, Storable};
 use serde::Serialize;
 use serde_json::{json, Value};

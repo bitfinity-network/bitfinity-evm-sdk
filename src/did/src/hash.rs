@@ -9,9 +9,7 @@ use derive_more::Display;
 use ic_stable_structures::{Bound, Bounded, Storable};
 use serde::Serialize;
 
-#[derive(
-    Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Serialize, Display, Hash,
-)]
+#[derive(Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Serialize, Display, Hash)]
 #[serde(transparent)]
 pub struct Hash<T>(pub T);
 
@@ -88,7 +86,9 @@ impl H160 {
     }
 
     pub fn from_hex_str(s: &str) -> Result<Self, FromHexError> {
-        Ok(Self(alloy::primitives::Address::from(from_hex_str::<20>(s)?)))
+        Ok(Self(alloy::primitives::Address::from(from_hex_str::<20>(
+            s,
+        )?)))
     }
 
     pub fn to_hex_str(&self) -> String {
@@ -128,7 +128,7 @@ impl Storable for H64 {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
         self.0.as_slice().into()
     }
-    
+
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self(alloy::primitives::B64::from_slice(bytes.as_ref()))
     }
@@ -250,8 +250,10 @@ impl Bounded for H64 {
 }
 
 impl Bounded for H160 {
-    const MIN: H160 = Hash::<alloy::primitives::Address>(alloy::primitives::Address::new([u8::MIN; 20]));
-    const MAX: H160 = Hash::<alloy::primitives::Address>(alloy::primitives::Address::new([u8::MAX; 20]));
+    const MIN: H160 =
+        Hash::<alloy::primitives::Address>(alloy::primitives::Address::new([u8::MIN; 20]));
+    const MAX: H160 =
+        Hash::<alloy::primitives::Address>(alloy::primitives::Address::new([u8::MAX; 20]));
 }
 
 impl Bounded for H256 {
@@ -570,7 +572,8 @@ mod tests {
         let value: H64 = alloy::primitives::B64::random().into();
 
         let encoded_value = serde_json::json!(&value);
-        let decoded_primitive: alloy::primitives::B64 = serde_json::from_value(encoded_value).unwrap();
+        let decoded_primitive: alloy::primitives::B64 =
+            serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: H64 = serde_json::from_value(encoded_primitive).unwrap();
 
