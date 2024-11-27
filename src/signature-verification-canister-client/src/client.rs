@@ -39,7 +39,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("add_access", (principal,)).await
+        self.client.update("admin_add_access", (principal,)).await
     }
 
     /// Remove principal from the access control list
@@ -47,7 +47,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("remove_access", (principal,)).await
+        self.client.update("admin_remove_access", (principal,)).await
     }
 
     /// Get the owner of the canister
@@ -60,7 +60,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("set_owner", (principal,)).await
+        self.client.update("admin_set_owner", (principal,)).await
     }
 
     /// Get the access control list
@@ -78,7 +78,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("add_evm_canister", (principal,)).await
+        self.client.update("admin_add_evm_canister", (principal,)).await
     }
 
     /// Remove evm canister from the access control list
@@ -87,7 +87,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
         self.client
-            .update("remove_evm_canister", (principal,))
+            .update("admin_remove_evm_canister", (principal,))
             .await
     }
 
@@ -102,7 +102,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         interval: u64,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
         self.client
-            .update("set_pushing_timer_interval", (interval,))
+            .update("admin_set_pushing_timer_interval", (interval,))
             .await
     }
 }
