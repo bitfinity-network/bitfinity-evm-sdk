@@ -4,10 +4,11 @@ use did::build::BuildData;
 use did::error::Result;
 use did::evm_reset_state::EvmResetState;
 use did::permission::{Permission, PermissionList};
+use did::revert_blocks::RevertToBlockArgs;
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::{
-    BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
+    Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
     TransactionReceipt, H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
@@ -205,13 +206,13 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Mint Native to an address
     /// Note: This works on the testnet only
-    pub async fn mint_native_tokens(
+    pub async fn admin_mint_native_tokens(
         &self,
         address: H160,
         amount: U256,
     ) -> CanisterClientResult<EvmResult<(H256, U256)>> {
         self.client
-            .update("mint_native_tokens", (address, amount))
+            .update("admin_mint_native_tokens", (address, amount))
             .await
     }
 
@@ -452,6 +453,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Returns the current logger filter
+    pub async fn get_logger_filter(&self) -> CanisterClientResult<Option<String>> {
+        self.client.query("get_logger_filter", ()).await
+    }
+
     /// Updates the runtime configuration of the logger with a new filter in the same form as the `RUST_LOG`
     /// environment variable.
     /// Example of valid filters:
@@ -479,6 +485,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// * `disabled` - Whether to disable or enable the EVM.
     pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<Result<()>> {
         self.client.update("admin_disable_evm", (disabled,)).await
+    }
+
+    /// Returns whether the EVM is disabled
+    pub async fn is_evm_disabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_evm_disabled", ()).await
     }
 
     /// Adds permissions to a principal and returns the principal permissions
@@ -761,6 +772,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Returns the current blockchain size limit for transactions, receipts, and blocks.
+    pub async fn get_blockchain_size_limit(&self) -> CanisterClientResult<BlockchainStorageLimits> {
+        self.client.query("get_blockchain_size_limit", ()).await
+    }
+
     /// Sets the block size limit.
     pub async fn admin_set_block_size_limit(
         &self,
@@ -785,5 +801,47 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Returns `EvmStats` which contains statistics for the Network
     pub async fn ic_stats(&self) -> CanisterClientResult<Result<EvmStats>> {
         self.client.query("ic_stats", ()).await
+    }
+
+    /// Disable/Enable the transaction pre-execution
+    pub async fn admin_disable_tx_pre_execution(
+        &self,
+        value: bool,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_disable_tx_pre_execution", (value,))
+            .await
+    }
+
+    /// Returns whether the transaction pre-execution is disabled.
+    pub async fn is_tx_pre_execution_disabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_tx_pre_execution_disabled", ()).await
+    }
+
+    /// Appends a new block to the blockchain.
+    pub async fn append_block(
+        &self,
+        block: Block<Transaction>,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client.update("append_block", (block,)).await
+    }
+
+    /// Drops all blocks up to the `block_number`.
+    ///
+    /// Only the blocks for which state history is preserved can be reverted.
+    ///
+    /// # Errors
+    ///
+    /// * [`EvmError::BlockDoesNotExist`] if given block number is higher than the tip of the
+    ///   chain.
+    /// * [`EvmError::NoHistoryDataForBlock`] if trying to revert to a block for which no history
+    ///   is preserved.
+    /// * [`EvmError::BadRequest`] if given arguments do not match actual values expected by the
+    ///   EVM.
+    pub async fn revert_to_block(
+        &self,
+        args: RevertToBlockArgs,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client.update("revert_to_block", (args,)).await
     }
 }

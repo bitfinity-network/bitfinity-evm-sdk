@@ -67,7 +67,7 @@ impl fmt::Display for SigningKeyId {
             SigningKeyId::Test => write!(f, "test_key_1"),
             SigningKeyId::Production => write!(f, "key_1"),
             SigningKeyId::PocketIc => {
-                write!(f, "dfx_test_key1")
+                write!(f, "dfx_test_key")
             }
             SigningKeyId::Custom(key) => write!(f, "{}", key),
         }

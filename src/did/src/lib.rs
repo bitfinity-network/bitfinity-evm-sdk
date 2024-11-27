@@ -3,6 +3,12 @@
 //! This is required because of `ic` Canisters required all types that are used in `update` and `query` methods to have `candid::CandidType` derived.
 //! This module contains submodules for each of the types that we have implemented.
 
+#[cfg(feature = "alloy-primitives-07")]
+mod alloy_primitives_07;
+
+#[cfg(feature = "alloy-primitives-08")]
+mod alloy_primitives_08;
+
 pub mod block;
 pub mod build;
 pub mod bytes;
@@ -18,9 +24,8 @@ pub mod init;
 pub mod integer;
 pub mod keccak;
 pub mod logs;
-pub mod mint_order_exemption;
-pub mod notify;
 pub mod permission;
+pub mod revert_blocks;
 pub mod state;
 pub mod transaction;
 
@@ -34,8 +39,6 @@ pub use fees::FeeHistory;
 pub use gas::*;
 pub use hash::{H160, H256, H64};
 pub use integer::{U256, U64};
-pub use mint_order_exemption::MintOrderExemptionUserData;
-pub use notify::NotificationInput;
 pub use transaction::{BlockId, BlockNumber, Transaction, TransactionReceipt};
 
 pub use crate::bytes::Bytes;
