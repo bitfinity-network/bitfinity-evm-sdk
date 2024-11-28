@@ -4,9 +4,8 @@ use std::collections::HashMap;
 use candid::CandidType;
 use jsonrpc_core::{Error, Failure, Id, Version};
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use serde_json::Value;
 
 // A HTTP response.
 #[derive(Clone, Debug, CandidType, Deserialize)]
@@ -93,7 +92,7 @@ pub struct HttpRequest {
     /// The HTTP method string.
     pub method: Cow<'static, str>,
     /// The URL that was visited.
-    pub url: String,
+    pub url: Cow<'static, str>,
     /// The request headers.
     pub headers: HashMap<Cow<'static, str>, Cow<'static, str>>,
     /// The request body.
@@ -101,7 +100,7 @@ pub struct HttpRequest {
 }
 
 impl HttpRequest {
-    pub fn new(data: Value) -> Self {
+    pub fn new<T: ?Sized + Serialize>(data: &T) -> Self {
         let mut headers = HashMap::new();
         headers.insert("content-type".into(), "application/json".into());
         Self {

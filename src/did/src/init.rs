@@ -53,6 +53,6 @@ pub struct SignatureVerificationCanisterInitData {
     pub access_list: Vec<Principal>,
     /// EVM canisters that receive transactions from the signature verification canister
     pub evm_canisters: Vec<Principal>,
-    /// Pushing timer interval
+    /// Interval for pushing transactions to the EVM canisters
     pub pushing_timer_interval: Duration,
 }

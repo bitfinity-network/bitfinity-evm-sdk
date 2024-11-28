@@ -18,8 +18,9 @@ pub enum Permission {
     UpdateLogsConfiguration,
     /// Allows caller to reset the EVM state
     ResetEvmState,
-    /// Allows the caller to send transactions to the EVM
-    SendTransactions,
+    /// Allows the signature verification canister to send transaction to
+    /// the EVM Canister
+    PrivilegedSendTransaction,
 }
 
 #[derive(Debug, Clone, Default, CandidType, Deserialize, PartialEq, Eq, serde::Serialize)]
