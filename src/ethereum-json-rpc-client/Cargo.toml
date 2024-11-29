@@ -42,9 +42,8 @@ serde_json = { workspace = true }
 url = { workspace = true, optional = true }
 
 [dev-dependencies]
+alloy = { workspace = true, features = ["contract"]}
 env_logger = { workspace = true }
 rand = { workspace = true }
 serial_test = { workspace = true }
 tokio = { workspace = true }
-
-ethabi = "18"

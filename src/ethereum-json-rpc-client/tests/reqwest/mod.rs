@@ -2,7 +2,7 @@ mod rpc_client;
 
 use std::time::Duration;
 
-use alloy::rpc::types::{TransactionInput, TransactionRequest};
+use alloy::{dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt}, json_abi::Function, rpc::types::{TransactionInput, TransactionRequest}};
 use did::{BlockNumber, H160, H256, U256};
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
 use rpc_client::RpcReqwestClient;
@@ -81,22 +81,9 @@ async fn should_perform_eth_call() {
     let caller = H160::from_hex_str("0xf990077c3205cbDf861e17Fa532eeB069cE9fF96")
         .unwrap();
 
-    #[allow(deprecated)]
-    let func = ethabi::Function {
-        name: "getManager".to_string(),
-        inputs: vec![ethabi::Param {
-            name: "getManager".to_string(),
-            kind: ethabi::ParamType::Address,
-            internal_type: None,
-        }],
-        outputs: vec![ethabi::Param {
-            name: "".to_string(),
-            kind: ethabi::ParamType::Address,
-            internal_type: None,
-        }],
-        constant: None,
-        state_mutability: ethabi::StateMutability::View,
-    };
+    let func = Function::parse("function getManager(address _addr) public view returns(address)").unwrap();
+    let input = func.abi_encode_input(&[DynSolValue::Address(caller.0)]).unwrap();
+    
 
     let params = TransactionRequest {
         from: Some(caller.0),
@@ -104,7 +91,7 @@ async fn should_perform_eth_call() {
         gas: Some(1000000u64.into()),
         gas_price: None,
         value: None,
-        input: TransactionInput::from(func.encode_input(&[ethabi::Token::Address(caller.0.into_array().into())]).unwrap()),
+        input: TransactionInput::from(input),
         ..Default::default()
     };
 
@@ -114,16 +101,17 @@ async fn should_perform_eth_call() {
         .unwrap();
 
     let result_address = func
-        .decode_output(&alloy::hex::decode(result.trim_start_matches("0x")).unwrap())
+        .abi_decode_output(&alloy::hex::decode(result.trim_start_matches("0x")).unwrap(), false)
         .unwrap()
         .first()
         .cloned()
         .unwrap()
-        .into_address()
+        .as_address()
         .unwrap();
 
-    assert_eq!(result_address, caller.0.into_array().into());
+    assert_eq!(result_address, caller.0);
 }
+
 
 #[tokio::test]
 #[serial]
