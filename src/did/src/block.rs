@@ -291,6 +291,7 @@ impl<T> From<&Block<T>> for alloy::consensus::Header {
             excess_blob_gas: None,
             parent_beacon_block_root: None,
             requests_hash: None,
+            target_blobs_per_block: None
         }
     }
 }
