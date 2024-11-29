@@ -42,7 +42,7 @@ serde_json = { workspace = true }
 url = { workspace = true, optional = true }
 
 [dev-dependencies]
-alloy = { workspace = true, features = ["contract"]}
+alloy = { workspace = true, features = ["dyn-abi", "json-abi"] }
 env_logger = { workspace = true }
 rand = { workspace = true }
 serial_test = { workspace = true }
