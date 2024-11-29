@@ -91,7 +91,7 @@ async fn should_perform_eth_call() {
     let params = TransactionRequest {
         from: Some(caller.0),
         to: Some(erc_1820_address.0.into()),
-        gas: Some(1000000u64.into()),
+        gas: Some(1000000u64),
         gas_price: None,
         value: None,
         input: TransactionInput::from(input),

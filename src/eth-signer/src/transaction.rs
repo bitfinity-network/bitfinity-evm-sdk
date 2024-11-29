@@ -37,7 +37,7 @@ pub struct TransactionBuilder<'a, 'b> {
     pub chain_id: u64,
 }
 
-impl<'a, 'b> TransactionBuilder<'a, 'b> {
+impl TransactionBuilder<'_, '_> {
     /// Creates a new transaction with the expected hash
     pub fn calculate_hash_and_build(self) -> Result<DidTransaction, EvmError> {
         match self.signature.clone() {
