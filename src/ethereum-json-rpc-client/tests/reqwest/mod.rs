@@ -2,6 +2,7 @@ mod rpc_client;
 
 use std::time::Duration;
 
+use alloy::rpc::types::{TransactionInput, TransactionRequest};
 use did::{BlockNumber, H160, H256, U256};
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
 use rpc_client::RpcReqwestClient;
@@ -66,65 +67,63 @@ async fn should_get_code() {
     assert_eq!(result, ERC_1820_EXPECTED_CODE);
 }
 
-// /// Calls the funtction of ERC-1820:
-// ///
-// ///```solidity
-// ///     function getManager(address _addr) public view returns(address)
-// ///```
-// #[tokio::test]
-// #[serial]
-// async fn should_perform_eth_call() {
-//     let erc_1820_address = "0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24"
-//         .parse::<H160>()
-//         .unwrap();
+/// Calls the funtction of ERC-1820:
+///
+///```solidity
+///     function getManager(address _addr) public view returns(address)
+///```
+#[tokio::test]
+#[serial]
+async fn should_perform_eth_call() {
+    let erc_1820_address = H160::from_hex_str("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24")
+        .unwrap();
 
-//     let caller = "0xf990077c3205cbDf861e17Fa532eeB069cE9fF96"
-//         .parse()
-//         .unwrap();
+    let caller = H160::from_hex_str("0xf990077c3205cbDf861e17Fa532eeB069cE9fF96")
+        .unwrap();
 
-//     #[allow(deprecated)]
-//     let func = Function {
-//         name: "getManager".to_string(),
-//         inputs: vec![Param {
-//             name: "getManager".to_string(),
-//             kind: ParamType::Address,
-//             internal_type: None,
-//         }],
-//         outputs: vec![Param {
-//             name: "".to_string(),
-//             kind: ParamType::Address,
-//             internal_type: None,
-//         }],
-//         constant: None,
-//         state_mutability: StateMutability::View,
-//     };
+    #[allow(deprecated)]
+    let func = ethabi::Function {
+        name: "getManager".to_string(),
+        inputs: vec![ethabi::Param {
+            name: "getManager".to_string(),
+            kind: ethabi::ParamType::Address,
+            internal_type: None,
+        }],
+        outputs: vec![ethabi::Param {
+            name: "".to_string(),
+            kind: ethabi::ParamType::Address,
+            internal_type: None,
+        }],
+        constant: None,
+        state_mutability: ethabi::StateMutability::View,
+    };
 
-//     let params = TransactionRequest {
-//         from: Some(caller),
-//         to: Some(erc_1820_address.into()),
-//         gas: Some(1000000u64.into()),
-//         gas_price: None,
-//         value: None,
-//         data: Some(func.encode_input(&[Token::Address(caller)]).unwrap().into()),
-//         ..Default::default()
-//     };
+    let params = TransactionRequest {
+        from: Some(caller.0),
+        to: Some(erc_1820_address.0.into()),
+        gas: Some(1000000u64.into()),
+        gas_price: None,
+        value: None,
+        input: TransactionInput::from(func.encode_input(&[ethabi::Token::Address(caller.0.into_array().into())]).unwrap()),
+        ..Default::default()
+    };
 
-//     let result = reqwest_client()
-//         .eth_call(params, BlockNumber::Latest)
-//         .await
-//         .unwrap();
+    let result = reqwest_client()
+        .eth_call(params, BlockNumber::Latest)
+        .await
+        .unwrap();
 
-//     let result_address = func
-//         .decode_output(&alloy::hex::decode(result.trim_start_matches("0x")).unwrap())
-//         .unwrap()
-//         .first()
-//         .cloned()
-//         .unwrap()
-//         .into_address()
-//         .unwrap();
+    let result_address = func
+        .decode_output(&alloy::hex::decode(result.trim_start_matches("0x")).unwrap())
+        .unwrap()
+        .first()
+        .cloned()
+        .unwrap()
+        .into_address()
+        .unwrap();
 
-//     assert_eq!(result_address, caller);
-// }
+    assert_eq!(result_address, caller.0.into_array().into());
+}
 
 #[tokio::test]
 #[serial]
