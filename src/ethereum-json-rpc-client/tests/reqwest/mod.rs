@@ -2,7 +2,9 @@ mod rpc_client;
 
 use std::time::Duration;
 
-use alloy::{dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt}, json_abi::Function, rpc::types::{TransactionInput, TransactionRequest}};
+use alloy::dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
+use alloy::json_abi::Function;
+use alloy::rpc::types::{TransactionInput, TransactionRequest};
 use did::{BlockNumber, H160, H256, U256};
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
 use rpc_client::RpcReqwestClient;
@@ -75,15 +77,16 @@ async fn should_get_code() {
 #[tokio::test]
 #[serial]
 async fn should_perform_eth_call() {
-    let erc_1820_address = H160::from_hex_str("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24")
-        .unwrap();
+    let erc_1820_address =
+        H160::from_hex_str("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24").unwrap();
 
-    let caller = H160::from_hex_str("0xf990077c3205cbDf861e17Fa532eeB069cE9fF96")
-        .unwrap();
+    let caller = H160::from_hex_str("0xf990077c3205cbDf861e17Fa532eeB069cE9fF96").unwrap();
 
-    let func = Function::parse("function getManager(address _addr) public view returns(address)").unwrap();
-    let input = func.abi_encode_input(&[DynSolValue::Address(caller.0)]).unwrap();
-    
+    let func =
+        Function::parse("function getManager(address _addr) public view returns(address)").unwrap();
+    let input = func
+        .abi_encode_input(&[DynSolValue::Address(caller.0)])
+        .unwrap();
 
     let params = TransactionRequest {
         from: Some(caller.0),
@@ -101,7 +104,10 @@ async fn should_perform_eth_call() {
         .unwrap();
 
     let result_address = func
-        .abi_decode_output(&alloy::hex::decode(result.trim_start_matches("0x")).unwrap(), false)
+        .abi_decode_output(
+            &alloy::hex::decode(result.trim_start_matches("0x")).unwrap(),
+            false,
+        )
         .unwrap()
         .first()
         .cloned()
@@ -111,7 +117,6 @@ async fn should_perform_eth_call() {
 
     assert_eq!(result_address, caller.0);
 }
-
 
 #[tokio::test]
 #[serial]

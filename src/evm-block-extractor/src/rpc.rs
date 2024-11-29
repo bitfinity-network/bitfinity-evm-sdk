@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
-use alloy::{
-    eips::BlockNumberOrTag,
-    primitives::{Address, U256, U64},
-};
+use alloy::eips::BlockNumberOrTag;
+use alloy::primitives::{Address, U256, U64};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 

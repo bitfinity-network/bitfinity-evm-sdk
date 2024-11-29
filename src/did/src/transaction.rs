@@ -1,12 +1,7 @@
-use super::hash::{H160, H256};
-use super::integer::{U256, U64};
-use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
-use crate::constant::{
-    TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
-};
-use crate::error::EvmError;
-use crate::keccak::keccak_hash;
-use crate::{codec, Bytes};
+use std::borrow::Cow;
+use std::rc::Rc;
+use std::str::FromStr;
+
 use alloy::consensus::{
     SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy,
 };
@@ -18,9 +13,16 @@ use ic_stable_structures::{Bound, Storable};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
 use sha3::Keccak256;
-use std::borrow::Cow;
-use std::rc::Rc;
-use std::str::FromStr;
+
+use super::hash::{H160, H256};
+use super::integer::{U256, U64};
+use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
+use crate::constant::{
+    TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
+};
+use crate::error::EvmError;
+use crate::keccak::keccak_hash;
+use crate::{codec, Bytes};
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq)]
 pub enum BlockNumber {

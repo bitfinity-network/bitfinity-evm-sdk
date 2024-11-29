@@ -118,9 +118,8 @@ impl<'a, 'b> TransactionBuilder<'a, 'b> {
 #[cfg(test)]
 mod test {
 
-    use alloy::signers::{
-        k256::ecdsa::signature::hazmat::PrehashVerifier, utils::secret_key_to_address,
-    };
+    use alloy::signers::k256::ecdsa::signature::hazmat::PrehashVerifier;
+    use alloy::signers::utils::secret_key_to_address;
     use did::U64;
 
     use super::*;
