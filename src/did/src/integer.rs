@@ -262,7 +262,7 @@ impl Mul for U256 {
     }
 }
 
-impl<'a, 'b> Mul<&'b U256> for &'a U256 {
+impl<'b> Mul<&'b U256> for &U256 {
     type Output = U256;
 
     fn mul(self, rhs: &'b U256) -> U256 {
@@ -278,7 +278,7 @@ impl Add for U256 {
     }
 }
 
-impl<'a, 'b> Add<&'b U256> for &'a U256 {
+impl<'b> Add<&'b U256> for &U256 {
     type Output = U256;
 
     fn add(self, rhs: &'b U256) -> U256 {
@@ -300,7 +300,7 @@ impl Sub for U256 {
     }
 }
 
-impl<'a, 'b> Sub<&'b U256> for &'a U256 {
+impl<'b> Sub<&'b U256> for &U256 {
     type Output = U256;
 
     fn sub(self, rhs: &'b U256) -> U256 {

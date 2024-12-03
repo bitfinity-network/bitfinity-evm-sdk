@@ -74,8 +74,8 @@ impl<'a, D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Wallet<'a
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-impl<'a, D: Sync + Send + PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Signer
-    for Wallet<'a, D>
+impl<D: Sync + Send + PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Signer
+    for Wallet<'_, D>
 {
     type Error = WalletError;
 
@@ -114,7 +114,7 @@ impl<'a, D: Sync + Send + PrehashSigner<(RecoverableSignature, RecoveryId)> + Cl
     }
 }
 
-impl<'a, D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Wallet<'a, D> {
+impl<D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Wallet<'_, D> {
     /// Synchronously signs the provided transaction, normalizing the signature `v` value with
     /// EIP-155 using the transaction's `chain_id`, or the signer's `chain_id` if the transaction
     /// does not specify one.
@@ -152,9 +152,7 @@ impl<'a, D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> Wallet<'a
     }
 }
 
-impl<'a, D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> fmt::Debug
-    for Wallet<'a, D>
-{
+impl<D: PrehashSigner<(RecoverableSignature, RecoveryId)> + Clone> fmt::Debug for Wallet<'_, D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Wallet")
             .field("address", &self.address)
