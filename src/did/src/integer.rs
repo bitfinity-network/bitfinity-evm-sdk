@@ -171,14 +171,27 @@ impl From<&U256> for Nat {
     }
 }
 
+impl From<usize> for U64 {
+    fn from(value: usize) -> Self {
+        Self(alloy::primitives::U64::from(value))
+    }
+}
+
 impl From<u64> for U64 {
     fn from(value: u64) -> Self {
         Self(alloy::primitives::U64::from(value))
     }
 }
+
 impl From<U64> for u64 {
     fn from(value: U64) -> Self {
         value.0.to()
+    }
+}
+
+impl From<usize> for U256 {
+    fn from(value: usize) -> Self {
+        Self(alloy::primitives::U256::from(value))
     }
 }
 
