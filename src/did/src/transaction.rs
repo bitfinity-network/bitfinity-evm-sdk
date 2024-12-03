@@ -534,23 +534,24 @@ impl From<Transaction> for alloy::rpc::types::Transaction {
     }
 }
 
-/// Calculate the hash of a transaction
-pub fn calculate_tx_hash(tx: &Transaction) -> H256 {
-    use alloy::eips::eip2718::Encodable2718;
-    let alloy_transaction: alloy::rpc::types::Transaction = tx.clone().into();
-    let encoded = alloy_transaction.inner.encoded_2718();
-    keccak_hash(&encoded)
-}
+impl Transaction {
 
-/// Encode the transaction according to [EIP-2718] rules. First a 1-byte
-/// type flag in the range 0x0-0x7f, then the body of the transaction.
-///
-/// This is a convenience method for encoding into a vec, and returning the
-/// vec.
-pub fn rlp_encoded_2718(tx: &Transaction) -> Vec<u8> {
-    use alloy::eips::eip2718::Encodable2718;
-    let alloy_transaction: alloy::rpc::types::Transaction = tx.clone().into();
-    alloy_transaction.inner.encoded_2718()
+    /// RLP encodes the transaction and recalculates the hash.
+    /// It does not modify the transaction itself.
+    /// It returns the calcualted hash and the RLP encoded bytes.
+    pub fn slow_hash(&self) -> (H256, Vec<u8>) {
+        let encoded = self.rlp_encoded_2718();
+        (keccak_hash(&encoded), encoded)
+    }
+    
+    /// Encode the transaction according to [EIP-2718] rules. First a 1-byte
+    /// type flag in the range 0x0-0x7f, then the body of the transaction.
+    pub fn rlp_encoded_2718(&self) -> Vec<u8> {
+        use alloy::eips::eip2718::Encodable2718;
+        let alloy_transaction: alloy::rpc::types::Transaction = self.clone().into();
+        alloy_transaction.inner.encoded_2718()
+    }
+
 }
 
 impl Storable for Transaction {
@@ -1337,7 +1338,7 @@ mod test {
 
             assert_eq!(
                 alloy::primitives::B256::from_str(&hash).unwrap(),
-                calculate_tx_hash(&transaction).0
+                transaction.slow_hash().0.0
             );
 
             let transaction_to_value = serde_json::to_value(transaction).unwrap();

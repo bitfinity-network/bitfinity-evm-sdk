@@ -6,7 +6,7 @@ use did::error::EvmError;
 use did::hash::H160;
 use did::integer::U256;
 use did::transaction::{
-    calculate_tx_hash, Signature as DidSignature, Transaction as DidTransaction,
+    Signature as DidSignature, Transaction as DidTransaction,
 };
 
 use crate::LocalWallet;
@@ -110,7 +110,7 @@ impl TransactionBuilder<'_, '_> {
             max_fee_per_gas: None,
             hash: Default::default(),
         };
-        transaction.hash = calculate_tx_hash(&transaction);
+        transaction.hash = transaction.slow_hash().0;
         transaction
     }
 }
