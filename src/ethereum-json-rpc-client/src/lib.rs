@@ -32,6 +32,7 @@ const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 const ETH_CALL_METHOD: &str = "eth_call";
 const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
+const ETH_GET_TRANSACTION_BY_HASH_METHOD: &str = "eth_getTransactionByHash";
 const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 const IC_GET_GENESIS_BALANCES: &str = "ic_getGenesisBalances";
@@ -233,6 +234,16 @@ impl<C: Client> EthJsonRpcClient<C> {
             ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
             make_params_array!(transaction),
             Id::Str(ETH_SEND_RAW_TRANSACTION_METHOD.to_string()),
+        )
+        .await
+    }
+
+    /// Gets transaction by hash.
+    pub async fn get_transaction_by_hash(&self, hash: H256) -> anyhow::Result<Option<Transaction>> {
+        self.single_request(
+            ETH_GET_TRANSACTION_BY_HASH_METHOD.to_string(),
+            make_params_array!(hash),
+            Id::Str(ETH_GET_TRANSACTION_BY_HASH_METHOD.to_string()),
         )
         .await
     }
