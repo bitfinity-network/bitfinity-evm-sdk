@@ -29,7 +29,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     /// Verifies a transaction signature and returns the signing address
     pub async fn verify_signature(
         &self,
-        transaction: Transaction,
+        transaction: &Transaction,
     ) -> CanisterClientResult<SignatureVerificationResult<H160>> {
         self.client.query("verify_signature", (transaction,)).await
     }
