@@ -150,6 +150,11 @@ impl U64 {
     pub fn from_little_endian(slice: &[u8]) -> Self {
         Self(alloy::primitives::U64::from_le_slice(slice))
     }
+
+    pub fn as_u64(&self) -> u64 {
+        self.0.to()
+    }
+    
 }
 
 impl TryFrom<&Nat> for U256 {
