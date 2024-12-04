@@ -23,7 +23,7 @@ homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.36.0"
+version = "0.37.0"
 
 [workspace.dependencies]
 did = { path = "src/did" }

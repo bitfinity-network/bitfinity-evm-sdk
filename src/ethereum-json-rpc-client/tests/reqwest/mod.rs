@@ -99,7 +99,7 @@ async fn should_perform_eth_call() {
     };
 
     let result = reqwest_client()
-        .eth_call(params, BlockNumber::Latest)
+        .eth_call(&params, BlockNumber::Latest)
         .await
         .unwrap();
 
