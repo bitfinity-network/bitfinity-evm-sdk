@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use alloy::primitives::{Log as AlloyLog, LogData};
+use alloy::primitives::{keccak256, Log as AlloyLog, LogData};
 use alloy::rlp::{encode_list, Decodable, Encodable, Header, PayloadView};
+use bytes::BufMut;
 use candid::{CandidType, Deserialize};
 use ic_stable_structures::{Bound, Storable};
 use serde::Serialize;
@@ -155,6 +156,135 @@ impl Block<H256> {
             transactions,
         })
     }
+
+}
+
+impl <TX> Block<TX> {
+
+    /// Encodes the block header into RLP format
+    pub fn header_rlp_encoded(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        self.header_rlp_encoding(&mut buf);
+        buf
+    }
+
+    /// Encodes the block header into RLP format
+    pub fn header_rlp_encoding(&self, out: &mut dyn BufMut) {
+        let list_header =
+            alloy::rlp::Header { list: true, payload_length: self.header_payload_length() };
+        list_header.encode(out);
+        self.parent_hash.encode(out);
+        self.uncles_hash.encode(out);
+        self.author.encode(out);
+        self.state_root.encode(out);
+        self.transactions_root.encode(out);
+        self.receipts_root.encode(out);
+        self.logs_bloom.encode(out);
+        self.difficulty.encode(out);
+        self.number.encode(out);
+        self.gas_limit.encode(out);
+        self.gas_used.encode(out);
+        self.timestamp.encode(out);
+        self.extra_data.encode(out);
+        self.mix_hash.encode(out);
+        self.nonce.encode(out);
+
+        // Encode all the fork specific fields
+        if let Some(ref base_fee) = self.base_fee_per_gas {
+            base_fee.encode(out);
+        }
+
+        // No need to encode withdrawals_root if it doesn't exist.
+        // if let Some(ref root) = self.withdrawals_root {
+        //     root.encode(out);
+        // }
+
+        // No need to encode blob_gas_used if it doesn't exist.
+        // if let Some(ref blob_gas_used) = self.blob_gas_used {
+        //     U256::from(*blob_gas_used).encode(out);
+        // }
+
+        // No need to encode excess_blob_gas if it doesn't exist.
+        // if let Some(ref excess_blob_gas) = self.excess_blob_gas {
+        //     U256::from(*excess_blob_gas).encode(out);
+        // }
+
+        // No need to encode parent_beacon_block_root if it doesn't exist.
+        // if let Some(ref parent_beacon_block_root) = self.parent_beacon_block_root {
+        //     parent_beacon_block_root.encode(out);
+        // }
+
+        // No need to encode requests_hash if it doesn't exist.
+        // if let Some(ref requests_hash) = self.requests_hash {
+        //     requests_hash.encode(out);
+        // }
+
+        // No need to encode target_blobs_per_block if it doesn't exist.
+        // if let Some(ref target_blobs_per_block) = self.target_blobs_per_block {
+        //     target_blobs_per_block.encode(out);
+        // }
+    }
+
+    /// Returns the length of the header payload for rlp encoding
+    pub fn header_payload_length(&self) -> usize {
+        let mut length = 0;
+        length += self.parent_hash.length();
+        length += self.uncles_hash.length();
+        length += self.author.length();
+        length += self.state_root.length();
+        length += self.transactions_root.length();
+        length += self.receipts_root.length();
+        length += self.logs_bloom.length();
+        length += self.difficulty.length();
+        length += self.number.length();
+        length += self.gas_limit.length();
+        length += self.gas_used.length();
+        length += self.timestamp.length();
+        length += self.extra_data.length();
+        length += self.mix_hash.length();
+        length += self.nonce.length();
+
+        if let Some(base_fee) = &self.base_fee_per_gas {
+            // Adding base fee length if it exists.
+            length += base_fee.length();
+        }
+
+        // No need to add withdrawals_root length if it doesn't exist.
+        // if let Some(root) = self.withdrawals_root {
+        //     // Adding withdrawals_root length if it exists.
+        //     length += root.length();
+        // }
+
+        // No need to add blob_gas_used length if it doesn't exist.
+        // if let Some(blob_gas_used) = self.blob_gas_used {
+        //     // Adding blob_gas_used length if it exists.
+        //     length += U256::from(blob_gas_used).length();
+        // }
+
+        // No need to add excess_blob_gas length if it doesn't exist.
+        // if let Some(excess_blob_gas) = self.excess_blob_gas {
+        //     // Adding excess_blob_gas length if it exists.
+        //     length += U256::from(excess_blob_gas).length();
+        // }
+
+        // No need to add parent_beacon_block_root length if it doesn't exist.
+        // if let Some(parent_beacon_block_root) = self.parent_beacon_block_root {
+        //     length += parent_beacon_block_root.length();
+        // }
+
+        // No need to add requests_hash length if it doesn't exist.
+        // if let Some(requests_hash) = self.requests_hash {
+        //     length += requests_hash.length();
+        // }
+
+        // No need to add target_blobs_per_block length if it doesn't exist.
+        // if let Some(target_blobs_per_block) = self.target_blobs_per_block {
+        //     length += target_blobs_per_block.length();
+        // }
+
+        length
+    }
+
 }
 
 impl Default for Block<H256> {
@@ -198,8 +328,9 @@ impl From<Block<Transaction>> for Block<H256> {
 
 /// Calculate the hash of a block
 pub fn calculate_block_hash<T>(block: &Block<T>) -> H256 {
-    let header: alloy::consensus::Header = block.into();
-    header.hash_slow().into()
+    keccak256(block.header_rlp_encoded()).into()
+    // let header: alloy::consensus::Header = block.into();
+    // header.hash_slow().into()
 }
 
 /// Calculate the size of a block in bytes considering all of its transactions
@@ -265,35 +396,6 @@ impl Storable for Block<H256> {
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         codec::decode(&bytes)
-    }
-}
-
-impl<T> From<&Block<T>> for alloy::consensus::Header {
-    fn from(value: &Block<T>) -> Self {
-        alloy::consensus::Header {
-            parent_hash: value.parent_hash.0,
-            ommers_hash: value.uncles_hash.0,
-            beneficiary: value.author.0,
-            state_root: value.state_root.0,
-            transactions_root: value.transactions_root.0,
-            receipts_root: value.receipts_root.0,
-            logs_bloom: value.logs_bloom.0,
-            difficulty: value.difficulty.0,
-            number: value.number.0.to(),
-            gas_limit: value.gas_limit.0.to(),
-            gas_used: value.gas_used.0.to(),
-            timestamp: value.timestamp.0.to(),
-            extra_data: value.extra_data.0.clone().into(),
-            mix_hash: value.mix_hash.0,
-            nonce: value.nonce.0,
-            base_fee_per_gas: value.base_fee_per_gas.as_ref().map(|val| val.0.to()),
-            withdrawals_root: None,
-            blob_gas_used: None,
-            excess_blob_gas: None,
-            parent_beacon_block_root: None,
-            requests_hash: None,
-            target_blobs_per_block: None,
-        }
     }
 }
 
