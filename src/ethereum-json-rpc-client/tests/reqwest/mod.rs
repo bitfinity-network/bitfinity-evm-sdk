@@ -134,7 +134,7 @@ async fn should_get_transaction_count() {
 #[serial]
 async fn should_get_block_by_number() {
     let result = reqwest_client()
-        .get_block_by_number(BlockNumber::Number(11588465.into()))
+        .get_block_by_number(BlockNumber::Number(11588465u64.into()))
         .await
         .unwrap();
 
@@ -152,7 +152,7 @@ async fn should_get_block_by_number() {
 #[serial]
 async fn should_get_full_block_by_number() {
     let result = reqwest_client()
-        .get_full_block_by_number(BlockNumber::Number(11588465.into()))
+        .get_full_block_by_number(BlockNumber::Number(11588465u64.into()))
         .await
         .unwrap();
 
@@ -177,8 +177,8 @@ async fn should_get_full_blocks_by_number() {
     let result = reqwest_client()
         .get_full_blocks_by_number(
             vec![
-                BlockNumber::Number(11588465.into()),
-                BlockNumber::Number(11588466.into()),
+                BlockNumber::Number(11588465u64.into()),
+                BlockNumber::Number(11588466u64.into()),
             ],
             MAX_BATCH_SIZE,
         )
@@ -243,7 +243,7 @@ async fn should_get_transaction_receipts() {
     // this test is flaky for some reasons, so we try multiple times
     for _ in 0..3 {
         let block = reqwest_client()
-            .get_block_by_number(BlockNumber::Number(11588465.into()))
+            .get_block_by_number(BlockNumber::Number(11588465u64.into()))
             .await
             .unwrap();
         if let Ok(receipts) = reqwest_client()
