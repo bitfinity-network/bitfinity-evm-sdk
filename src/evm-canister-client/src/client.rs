@@ -545,6 +545,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Returns whether unsafe blocks are enabled
+    pub async fn is_unsafe_blocks_enabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_unsafe_blocks_enabled", ()).await
+    }
+
     /// Validate unsafe block on the EVM.
     ///
     /// Only those with [`did::permission::Permission::ValidateUnsafeBlocks`] can call this method.
