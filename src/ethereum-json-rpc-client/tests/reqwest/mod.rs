@@ -267,8 +267,9 @@ async fn should_get_transaction_receipts() {
 #[tokio::test]
 #[serial]
 async fn should_get_transaction_by_hash() {
-    let hash = H256::from_hex_str("0xd5ac65792636f33afecfb829a42497c7062ee846b4e9bb16da7ddd67a8035b41")
-        .unwrap();
+    let hash =
+        H256::from_hex_str("0xd5ac65792636f33afecfb829a42497c7062ee846b4e9bb16da7ddd67a8035b41")
+            .unwrap();
     let tx = reqwest_client()
         .get_transaction_by_hash(hash.clone())
         .await
