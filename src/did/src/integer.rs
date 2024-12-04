@@ -154,7 +154,6 @@ impl U64 {
     pub fn as_u64(&self) -> u64 {
         self.0.to()
     }
-    
 }
 
 impl TryFrom<&Nat> for U256 {

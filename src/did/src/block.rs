@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use alloy::primitives::Log as AlloyLog;
+use alloy::primitives::{Log as AlloyLog, LogData};
 use candid::{CandidType, Deserialize};
 use ic_stable_structures::{Bound, Storable};
 use serde::Serialize;
@@ -317,6 +317,18 @@ impl From<AlloyLog> for TransactionExecutionLog {
             address: log.address.into(),
             topics: log.topics().iter().map(|h| (*h).into()).collect(),
             data: log.data.data.into(),
+        }
+    }
+}
+
+impl From<TransactionExecutionLog> for AlloyLog {
+    fn from(log: TransactionExecutionLog) -> Self {
+        Self {
+            address: log.address.into(),
+            data: LogData::new_unchecked(
+                log.topics.into_iter().map(|h| h.into()).collect(),
+                log.data.into(),
+            ),
         }
     }
 }
