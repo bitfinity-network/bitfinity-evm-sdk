@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use alloy::primitives::{Log as AlloyLog, LogData};
+use alloy::rlp::{encode_list, Encodable};
 use candid::{CandidType, Deserialize};
 use ic_stable_structures::{Bound, Storable};
 use serde::Serialize;
@@ -309,6 +310,13 @@ pub struct TransactionExecutionLog {
 
     /// Data
     pub data: Bytes,
+}
+
+impl Encodable for TransactionExecutionLog {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        let enc: [&dyn Encodable; 3] = [&self.address, &self.topics, &self.data];
+        encode_list::<_, dyn Encodable>(&enc, out);
+    }
 }
 
 impl From<AlloyLog> for TransactionExecutionLog {
