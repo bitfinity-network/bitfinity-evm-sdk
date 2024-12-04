@@ -371,6 +371,27 @@ pub struct Transaction {
     pub chain_id: Option<U256>,
 }
 
+impl From<alloy::consensus::TxEnvelope> for Transaction {
+    fn from(tx: alloy::consensus::TxEnvelope) -> Self {
+        let tx = alloy::rpc::types::Transaction {
+            inner: tx,
+            block_hash: None,
+            block_number: None,
+            transaction_index: None,
+            effective_gas_price: None,
+            from: Default::default(),
+        };
+        tx.into()
+    }
+}
+
+impl From<Transaction> for alloy::consensus::TxEnvelope {
+    fn from(value: Transaction) -> Self {
+        let tx: alloy::rpc::types::Transaction = value.into();
+        tx.inner
+    }
+}
+
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
         let signature: Signature = (*tx.inner.signature()).into();
