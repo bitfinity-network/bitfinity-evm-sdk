@@ -98,12 +98,8 @@ impl<C: Client> EthJsonRpcClient<C> {
                 Ok((make_params_array!(block_number, true), Id::Num(index as _)))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
-        self.batch_request(
-            ETH_GET_BLOCK_BY_NUMBER_METHOD,
-            params,
-            max_batch_size,
-        )
-        .await
+        self.batch_request(ETH_GET_BLOCK_BY_NUMBER_METHOD, params, max_batch_size)
+            .await
     }
 
     /// Get receipt by number
@@ -118,12 +114,8 @@ impl<C: Client> EthJsonRpcClient<C> {
                 Ok((make_params_array!(hash), Id::Str(hash.to_string())))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
-        self.batch_request(
-            ETH_GET_TRANSACTION_RECEIPT_METHOD,
-            params,
-            max_batch_size,
-        )
-        .await
+        self.batch_request(ETH_GET_TRANSACTION_RECEIPT_METHOD, params, max_batch_size)
+            .await
     }
 
     /// Get receipt by hash
