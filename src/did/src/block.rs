@@ -156,11 +156,9 @@ impl Block<H256> {
             transactions,
         })
     }
-
 }
 
-impl <TX> Block<TX> {
-
+impl<TX> Block<TX> {
     /// Encodes the block header into RLP format
     pub fn header_rlp_encoded(&self) -> Vec<u8> {
         let mut buf = Vec::new();
@@ -170,8 +168,10 @@ impl <TX> Block<TX> {
 
     /// Encodes the block header into RLP format
     pub fn header_rlp_encoding(&self, out: &mut dyn BufMut) {
-        let list_header =
-            alloy::rlp::Header { list: true, payload_length: self.header_payload_length() };
+        let list_header = alloy::rlp::Header {
+            list: true,
+            payload_length: self.header_payload_length(),
+        };
         list_header.encode(out);
         self.parent_hash.encode(out);
         self.uncles_hash.encode(out);
@@ -284,7 +284,6 @@ impl <TX> Block<TX> {
 
         length
     }
-
 }
 
 impl Default for Block<H256> {
@@ -400,7 +399,6 @@ impl Storable for Block<H256> {
 }
 
 impl Decodable for Block<Transaction> {
-
     fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
         let payload = Header::decode_raw(buf)?;
         let block = match payload {
@@ -410,20 +408,34 @@ impl Decodable for Block<Transaction> {
                     PayloadView::List(mut header_items) => {
                         let item_count = header_items.len();
                         Self {
-                            parent_hash: alloy::primitives::B256::decode(&mut header_items[0])?.into(),
-                            uncles_hash: alloy::primitives::B256::decode(&mut header_items[1])?.into(),
-                            author: alloy::primitives::Address::decode(&mut header_items[2])?.into(),
-                            state_root: alloy::primitives::B256::decode(&mut header_items[3])?.into(),
-                            transactions_root: alloy::primitives::B256::decode(&mut header_items[4])?.into(),
-                            receipts_root: alloy::primitives::B256::decode(&mut header_items[5])?.into(),
-                            logs_bloom: alloy::primitives::Bloom::decode(&mut header_items[6])?.into(),
-                            difficulty: alloy::primitives::U256::decode(&mut header_items[7])?.into(),
+                            parent_hash: alloy::primitives::B256::decode(&mut header_items[0])?
+                                .into(),
+                            uncles_hash: alloy::primitives::B256::decode(&mut header_items[1])?
+                                .into(),
+                            author: alloy::primitives::Address::decode(&mut header_items[2])?
+                                .into(),
+                            state_root: alloy::primitives::B256::decode(&mut header_items[3])?
+                                .into(),
+                            transactions_root: alloy::primitives::B256::decode(
+                                &mut header_items[4],
+                            )?
+                            .into(),
+                            receipts_root: alloy::primitives::B256::decode(&mut header_items[5])?
+                                .into(),
+                            logs_bloom: alloy::primitives::Bloom::decode(&mut header_items[6])?
+                                .into(),
+                            difficulty: alloy::primitives::U256::decode(&mut header_items[7])?
+                                .into(),
                             number: alloy::primitives::U64::decode(&mut header_items[8])?.into(),
-                            gas_limit: alloy::primitives::U256::decode(&mut header_items[9])?.into(),
-                            gas_used: alloy::primitives::U256::decode(&mut header_items[10])?.into(),
-                            timestamp: alloy::primitives::U256::decode(&mut header_items[11])?.into(),
+                            gas_limit: alloy::primitives::U256::decode(&mut header_items[9])?
+                                .into(),
+                            gas_used: alloy::primitives::U256::decode(&mut header_items[10])?
+                                .into(),
+                            timestamp: alloy::primitives::U256::decode(&mut header_items[11])?
+                                .into(),
                             extra_data: <Vec<_>>::decode(&mut header_items[12])?.into(),
-                            mix_hash: alloy::primitives::B256::decode(&mut header_items[13])?.into(),
+                            mix_hash: alloy::primitives::B256::decode(&mut header_items[13])?
+                                .into(),
                             nonce: alloy::primitives::B64::decode(&mut header_items[14])?.into(),
                             hash: Default::default(),
                             total_difficulty: Default::default(),
@@ -437,13 +449,11 @@ impl Decodable for Block<Transaction> {
                                 None
                             },
                         }
-                        
                     }
                     PayloadView::String(_) => {
                         panic!("Block header should be a list")
                     }
                 };
-
 
                 let mut transactions = items[1];
                 match Header::decode_raw(&mut transactions)? {
@@ -452,7 +462,7 @@ impl Decodable for Block<Transaction> {
                             let tx = alloy::consensus::TxEnvelope::decode(&mut transaction)?;
                             block.transactions.push(tx.into());
                         }
-                    },
+                    }
                     PayloadView::String(_) => panic!("Transactions should be a list"),
                 }
                 block
@@ -464,11 +474,7 @@ impl Decodable for Block<Transaction> {
 
         Ok(block)
     }
-
 }
-
-
-
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, CandidType)]
 pub struct TransactionExecutionLog {

@@ -385,6 +385,7 @@ mod tests {
     #[test]
     fn test_h64_from_str() {
         let (hex_val, str_val) = generate_hex_str(8);
+        println!("str_val: {}", str_val);
         let value = H64::from_slice(&hex_val);
         assert_eq!(value, H64::from_hex_str(&str_val).unwrap());
 

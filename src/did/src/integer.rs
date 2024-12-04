@@ -10,6 +10,7 @@ use derive_more::{From, Into};
 use ic_stable_structures::{Bound, Bounded, Storable};
 use num::BigUint;
 use serde::Serialize;
+
 #[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Hash, From, Into)]
 #[serde(transparent)]
 pub struct U256(pub alloy::primitives::U256);
@@ -56,6 +57,13 @@ impl U256 {
     }
 
     pub fn from_hex_str(s: &str) -> Result<Self, String> {
+        let temp: String;
+        let s = if s.starts_with("0x") || s.starts_with("0X") {
+            s
+        } else {
+            temp = format!("0x{}", s);
+            &temp
+        };
         alloy::primitives::U256::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
@@ -118,6 +126,13 @@ impl U64 {
     }
 
     pub fn from_hex_str(s: &str) -> Result<Self, String> {
+        let temp: String;
+        let s = if s.starts_with("0x") || s.starts_with("0X") {
+            s
+        } else {
+            temp = format!("0x{}", s);
+            &temp
+        };
         alloy::primitives::U64::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
@@ -507,8 +522,9 @@ mod tests {
     #[test]
     fn test_u256_from_hex_should_succeed() {
         assert_eq!(U256::from(0u64), U256::from_hex_str("0x00").unwrap());
-        assert_eq!(U256::from(1u64), U256::from_hex_str("0x01").unwrap());
+        assert_eq!(U256::from(1u64), U256::from_hex_str("0X01").unwrap());
         assert_eq!(U256::from(255u64), U256::from_hex_str("0xff").unwrap());
+        assert_eq!(U256::from(255u64), U256::from_hex_str("ff").unwrap());
         assert_eq!(
             U256::from(2074343815918867987178857765017879333u128),
             U256::from_hex_str("0x18F810BD8895AA66364CBDD91A20325").unwrap()
@@ -631,8 +647,9 @@ mod tests {
     #[test]
     fn test_u64_from_hex_should_succeed() {
         assert_eq!(U64::from(0u64), U64::from_hex_str("0x00").unwrap());
-        assert_eq!(U64::from(1u64), U64::from_hex_str("0x01").unwrap());
+        assert_eq!(U64::from(1u64), U64::from_hex_str("0X01").unwrap());
         assert_eq!(U64::from(255u64), U64::from_hex_str("0xff").unwrap());
+        assert_eq!(U64::from(255u64), U64::from_hex_str("ff").unwrap());
         assert_eq!(
             U64::from(72057594037927936u64),
             U64::from_hex_str("0x100000000000000").unwrap()
