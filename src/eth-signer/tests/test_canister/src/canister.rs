@@ -48,10 +48,9 @@ impl TestCanister {
             .await
             .unwrap();
 
-        let tx = tx.into_signed(signature.clone().try_into().unwrap());
-
-        let recovered_from = signature.recover_from(&tx.signature_hash().into()).unwrap();
-        assert_eq!(recovered_from.0, from);
+        let tx = tx.into_signed(signature.try_into().unwrap());
+        let recovered_from = tx.recover_signer().unwrap();
+        assert_eq!(recovered_from, from);
 
         let mut tx = TransactionRequest::default()
             .with_from(from)
