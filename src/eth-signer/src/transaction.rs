@@ -5,9 +5,7 @@ use alloy::signers::k256::ecdsa::SigningKey;
 use did::error::EvmError;
 use did::hash::H160;
 use did::integer::U256;
-use did::transaction::{
-    Signature as DidSignature, Transaction as DidTransaction,
-};
+use did::transaction::{Signature as DidSignature, Transaction as DidTransaction};
 
 use crate::LocalWallet;
 
