@@ -32,6 +32,7 @@ const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 const ETH_CALL_METHOD: &str = "eth_call";
 const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
+const ETH_GET_TRANSACTION_BY_HASH_METHOD: &str = "eth_getTransactionByHash";
 const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 const IC_GET_GENESIS_BALANCES: &str = "ic_getGenesisBalances";
@@ -97,12 +98,8 @@ impl<C: Client> EthJsonRpcClient<C> {
                 Ok((make_params_array!(block_number, true), Id::Num(index as _)))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
-        self.batch_request(
-            ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string(),
-            params,
-            max_batch_size,
-        )
-        .await
+        self.batch_request(ETH_GET_BLOCK_BY_NUMBER_METHOD, params, max_batch_size)
+            .await
     }
 
     /// Get receipt by number
@@ -117,12 +114,8 @@ impl<C: Client> EthJsonRpcClient<C> {
                 Ok((make_params_array!(hash), Id::Str(hash.to_string())))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
-        self.batch_request(
-            ETH_GET_TRANSACTION_RECEIPT_METHOD.to_string(),
-            params,
-            max_batch_size,
-        )
-        .await
+        self.batch_request(ETH_GET_TRANSACTION_RECEIPT_METHOD, params, max_batch_size)
+            .await
     }
 
     /// Get receipt by hash
@@ -215,7 +208,7 @@ impl<C: Client> EthJsonRpcClient<C> {
     /// Performs eth call and return the result.
     pub async fn eth_call(
         &self,
-        params: TransactionRequest,
+        params: &TransactionRequest,
         block: BlockNumber,
     ) -> anyhow::Result<String> {
         self.single_request(
@@ -237,8 +230,18 @@ impl<C: Client> EthJsonRpcClient<C> {
         .await
     }
 
+    /// Gets transaction by hash.
+    pub async fn get_transaction_by_hash(&self, hash: H256) -> anyhow::Result<Option<Transaction>> {
+        self.single_request(
+            ETH_GET_TRANSACTION_BY_HASH_METHOD.to_string(),
+            make_params_array!(hash),
+            Id::Str(ETH_GET_TRANSACTION_BY_HASH_METHOD.to_string()),
+        )
+        .await
+    }
+
     /// Sends raw transaction and returns transaction hash
-    pub async fn send_raw_transaction(&self, transaction: Transaction) -> anyhow::Result<H256> {
+    pub async fn send_raw_transaction(&self, transaction: &Transaction) -> anyhow::Result<H256> {
         let bytes = transaction.rlp();
         let transaction = format!("0x{}", hex::encode(bytes));
 
@@ -293,7 +296,7 @@ impl<C: Client> EthJsonRpcClient<C> {
 
         Ok(self
             .batch_request::<Option<StorableExecutionResult>>(
-                IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD.to_string(),
+                IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD,
                 params,
                 max_batch_size,
             )
@@ -358,7 +361,7 @@ impl<C: Client> EthJsonRpcClient<C> {
     /// Performs a batch request.
     pub async fn batch_request<R: DeserializeOwned>(
         &self,
-        method: String,
+        method: &str,
         params: impl IntoIterator<Item = (Params, Id)>,
         max_batch_size: usize,
     ) -> anyhow::Result<Vec<R>> {
@@ -367,7 +370,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         let value_from_json = |value| serde_json::from_value::<R>(value);
 
         // Collect chunks before iteration, otherwise the future won't be `Send`
-        let chunks = params
+        let chunks: Vec<Vec<(Params, Id)>> = params
             .into_iter()
             .chunks(max_batch_size)
             .into_iter()
@@ -379,7 +382,7 @@ impl<C: Client> EthJsonRpcClient<C> {
                 .map(|(params, id)| {
                     Call::MethodCall(MethodCall {
                         jsonrpc: Some(Version::V2),
-                        method: method.clone(),
+                        method: method.to_owned(),
                         params,
                         id,
                     })

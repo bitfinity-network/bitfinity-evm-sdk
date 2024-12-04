@@ -14,8 +14,7 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-alloy-primitives-07 = { workspace = true, optional = true }
-alloy-primitives-08 = { workspace = true, optional = true }
+alloy-primitives = { workspace = true }
 bincode = { workspace = true }
 bytes = { workspace = true }
 candid = { workspace = true }
@@ -41,9 +40,3 @@ thiserror = { workspace = true }
 eth-signer = { path = "../eth-signer" }
 rand = { workspace = true }
 tokio = { workspace = true }
-
-[features]
-# Enable the type conversion support between did and alloy-primitives 0.7
-"alloy-primitives-07" = ["dep:alloy-primitives-07"]
-# Enable the type conversion support between did and alloy-primitives 0.8
-"alloy-primitives-08" = ["dep:alloy-primitives-08"]

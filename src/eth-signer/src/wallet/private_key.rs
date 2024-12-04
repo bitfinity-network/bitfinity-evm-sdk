@@ -26,7 +26,7 @@ pub enum WalletError {
     Eip712Error(String),
 }
 
-impl<'a> Wallet<'a, SigningKey> {
+impl Wallet<'_, SigningKey> {
     /// Creates a new random keypair seeded with the provided RNG
     pub fn new<R: Rng + CryptoRng>(rng: &mut R) -> Self {
         let signer = SigningKey::random(rng);
@@ -50,7 +50,7 @@ impl<'a> Wallet<'a, SigningKey> {
     }
 }
 
-impl<'a> PartialEq for Wallet<'a, SigningKey> {
+impl PartialEq for Wallet<'_, SigningKey> {
     fn eq(&self, other: &Self) -> bool {
         self.signer.to_bytes().eq(&other.signer.to_bytes())
             && self.address == other.address

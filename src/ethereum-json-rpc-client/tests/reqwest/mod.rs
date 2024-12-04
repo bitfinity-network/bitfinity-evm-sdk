@@ -1,5 +1,6 @@
 mod rpc_client;
 
+use std::str::FromStr;
 use std::time::Duration;
 
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
@@ -117,7 +118,7 @@ async fn should_perform_eth_call() {
     };
 
     let result = reqwest_client()
-        .eth_call(params, BlockNumber::Latest)
+        .eth_call(&params, BlockNumber::Latest)
         .await
         .unwrap();
 
@@ -284,6 +285,20 @@ async fn should_get_transaction_receipts() {
     }
 
     panic!("Failed to get transaction receipts");
+}
+
+#[tokio::test]
+#[serial]
+async fn should_get_transaction_by_hash() {
+    let hash = H256::from_str("0xd5ac65792636f33afecfb829a42497c7062ee846b4e9bb16da7ddd67a8035b41")
+        .unwrap();
+    let tx = reqwest_client()
+        .get_transaction_by_hash(hash)
+        .await
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(tx.hash, hash);
 }
 
 const ERC_1820_EXPECTED_CODE: &str = "0x608060405234801561001057600080fd5b50600436106100a557600035\
