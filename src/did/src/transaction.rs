@@ -568,8 +568,8 @@ impl Transaction {
     /// type flag in the range 0x0-0x7f, then the body of the transaction.
     pub fn rlp_encoded_2718(&self) -> Vec<u8> {
         use alloy::eips::eip2718::Encodable2718;
-        let alloy_transaction: alloy::rpc::types::Transaction = self.clone().into();
-        alloy_transaction.inner.encoded_2718()
+        let alloy_transaction: alloy::consensus::TxEnvelope = self.clone().into();
+        alloy_transaction.encoded_2718()
     }
 }
 

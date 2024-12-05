@@ -1,6 +1,7 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use alloy::consensus::TxEnvelope;
 use alloy::rpc::types::{Log, TransactionRequest};
 use anyhow::Context;
 pub use did::certified::CertifiedResult;
@@ -240,18 +241,19 @@ impl<C: Client> EthJsonRpcClient<C> {
         .await
     }
 
-    // /// Sends raw transaction and returns transaction hash
-    // pub async fn send_raw_transaction(&self, transaction: &TransactionRequest) -> anyhow::Result<H256> {
-    //     let bytes = transaction.rlp();
-    //     let transaction = format!("0x{}", alloy::hex::encode(bytes));
+    /// Sends raw transaction and returns transaction hash
+    pub async fn send_raw_transaction(&self, transaction: &TxEnvelope) -> anyhow::Result<H256> {
+        use alloy::eips::eip2718::Encodable2718;
+        let bytes = transaction.encoded_2718();
+        let transaction = format!("0x{}", alloy::hex::encode(bytes));
 
-    //     self.single_request(
-    //         ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
-    //         make_params_array!(transaction),
-    //         Id::Str(ETH_SEND_RAW_TRANSACTION_METHOD.to_string()),
-    //     )
-    //     .await
-    // }
+        self.single_request(
+            ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
+            make_params_array!(transaction),
+            Id::Str(ETH_SEND_RAW_TRANSACTION_METHOD.to_string()),
+        )
+        .await
+    }
 
     /// Get EVM logs according to the given parameters.
     pub async fn get_logs(&self, params: EthGetLogsParams) -> anyhow::Result<Vec<Log>> {
