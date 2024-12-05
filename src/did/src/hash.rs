@@ -32,21 +32,21 @@ pub fn from_hex_str<const SIZE: usize>(mut s: &str) -> Result<[u8; SIZE], FromHe
 impl<'de> serde::Deserialize<'de> for H64 {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Ok(H64::from_hex_str(&s).map_err(serde::de::Error::custom)?)
+        H64::from_hex_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
 impl<'de> serde::Deserialize<'de> for H160 {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Ok(H160::from_hex_str(&s).map_err(serde::de::Error::custom)?)
+        H160::from_hex_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
 impl<'de> serde::Deserialize<'de> for H256 {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Ok(H256::from_hex_str(&s).map_err(serde::de::Error::custom)?)
+        H256::from_hex_str(&s).map_err(serde::de::Error::custom)
     }
 }
 

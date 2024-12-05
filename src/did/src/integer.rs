@@ -24,14 +24,14 @@ pub struct U64(pub alloy::primitives::U64);
 impl<'de> serde::Deserialize<'de> for U64 {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Ok(U64::from_hex_str(&s).map_err(serde::de::Error::custom)?)
+        U64::from_hex_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
 impl<'de> serde::Deserialize<'de> for U256 {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Ok(U256::from_hex_str(&s).map_err(serde::de::Error::custom)?)
+        U256::from_hex_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
