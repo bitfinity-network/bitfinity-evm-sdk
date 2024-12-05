@@ -433,7 +433,8 @@ impl Decodable for Block<Transaction> {
                                 .into(),
                             timestamp: alloy::primitives::U256::decode(&mut header_items[11])?
                                 .into(),
-                            extra_data: alloy::primitives::Bytes::decode(&mut header_items[12])?.into(),
+                            extra_data: alloy::primitives::Bytes::decode(&mut header_items[12])?
+                                .into(),
                             mix_hash: alloy::primitives::B256::decode(&mut header_items[13])?
                                 .into(),
                             nonce: alloy::primitives::B64::decode(&mut header_items[14])?.into(),
