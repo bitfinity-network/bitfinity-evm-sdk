@@ -1,6 +1,6 @@
-use alloy::consensus::SignableTransaction;
-use alloy::network::{TransactionBuilder as AlloyTransactionBuilder, TxSignerSync};
-use alloy::rpc::types::{Transaction as AlloyRpcTransaction, TransactionRequest};
+use alloy::consensus::{SignableTransaction, TxLegacy};
+use alloy::network::TxSignerSync;
+use alloy::rpc::types::Transaction as AlloyRpcTransaction;
 use alloy::signers::k256::ecdsa::SigningKey;
 use did::error::EvmError;
 use did::hash::H160;
@@ -10,19 +10,22 @@ use did::transaction::{Signature as DidSignature, Transaction as DidTransaction}
 use crate::LocalWallet;
 
 /// Method to create a transaction signature
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub enum SigningMethod<'a> {
     // Do not sign transaction.
-    // Could be used only for the cases when transactions isn't applied
+    // Could be used only for the cases when transactions isn't applied.
     None,
-    // Precalculated signature
-    // Could be used only for the cases when the transaction is executed ReadOnly
+    // Precalculated signature.
+    // Could be used only for the cases when the transaction is executed ReadOnly.
     Signature(DidSignature),
-    /// Use signing key to generate signature in `calculate_hash_and_build` method
+    /// Use signing key to generate signature in `calculate_hash_and_build` method.
+    /// Whenever possible use `LocalWallet` instead of `SigningKey` as it requires less allocations.
     SigningKey(&'a SigningKey),
+    /// Use the wallet to generate signature in `calculate_hash_and_build` method.
+    LocalWallet(&'a LocalWallet),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct TransactionBuilder<'a, 'b> {
     pub from: &'a H160,
     pub to: Option<H160>,
@@ -38,9 +41,19 @@ pub struct TransactionBuilder<'a, 'b> {
 impl TransactionBuilder<'_, '_> {
     /// Creates a new transaction with the expected hash
     pub fn calculate_hash_and_build(self) -> Result<DidTransaction, EvmError> {
-        match self.signature.clone() {
-            SigningMethod::None => Ok(self.build_did_tx(DidSignature::default())),
-            SigningMethod::Signature(signature) => Ok(self.build_did_tx(signature)),
+        let mut transaction = TxLegacy {
+            chain_id: Some(self.chain_id),
+            nonce: self.nonce.0.to(),
+            gas_price: self.gas_price.0.to(),
+            gas_limit: self.gas.0.to(),
+            to: self.to.map(|to| to.0).into(),
+            value: self.value.0,
+            input: alloy::primitives::Bytes::from(self.input),
+        };
+
+        let alloy_signature = match self.signature {
+            SigningMethod::None => DidSignature::default().try_into()?,
+            SigningMethod::Signature(signature) => signature.try_into()?,
             SigningMethod::SigningKey(key) => {
                 let wallet = LocalWallet::new_with_credential(
                     (*key).clone(),
@@ -48,68 +61,27 @@ impl TransactionBuilder<'_, '_> {
                     Some(self.chain_id),
                 );
 
-                let transaction = TransactionRequest::default()
-                    .with_from(self.from.0)
-                    .with_nonce(self.nonce.0.to())
-                    .with_gas_price(self.gas_price.0.to())
-                    .with_value(self.value.0)
-                    .with_gas_limit(self.gas.0.to())
-                    .with_chain_id(self.chain_id)
-                    .with_input(alloy::primitives::Bytes::from(self.input))
-                    .with_kind(self.to.map(|to| to.0).into());
-
-                let tx = transaction
-                    .build_typed_tx()
-                    .expect("Should build an alloy typed transaction");
-
-                let mut tx = tx
-                    .legacy()
-                    .cloned()
-                    .expect("Should be a legacy transaction");
-                let signature = wallet
-                    .sign_transaction_sync(&mut tx)
-                    .map_err(|err| EvmError::SignatureError(err.to_string()))?;
-
-                let signed = tx.into_signed(signature);
-                let transaction: DidTransaction = AlloyRpcTransaction {
-                    inner: signed.into(),
-                    from: self.from.0,
-                    block_hash: None,
-                    block_number: None,
-                    transaction_index: None,
-                    effective_gas_price: None,
-                }
-                .into();
-
-                Ok(transaction)
+                wallet
+                    .sign_transaction_sync(&mut transaction)
+                    .map_err(|err| EvmError::SignatureError(err.to_string()))?
             }
-        }
-    }
+            SigningMethod::LocalWallet(wallet) => wallet
+                .sign_transaction_sync(&mut transaction)
+                .map_err(|err| EvmError::SignatureError(err.to_string()))?,
+        };
 
-    fn build_did_tx(self, signature: DidSignature) -> DidTransaction {
-        let mut transaction = DidTransaction {
-            to: self.to,
-            from: self.from.clone(),
-            nonce: self.nonce,
-            value: self.value,
-            gas: self.gas,
-            gas_price: Some(self.gas_price),
-            input: self.input.into(),
-            chain_id: Some(self.chain_id.into()),
-            transaction_type: Some(0u64.into()),
-            r: signature.r,
-            s: signature.s,
-            v: signature.v,
+        let signed = transaction.into_signed(alloy_signature);
+        let transaction: DidTransaction = AlloyRpcTransaction {
+            inner: signed.into(),
+            from: self.from.0,
             block_hash: None,
             block_number: None,
             transaction_index: None,
-            access_list: None,
-            max_priority_fee_per_gas: None,
-            max_fee_per_gas: None,
-            hash: Default::default(),
-        };
-        transaction.hash = transaction.slow_hash().0;
-        transaction
+            effective_gas_price: None,
+        }
+        .into();
+
+        Ok(transaction)
     }
 }
 
