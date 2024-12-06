@@ -387,76 +387,70 @@ impl From<Transaction> for ethers_core::types::Transaction {
 }
 
 impl From<(TypedTransaction, ethers_core::types::Signature)> for Transaction {
-    fn from((tx, sign): (TypedTransaction, ethers_core::types::Signature) ) -> Self {
+    fn from((tx, sign): (TypedTransaction, ethers_core::types::Signature)) -> Self {
         match tx {
-            TypedTransaction::Legacy(tx) => {
-                Transaction {
-                    hash: Default::default(),
-                    nonce: tx.nonce.unwrap_or_default().into(),
-                    block_hash: None,
-                    block_number: None,
-                    transaction_index: None,
-                    from: tx.from.unwrap_or_default().into(),
-                    to: tx.to.map(Into::into),
-                    value: tx.value.unwrap_or_default().into(),
-                    gas_price: tx.gas_price.map(Into::into),
-                    gas: tx.gas.unwrap_or_default().into(),
-                    input: tx.data.unwrap_or_default().into(),
-                    v: sign.v.into(),
-                    r: sign.r.into(),
-                    s: sign.s.into(),
-                    transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
-                    access_list: None,
-                    max_priority_fee_per_gas: None,
-                    max_fee_per_gas: None,
-                    chain_id: tx.chain_id.map(|c| c.as_u64().into()),
-                }
+            TypedTransaction::Legacy(tx) => Transaction {
+                hash: Default::default(),
+                nonce: tx.nonce.unwrap_or_default().into(),
+                block_hash: None,
+                block_number: None,
+                transaction_index: None,
+                from: tx.from.unwrap_or_default().into(),
+                to: tx.to.map(Into::into),
+                value: tx.value.unwrap_or_default().into(),
+                gas_price: tx.gas_price.map(Into::into),
+                gas: tx.gas.unwrap_or_default().into(),
+                input: tx.data.unwrap_or_default().into(),
+                v: sign.v.into(),
+                r: sign.r.into(),
+                s: sign.s.into(),
+                transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
+                access_list: None,
+                max_priority_fee_per_gas: None,
+                max_fee_per_gas: None,
+                chain_id: tx.chain_id.map(|c| c.as_u64().into()),
             },
-            TypedTransaction::Eip2930(tx) => {
-                Transaction {
-                    hash: Default::default(),
-                    nonce: tx.tx.nonce.unwrap_or_default().into(),
-                    block_hash: None,
-                    block_number: None,
-                    transaction_index: None,
-                    from: tx.tx.from.unwrap_or_default().into(),
-                    to: tx.tx.to.map(Into::into),
-                    value: tx.tx.value.unwrap_or_default().into(),
-                    gas_price: tx.tx.gas_price.map(Into::into),
-                    gas: tx.tx.gas.unwrap_or_default().into(),
-                    input: tx.tx.data.unwrap_or_default().into(),
-                    v: sign.v.into(),
-                    r: sign.r.into(),
-                    s: sign.s.into(),
-                    transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
-                    access_list: Some(tx.access_list.into()),
-                    max_priority_fee_per_gas: None,
-                    max_fee_per_gas: None,
-                    chain_id: tx.tx.chain_id.map(|c| c.as_u64().into()),
-                }
+            TypedTransaction::Eip2930(tx) => Transaction {
+                hash: Default::default(),
+                nonce: tx.tx.nonce.unwrap_or_default().into(),
+                block_hash: None,
+                block_number: None,
+                transaction_index: None,
+                from: tx.tx.from.unwrap_or_default().into(),
+                to: tx.tx.to.map(Into::into),
+                value: tx.tx.value.unwrap_or_default().into(),
+                gas_price: tx.tx.gas_price.map(Into::into),
+                gas: tx.tx.gas.unwrap_or_default().into(),
+                input: tx.tx.data.unwrap_or_default().into(),
+                v: sign.v.into(),
+                r: sign.r.into(),
+                s: sign.s.into(),
+                transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
+                access_list: Some(tx.access_list.into()),
+                max_priority_fee_per_gas: None,
+                max_fee_per_gas: None,
+                chain_id: tx.tx.chain_id.map(|c| c.as_u64().into()),
             },
-            TypedTransaction::Eip1559(tx) => {
-                Transaction {
-                    hash: Default::default(),
-                    nonce: tx.nonce.unwrap_or_default().into(),
-                    block_hash: None,
-                    block_number: None,
-                    transaction_index: None,
-                    from: tx.from.unwrap_or_default().into(),
-                    to: tx.to.map(Into::into),
-                    value: tx.value.unwrap_or_default().into(),
-                    gas_price: None,
-                    gas: tx.gas.unwrap_or_default().into(),
-                    input: tx.data.unwrap_or_default().into(),
-                    v: sign.v.into(),
-                    r: sign.r.into(),
-                    s: sign.s.into(),
-                    transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
-                    access_list: Some(tx.access_list.into()),
-                    max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
-                    max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
-                    chain_id: tx.chain_id.map(|c| c.as_u64().into()),
-                }
+            TypedTransaction::Eip1559(tx) => Transaction {
+                hash: Default::default(),
+                nonce: tx.nonce.unwrap_or_default().into(),
+                block_hash: None,
+                block_number: None,
+                transaction_index: None,
+                from: tx.from.unwrap_or_default().into(),
+                to: tx.to.map(Into::into),
+                value: tx.value.unwrap_or_default().into(),
+                gas_price: None,
+                gas: tx.gas.unwrap_or_default().into(),
+                input: tx.data.unwrap_or_default().into(),
+                v: sign.v.into(),
+                r: sign.r.into(),
+                s: sign.s.into(),
+                transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
+                access_list: Some(tx.access_list.into()),
+                max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
+                max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
+                chain_id: tx.chain_id.map(|c| c.as_u64().into()),
             },
         }
     }
@@ -469,20 +463,24 @@ impl From<Transaction> for (TypedTransaction, ethers_core::types::Signature) {
                 TypedTransaction::Legacy(ethers_core::types::TransactionRequest {
                     nonce: Some(value.nonce.into()),
                     from: Some(value.from.into()),
-                    to: value.to.map(|add| ethers_core::types::NameOrAddress::Address(add.into())),
+                    to: value
+                        .to
+                        .map(|add| ethers_core::types::NameOrAddress::Address(add.into())),
                     value: Some(value.value.into()),
                     gas_price: value.gas_price.map(Into::into),
                     gas: Some(value.gas.into()),
                     data: Some(value.input.into()),
                     chain_id: value.chain_id.map(|c| c.0.as_u64().into()),
                 })
-            },
+            }
             TRANSACTION_TYPE_EIP2930 => {
                 TypedTransaction::Eip2930(ethers_core::types::Eip2930TransactionRequest {
                     tx: ethers_core::types::TransactionRequest {
                         nonce: Some(value.nonce.into()),
                         from: Some(value.from.into()),
-                        to: value.to.map(|add| ethers_core::types::NameOrAddress::Address(add.into())),
+                        to: value
+                            .to
+                            .map(|add| ethers_core::types::NameOrAddress::Address(add.into())),
                         value: Some(value.value.into()),
                         gas_price: value.gas_price.map(Into::into),
                         gas: Some(value.gas.into()),
@@ -491,21 +489,21 @@ impl From<Transaction> for (TypedTransaction, ethers_core::types::Signature) {
                     },
                     access_list: value.access_list.unwrap_or_default().into(),
                 })
-            },
-            _ => {
-                TypedTransaction::Eip1559(ethers_core::types::Eip1559TransactionRequest {
-                    nonce: Some(value.nonce.into()),
-                    from: Some(value.from.into()),
-                    to: value.to.map(|add| ethers_core::types::NameOrAddress::Address(add.into())),
-                    value: Some(value.value.into()),
-                    gas: Some(value.gas.into()),
-                    data: Some(value.input.into()),
-                    access_list: value.access_list.unwrap_or_default().into(),
-                    max_priority_fee_per_gas: value.max_priority_fee_per_gas.map(Into::into),
-                    max_fee_per_gas: value.max_fee_per_gas.map(Into::into),
-                    chain_id: value.chain_id.map(|c| c.0.as_u64().into()),
-                })
-            },
+            }
+            _ => TypedTransaction::Eip1559(ethers_core::types::Eip1559TransactionRequest {
+                nonce: Some(value.nonce.into()),
+                from: Some(value.from.into()),
+                to: value
+                    .to
+                    .map(|add| ethers_core::types::NameOrAddress::Address(add.into())),
+                value: Some(value.value.into()),
+                gas: Some(value.gas.into()),
+                data: Some(value.input.into()),
+                access_list: value.access_list.unwrap_or_default().into(),
+                max_priority_fee_per_gas: value.max_priority_fee_per_gas.map(Into::into),
+                max_fee_per_gas: value.max_fee_per_gas.map(Into::into),
+                chain_id: value.chain_id.map(|c| c.0.as_u64().into()),
+            }),
         };
 
         let sign = ethers_core::types::Signature {
@@ -1286,7 +1284,7 @@ mod test {
 
             assert_eq!(
                 ethereum_types::H256::from_str(&hash).unwrap(),
-                transaction.slow_hash().0.0
+                transaction.slow_hash().0 .0
             );
 
             let ethers_transaction: ethers_core::types::Transaction = transaction.clone().into();
