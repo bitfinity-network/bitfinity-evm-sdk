@@ -1,6 +1,12 @@
-use alloy::{consensus::{SignableTransaction, Transaction, TxEip1559, TxEip2930, TxLegacy}, primitives::Parity};
+use alloy::consensus::{SignableTransaction, Transaction, TxEip1559, TxEip2930, TxLegacy};
+use alloy::primitives::Parity;
 
-use crate::{constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY}, error::EvmError, transaction::{AccessList, AccessListItem, Signature}, Bytes, H160, H256, H64, U256, U64};
+use crate::constant::{
+    TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
+};
+use crate::error::EvmError;
+use crate::transaction::{AccessList, AccessListItem, Signature};
+use crate::{Bytes, H160, H256, H64, U256, U64};
 
 impl From<alloy::primitives::Bytes> for Bytes {
     fn from(value: alloy::primitives::Bytes) -> Self {
@@ -240,7 +246,10 @@ impl From<crate::Transaction> for alloy::rpc::types::Transaction {
                     value: tx.value.into(),
                     input: tx.input.into(),
                     chain_id: tx.chain_id.map(|v| v.0.as_u64()).unwrap_or_default(),
-                    max_fee_per_gas: tx.max_fee_per_gas.map(|v| v.0.as_u128()).unwrap_or_default(),
+                    max_fee_per_gas: tx
+                        .max_fee_per_gas
+                        .map(|v| v.0.as_u128())
+                        .unwrap_or_default(),
                     max_priority_fee_per_gas: tx
                         .max_priority_fee_per_gas
                         .map(|v| v.0.as_u128())
@@ -262,7 +271,6 @@ impl From<crate::Transaction> for alloy::rpc::types::Transaction {
     }
 }
 
-
 impl TryFrom<Signature> for alloy::primitives::Signature {
     type Error = EvmError;
 
@@ -277,7 +285,13 @@ impl TryFrom<&Signature> for alloy::primitives::Signature {
     fn try_from(value: &Signature) -> Result<Self, Self::Error> {
         Parity::try_from(value.v.0.as_u64())
             .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))
-            .map(|parity| alloy::primitives::Signature::new(value.r.clone().into(), value.s.clone().into(), parity))
+            .map(|parity| {
+                alloy::primitives::Signature::new(
+                    value.r.clone().into(),
+                    value.s.clone().into(),
+                    parity,
+                )
+            })
     }
 }
 
