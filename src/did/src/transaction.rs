@@ -334,7 +334,9 @@ impl Transaction {
 
     pub fn from_rlp_2718(bytes: &mut &[u8]) -> Result<Self, EvmError> {
         use alloy::eips::eip2718::Decodable2718;
-        alloy::consensus::TxEnvelope::decode_2718(bytes).map(Into::into).map_err(Into::into)
+        alloy::consensus::TxEnvelope::decode_2718(bytes)
+            .map(Into::into)
+            .map_err(Into::into)
     }
 }
 
