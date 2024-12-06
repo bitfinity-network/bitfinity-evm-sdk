@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 
+use alloy::eips::eip2718::Eip2718Error;
+use alloy::rlp::Error as DecoderError;
 use candid::{CandidType, Deserialize};
 use jsonrpc_core::{Error, ErrorCode};
-use rlp::DecoderError;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -66,6 +67,15 @@ pub enum EvmError {
 
     #[error("Precompile: {0}")]
     Precompile(String),
+
+    #[error("Signature Parity is invalid: {0}")]
+    InvalidSignatureParity(String),
+
+    #[error("Signature error: {0}")]
+    SignatureError(String),
+
+    #[error("Rlp error: {0}")]
+    RlpError(String),
 }
 
 /// Variant of `TransactionPool` error
@@ -98,7 +108,13 @@ impl From<String> for EvmError {
 
 impl From<DecoderError> for EvmError {
     fn from(decode_error: DecoderError) -> Self {
-        Self::Internal(format!("rlp err: {decode_error}"))
+        Self::RlpError(format!("rlp err: {decode_error}"))
+    }
+}
+
+impl From<Eip2718Error> for EvmError {
+    fn from(eip2718_error: Eip2718Error) -> Self {
+        Self::RlpError(format!("EIP-2718 rlp error: {eip2718_error}"))
     }
 }
 

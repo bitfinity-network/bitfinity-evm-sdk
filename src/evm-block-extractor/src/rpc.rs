@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use ethers_core::types::{BlockNumber, H160, U256, U64};
+use alloy::eips::BlockNumberOrTag;
+use alloy::primitives::{Address, U256, U64};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 
@@ -24,7 +25,7 @@ pub trait Eth {
     /// Get a block by number
     async fn get_block_by_number(
         &self,
-        block: BlockNumber,
+        block: BlockNumberOrTag,
         full_transactions: bool,
     ) -> RpcResult<serde_json::Value>;
 
@@ -41,7 +42,7 @@ pub trait Eth {
 #[rpc(server, namespace = "ic")]
 pub trait IC {
     #[method(name = "getGenesisBalances")]
-    async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>>;
+    async fn get_genesis_balances(&self) -> RpcResult<Vec<(Address, U256)>>;
 
     #[method(name = "getLastCertifiedBlock")]
     async fn get_last_block_certified_data(&self) -> RpcResult<CertifiedBlock>;
@@ -49,7 +50,7 @@ pub trait IC {
 
 #[async_trait::async_trait]
 impl ICServer for EthImpl {
-    async fn get_genesis_balances(&self) -> RpcResult<Vec<(H160, U256)>> {
+    async fn get_genesis_balances(&self) -> RpcResult<Vec<(Address, U256)>> {
         let tx = self.blockchain.get_genesis_balances().await.map_err(|e| {
             log::error!("Error getting genesis balances: {:?}", e);
             jsonrpsee::types::error::ErrorCode::InternalError
@@ -80,13 +81,13 @@ impl ICServer for EthImpl {
 impl EthServer for EthImpl {
     async fn get_block_by_number(
         &self,
-        block: BlockNumber,
+        block: BlockNumberOrTag,
         include_transactions: bool,
     ) -> RpcResult<serde_json::Value> {
         let db = &self.blockchain;
 
         let block_number = match block {
-            BlockNumber::Latest => db
+            BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe | BlockNumberOrTag::Latest => db
                 .get_latest_block_number()
                 .await
                 .map_err(|e| {
@@ -94,13 +95,12 @@ impl EthServer for EthImpl {
                     jsonrpsee::types::error::ErrorCode::InternalError
                 })?
                 .unwrap_or(0),
-            BlockNumber::Earliest => db.get_earliest_block_number().await.map_err(|e| {
+            BlockNumberOrTag::Earliest => db.get_earliest_block_number().await.map_err(|e| {
                 log::error!("Error getting earliest block number: {:?}", e);
                 jsonrpsee::types::error::ErrorCode::InternalError
             })?,
-            BlockNumber::Number(num) => num.as_u64(),
-            BlockNumber::Pending => return Ok(serde_json::Value::Null),
-            _ => return Ok(serde_json::Value::Null),
+            BlockNumberOrTag::Number(num) => num,
+            BlockNumberOrTag::Pending => return Ok(serde_json::Value::Null),
         };
 
         if include_transactions {
@@ -149,7 +149,7 @@ impl EthServer for EthImpl {
             })?
             .unwrap_or(0);
 
-        Ok(block_number.into())
+        Ok(U256::from(block_number))
     }
 
     async fn get_chain_id(&self) -> RpcResult<U64> {
@@ -163,6 +163,6 @@ impl EthServer for EthImpl {
             })?
             .ok_or(jsonrpsee::types::error::ErrorCode::InternalError)?;
 
-        Ok(chain_id.into())
+        Ok(U64::from(chain_id))
     }
 }

@@ -14,7 +14,7 @@ fn build_transaction(
         nonce: U256::zero(),
         value: U256::zero(),
         gas: 10_000u64.into(),
-        gas_price: None,
+        gas_price: 10u64.into(),
         input: Vec::new(),
         signature: SigningMethod::None,
         chain_id: 31540,
