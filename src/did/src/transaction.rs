@@ -18,6 +18,7 @@ use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
 use crate::constant::{TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY};
 use crate::error::EvmError;
+use crate::keccak::keccak_hash;
 use crate::{codec, Bytes};
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq)]
@@ -313,6 +314,23 @@ pub struct Transaction {
 
     #[serde(rename = "chainId", default, skip_serializing_if = "Option::is_none")]
     pub chain_id: Option<U256>,
+}
+
+impl Transaction {
+    /// RLP encodes the transaction and recalculates the hash.
+    /// It does not modify the transaction itself.
+    /// It returns the calcualted hash and the RLP encoded bytes.
+    pub fn slow_hash(&self) -> (H256, Bytes) {
+        let encoded = self.rlp_encoded_2718();
+        (keccak_hash(encoded.0.as_ref()), encoded)
+    }
+
+    /// Encode the transaction according to [EIP-2718] rules. First a 1-byte
+    /// type flag in the range 0x0-0x7f, then the body of the transaction.
+    pub fn rlp_encoded_2718(&self) -> Bytes {
+        let (tx, sign): (TypedTransaction, ethers_core::types::Signature) = self.clone().into();
+        tx.rlp_signed(&sign).0.into()
+    }
 }
 
 impl From<ethers_core::types::Transaction> for Transaction {
@@ -1265,6 +1283,11 @@ mod test {
             let transaction_from_value = value.get("result").unwrap().to_owned();
             let transaction: Transaction =
                 serde_json::from_value(transaction_from_value.clone()).unwrap();
+
+            assert_eq!(
+                ethereum_types::H256::from_str(&hash).unwrap(),
+                transaction.slow_hash().0.0
+            );
 
             let ethers_transaction: ethers_core::types::Transaction = transaction.clone().into();
             assert_eq!(
