@@ -6,6 +6,7 @@ use alloy::consensus::{
     SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy,
 };
 use alloy::primitives::Parity;
+use bytes::BytesMut;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
@@ -559,17 +560,19 @@ impl Transaction {
     /// RLP encodes the transaction and recalculates the hash.
     /// It does not modify the transaction itself.
     /// It returns the calcualted hash and the RLP encoded bytes.
-    pub fn slow_hash(&self) -> (H256, Vec<u8>) {
+    pub fn slow_hash(&self) -> (H256, bytes::Bytes) {
         let encoded = self.rlp_encoded_2718();
         (keccak_hash(&encoded), encoded)
     }
 
     /// Encode the transaction according to [EIP-2718] rules. First a 1-byte
     /// type flag in the range 0x0-0x7f, then the body of the transaction.
-    pub fn rlp_encoded_2718(&self) -> Vec<u8> {
+    pub fn rlp_encoded_2718(&self) -> bytes::Bytes {
         use alloy::eips::eip2718::Encodable2718;
         let alloy_transaction: alloy::consensus::TxEnvelope = self.clone().into();
-        alloy_transaction.encoded_2718()
+        let mut buffer = BytesMut::new();
+        alloy_transaction.encode_2718(&mut buffer);
+        buffer.freeze()
     }
 
     /// Decode the transaction according to [EIP-2718] rules.
