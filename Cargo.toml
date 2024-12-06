@@ -26,7 +26,7 @@ repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 version = "0.37.0"
 
 [workspace.dependencies]
-alloy-primitives = { version = "0.8", default-features = false }
+alloy = { version = "0.7", features = ["consensus", "eips", "rpc", "rpc-types", "rlp", "serde"]}
 anyhow = "1.0"
 async-trait = "0.1"
 bincode = "1.3"
