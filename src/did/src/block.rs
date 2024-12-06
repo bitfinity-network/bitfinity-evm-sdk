@@ -451,9 +451,7 @@ impl Decodable for Block<Transaction> {
                             },
                         }
                     }
-                    PayloadView::String(_) => {
-                        return Err(alloy::rlp::Error::UnexpectedString)
-                    }
+                    PayloadView::String(_) => return Err(alloy::rlp::Error::UnexpectedString),
                 };
 
                 let mut transactions = items[1];
@@ -468,9 +466,7 @@ impl Decodable for Block<Transaction> {
                 }
                 Ok(block)
             }
-            PayloadView::String(_) => {
-                Err(alloy::rlp::Error::UnexpectedString)
-            }
+            PayloadView::String(_) => Err(alloy::rlp::Error::UnexpectedString),
         }
     }
 }
