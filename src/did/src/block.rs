@@ -401,7 +401,7 @@ impl Storable for Block<H256> {
 impl Decodable for Block<Transaction> {
     fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
         let payload = Header::decode_raw(buf)?;
-        let block = match payload {
+        match payload {
             PayloadView::List(items) => {
                 let mut header = items[0];
                 let mut block = match Header::decode_raw(&mut header)? {
@@ -452,7 +452,7 @@ impl Decodable for Block<Transaction> {
                         }
                     }
                     PayloadView::String(_) => {
-                        panic!("Block header should be a list")
+                        return Err(alloy::rlp::Error::UnexpectedString)
                     }
                 };
 
@@ -464,16 +464,14 @@ impl Decodable for Block<Transaction> {
                             block.transactions.push(tx.into());
                         }
                     }
-                    PayloadView::String(_) => panic!("Transactions should be a list"),
+                    PayloadView::String(_) => return Err(alloy::rlp::Error::UnexpectedString),
                 }
-                block
+                Ok(block)
             }
             PayloadView::String(_) => {
-                panic!("Block should be a list")
+                Err(alloy::rlp::Error::UnexpectedString)
             }
-        };
-
-        Ok(block)
+        }
     }
 }
 
