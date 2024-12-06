@@ -206,8 +206,7 @@ impl Encodable for Block<Transaction> {
         // Block transactions
         s.begin_list(self.transactions.len());
         for transaction in &self.transactions {
-            let transaction = ethers_core::types::Transaction::from(transaction.clone());
-            s.append_raw(&transaction.rlp(), 1);
+            s.append_raw(transaction.rlp_encoded_2718().0.as_ref(), 1);
         }
 
         // Uncles block headers. Currently not supported
@@ -282,9 +281,11 @@ impl Decodable for Block<Transaction> {
         block.transactions.reserve(transactions_count);
         for i in 0..transactions_count {
             let transaction_rlp = transactions.at(i)?;
-            let tx = ethers_core::types::Transaction::decode(&transaction_rlp)?;
+            let tx = Transaction::from_rlp_2718(&mut transaction_rlp.as_raw())
+                .map_err(|_| DecoderError::Custom("cannot decede transaction"))?;
+            // let tx = ethers_core::types::Transaction::decode(&transaction_rlp)?;
 
-            block.transactions.push(tx.into());
+            block.transactions.push(tx);
         }
 
         Ok(block)
