@@ -1,4 +1,5 @@
 use alloy::consensus::{SignableTransaction, Transaction, TxEip1559, TxEip2930, TxLegacy};
+use alloy::eips::eip2718::Eip2718Error;
 use alloy::primitives::Parity;
 
 use crate::constant::{
@@ -371,6 +372,12 @@ impl From<AccessList> for alloy::rpc::types::AccessList {
                 })
                 .collect(),
         )
+    }
+}
+
+impl From<Eip2718Error> for EvmError {
+    fn from(eip2718_error: Eip2718Error) -> Self {
+        Self::RlpError(format!("EIP-2718 rlp error: {eip2718_error}"))
     }
 }
 

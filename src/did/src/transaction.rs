@@ -331,6 +331,11 @@ impl Transaction {
         let (tx, sign): (TypedTransaction, ethers_core::types::Signature) = self.clone().into();
         tx.rlp_signed(&sign).0.into()
     }
+
+    pub fn from_rlp_2718(bytes: &mut &[u8]) -> Result<Self, EvmError> {
+        use alloy::eips::eip2718::Decodable2718;
+        alloy::consensus::TxEnvelope::decode_2718(bytes).map(Into::into).map_err(Into::into)
+    }
 }
 
 impl From<ethers_core::types::Transaction> for Transaction {

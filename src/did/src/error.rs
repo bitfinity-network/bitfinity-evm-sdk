@@ -69,6 +69,9 @@ pub enum EvmError {
 
     #[error("Precompile: {0}")]
     Precompile(String),
+
+    #[error("Rlp error: {0}")]
+    RlpError(String),
 }
 
 /// Variant of `TransactionPool` error
