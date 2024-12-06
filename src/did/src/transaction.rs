@@ -571,6 +571,14 @@ impl Transaction {
         let alloy_transaction: alloy::consensus::TxEnvelope = self.clone().into();
         alloy_transaction.encoded_2718()
     }
+
+    /// Decode the transaction according to [EIP-2718] rules.
+    pub fn from_rlp_2718(bytes: &mut &[u8]) -> Result<Self, EvmError> {
+        use alloy::eips::eip2718::Decodable2718;
+        alloy::consensus::TxEnvelope::decode_2718(bytes)
+            .map(Into::into)
+            .map_err(Into::into)
+    }
 }
 
 impl Storable for Transaction {
@@ -1359,6 +1367,15 @@ mod test {
                 alloy::primitives::B256::from_str(&hash).unwrap(),
                 transaction.slow_hash().0 .0
             );
+
+            // from/to rlp
+            {
+                let (hash, rlp) = transaction.slow_hash();
+                let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
+                let (re_hash, re_rlp) = tx_from_rlp.slow_hash();
+                assert_eq!(hash, re_hash);
+                assert_eq!(rlp, re_rlp);
+            }
 
             let transaction_to_value = serde_json::to_value(transaction).unwrap();
             assert_eq!(transaction_from_value, transaction_to_value);
