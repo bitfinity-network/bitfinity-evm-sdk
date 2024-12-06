@@ -328,10 +328,12 @@ impl Transaction {
     /// Encode the transaction according to [EIP-2718] rules. First a 1-byte
     /// type flag in the range 0x0-0x7f, then the body of the transaction.
     pub fn rlp_encoded_2718(&self) -> Bytes {
-        let (tx, sign): (TypedTransaction, ethers_core::types::Signature) = self.clone().into();
-        tx.rlp_signed(&sign).0.into()
+        use alloy::eips::eip2718::Encodable2718;
+        let tx: alloy::consensus::TxEnvelope = self.clone().into();
+        tx.encoded_2718().into()
     }
 
+    /// Decode the transaction according to [EIP-2718] rules.
     pub fn from_rlp_2718(bytes: &mut &[u8]) -> Result<Self, EvmError> {
         use alloy::eips::eip2718::Decodable2718;
         alloy::consensus::TxEnvelope::decode_2718(bytes)
@@ -1293,6 +1295,15 @@ mod test {
                 ethereum_types::H256::from_str(&hash).unwrap(),
                 transaction.slow_hash().0 .0
             );
+
+            // from/to rlp
+            {
+                let (hash, rlp) = transaction.slow_hash();
+                let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.0.as_ref()).unwrap();
+                let (re_hash, re_rlp) = tx_from_rlp.slow_hash();
+                assert_eq!(hash, re_hash, "HASH - Tx1: \n{:?}\n tx2: \n{:?}", transaction, tx_from_rlp);
+                assert_eq!(rlp, re_rlp, "RLP - Tx1: \n{:?}\n tx2: \n{:?}", transaction, tx_from_rlp);
+            }
 
             let ethers_transaction: ethers_core::types::Transaction = transaction.clone().into();
             assert_eq!(
