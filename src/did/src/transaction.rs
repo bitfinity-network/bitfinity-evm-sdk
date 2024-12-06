@@ -1301,8 +1301,8 @@ mod test {
                 let (hash, rlp) = transaction.slow_hash();
                 let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.0.as_ref()).unwrap();
                 let (re_hash, re_rlp) = tx_from_rlp.slow_hash();
-                assert_eq!(hash, re_hash, "HASH - Tx1: \n{:?}\n tx2: \n{:?}", transaction, tx_from_rlp);
-                assert_eq!(rlp, re_rlp, "RLP - Tx1: \n{:?}\n tx2: \n{:?}", transaction, tx_from_rlp);
+                assert_eq!(hash, re_hash);
+                assert_eq!(rlp, re_rlp);
             }
 
             let ethers_transaction: ethers_core::types::Transaction = transaction.clone().into();
