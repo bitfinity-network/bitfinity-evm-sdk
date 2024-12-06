@@ -1372,6 +1372,10 @@ mod test {
             {
                 let (hash, rlp) = transaction.slow_hash();
                 let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
+
+                // rlp decoded TX should have the hash set
+                assert_eq!(hash, tx_from_rlp.hash);
+
                 let (re_hash, re_rlp) = tx_from_rlp.slow_hash();
                 assert_eq!(hash, re_hash);
                 assert_eq!(rlp, re_rlp);
