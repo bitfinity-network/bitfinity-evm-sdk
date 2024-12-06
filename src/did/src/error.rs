@@ -52,6 +52,9 @@ pub enum EvmError {
     #[error("Transaction Signature error: {0}")]
     TransactionSignature(String),
 
+    #[error("Invalid Signature Parity: {0}")]
+    InvalidSignatureParity(String),
+
     #[error("gas is too low, minimum required: {minimum}")]
     GasTooLow { minimum: U256 },
 

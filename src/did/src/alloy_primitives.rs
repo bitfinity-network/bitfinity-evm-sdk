@@ -1,4 +1,6 @@
-use crate::{Bytes, H160, H256, H64, U256, U64};
+use alloy::{consensus::{TxEip1559, TxEip2930, TxLegacy}, primitives::Parity};
+
+use crate::{constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY}, error::EvmError, transaction::Signature, Bytes, H160, H256, H64, U256, U64};
 
 impl From<alloy::primitives::Bytes> for Bytes {
     fn from(value: alloy::primitives::Bytes) -> Self {
@@ -107,7 +109,7 @@ impl From<alloy::rpc::types::Transaction> for crate::Transaction {
                 Self {
                     hash: (*signed.hash()).into(),
                     nonce: inner_tx.nonce.into(),
-                    to: inner_tx.to().map(Into::into),
+                    to: inner_tx.to.map(Into::into),
                     value: inner_tx.value.into(),
                     gas_price: Some(inner_tx.gas_price.into()),
                     gas: inner_tx.gas_limit.into(),
@@ -182,8 +184,69 @@ impl From<alloy::rpc::types::Transaction> for crate::Transaction {
     }
 }
 
-impl From<Transaction> for alloy::rpc::types::Transaction {
-    fn from(tx: Transaction) -> Self {
+
+impl TryFrom<Signature> for alloy::primitives::Signature {
+    type Error = EvmError;
+
+    fn try_from(value: Signature) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
+impl TryFrom<&Signature> for alloy::primitives::Signature {
+    type Error = EvmError;
+
+    fn try_from(value: &Signature) -> Result<Self, Self::Error> {
+        Parity::try_from(value.v.0.as_u64())
+            .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))
+            .map(|parity| alloy::primitives::Signature::new(value.r.0, value.s.0, parity))
+    }
+}
+
+impl From<alloy::primitives::Signature> for Signature {
+    fn from(value: alloy::primitives::Signature) -> Self {
+        Self {
+            v: U64::from(value.v().to_u64()),
+            r: value.r().into(),
+            s: value.s().into(),
+        }
+    }
+}
+
+impl TryFrom<Signature> for alloy::primitives::PrimitiveSignature {
+    type Error = EvmError;
+
+    fn try_from(value: Signature) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
+impl TryFrom<&Signature> for alloy::primitives::PrimitiveSignature {
+    type Error = EvmError;
+
+    fn try_from(value: &Signature) -> Result<Self, Self::Error> {
+        let parity = Parity::try_from(value.v.0.as_u64())
+            .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))?;
+        Ok(alloy::primitives::PrimitiveSignature::new(
+            value.r.clone().into(),
+            value.s.clone().into(),
+            parity.y_parity(),
+        ))
+    }
+}
+
+impl From<alloy::primitives::PrimitiveSignature> for Signature {
+    fn from(value: alloy::primitives::PrimitiveSignature) -> Self {
+        Self {
+            v: U64::from(value.v() as u64),
+            r: value.r().into(),
+            s: value.s().into(),
+        }
+    }
+}
+
+impl From<crate::Transaction> for alloy::rpc::types::Transaction {
+    fn from(tx: crate::Transaction) -> Self {
         let signature = Signature {
             v: tx.v,
             r: tx.r,
@@ -191,7 +254,7 @@ impl From<Transaction> for alloy::rpc::types::Transaction {
         };
         let signature = alloy::primitives::PrimitiveSignature::try_from(signature).unwrap();
 
-        let tx_type = tx.transaction_type.unwrap_or_default().0.to::<u64>();
+        let tx_type = tx.transaction_type.unwrap_or_default().0.as_u64();
         match tx_type {
             TRANSACTION_TYPE_LEGACY => alloy::rpc::types::Transaction {
                 inner: TxLegacy {
