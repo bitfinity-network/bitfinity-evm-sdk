@@ -1,6 +1,6 @@
 use alloy::{consensus::{SignableTransaction, Transaction, TxEip1559, TxEip2930, TxLegacy}, primitives::Parity};
 
-use crate::{constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY}, error::EvmError, transaction::Signature, Bytes, H160, H256, H64, U256, U64};
+use crate::{constant::{TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY}, error::EvmError, transaction::{AccessList, AccessListItem, Signature}, Bytes, H160, H256, H64, U256, U64};
 
 impl From<alloy::primitives::Bytes> for Bytes {
     fn from(value: alloy::primitives::Bytes) -> Self {
@@ -200,7 +200,7 @@ impl From<crate::Transaction> for alloy::rpc::types::Transaction {
                     nonce: tx.nonce.0.as_u64(),
                     gas_price: tx.gas_price.map(|v| v.0.as_u128()).unwrap_or_default(),
                     gas_limit: tx.gas.0.as_u64(),
-                    to: tx.to.map(|v| alloy::primitives::Address::from(0)).into(),
+                    to: tx.to.map(|v| alloy::primitives::Address::from(v)).into(),
                     value: tx.value.into(),
                     input: tx.input.into(),
                     chain_id: tx.chain_id.map(|v| v.0.as_u64()),
@@ -218,7 +218,7 @@ impl From<crate::Transaction> for alloy::rpc::types::Transaction {
                     nonce: tx.nonce.0.as_u64(),
                     gas_price: tx.gas_price.map(|v| v.0.as_u128()).unwrap_or_default(),
                     gas_limit: tx.gas.0.as_u64(),
-                    to: tx.to.map(|v| alloy::primitives::Address::from(0)).into(),
+                    to: tx.to.map(|v| alloy::primitives::Address::from(v)).into(),
                     value: tx.value.into(),
                     input: tx.input.into(),
                     chain_id: tx.chain_id.map(|v| v.0.as_u64()).unwrap_or_default(),
@@ -236,7 +236,7 @@ impl From<crate::Transaction> for alloy::rpc::types::Transaction {
                 inner: TxEip1559 {
                     nonce: tx.nonce.0.as_u64(),
                     gas_limit: tx.gas.0.as_u64(),
-                    to: tx.to.map(|v| alloy::primitives::Address::from(0)).into(),
+                    to: tx.to.map(|v| alloy::primitives::Address::from(v)).into(),
                     value: tx.value.into(),
                     input: tx.input.into(),
                     chain_id: tx.chain_id.map(|v| v.0.as_u64()).unwrap_or_default(),
@@ -320,6 +320,43 @@ impl From<alloy::primitives::PrimitiveSignature> for Signature {
             r: value.r().into(),
             s: value.s().into(),
         }
+    }
+}
+
+impl From<alloy::rpc::types::AccessList> for AccessList {
+    fn from(access_list: alloy::rpc::types::AccessList) -> Self {
+        AccessList(
+            access_list
+                .0
+                .into_iter()
+                .map(|access_list| AccessListItem {
+                    address: access_list.address.into(),
+                    storage_keys: access_list
+                        .storage_keys
+                        .into_iter()
+                        .map(Into::into)
+                        .collect(),
+                })
+                .collect(),
+        )
+    }
+}
+impl From<AccessList> for alloy::rpc::types::AccessList {
+    fn from(access_list: AccessList) -> Self {
+        alloy::rpc::types::AccessList(
+            access_list
+                .0
+                .into_iter()
+                .map(|access_list| alloy::rpc::types::AccessListItem {
+                    address: access_list.address.into(),
+                    storage_keys: access_list
+                        .storage_keys
+                        .into_iter()
+                        .map(Into::into)
+                        .collect(),
+                })
+                .collect(),
+        )
     }
 }
 
