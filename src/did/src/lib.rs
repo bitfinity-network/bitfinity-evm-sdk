@@ -26,6 +26,7 @@ pub mod state;
 pub mod transaction;
 
 pub mod fees;
+pub mod http;
 #[cfg(test)]
 mod test_utils;
 
