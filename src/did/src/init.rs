@@ -52,7 +52,7 @@ pub struct SignatureVerificationCanisterInitData {
     /// Access list of principals that are allowed to send transactions to the EVM canisters
     pub access_list: Vec<Principal>,
     /// EVM canister Principal
-    pub evm_canisters: Principal,
+    pub evm_canister: Principal,
     /// Interval for pushing transactions to the EVM canisters
     pub pushing_timer_interval: Duration,
 }
