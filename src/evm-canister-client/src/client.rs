@@ -846,12 +846,12 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Receive a batch of  Transactions and append them to the blockchain.
-    pub async fn receive_transactions(
+    pub async fn receive_transactions_unchecked(
         &self,
         transactions: Vec<Transaction>,
     ) -> CanisterClientResult<Result<()>> {
         self.client
-            .update("receive_transactions", (transactions,))
+            .update("receive_transactions_unchecked", (transactions,))
             .await
     }
 }
