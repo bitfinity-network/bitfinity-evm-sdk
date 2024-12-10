@@ -10,7 +10,7 @@ use did::transaction::{Signature as DidSignature, Transaction as DidTransaction}
 use crate::LocalWallet;
 
 /// Method to create a transaction signature
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum SigningMethod<'a> {
     // Do not sign transaction.
     // Could be used only for the cases when transactions isn't applied.
