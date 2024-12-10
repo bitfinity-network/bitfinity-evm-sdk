@@ -5,7 +5,7 @@ use std::str::FromStr;
 use alloy::consensus::{
     SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy,
 };
-use alloy::primitives::Parity;
+use alloy::primitives::normalize_v;
 use bytes::BytesMut;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
@@ -188,34 +188,6 @@ impl Signature {
     }
 }
 
-impl TryFrom<Signature> for alloy::primitives::Signature {
-    type Error = EvmError;
-
-    fn try_from(value: Signature) -> Result<Self, Self::Error> {
-        Self::try_from(&value)
-    }
-}
-
-impl TryFrom<&Signature> for alloy::primitives::Signature {
-    type Error = EvmError;
-
-    fn try_from(value: &Signature) -> Result<Self, Self::Error> {
-        Parity::try_from(value.v.0.to::<u64>())
-            .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))
-            .map(|parity| alloy::primitives::Signature::new(value.r.0, value.s.0, parity))
-    }
-}
-
-impl From<alloy::primitives::Signature> for Signature {
-    fn from(value: alloy::primitives::Signature) -> Self {
-        Self {
-            v: U64::from(value.v().to_u64()),
-            r: value.r().into(),
-            s: value.s().into(),
-        }
-    }
-}
-
 impl TryFrom<Signature> for alloy::primitives::PrimitiveSignature {
     type Error = EvmError;
 
@@ -228,12 +200,11 @@ impl TryFrom<&Signature> for alloy::primitives::PrimitiveSignature {
     type Error = EvmError;
 
     fn try_from(value: &Signature) -> Result<Self, Self::Error> {
-        let parity = Parity::try_from(value.v.0.to::<u64>())
-            .map_err(|e| EvmError::InvalidSignatureParity(e.to_string()))?;
+        let parity = normalize_v(value.v.0.to()).ok_or_else(|| EvmError::InvalidSignatureParity(format!("{}", value.v)))?;
         Ok(alloy::primitives::PrimitiveSignature::new(
             value.r.0,
             value.s.0,
-            parity.y_parity(),
+            parity,
         ))
     }
 }
@@ -1557,17 +1528,6 @@ mod test {
         }
     }
 
-    #[test]
-    fn signature_conversion_roundtrip() {
-        let signature = Signature {
-            r: U256::max_value(),
-            s: U256::max_value() - U256::from(1u64),
-            v: U64::max_value(),
-        };
-        let ethers_signature = alloy::primitives::Signature::try_from(signature.clone()).unwrap();
-        let roundtrip_signature = Signature::from(ethers_signature);
-        assert_eq!(signature, roundtrip_signature);
-    }
 
     #[test]
     fn primitive_signature_roundtrip() {

@@ -88,6 +88,7 @@ impl TransactionBuilder<'_, '_> {
 #[cfg(test)]
 mod test {
 
+    use alloy::consensus::TxEnvelope;
     use alloy::signers::k256::ecdsa::signature::hazmat::PrehashVerifier;
     use alloy::signers::utils::secret_key_to_address;
     use did::U64;
@@ -244,5 +245,39 @@ mod test {
             .unwrap();
 
         assert_eq!(from, recovered_from);
+    }
+
+    #[test]
+    fn test_build_transaction_is_protected_from_replay_attack() {
+        let key = SigningKey::random(&mut rand::thread_rng());
+        let from = secret_key_to_address(&key);
+        let chain_id = 31540;
+
+        let tx_1 = TransactionBuilder {
+            from: &from.into(),
+            to: None,
+            nonce: U256::zero(),
+            value: U256::zero(),
+            gas: 10_000u64.into(),
+            gas_price: 20_000u64.into(),
+            input: Vec::new(),
+            signature: SigningMethod::SigningKey(&key),
+            chain_id,
+        }.calculate_hash_and_build().unwrap();
+
+        let tx_1_envelop: TxEnvelope = tx_1.clone().into();
+        let recovered_tx_1_from = tx_1_envelop.recover_signer().unwrap();
+
+        // Replaying the same transaction with different chain_id
+        let tx_2 = DidTransaction {
+            chain_id: Some(U256::from(chain_id + 1u64)),
+            ..tx_1
+        };
+
+        let tx_2_envelop: TxEnvelope = tx_2.into();
+        let recovered_tx_2_from = tx_2_envelop.recover_signer().unwrap();
+
+        assert_ne!(recovered_tx_1_from, recovered_tx_2_from);
+
     }
 }
