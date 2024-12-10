@@ -200,11 +200,10 @@ impl TryFrom<&Signature> for alloy::primitives::PrimitiveSignature {
     type Error = EvmError;
 
     fn try_from(value: &Signature) -> Result<Self, Self::Error> {
-        let parity = normalize_v(value.v.0.to()).ok_or_else(|| EvmError::InvalidSignatureParity(format!("{}", value.v)))?;
+        let parity = normalize_v(value.v.0.to())
+            .ok_or_else(|| EvmError::InvalidSignatureParity(format!("{}", value.v)))?;
         Ok(alloy::primitives::PrimitiveSignature::new(
-            value.r.0,
-            value.s.0,
-            parity,
+            value.r.0, value.s.0, parity,
         ))
     }
 }
@@ -1527,7 +1526,6 @@ mod test {
             assert_eq!(receipt.transaction_type, Some(2u64.into()));
         }
     }
-
 
     #[test]
     fn primitive_signature_roundtrip() {

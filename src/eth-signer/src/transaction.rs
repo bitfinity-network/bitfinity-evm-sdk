@@ -263,7 +263,9 @@ mod test {
             input: Vec::new(),
             signature: SigningMethod::SigningKey(&key),
             chain_id,
-        }.calculate_hash_and_build().unwrap();
+        }
+        .calculate_hash_and_build()
+        .unwrap();
 
         let tx_1_envelop: TxEnvelope = tx_1.clone().into();
         let recovered_tx_1_from = tx_1_envelop.recover_signer().unwrap();
@@ -278,6 +280,5 @@ mod test {
         let recovered_tx_2_from = tx_2_envelop.recover_signer().unwrap();
 
         assert_ne!(recovered_tx_1_from, recovered_tx_2_from);
-
     }
 }
