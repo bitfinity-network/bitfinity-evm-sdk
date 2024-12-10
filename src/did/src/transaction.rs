@@ -1221,8 +1221,6 @@ mod test {
         rand::thread_rng().fill(&mut data);
         let bloom = Bloom(data.into());
 
-        // let mut stream = rlp::RlpStream::new();
-        // bloom.rlp_append(&mut stream);
         let encoded = alloy::rlp::encode(&bloom);
         let decoded = alloy::rlp::decode_exact::<Bloom>(&encoded).unwrap();
 

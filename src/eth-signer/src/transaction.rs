@@ -25,7 +25,7 @@ pub enum SigningMethod<'a> {
     LocalWallet(&'a LocalWallet),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TransactionBuilder<'a, 'b> {
     pub from: &'a H160,
     pub to: Option<H160>,

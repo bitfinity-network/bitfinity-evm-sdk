@@ -85,18 +85,6 @@ pub enum TxSigner {
     ManagementCanister(ManagementCanisterSigner),
 }
 
-// impl Storable for TxSigner {
-//     fn to_bytes(&self) -> Cow<[u8]> {
-//         codec::bincode_encode(self).into()
-//     }
-
-//     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-//         codec::bincode_decode(&bytes)
-//     }
-
-//     const BOUND: Bound = Bound::Unbounded;
-// }
-
 impl TxSigner {
     pub async fn get_address(&self) -> TransactionSignerResult<H160> {
         match self {
@@ -179,51 +167,6 @@ impl LocalTxSigner {
             .to_vec())
     }
 }
-
-// /// A helper struct for serializing/deserializing `LocalTxSigner`
-// #[derive(Serialize, Deserialize)]
-// struct WalletSerializationData<'a> {
-//     signing_key_bytes: &'a [u8],
-//     address_bytes: &'a [u8],
-//     chain_id: u64,
-// }
-
-// impl Serialize for LocalTxSigner {
-//     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-//     where
-//         S: serde::Serializer,
-//     {
-//         let signing_key_bytes = &self.private_key;
-//         let address = self.wallet.address();
-//         let chain_id = self.wallet.chain_id().unwrap_or_default();
-//         let serialization_data = WalletSerializationData {
-//             signing_key_bytes: signing_key_bytes,
-//             address_bytes: address.as_bytes(),
-//             chain_id,
-//         };
-
-//         serialization_data.serialize(serializer)
-//     }
-// }
-
-// impl<'de> Deserialize<'de> for LocalTxSigner {
-//     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//         use serde::de::Error;
-
-//         let val = WalletSerializationData::deserialize(deserializer)?;
-//         let signing_key = SigningKey::from_slice(val.signing_key_bytes)
-//             .map_err(|e| D::Error::custom(format!("failed to decode signing key: {e}")))?;
-//         let address = H160::from_slice(val.address_bytes);
-//         Ok(LocalTxSigner::new(Wallet::new_with_signer(
-//             Cow::Owned(signing_key),
-//             address.into(),
-//             val.chain_id,
-//         )))
-//     }
-// }
 
 #[cfg(feature = "ic_sign")]
 mod ic_sign {
@@ -348,55 +291,6 @@ mod test {
         };
         assert_eq!(storable_roundtrip(&signing_strategy), signing_strategy);
     }
-
-    // #[test]
-    // fn test_local_signer_storable_roundtrip() {
-    //     let wallet = LocalWallet::random_with(&mut thread_rng());
-    //     let signer = TxSigner::Local(LocalTxSigner {
-    //         wallet: wallet.clone(),
-    //     });
-    //     let signer: TxSigner = storable_roundtrip(&signer);
-
-    //     #[allow(irrefutable_let_patterns)]
-    //     if let TxSigner::Local(LocalTxSigner {
-    //         wallet: wallet_roundtrip,
-    //     }) = signer
-    //     {
-    //         assert_eq!(wallet.address(), wallet_roundtrip.address());
-    //         assert_eq!(wallet.signer(), wallet_roundtrip.signer());
-    //         assert_eq!(wallet.chain_id(), wallet_roundtrip.chain_id());
-    //     } else {
-    //         panic!("roundtrip failed");
-    //     }
-    // }
-
-    // #[cfg(feature = "ic_sign")]
-    // #[test]
-    // fn test_management_canister_signer_roundtrip() {
-    //     let management_canister_signer = ManagementCanisterSigner {
-    //         key_id: crate::ic_sign::SigningKeyId::Dfx,
-    //         cached_address: RefCell::new(Some(H160::from_slice(&[3; 20]))),
-    //         derivation_path: vec![vec![1, 2], vec![3]],
-    //         cached_pubkey: RefCell::new(Some(vec![42; 32])),
-    //     };
-    //     let signer: TxSigner = storable_roundtrip(&TxSigner::ManagementCanister(
-    //         management_canister_signer.clone(),
-    //     ));
-    //     if let TxSigner::ManagementCanister(ManagementCanisterSigner {
-    //         key_id,
-    //         cached_address,
-    //         derivation_path,
-    //         cached_pubkey,
-    //     }) = signer
-    //     {
-    //         assert!(matches!(key_id, crate::ic_sign::SigningKeyId::Dfx));
-    //         assert_eq!(cached_address, management_canister_signer.cached_address);
-    //         assert_eq!(derivation_path, management_canister_signer.derivation_path);
-    //         assert_eq!(cached_pubkey, management_canister_signer.cached_pubkey)
-    //     } else {
-    //         panic!("roundtrip failed");
-    //     }
-    // }
 
     #[test]
     fn test_create_local_signer() {

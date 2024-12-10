@@ -193,36 +193,6 @@ impl<TX> Block<TX> {
         if let Some(ref base_fee) = self.base_fee_per_gas {
             base_fee.encode(out);
         }
-
-        // No need to encode withdrawals_root if it doesn't exist.
-        // if let Some(ref root) = self.withdrawals_root {
-        //     root.encode(out);
-        // }
-
-        // No need to encode blob_gas_used if it doesn't exist.
-        // if let Some(ref blob_gas_used) = self.blob_gas_used {
-        //     U256::from(*blob_gas_used).encode(out);
-        // }
-
-        // No need to encode excess_blob_gas if it doesn't exist.
-        // if let Some(ref excess_blob_gas) = self.excess_blob_gas {
-        //     U256::from(*excess_blob_gas).encode(out);
-        // }
-
-        // No need to encode parent_beacon_block_root if it doesn't exist.
-        // if let Some(ref parent_beacon_block_root) = self.parent_beacon_block_root {
-        //     parent_beacon_block_root.encode(out);
-        // }
-
-        // No need to encode requests_hash if it doesn't exist.
-        // if let Some(ref requests_hash) = self.requests_hash {
-        //     requests_hash.encode(out);
-        // }
-
-        // No need to encode target_blobs_per_block if it doesn't exist.
-        // if let Some(ref target_blobs_per_block) = self.target_blobs_per_block {
-        //     target_blobs_per_block.encode(out);
-        // }
     }
 
     /// Returns the length of the header payload for rlp encoding
@@ -248,39 +218,6 @@ impl<TX> Block<TX> {
             // Adding base fee length if it exists.
             length += base_fee.length();
         }
-
-        // No need to add withdrawals_root length if it doesn't exist.
-        // if let Some(root) = self.withdrawals_root {
-        //     // Adding withdrawals_root length if it exists.
-        //     length += root.length();
-        // }
-
-        // No need to add blob_gas_used length if it doesn't exist.
-        // if let Some(blob_gas_used) = self.blob_gas_used {
-        //     // Adding blob_gas_used length if it exists.
-        //     length += U256::from(blob_gas_used).length();
-        // }
-
-        // No need to add excess_blob_gas length if it doesn't exist.
-        // if let Some(excess_blob_gas) = self.excess_blob_gas {
-        //     // Adding excess_blob_gas length if it exists.
-        //     length += U256::from(excess_blob_gas).length();
-        // }
-
-        // No need to add parent_beacon_block_root length if it doesn't exist.
-        // if let Some(parent_beacon_block_root) = self.parent_beacon_block_root {
-        //     length += parent_beacon_block_root.length();
-        // }
-
-        // No need to add requests_hash length if it doesn't exist.
-        // if let Some(requests_hash) = self.requests_hash {
-        //     length += requests_hash.length();
-        // }
-
-        // No need to add target_blobs_per_block length if it doesn't exist.
-        // if let Some(target_blobs_per_block) = self.target_blobs_per_block {
-        //     length += target_blobs_per_block.length();
-        // }
 
         length
     }
@@ -328,8 +265,6 @@ impl From<Block<Transaction>> for Block<H256> {
 /// Calculate the hash of a block
 pub fn calculate_block_hash<T>(block: &Block<T>) -> H256 {
     keccak256(block.header_rlp_encoded()).into()
-    // let header: alloy::consensus::Header = block.into();
-    // header.hash_slow().into()
 }
 
 /// Calculate the size of a block in bytes considering all of its transactions
