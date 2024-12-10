@@ -69,7 +69,7 @@ pub struct EvmStats {
     /// Returns a vec of the transactions in the pool
     pub pending_transactions: Vec<H256>,
     /// Latest Block number
-    pub block_number: usize,
+    pub block_number: u64,
     /// The CHAIN_ID for the evm
     pub chain_id: u64,
     /// This is the hash of all account balances, contract storage etc

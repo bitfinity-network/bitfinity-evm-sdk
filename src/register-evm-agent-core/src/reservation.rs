@@ -3,34 +3,33 @@ use std::time::Duration;
 use candid::Principal;
 use did::{H160, H256, U256};
 use eth_signer::transaction::{SigningMethod, TransactionBuilder};
-use eth_signer::{Signer, Wallet};
-use ethers_core::k256::ecdsa::SigningKey;
+use eth_signer::LocalWallet;
 use evm_canister_client::{CanisterClient, EvmCanisterClient};
 use log::*;
 
 use crate::error::{Error, Result};
 use crate::TimeWaiter;
 
-pub struct ReservationService<'a, C: CanisterClient, W: TimeWaiter> {
+pub struct ReservationService<C: CanisterClient, W: TimeWaiter> {
     client: EvmCanisterClient<C>,
     amount_to_mint: Option<u64>,
     gas_price: U256,
     reserve_canister_id: Principal,
-    wallet: Wallet<'a, SigningKey>,
+    wallet: LocalWallet,
     chain_id: u64,
     time_waiter: W,
 }
 
-impl<'a, C: CanisterClient, W: TimeWaiter> ReservationService<'a, C, W> {
+impl<C: CanisterClient, W: TimeWaiter> ReservationService<C, W> {
     pub async fn new(
         client: EvmCanisterClient<C>,
         amount_to_mint: Option<u64>,
         gas_price: U256,
         reserve_canister_id: Principal,
-        wallet: Wallet<'a, SigningKey>,
+        wallet: LocalWallet,
         chain_id: u64,
         time_waiter: W,
-    ) -> Result<ReservationService<'a, C, W>> {
+    ) -> Result<ReservationService<C, W>> {
         Ok(Self {
             client,
             amount_to_mint,
@@ -81,9 +80,9 @@ impl<'a, C: CanisterClient, W: TimeWaiter> ReservationService<'a, C, W> {
             nonce,
             value: U256::zero(),
             gas: 23_000_u64.into(),
-            gas_price: Some(self.gas_price.clone()),
+            gas_price: self.gas_price.clone(),
             input: self.reserve_canister_id.as_slice().to_vec(),
-            signature: SigningMethod::SigningKey(self.wallet.signer()),
+            signature: SigningMethod::SigningKey(self.wallet.credential()),
             chain_id: self.chain_id,
         }
         .calculate_hash_and_build()?;

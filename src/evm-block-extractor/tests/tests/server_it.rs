@@ -1,10 +1,10 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use did::{Block, H160, U256, U64};
+use alloy::primitives::{Address, B256};
+use did::{Block, BlockNumber, H160, H256, U256, U64};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
-use ethers_core::types::{BlockNumber, Transaction, H256};
 use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
 use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
@@ -24,20 +24,18 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
         db_client.init(None, false).await.unwrap();
 
         for i in 0..BLOCK_COUNT {
-            let tx_hash = H256::random();
-            let dummy_transaction: did::Transaction = Transaction {
-                hash: tx_hash,
+            let tx_hash = H256::from(B256::random());
+            let dummy_transaction = did::Transaction {
+                hash: tx_hash.clone(),
                 block_number: Some(i.into()),
                 ..Default::default()
-            }
-            .into();
-            let dummy_block: did::Block<did::H256> = ethers_core::types::Block::<H256> {
-                number: Some(ethers_core::types::U64::from(i)),
-                hash: Some(H256::random()),
+            };
+            let dummy_block = Block::<H256> {
+                number: U64::from(i),
+                hash: H256::from(B256::random()),
                 transactions: vec![tx_hash],
                 ..Default::default()
-            }
-            .into();
+            };
 
             db_client
                 .insert_block_data(&[dummy_block], &[dummy_transaction])
@@ -62,14 +60,14 @@ async fn test_get_blocks() {
                 .get_block_by_number(BlockNumber::Number(i.into()))
                 .await
                 .unwrap();
-            assert_eq!(block.number, Some(i.into()));
+            assert_eq!(block.number, i.into());
             assert_eq!(block.transactions.len(), 1);
 
             let full_block = http_client
                 .get_full_block_by_number(BlockNumber::Number(i.into()))
                 .await
                 .unwrap();
-            assert_eq!(full_block.number, Some(i.into()));
+            assert_eq!(full_block.number, i.into());
             assert_eq!(full_block.transactions.len(), 1);
             assert_eq!(full_block.transactions[0].hash, block.transactions[0]);
         }
@@ -151,11 +149,11 @@ async fn test_get_genesis_accounts() {
             // Arrange
             let genesis_balances = vec![
                 AccountBalance {
-                    address: H160::from(ethers_core::types::H160::random()),
+                    address: H160::from(Address::random()),
                     balance: U256::from(100_u64),
                 },
                 AccountBalance {
-                    address: H160::from(ethers_core::types::H160::random()),
+                    address: H160::from(Address::random()),
                     balance: U256::from(200_u64),
                 },
             ];
@@ -170,8 +168,8 @@ async fn test_get_genesis_accounts() {
             let genesis_accounts: Vec<AccountBalance> = genesis_accounts
                 .into_iter()
                 .map(|account| AccountBalance {
-                    address: account.0.into(),
-                    balance: account.1.into(),
+                    address: account.0,
+                    balance: account.1,
                 })
                 .collect();
 
@@ -301,7 +299,7 @@ async fn test_get_last_certified_block() {
         // Assert
         assert_eq!(certified_block.certificate, vec![1, 2, 3]);
         assert_eq!(certified_block.witness, vec![5, 6, 7]);
-        assert_eq!(certified_block.data, block.into());
+        assert_eq!(certified_block.data, block);
 
         {
             handle.stop().unwrap();

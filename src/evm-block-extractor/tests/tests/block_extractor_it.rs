@@ -44,10 +44,7 @@ async fn test_extractor_collect_blocks() {
 
             let evmc_genesis_balances = evmc_genesis_balances
                 .into_iter()
-                .map(|(address, balance)| AccountBalance {
-                    address: address.into(),
-                    balance: balance.into(),
-                })
+                .map(|(address, balance)| AccountBalance { address, balance })
                 .collect::<Vec<_>>();
 
             assert_eq!(evmc_genesis_balances, db_genesis_balances);
@@ -68,8 +65,8 @@ async fn test_extractor_collect_blocks() {
             assert!(!certified_data.witness.is_empty());
 
             // Check that it is more or less last block
-            assert!(end_block - 10 <= certified_data.data.number.0.as_u64());
-            assert!(end_block + 10 >= certified_data.data.number.0.as_u64());
+            assert!(end_block - 10 <= certified_data.data.number.0.to::<u64>());
+            assert!(end_block + 10 >= certified_data.data.number.0.to::<u64>());
         }
 
         for block_num in start_block..=end_block {
@@ -79,8 +76,8 @@ async fn test_extractor_collect_blocks() {
 
             // Check blocks
             {
-                assert_eq!(block_num, full_block.number.0.as_u64());
-                assert_eq!(block_num, block.number.0.as_u64());
+                assert_eq!(block_num, full_block.number.0.to::<u64>());
+                assert_eq!(block_num, block.number.0.to::<u64>());
                 assert_eq!(block.hash, full_block.hash);
             }
 
