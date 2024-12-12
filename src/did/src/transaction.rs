@@ -1,13 +1,16 @@
 use std::borrow::Cow;
 use std::rc::Rc;
+use std::str::FromStr;
 
+use alloy::consensus::{
+    SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy,
+};
+use alloy::primitives::normalize_v;
+use bytes::BytesMut;
 use candid::types::{Type, TypeInner};
 use candid::{CandidType, Deserialize};
 use derive_more::{Display, From};
-use ethers_core::types::transaction::eip2930;
-use ethers_core::types::Signature as EthersSignature;
 use ic_stable_structures::{Bound, Storable};
-use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::{Deserializer, Serialize, Serializer};
 use sha2::Digest;
 use sha3::Keccak256;
@@ -15,7 +18,11 @@ use sha3::Keccak256;
 use super::hash::{H160, H256};
 use super::integer::{U256, U64};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
+use crate::constant::{
+    TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
+};
 use crate::error::EvmError;
+use crate::keccak::keccak_hash;
 use crate::{codec, Bytes};
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq)]
@@ -169,22 +176,44 @@ pub struct Signature {
     pub s: U256,
 }
 
-impl From<Signature> for EthersSignature {
-    fn from(value: Signature) -> Self {
-        Self {
-            r: value.r.into(),
-            s: value.s.into(),
-            v: value.v.into(),
-        }
+impl Signature {
+    /// Recovers an [`Address`] from this signature and the given prehashed message.
+    /// e.g.: signature.recover_from(&tx.signature_hash())
+    pub fn recover_from(&self, signature_hash: &H256) -> Result<H160, EvmError> {
+        let primitive_signature = alloy::primitives::PrimitiveSignature::try_from(self)?;
+        let recovered_from = primitive_signature
+            .recover_address_from_prehash(&signature_hash.0)
+            .map_err(|err| EvmError::SignatureError(format!("{err:?}")))?;
+        Ok(recovered_from.into())
     }
 }
 
-impl From<EthersSignature> for Signature {
-    fn from(value: EthersSignature) -> Self {
+impl TryFrom<Signature> for alloy::primitives::PrimitiveSignature {
+    type Error = EvmError;
+
+    fn try_from(value: Signature) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
+impl TryFrom<&Signature> for alloy::primitives::PrimitiveSignature {
+    type Error = EvmError;
+
+    fn try_from(value: &Signature) -> Result<Self, Self::Error> {
+        let parity = normalize_v(value.v.0.to())
+            .ok_or_else(|| EvmError::InvalidSignatureParity(format!("{}", value.v)))?;
+        Ok(alloy::primitives::PrimitiveSignature::new(
+            value.r.0, value.s.0, parity,
+        ))
+    }
+}
+
+impl From<alloy::primitives::PrimitiveSignature> for Signature {
+    fn from(value: alloy::primitives::PrimitiveSignature) -> Self {
         Self {
-            r: value.r.into(),
-            s: value.s.into(),
-            v: value.v.into(),
+            v: U64::from(value.v() as u64),
+            r: value.r().into(),
+            s: value.s().into(),
         }
     }
 }
@@ -313,56 +342,215 @@ pub struct Transaction {
     pub chain_id: Option<U256>,
 }
 
-impl From<ethers_core::types::Transaction> for Transaction {
-    fn from(tx: ethers_core::types::Transaction) -> Self {
-        Self {
-            hash: tx.hash.into(),
-            nonce: tx.nonce.into(),
-            block_hash: tx.block_hash.map(Into::into),
-            block_number: tx.block_number.map(Into::into),
-            transaction_index: tx.transaction_index.map(Into::into),
-            from: tx.from.into(),
-            to: tx.to.map(Into::into),
-            value: tx.value.into(),
-            gas_price: tx.gas_price.map(Into::into),
-            gas: tx.gas.into(),
-            input: tx.input.into(),
-            v: tx.v.into(),
-            r: tx.r.into(),
-            s: tx.s.into(),
-            transaction_type: Some(tx.transaction_type.unwrap_or_default().into()),
-            access_list: tx.access_list.map(Into::into),
-            max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
-            max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
-            chain_id: tx.chain_id.map(Into::into),
+impl From<alloy::consensus::TxEnvelope> for Transaction {
+    fn from(tx: alloy::consensus::TxEnvelope) -> Self {
+        let tx = alloy::rpc::types::Transaction {
+            inner: tx,
+            block_hash: None,
+            block_number: None,
+            transaction_index: None,
+            effective_gas_price: None,
+            from: Default::default(),
+        };
+        tx.into()
+    }
+}
+
+impl From<Transaction> for alloy::consensus::TxEnvelope {
+    fn from(value: Transaction) -> Self {
+        let tx: alloy::rpc::types::Transaction = value.into();
+        tx.inner
+    }
+}
+
+impl From<alloy::rpc::types::Transaction> for Transaction {
+    fn from(tx: alloy::rpc::types::Transaction) -> Self {
+        let signature: Signature = (*tx.inner.signature()).into();
+
+        match tx.inner {
+            alloy::consensus::TxEnvelope::Legacy(signed) => {
+                let inner_tx = signed.tx();
+                Self {
+                    hash: (*signed.hash()).into(),
+                    nonce: inner_tx.nonce.into(),
+                    to: inner_tx.to().map(Into::into),
+                    value: inner_tx.value.into(),
+                    gas_price: Some(inner_tx.gas_price.into()),
+                    gas: inner_tx.gas_limit.into(),
+                    input: inner_tx.input.clone().into(),
+                    chain_id: inner_tx.chain_id.map(Into::into),
+                    access_list: None,
+                    max_priority_fee_per_gas: None,
+                    max_fee_per_gas: None,
+                    block_hash: tx.block_hash.map(Into::into),
+                    block_number: tx.block_number.map(Into::into),
+                    transaction_index: tx.transaction_index.map(Into::into),
+                    from: tx.from.into(),
+                    v: signature.v,
+                    r: signature.r,
+                    s: signature.s,
+                    transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
+                }
+            }
+            alloy::consensus::TxEnvelope::Eip2930(signed) => {
+                let inner_tx = signed.tx();
+                Self {
+                    hash: (*signed.hash()).into(),
+                    nonce: inner_tx.nonce.into(),
+                    to: inner_tx.to().map(Into::into),
+                    value: inner_tx.value.into(),
+                    gas_price: Some(inner_tx.gas_price.into()),
+                    gas: inner_tx.gas_limit.into(),
+                    input: inner_tx.input.clone().into(),
+                    chain_id: Some(inner_tx.chain_id.into()),
+                    access_list: Some(inner_tx.access_list.clone().into()),
+                    max_priority_fee_per_gas: None,
+                    max_fee_per_gas: None,
+                    block_hash: tx.block_hash.map(Into::into),
+                    block_number: tx.block_number.map(Into::into),
+                    transaction_index: tx.transaction_index.map(Into::into),
+                    from: tx.from.into(),
+                    v: signature.v,
+                    r: signature.r,
+                    s: signature.s,
+                    transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
+                }
+            }
+            alloy::consensus::TxEnvelope::Eip1559(signed) => {
+                let inner_tx = signed.tx();
+                Self {
+                    hash: (*signed.hash()).into(),
+                    nonce: inner_tx.nonce.into(),
+                    to: inner_tx.to().map(Into::into),
+                    value: inner_tx.value.into(),
+                    gas_price: None,
+                    gas: inner_tx.gas_limit.into(),
+                    input: inner_tx.input.clone().into(),
+                    chain_id: Some(inner_tx.chain_id.into()),
+                    access_list: Some(inner_tx.access_list.clone().into()),
+                    max_priority_fee_per_gas: Some(inner_tx.max_priority_fee_per_gas.into()),
+                    max_fee_per_gas: Some(inner_tx.max_fee_per_gas.into()),
+                    block_hash: tx.block_hash.map(Into::into),
+                    block_number: tx.block_number.map(Into::into),
+                    transaction_index: tx.transaction_index.map(Into::into),
+                    from: tx.from.into(),
+                    v: signature.v,
+                    r: signature.r,
+                    s: signature.s,
+                    transaction_type: Some(TRANSACTION_TYPE_EIP1559.into()),
+                }
+            }
+
+            _ => {
+                panic!("Unsupported transaction type");
+            }
         }
     }
 }
 
-impl From<Transaction> for ethers_core::types::Transaction {
+impl From<Transaction> for alloy::rpc::types::Transaction {
     fn from(tx: Transaction) -> Self {
-        Self {
-            hash: tx.hash.into(),
-            nonce: tx.nonce.into(),
-            block_hash: tx.block_hash.map(Into::into),
-            block_number: tx.block_number.map(Into::into),
-            transaction_index: tx.transaction_index.map(Into::into),
-            from: tx.from.into(),
-            to: tx.to.map(Into::into),
-            value: tx.value.into(),
-            gas_price: tx.gas_price.map(Into::into),
-            gas: tx.gas.into(),
-            input: tx.input.into(),
-            v: tx.v.into(),
-            r: tx.r.into(),
-            s: tx.s.into(),
-            transaction_type: tx.transaction_type.map(Into::into),
-            access_list: tx.access_list.map(Into::into),
-            max_priority_fee_per_gas: tx.max_priority_fee_per_gas.map(Into::into),
-            max_fee_per_gas: tx.max_fee_per_gas.map(Into::into),
-            chain_id: tx.chain_id.map(Into::into),
-            other: ethers_core::types::OtherFields::default(),
+        let signature = Signature {
+            v: tx.v,
+            r: tx.r,
+            s: tx.s,
+        };
+        let signature = alloy::primitives::PrimitiveSignature::try_from(signature).unwrap();
+
+        let tx_type = tx.transaction_type.unwrap_or_default().0.to::<u64>();
+        match tx_type {
+            TRANSACTION_TYPE_LEGACY => alloy::rpc::types::Transaction {
+                inner: TxLegacy {
+                    nonce: tx.nonce.0.to(),
+                    gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
+                    gas_limit: tx.gas.0.to(),
+                    to: tx.to.map(|v| v.0).into(),
+                    value: tx.value.into(),
+                    input: tx.input.into(),
+                    chain_id: tx.chain_id.map(|v| v.0.to()),
+                }
+                .into_signed(signature)
+                .into(),
+                block_hash: tx.block_hash.map(Into::into),
+                block_number: tx.block_number.map(Into::into),
+                transaction_index: tx.transaction_index.map(Into::into),
+                effective_gas_price: None,
+                from: tx.from.into(),
+            },
+            TRANSACTION_TYPE_EIP2930 => alloy::rpc::types::Transaction {
+                inner: TxEip2930 {
+                    nonce: tx.nonce.0.to(),
+                    gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
+                    gas_limit: tx.gas.0.to(),
+                    to: tx.to.map(|v| v.0).into(),
+                    value: tx.value.into(),
+                    input: tx.input.into(),
+                    chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
+                    access_list: tx.access_list.map(Into::into).unwrap_or_default(),
+                }
+                .into_signed(signature)
+                .into(),
+                block_hash: tx.block_hash.map(Into::into),
+                block_number: tx.block_number.map(Into::into),
+                transaction_index: tx.transaction_index.map(Into::into),
+                effective_gas_price: None,
+                from: tx.from.into(),
+            },
+            TRANSACTION_TYPE_EIP1559 => alloy::rpc::types::Transaction {
+                inner: TxEip1559 {
+                    nonce: tx.nonce.0.to(),
+                    gas_limit: tx.gas.0.to(),
+                    to: tx.to.map(|v| v.0).into(),
+                    value: tx.value.into(),
+                    input: tx.input.into(),
+                    chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
+                    max_fee_per_gas: tx.max_fee_per_gas.map(|v| v.0.to()).unwrap_or_default(),
+                    max_priority_fee_per_gas: tx
+                        .max_priority_fee_per_gas
+                        .map(|v| v.0.to())
+                        .unwrap_or_default(),
+                    access_list: tx.access_list.map(Into::into).unwrap_or_default(),
+                }
+                .into_signed(signature)
+                .into(),
+                block_hash: tx.block_hash.map(Into::into),
+                block_number: tx.block_number.map(Into::into),
+                transaction_index: tx.transaction_index.map(Into::into),
+                effective_gas_price: None,
+                from: tx.from.into(),
+            },
+            _ => {
+                panic!("Unsupported transaction type: {}", tx_type);
+            }
         }
+    }
+}
+
+impl Transaction {
+    /// RLP encodes the transaction and recalculates the hash.
+    /// It does not modify the transaction itself.
+    /// It returns the calcualted hash and the RLP encoded bytes.
+    pub fn slow_hash(&self) -> (H256, bytes::Bytes) {
+        let encoded = self.rlp_encoded_2718();
+        (keccak_hash(&encoded), encoded)
+    }
+
+    /// Encode the transaction according to [EIP-2718] rules. First a 1-byte
+    /// type flag in the range 0x0-0x7f, then the body of the transaction.
+    pub fn rlp_encoded_2718(&self) -> bytes::Bytes {
+        use alloy::eips::eip2718::Encodable2718;
+        let alloy_transaction: alloy::consensus::TxEnvelope = self.clone().into();
+        let mut buffer = BytesMut::new();
+        alloy_transaction.encode_2718(&mut buffer);
+        buffer.freeze()
+    }
+
+    /// Decode the transaction according to [EIP-2718] rules.
+    pub fn from_rlp_2718(bytes: &mut &[u8]) -> Result<Self, EvmError> {
+        use alloy::eips::eip2718::Decodable2718;
+        alloy::consensus::TxEnvelope::decode_2718(bytes)
+            .map(Into::into)
+            .map_err(Into::into)
     }
 }
 
@@ -390,8 +578,8 @@ pub struct AccessListItem {
 #[derive(Clone, Serialize, Deserialize, Default, PartialEq, Eq, Debug, CandidType)]
 pub struct AccessList(pub Vec<AccessListItem>);
 
-impl From<eip2930::AccessList> for AccessList {
-    fn from(access_list: eip2930::AccessList) -> Self {
+impl From<alloy::rpc::types::AccessList> for AccessList {
+    fn from(access_list: alloy::rpc::types::AccessList) -> Self {
         AccessList(
             access_list
                 .0
@@ -408,13 +596,13 @@ impl From<eip2930::AccessList> for AccessList {
         )
     }
 }
-impl From<AccessList> for eip2930::AccessList {
+impl From<AccessList> for alloy::rpc::types::AccessList {
     fn from(access_list: AccessList) -> Self {
-        eip2930::AccessList(
+        alloy::rpc::types::AccessList(
             access_list
                 .0
                 .into_iter()
-                .map(|access_list| eip2930::AccessListItem {
+                .map(|access_list| alloy::rpc::types::AccessListItem {
                     address: access_list.address.into(),
                     storage_keys: access_list
                         .storage_keys
@@ -508,7 +696,7 @@ impl From<StorableExecutionResult> for TransactionReceipt {
                 };
 
                 ExeResultData {
-                    status: U64::one(),
+                    status: U64::from(1u64),
                     gas_used,
                     logs,
                     logs_bloom: *logs_bloom,
@@ -558,7 +746,7 @@ impl From<StorableExecutionResult> for TransactionReceipt {
                     block_hash: tx_receipt.block_hash.clone(),
                     transaction_index: tx_receipt.transaction_index,
                     removed: false,
-                    log_index: U256::from(i),
+                    log_index: U256::from(i as u64),
                 })
                 .collect(),
             logs_bloom: exe_data.logs_bloom,
@@ -646,18 +834,31 @@ impl Storable for StorableExecutionResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Bloom(pub ethereum_types::Bloom);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Bloom(pub alloy::primitives::Bloom);
+
+impl<'de> serde::Deserialize<'de> for Bloom {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok(Bloom::from_hex_str(&s).unwrap())
+    }
+}
 
 impl Bloom {
     pub const FILTER_LENGTH_BYTES: usize = 256;
 
     pub fn zeros() -> Bloom {
-        Bloom(ethereum_types::Bloom::zero())
+        Bloom(alloy::primitives::Bloom::ZERO)
     }
 
     pub fn to_hex_str(&self) -> String {
         format!("0x{self:x}")
+    }
+
+    pub fn from_hex_str(s: &str) -> Result<Self, String> {
+        alloy::primitives::Bloom::from_str(s)
+            .map_err(|e| e.to_string())
+            .map(Into::into)
     }
 
     pub fn from_logs<'a>(logs: impl IntoIterator<Item = &'a TransactionExecutionLog>) -> Bloom {
@@ -673,6 +874,10 @@ impl Bloom {
         result
     }
 
+    pub fn from_slice(slice: &[u8]) -> Bloom {
+        Bloom(alloy::primitives::Bloom::from_slice(slice))
+    }
+
     pub fn contains_log(&self, log: &TransactionExecutionLog) -> bool {
         Bloom::process_log(log, &mut |index, mask| self.0[index] & mask == mask)
     }
@@ -682,11 +887,11 @@ impl Bloom {
     }
 
     fn process_log(log: &TransactionExecutionLog, f: &mut impl FnMut(usize, u8) -> bool) -> bool {
-        Bloom::process_data(log.address.0.as_bytes(), f)
+        Bloom::process_data(log.address.0.as_slice(), f)
             && log
                 .topics
                 .iter()
-                .all(|t| Bloom::process_data(t.0.as_bytes(), f))
+                .all(|t| Bloom::process_data(t.0.as_slice(), f))
     }
 
     fn process_data(data: &[u8], f: &mut impl FnMut(usize, u8) -> bool) -> bool {
@@ -713,15 +918,15 @@ impl Default for Bloom {
     }
 }
 
-impl Encodable for Bloom {
-    fn rlp_append(&self, s: &mut RlpStream) {
-        self.0.rlp_append(s);
+impl alloy::rlp::Encodable for Bloom {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        self.0.encode(out);
     }
 }
 
-impl Decodable for Bloom {
-    fn decode(r: &Rlp) -> Result<Self, DecoderError> {
-        Ok(Bloom(ethereum_types::Bloom::decode(r)?))
+impl alloy::rlp::Decodable for Bloom {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::Bloom::decode(buf)?))
     }
 }
 
@@ -744,13 +949,13 @@ impl CandidType for Bloom {
     }
 }
 
-impl From<ethereum_types::Bloom> for Bloom {
-    fn from(bloom: ethereum_types::Bloom) -> Self {
+impl From<alloy::primitives::Bloom> for Bloom {
+    fn from(bloom: alloy::primitives::Bloom) -> Self {
         Bloom(bloom)
     }
 }
 
-impl From<Bloom> for ethereum_types::Bloom {
+impl From<Bloom> for alloy::primitives::Bloom {
     fn from(bloom: Bloom) -> Self {
         bloom.0
     }
@@ -762,8 +967,7 @@ mod test {
 
     use candid::{Decode, Encode};
     use ic_stable_structures::Storable;
-    use rand::Rng;
-    use rlp::Encodable;
+    use rand::{random, Rng};
 
     use super::*;
     use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
@@ -805,8 +1009,8 @@ mod test {
     fn test_storable_transaction() {
         let tx = Transaction {
             access_list: Some(AccessList(vec![AccessListItem {
-                address: ethereum_types::H160::random().into(),
-                storage_keys: vec![ethereum_types::H256::random().into()],
+                address: alloy::primitives::Address::random().into(),
+                storage_keys: vec![alloy::primitives::B256::random().into()],
             }])),
             transaction_type: Some(1u64.into()),
             ..Default::default()
@@ -822,8 +1026,8 @@ mod test {
     fn test_storable_transaction_without_tx_type() {
         let mut tx = Transaction {
             access_list: Some(AccessList(vec![AccessListItem {
-                address: ethereum_types::H160::random().into(),
-                storage_keys: vec![ethereum_types::H256::random().into()],
+                address: alloy::primitives::Address::random().into(),
+                storage_keys: vec![alloy::primitives::B256::random().into()],
             }])),
             transaction_type: None,
             ..Default::default()
@@ -841,8 +1045,8 @@ mod test {
     fn test_candid_encoding_transaction() {
         let tx = Transaction {
             access_list: Some(AccessList(vec![AccessListItem {
-                address: ethereum_types::H160::random().into(),
-                storage_keys: vec![ethereum_types::H256::random().into()],
+                address: alloy::primitives::Address::random().into(),
+                storage_keys: vec![alloy::primitives::B256::random().into()],
             }])),
             ..Default::default()
         };
@@ -860,12 +1064,12 @@ mod test {
                 gas_used: rand::random::<u64>().into(),
                 output: vec![1, 2, 3].into(),
             },
-            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_hash: H256::from(alloy::primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(ethereum_types::H256::random()),
+            block_hash: H256::from(alloy::primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(ethereum_types::H160::random()),
-            to: Some(H160::from(ethereum_types::H160::random())),
+            from: H160::from(alloy::primitives::Address::random()),
+            to: Some(H160::from(alloy::primitives::Address::random())),
             transaction_type: Some(rand::random::<u64>().into()),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Some(rand::random::<u64>().into()),
@@ -888,12 +1092,12 @@ mod test {
                 gas_used: rand::random::<u64>().into(),
                 output: vec![1, 2, 3].into(),
             },
-            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_hash: H256::from(alloy::primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(ethereum_types::H256::random()),
+            block_hash: H256::from(alloy::primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(ethereum_types::H160::random()),
-            to: Some(H160::from(ethereum_types::H160::random())),
+            from: H160::from(alloy::primitives::Address::random()),
+            to: Some(H160::from(alloy::primitives::Address::random())),
             transaction_type: None,
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Some(rand::random::<u64>().into()),
@@ -917,12 +1121,12 @@ mod test {
                 error: HaltError::CallTooDeep,
                 gas_used: Default::default(),
             },
-            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_hash: H256::from(alloy::primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(ethereum_types::H256::random()),
+            block_hash: H256::from(alloy::primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(ethereum_types::H160::random()),
-            to: Some(H160::from(ethereum_types::H160::random())),
+            from: H160::from(alloy::primitives::Address::random()),
+            to: Some(H160::from(alloy::primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -945,12 +1149,12 @@ mod test {
                 gas_used: Default::default(),
                 output: Default::default(),
             },
-            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_hash: H256::from(alloy::primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(ethereum_types::H256::random()),
+            block_hash: H256::from(alloy::primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(ethereum_types::H160::random()),
-            to: Some(H160::from(ethereum_types::H160::random())),
+            from: H160::from(alloy::primitives::Address::random()),
+            to: Some(H160::from(alloy::primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -972,7 +1176,7 @@ mod test {
         let bloom = Bloom::from_logs(&logs);
         assert_eq!(
             bloom,
-            Bloom(ethereum_types::Bloom::from_str(
+            Bloom(alloy::primitives::Bloom::from_str(
                 "000000000000000000810000000000000000000000000000000000020000000000000000000000000000008000\
                  000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\
                  000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000\
@@ -1001,13 +1205,13 @@ mod test {
         assert!(bloom_1_2.contains_bloom(&Bloom::zeros()));
 
         let mut bloom = Bloom::zeros();
-        bloom.0 |= &bloom_1.0;
+        bloom.0 |= bloom_1.0;
         assert_eq!(bloom, bloom_1);
 
-        bloom.0 |= &bloom_1.0;
+        bloom.0 |= bloom_1.0;
         assert_eq!(bloom, bloom_1);
 
-        bloom.0 |= &bloom_2.0;
+        bloom.0 |= bloom_2.0;
         assert_eq!(bloom, bloom_1_2);
     }
 
@@ -1017,10 +1221,8 @@ mod test {
         rand::thread_rng().fill(&mut data);
         let bloom = Bloom(data.into());
 
-        let mut stream = rlp::RlpStream::new();
-        bloom.rlp_append(&mut stream);
-        let encoded = stream.out();
-        let decoded = rlp::decode::<Bloom>(&encoded).unwrap();
+        let encoded = alloy::rlp::encode(&bloom);
+        let decoded = alloy::rlp::decode_exact::<Bloom>(&encoded).unwrap();
 
         assert_eq!(bloom, decoded);
     }
@@ -1047,7 +1249,7 @@ mod test {
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(
             value,
-            Bloom(ethereum_types::Bloom::from_str(&lower_hex).unwrap())
+            Bloom(alloy::primitives::Bloom::from_str(&lower_hex).unwrap())
         );
     }
 
@@ -1132,17 +1334,26 @@ mod test {
             let transaction: Transaction =
                 serde_json::from_value(transaction_from_value.clone()).unwrap();
 
-            let ethers_transaction: ethers_core::types::Transaction = transaction.clone().into();
             assert_eq!(
-                ethereum_types::H256::from_str(&hash).unwrap(),
-                ethers_transaction.hash()
+                alloy::primitives::B256::from_str(&hash).unwrap(),
+                transaction.slow_hash().0 .0
             );
+
+            // from/to rlp
+            {
+                let (hash, rlp) = transaction.slow_hash();
+                let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
+
+                // rlp decoded TX should have the hash set
+                assert_eq!(hash, tx_from_rlp.hash);
+
+                let (re_hash, re_rlp) = tx_from_rlp.slow_hash();
+                assert_eq!(hash, re_hash);
+                assert_eq!(rlp, re_rlp);
+            }
 
             let transaction_to_value = serde_json::to_value(transaction).unwrap();
             assert_eq!(transaction_from_value, transaction_to_value);
-
-            let ethers_transaction_to_value = serde_json::to_value(ethers_transaction).unwrap();
-            assert_eq!(transaction_from_value, ethers_transaction_to_value)
         }
     }
 
@@ -1155,12 +1366,12 @@ mod test {
                 logs_bloom: Default::default(),
                 output: TransactOut::Call(vec![]),
             },
-            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_hash: H256::from(alloy::primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(ethereum_types::H256::random()),
+            block_hash: H256::from(alloy::primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(ethereum_types::H160::random()),
-            to: Some(H160::from(ethereum_types::H160::random())),
+            from: H160::from(alloy::primitives::Address::random()),
+            to: Some(H160::from(alloy::primitives::Address::random())),
             transaction_type: Some(rand::random::<u64>().into()),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Some(rand::random::<u64>().into()),
@@ -1170,7 +1381,7 @@ mod test {
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
-        assert_eq!(receipt.status, Some(U64::one()));
+        assert_eq!(receipt.status, Some(U64::from(1u64)));
         assert_eq!(receipt.block_hash, exe_result.block_hash);
         assert_eq!(receipt.from, exe_result.from);
         assert_eq!(receipt.contract_address, None);
@@ -1182,7 +1393,7 @@ mod test {
 
     #[test]
     fn test_from_success_create_exe_result_to_transaction_receipt() {
-        let contract_address = H160::from(ethereum_types::H160::random());
+        let contract_address = H160::from(alloy::primitives::Address::random());
         let exe_result = StorableExecutionResult {
             exe_result: ExeResult::Success {
                 gas_used: rand::random::<u64>().into(),
@@ -1190,12 +1401,12 @@ mod test {
                 logs_bloom: Default::default(),
                 output: TransactOut::Create(vec![1, 2], Some(contract_address.clone())),
             },
-            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_hash: H256::from(alloy::primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(ethereum_types::H256::random()),
+            block_hash: H256::from(alloy::primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(ethereum_types::H160::random()),
-            to: Some(H160::from(ethereum_types::H160::random())),
+            from: H160::from(alloy::primitives::Address::random()),
+            to: Some(H160::from(alloy::primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -1205,7 +1416,7 @@ mod test {
         };
 
         let receipt: TransactionReceipt = exe_result.clone().into();
-        assert_eq!(receipt.status, Some(U64::one()));
+        assert_eq!(receipt.status, Some(U64::from(1u64)));
         assert_eq!(receipt.block_hash, exe_result.block_hash);
         assert_eq!(receipt.from, exe_result.from);
         assert_eq!(receipt.contract_address, Some(contract_address));
@@ -1222,12 +1433,12 @@ mod test {
                 gas_used: rand::random::<u64>().into(),
                 output: vec![1, 2, 3].into(),
             },
-            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_hash: H256::from(alloy::primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(ethereum_types::H256::random()),
+            block_hash: H256::from(alloy::primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(ethereum_types::H160::random()),
-            to: Some(H160::from(ethereum_types::H160::random())),
+            from: H160::from(alloy::primitives::Address::random()),
+            to: Some(H160::from(alloy::primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -1253,12 +1464,12 @@ mod test {
                 gas_used: rand::random::<u64>().into(),
                 error: crate::HaltError::PriorityFeeGreaterThanMaxFee,
             },
-            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_hash: H256::from(alloy::primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(ethereum_types::H256::random()),
+            block_hash: H256::from(alloy::primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(ethereum_types::H160::random()),
-            to: Some(H160::from(ethereum_types::H160::random())),
+            from: H160::from(alloy::primitives::Address::random()),
+            to: Some(H160::from(alloy::primitives::Address::random())),
             transaction_type: Default::default(),
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -1284,12 +1495,12 @@ mod test {
                 gas_used: rand::random::<u64>().into(),
                 error: crate::HaltError::PriorityFeeGreaterThanMaxFee,
             },
-            transaction_hash: H256::from(ethereum_types::H256::random()),
+            transaction_hash: H256::from(alloy::primitives::B256::random()),
             transaction_index: rand::random::<u64>().into(),
-            block_hash: H256::from(ethereum_types::H256::random()),
+            block_hash: H256::from(alloy::primitives::B256::random()),
             block_number: rand::random::<u64>().into(),
-            from: H160::from(ethereum_types::H160::random()),
-            to: Some(H160::from(ethereum_types::H160::random())),
+            from: H160::from(alloy::primitives::Address::random()),
+            to: Some(H160::from(alloy::primitives::Address::random())),
             transaction_type: None,
             cumulative_gas_used: rand::random::<u64>().into(),
             gas_price: Default::default(),
@@ -1315,15 +1526,17 @@ mod test {
     }
 
     #[test]
-    fn signature_conversion_roundtrip() {
-        let signature = Signature {
-            r: U256::max_value(),
-            s: U256::max_value() - U256::one(),
-            v: U64::max_value(),
-        };
-        let ethers_signature = EthersSignature::from(signature.clone());
-        let roundtrip_signature = Signature::from(ethers_signature);
-        assert_eq!(signature, roundtrip_signature);
+    fn primitive_signature_roundtrip() {
+        let signature = alloy::primitives::PrimitiveSignature::new(
+            alloy::primitives::U256::from(random::<u64>()),
+            alloy::primitives::U256::from(random::<u64>()),
+            random(),
+        );
+        let roundtrip_signature = Signature::from(signature);
+        assert_eq!(
+            signature,
+            alloy::primitives::PrimitiveSignature::try_from(roundtrip_signature).unwrap()
+        );
     }
 
     #[test]
@@ -1332,34 +1545,6 @@ mod test {
         Signature::check_malleability(&s).unwrap();
 
         // If signature S field exceeds the limit, it should return an error.
-        Signature::check_malleability(&(s + U256::one())).unwrap_err();
-    }
-
-    #[test]
-    fn test_type_convertion_from_ether_tx_to_to() {
-        // ----------------------------
-        // test type Some(1)
-        // ----------------------------
-
-        let ether_tx_type_some = ethers_core::types::Transaction {
-            transaction_type: Some(1u64.into()),
-            ..Default::default()
-        };
-
-        let tx: Transaction = ether_tx_type_some.into();
-        assert_eq!(tx.transaction_type, Some(1u64.into()));
-
-        // ----------------------------
-        // test type None
-        // ----------------------------
-
-        let ether_tx_type_none = ethers_core::types::Transaction {
-            transaction_type: None,
-            ..Default::default()
-        };
-
-        let tx: Transaction = ether_tx_type_none.into();
-        // Transaction type should be Some(0) after convertion
-        assert_eq!(tx.transaction_type, Some(0u64.into()));
+        Signature::check_malleability(&(s + U256::from(1u64))).unwrap_err();
     }
 }

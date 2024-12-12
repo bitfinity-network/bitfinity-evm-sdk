@@ -4,8 +4,7 @@ use anyhow::Result;
 use candid::Principal;
 use clap::{Args, Parser, Subcommand};
 use did::H160;
-use eth_signer::{Signer, Wallet};
-use ethers_core::k256::ecdsa::SigningKey;
+use eth_signer::LocalWallet;
 use evm_canister_client::agent::identity::init_agent;
 use evm_canister_client::{EvmCanisterClient, IcAgentClient};
 use register_evm_agent_core::error::Error;
@@ -114,20 +113,19 @@ impl ReserveArgs {
 }
 
 /// Parse an existing wallet
-pub fn get_wallet<'a>(signing_key: &str) -> Result<Wallet<'a, SigningKey>> {
-    let key_bytes = hex::decode(signing_key)?;
-    let wallet = Wallet::from_bytes(&key_bytes)?;
+pub fn get_wallet(signing_key: &str) -> Result<LocalWallet> {
+    let key_bytes = alloy::hex::decode(signing_key)?;
+    let wallet = LocalWallet::from_slice(&key_bytes)?;
     Ok(wallet)
 }
 
 /// generate a brand new wallet
-pub fn generate_wallet<'a>() -> Result<Wallet<'a, SigningKey>> {
-    let mut rng = rand::thread_rng();
-    let wallet = Wallet::new(&mut rng);
-    let signer = wallet.signer();
-    let signer_hex = hex::encode(signer.to_bytes());
-    let public_key = wallet.signer().verifying_key();
-    let public_key_hex = hex::encode(public_key.to_sec1_bytes());
+pub fn generate_wallet() -> Result<LocalWallet> {
+    let wallet = LocalWallet::random();
+    let signer = wallet.credential();
+    let signer_hex = alloy::hex::encode(signer.to_bytes());
+    let public_key = wallet.credential().verifying_key();
+    let public_key_hex = alloy::hex::encode(public_key.to_sec1_bytes());
     let address: H160 = wallet.address().into();
     println!(
         "Wallet:\n  Private Key = {}\n  Public Key = {}\n  Address = {}",

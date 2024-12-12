@@ -9,11 +9,11 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 pub struct Bytes(pub bytes::Bytes);
 
 impl Bytes {
-    pub fn from_hex_str(mut s: &str) -> Result<Self, hex::FromHexError> {
+    pub fn from_hex_str(mut s: &str) -> Result<Self, alloy::hex::FromHexError> {
         if s.starts_with("0x") || s.starts_with("0X") {
             s = &s[2..]
         }
-        let bytes = hex::decode(s)?;
+        let bytes = alloy::hex::decode(s)?;
         Ok(Self(bytes::Bytes::from(bytes)))
     }
 
@@ -22,15 +22,15 @@ impl Bytes {
     }
 }
 
-impl rlp::Encodable for Bytes {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.rlp_append(s);
+impl alloy::rlp::Encodable for Bytes {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        self.0.encode(out);
     }
 }
 
-impl rlp::Decodable for Bytes {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        bytes::Bytes::decode(rlp).map(Into::into)
+impl alloy::rlp::Decodable for Bytes {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(bytes::Bytes::decode(buf)?))
     }
 }
 
@@ -58,14 +58,14 @@ impl From<Bytes> for Vec<u8> {
     }
 }
 
-impl From<Bytes> for ethers_core::types::Bytes {
+impl From<Bytes> for alloy::primitives::Bytes {
     fn from(value: Bytes) -> Self {
-        ethers_core::types::Bytes(value.0)
+        value.0.into()
     }
 }
 
-impl From<ethers_core::types::Bytes> for Bytes {
-    fn from(value: ethers_core::types::Bytes) -> Self {
+impl From<alloy::primitives::Bytes> for Bytes {
+    fn from(value: alloy::primitives::Bytes) -> Self {
         Bytes(value.0)
     }
 }

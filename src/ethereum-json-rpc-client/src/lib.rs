@@ -1,13 +1,12 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use alloy::consensus::TxEnvelope;
+use alloy::rpc::types::{Log, TransactionRequest};
 use anyhow::Context;
 pub use did::certified::CertifiedResult;
 pub use did::transaction::StorableExecutionResult;
-pub use ethers_core::types::{
-    Block, BlockNumber, Log, Transaction, TransactionReceipt, TransactionRequest, H160, H256, U256,
-    U64,
-};
+use did::{Block, BlockNumber, Transaction, TransactionReceipt, H160, H256, U256, U64};
 use itertools::Itertools;
 pub use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
@@ -111,7 +110,8 @@ impl<C: Client> EthJsonRpcClient<C> {
         let params = hashes
             .into_iter()
             .map(|hash| -> anyhow::Result<(Params, Id)> {
-                Ok((make_params_array!(hash), Id::Str(hash.to_string())))
+                let id = Id::Str(hash.0.to_string());
+                Ok((make_params_array!(hash), id))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
         self.batch_request(ETH_GET_TRANSACTION_RECEIPT_METHOD, params, max_batch_size)
@@ -120,10 +120,11 @@ impl<C: Client> EthJsonRpcClient<C> {
 
     /// Get receipt by hash
     pub async fn get_receipt_by_hash(&self, hash: H256) -> anyhow::Result<TransactionReceipt> {
+        let id = Id::Str(hash.0.to_string());
         self.single_request(
             ETH_GET_TRANSACTION_RECEIPT_METHOD.to_string(),
             make_params_array!(hash),
-            Id::Str(hash.to_string()),
+            id,
         )
         .await
     }
@@ -136,7 +137,7 @@ impl<C: Client> EthJsonRpcClient<C> {
             Id::Str(ETH_BLOCK_NUMBER_METHOD.to_string()),
         )
         .await
-        .map(|v| v.as_u64())
+        .map(|v| v.0.to())
     }
 
     /// Returns chain id
@@ -147,7 +148,7 @@ impl<C: Client> EthJsonRpcClient<C> {
             Id::Str(ETH_CHAIN_ID_METHOD.to_string()),
         )
         .await
-        .map(|v| v.as_u64())
+        .map(|v| v.0.to())
     }
 
     /// Returns balance of the address.
@@ -202,7 +203,7 @@ impl<C: Client> EthJsonRpcClient<C> {
             Id::Str(ETH_GET_TRANSACTION_COUNT_METHOD.to_string()),
         )
         .await
-        .map(|v| v.as_u64())
+        .map(|v| v.0.to())
     }
 
     /// Performs eth call and return the result.
@@ -221,7 +222,7 @@ impl<C: Client> EthJsonRpcClient<C> {
 
     /// Sends raw transaction and takes the arguments in bytes.
     pub async fn send_raw_transaction_bytes(&self, transaction: &[u8]) -> anyhow::Result<H256> {
-        let transaction = format!("0x{}", hex::encode(transaction));
+        let transaction = format!("0x{}", alloy::hex::encode(transaction));
         self.single_request(
             ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
             make_params_array!(transaction),
@@ -241,9 +242,10 @@ impl<C: Client> EthJsonRpcClient<C> {
     }
 
     /// Sends raw transaction and returns transaction hash
-    pub async fn send_raw_transaction(&self, transaction: &Transaction) -> anyhow::Result<H256> {
-        let bytes = transaction.rlp();
-        let transaction = format!("0x{}", hex::encode(bytes));
+    pub async fn send_raw_transaction(&self, transaction: &TxEnvelope) -> anyhow::Result<H256> {
+        use alloy::eips::eip2718::Encodable2718;
+        let bytes = transaction.encoded_2718();
+        let transaction = format!("0x{}", alloy::hex::encode(bytes));
 
         self.single_request(
             ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
@@ -268,16 +270,14 @@ impl<C: Client> EthJsonRpcClient<C> {
         &self,
         hash: H256,
     ) -> anyhow::Result<StorableExecutionResult> {
-        let transaction = self
-            .single_request::<Option<StorableExecutionResult>>(
-                IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD.to_string(),
-                make_params_array!(hash),
-                Id::Str(hash.to_string()),
-            )
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("Transaction not found"))?;
-
-        Ok(transaction)
+        let id = Id::Str(hash.to_string());
+        self.single_request::<Option<StorableExecutionResult>>(
+            IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD.to_string(),
+            make_params_array!(hash),
+            id,
+        )
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("Transaction not found"))
     }
 
     /// Returns the transaction execution result by hash in batch
@@ -471,27 +471,25 @@ mod tests {
     #[test]
     fn test_eth_get_logs_params_serialization() {
         let get_logs_params = EthGetLogsParams {
-            address: Some(vec!["0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907"
-                .parse()
-                .unwrap()]),
+            address: Some(vec![H160::from_hex_str(
+                "0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907",
+            )
+            .unwrap()]),
             from_block: BlockNumber::Number(42u64.into()),
             to_block: BlockNumber::Latest,
             topics: Some(vec![
-                vec![
-                    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-                        .parse()
-                        .unwrap(),
-                ],
-                vec![
-                    "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75"
-                        .parse()
-                        .unwrap(),
-                ],
-                vec![
-                    "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078"
-                        .parse()
-                        .unwrap(),
-                ],
+                vec![H256::from_hex_str(
+                    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+                )
+                .unwrap()],
+                vec![H256::from_hex_str(
+                    "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75",
+                )
+                .unwrap()],
+                vec![H256::from_hex_str(
+                    "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078",
+                )
+                .unwrap()],
             ]),
         };
 

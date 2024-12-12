@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use did::BlockNumber;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRpcClient;
-use ethers_core::types::BlockNumber;
 use log::*;
 use tokio::time::Duration;
 
@@ -20,7 +20,7 @@ pub async fn start_extractor(
         .await?;
 
     db_client
-        .init(Some(earliest_block.into()), config.reset_db_on_state_change)
+        .init(Some(earliest_block), config.reset_db_on_state_change)
         .await?;
 
     let mut extractor = BlockExtractor::new(
@@ -96,7 +96,7 @@ impl BlockExtractor {
 
             let block_numbers = blocks_batch
                 .into_iter()
-                .map(|block| ethers_core::types::BlockNumber::Number(block.into()));
+                .map(|block| BlockNumber::Number(block.into()));
 
             let evm_blocks = tokio::time::timeout(
                 Duration::from_secs(request_time_out_secs),
@@ -113,16 +113,10 @@ impl BlockExtractor {
             let blocks = evm_blocks
                 .into_iter()
                 .map(|block| block.into())
-                .collect::<Vec<ethers_core::types::Block<ethers_core::types::H256>>>();
-
-            let blocks = blocks
-                .into_iter()
-                .map(|block| block.into())
                 .collect::<Vec<did::Block<did::H256>>>();
 
             let all_transactions = all_transactions
                 .into_iter()
-                .map(|tx| tx.into())
                 .collect::<Vec<did::Transaction>>();
 
             self.blockchain
@@ -138,7 +132,7 @@ impl BlockExtractor {
         let certified_block = self.client.get_last_certified_block().await?;
         self.blockchain
             .insert_certified_block_data(CertifiedBlock {
-                data: certified_block.data.into(),
+                data: certified_block.data,
                 witness: certified_block.witness,
                 certificate: certified_block.certificate,
             })
@@ -160,10 +154,7 @@ impl BlockExtractor {
             Ok(genesis_balances) => {
                 let genesis_balances = genesis_balances
                     .into_iter()
-                    .map(|(address, balance)| AccountBalance {
-                        address: address.into(),
-                        balance: balance.into(),
-                    })
+                    .map(|(address, balance)| AccountBalance { address, balance })
                     .collect::<Vec<_>>();
                 self.blockchain
                     .insert_genesis_balances(&genesis_balances)

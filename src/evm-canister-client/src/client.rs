@@ -221,7 +221,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ///
     /// # Returns
     /// The latest block number
-    pub async fn eth_block_number(&self) -> CanisterClientResult<usize> {
+    pub async fn eth_block_number(&self) -> CanisterClientResult<u64> {
         self.client.query("eth_block_number", ()).await
     }
 

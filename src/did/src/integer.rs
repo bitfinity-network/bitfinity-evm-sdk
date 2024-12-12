@@ -5,61 +5,66 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use candid::types::{Type, TypeInner};
-use candid::{CandidType, Deserialize, Nat};
+use candid::{CandidType, Nat};
 use derive_more::{From, Into};
 use ic_stable_structures::{Bound, Bounded, Storable};
 use num::BigUint;
 use serde::Serialize;
-#[derive(
-    Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Hash, From, Into,
-)]
+
+#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Hash, From, Into)]
 #[serde(transparent)]
-pub struct U256(pub ethereum_types::U256);
+pub struct U256(pub alloy::primitives::U256);
 
 #[derive(
-    Debug,
-    Default,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    Serialize,
-    Deserialize,
-    Hash,
-    From,
-    Into,
+    Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Hash, From, Into,
 )]
 #[serde(transparent)]
-pub struct U64(pub ethereum_types::U64);
+pub struct U64(pub alloy::primitives::U64);
+
+impl<'de> serde::Deserialize<'de> for U64 {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        U64::from_hex_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for U256 {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        U256::from_hex_str(&s).map_err(serde::de::Error::custom)
+    }
+}
 
 impl Bounded for U256 {
-    const MIN: U256 = U256(ethereum_types::U256::zero());
-    const MAX: U256 = U256(ethereum_types::U256::max_value());
+    const MIN: U256 = U256(alloy::primitives::U256::ZERO);
+    const MAX: U256 = U256(alloy::primitives::U256::MAX);
 }
 
 impl Bounded for U64 {
-    const MIN: U64 = U64(ethereum_types::U64::zero());
-    const MAX: U64 = U64(ethereum_types::U64::max_value());
+    const MIN: U64 = U64(alloy::primitives::U64::ZERO);
+    const MAX: U64 = U64(alloy::primitives::U64::MAX);
 }
 
 impl U256 {
     pub const BYTE_SIZE: usize = 32;
 
-    pub fn new(value: ethereum_types::U256) -> Self {
+    pub fn new(value: alloy::primitives::U256) -> Self {
         Self(value)
     }
 
     pub fn max_value() -> Self {
-        Self(ethereum_types::U256::max_value())
+        Self(alloy::primitives::U256::MAX)
     }
 
-    pub fn from_hex_str(mut s: &str) -> Result<Self, String> {
-        if s.starts_with("0x") || s.starts_with("0X") {
-            s = &s[2..]
-        }
-        ethereum_types::U256::from_str(s)
+    pub fn from_hex_str(s: &str) -> Result<Self, String> {
+        let temp: String;
+        let s = if s.starts_with("0x") || s.starts_with("0X") {
+            s
+        } else {
+            temp = format!("0x{}", s);
+            &temp
+        };
+        alloy::primitives::U256::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
     }
@@ -69,11 +74,7 @@ impl U256 {
     }
 
     pub const fn zero() -> Self {
-        Self(ethereum_types::U256::zero())
-    }
-
-    pub const fn one() -> Self {
-        Self(ethereum_types::U256::one())
+        Self(alloy::primitives::U256::ZERO)
     }
 
     pub fn is_zero(&self) -> bool {
@@ -81,23 +82,19 @@ impl U256 {
     }
 
     pub fn to_big_endian(&self) -> Vec<u8> {
-        let mut buffer = vec![0; 32];
-        self.0.to_big_endian(&mut buffer);
-        buffer
+        self.0.to_be_bytes_vec()
     }
 
     pub fn from_big_endian(slice: &[u8]) -> Self {
-        Self(ethereum_types::U256::from_big_endian(slice))
+        Self(alloy::primitives::U256::from_be_slice(slice))
     }
 
     pub fn to_little_endian(&self) -> Vec<u8> {
-        let mut buffer = vec![0; 32];
-        self.0.to_little_endian(&mut buffer);
-        buffer
+        self.0.to_le_bytes_vec()
     }
 
     pub fn from_little_endian(slice: &[u8]) -> Self {
-        Self(ethereum_types::U256::from_little_endian(slice))
+        Self(alloy::primitives::U256::from_le_slice(slice))
     }
 
     pub fn checked_add(&self, rhs: &Self) -> Option<Self> {
@@ -120,19 +117,23 @@ impl U256 {
 impl U64 {
     pub const BYTE_SIZE: usize = 8;
 
-    pub fn new(value: ethereum_types::U64) -> Self {
+    pub fn new(value: alloy::primitives::U64) -> Self {
         Self(value)
     }
 
     pub fn max_value() -> Self {
-        Self(ethereum_types::U64::max_value())
+        Self(alloy::primitives::U64::MAX)
     }
 
-    pub fn from_hex_str(mut s: &str) -> Result<Self, String> {
-        if s.starts_with("0x") || s.starts_with("0X") {
-            s = &s[2..]
-        }
-        ethereum_types::U64::from_str(s)
+    pub fn from_hex_str(s: &str) -> Result<Self, String> {
+        let temp: String;
+        let s = if s.starts_with("0x") || s.starts_with("0X") {
+            s
+        } else {
+            temp = format!("0x{}", s);
+            &temp
+        };
+        alloy::primitives::U64::from_str(s)
             .map_err(|e| e.to_string())
             .map(Into::into)
     }
@@ -142,11 +143,7 @@ impl U64 {
     }
 
     pub const fn zero() -> Self {
-        Self(ethereum_types::U64::zero())
-    }
-
-    pub const fn one() -> Self {
-        Self(ethereum_types::U64::one())
+        Self(alloy::primitives::U64::ZERO)
     }
 
     pub fn is_zero(&self) -> bool {
@@ -154,23 +151,23 @@ impl U64 {
     }
 
     pub fn to_big_endian(&self) -> Vec<u8> {
-        let mut buffer = vec![0; 8];
-        self.0.to_big_endian(&mut buffer);
-        buffer
+        self.0.to_be_bytes_vec()
     }
 
     pub fn from_big_endian(slice: &[u8]) -> Self {
-        Self(ethereum_types::U64::from_big_endian(slice))
+        Self(alloy::primitives::U64::from_be_slice(slice))
     }
 
     pub fn to_little_endian(&self) -> Vec<u8> {
-        let mut buffer = vec![0; 8];
-        self.0.to_little_endian(&mut buffer);
-        buffer
+        self.0.to_le_bytes_vec()
     }
 
     pub fn from_little_endian(slice: &[u8]) -> Self {
-        Self(ethereum_types::U64::from_little_endian(slice))
+        Self(alloy::primitives::U64::from_le_slice(slice))
+    }
+
+    pub fn as_u64(&self) -> u64 {
+        self.0.to()
     }
 }
 
@@ -195,62 +192,37 @@ impl From<&U256> for Nat {
 
 impl From<usize> for U64 {
     fn from(value: usize) -> Self {
-        Self(value.into())
-    }
-}
-
-impl From<U64> for usize {
-    fn from(value: U64) -> Self {
-        value.0.as_usize()
+        Self(alloy::primitives::U64::from(value))
     }
 }
 
 impl From<u64> for U64 {
     fn from(value: u64) -> Self {
-        Self(value.into())
+        Self(alloy::primitives::U64::from(value))
     }
 }
+
 impl From<U64> for u64 {
     fn from(value: U64) -> Self {
-        value.0.as_u64()
+        value.0.to()
     }
 }
 
 impl From<usize> for U256 {
     fn from(value: usize) -> Self {
-        Self(value.into())
+        Self(alloy::primitives::U256::from(value))
     }
 }
 
 impl From<u64> for U256 {
     fn from(value: u64) -> Self {
-        Self(value.into())
+        Self(alloy::primitives::U256::from(value))
     }
 }
 
 impl From<u128> for U256 {
     fn from(value: u128) -> Self {
-        Self(value.into())
-    }
-}
-
-impl From<[u64; 4]> for U256 {
-    fn from(value: [u64; 4]) -> Self {
-        Self(ethereum_types::U256(value))
-    }
-}
-
-impl From<&[u64; 4]> for U256 {
-    fn from(value: &[u64; 4]) -> Self {
-        Self(ethereum_types::U256(*value))
-    }
-}
-
-impl TryFrom<U256> for u128 {
-    type Error = &'static str;
-
-    fn try_from(value: U256) -> Result<Self, Self::Error> {
-        value.0.try_into()
+        Self(alloy::primitives::U256::from(value))
     }
 }
 
@@ -330,15 +302,15 @@ impl Sub for U64 {
     }
 }
 
-impl rlp::Encodable for U256 {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.rlp_append(s);
+impl alloy::rlp::Encodable for U256 {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        self.0.encode(out);
     }
 }
 
-impl rlp::Decodable for U256 {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        ethereum_types::U256::decode(rlp).map(Into::into)
+impl alloy::rlp::Decodable for U256 {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::U256::decode(buf)?))
     }
 }
 
@@ -354,15 +326,15 @@ impl fmt::LowerHex for U256 {
     }
 }
 
-impl rlp::Encodable for U64 {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        self.0.rlp_append(s);
+impl alloy::rlp::Encodable for U64 {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        self.0.encode(out);
     }
 }
 
-impl rlp::Decodable for U64 {
-    fn decode(rlp: &rlp::Rlp) -> Result<Self, rlp::DecoderError> {
-        ethereum_types::U64::decode(rlp).map(Into::into)
+impl alloy::rlp::Decodable for U64 {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        Ok(Self(alloy::primitives::U64::decode(buf)?))
     }
 }
 
@@ -428,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_storable_u256() {
-        let value = ethereum_types::U256::from(rand::random::<u128>());
+        let value = alloy::primitives::U256::from(rand::random::<u128>());
         let u256: U256 = value.into();
 
         let serialized = u256.to_bytes();
@@ -447,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_from_too_big_nat() {
-        let nat: Nat = Nat::from(&U256::max_value()) + 1u64;
+        let nat: Nat = Nat::from(&U256::MAX) + 1u64;
         U256::try_from(&nat).unwrap_err();
     }
 
@@ -503,7 +475,7 @@ mod tests {
 
     #[test]
     fn test_candid_type_u64() {
-        let value = ethereum_types::U64::from(rand::random::<u64>());
+        let value = alloy::primitives::U64::from(rand::random::<u64>());
         let u64: U64 = value.into();
 
         let encoded = Encode!(&u64).unwrap();
@@ -514,7 +486,7 @@ mod tests {
 
     #[test]
     fn test_candid_type_u256() {
-        let value = ethereum_types::U256::from(rand::random::<u128>());
+        let value = alloy::primitives::U256::from(rand::random::<u128>());
         let u256: U256 = value.into();
 
         let encoded = Encode!(&u256).unwrap();
@@ -526,7 +498,7 @@ mod tests {
     #[test]
     fn test_u256_from_hex_should_fail_long_length() {
         assert!(U256::from_hex_str(
-            "18201820182018201820182018201820182018201820182018201820182018212"
+            "0x18201820182018201820182018201820182018201820182018201820182018212"
         )
         .is_err());
     }
@@ -541,7 +513,7 @@ mod tests {
 
     #[test]
     fn test_u256_fmt_lower_hex() {
-        let value: U256 = ethereum_types::U256::from(rand::random::<u128>()).into();
+        let value: U256 = alloy::primitives::U256::from(rand::random::<u128>()).into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(value, U256::from_hex_str(&lower_hex).unwrap());
@@ -549,22 +521,25 @@ mod tests {
 
     #[test]
     fn test_u256_from_hex_should_succeed() {
-        assert_eq!(U256::from(0u64), U256::from_hex_str("00").unwrap());
-        assert_eq!(U256::from(1u64), U256::from_hex_str("01").unwrap());
+        assert_eq!(U256::from(0u64), U256::from_hex_str("0x00").unwrap());
+        assert_eq!(U256::from(1u64), U256::from_hex_str("0X01").unwrap());
+        assert_eq!(U256::from(255u64), U256::from_hex_str("0xff").unwrap());
         assert_eq!(U256::from(255u64), U256::from_hex_str("ff").unwrap());
         assert_eq!(
             U256::from(2074343815918867987178857765017879333u128),
-            U256::from_hex_str("18F810BD8895AA66364CBDD91A20325").unwrap()
+            U256::from_hex_str("0x18F810BD8895AA66364CBDD91A20325").unwrap()
         );
 
         assert_eq!(
             U256::from(0x0123456789abcdefu128),
-            U256::from_hex_str("0123456789abcdef").unwrap()
+            U256::from_hex_str("0x0123456789abcdef").unwrap()
         );
         assert_eq!(
-            U256::max_value(),
-            U256::from_hex_str("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-                .unwrap()
+            U256::MAX,
+            U256::from_hex_str(
+                "0Xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            )
+            .unwrap()
         );
     }
 
@@ -613,7 +588,7 @@ mod tests {
         assert_eq!(checked_mul, Some(mul));
         assert_eq!(checked_div, Some(div));
 
-        let add_overflow = U256::max_value().checked_add(&a);
+        let add_overflow = U256::MAX.checked_add(&a);
         let sub_overflow = U256::zero().checked_sub(&a);
 
         assert!(add_overflow.is_none());
@@ -625,23 +600,11 @@ mod tests {
     }
 
     #[test]
-    fn test_u256_conversion() {
-        assert_eq!(
-            U256::from([1u64, 2u64, 3u64, 4u64]),
-            U256(ethereum_types::U256([1u64, 2u64, 3u64, 4u64]))
-        );
-        assert_eq!(
-            U256::from(&[1u64, 2u64, 3u64, 4u64]),
-            U256(ethereum_types::U256([1u64, 2u64, 3u64, 4u64]))
-        );
-    }
-
-    #[test]
     fn test_u256_transparent_serde_serialization() {
-        let value: U256 = ethereum_types::U256::from(rand::random::<u128>()).into();
+        let value: U256 = alloy::primitives::U256::from(rand::random::<u128>()).into();
 
         let encoded_value = serde_json::json!(&value);
-        let decoded_primitive: ethereum_types::U256 =
+        let decoded_primitive: alloy::primitives::U256 =
             serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: U256 = serde_json::from_value(encoded_primitive).unwrap();
@@ -675,7 +638,7 @@ mod tests {
 
     #[test]
     fn test_u64_fmt_lower_hex() {
-        let value: U64 = ethereum_types::U64::from(rand::random::<u64>()).into();
+        let value: U64 = alloy::primitives::U64::from(rand::random::<u64>()).into();
         let lower_hex = value.to_hex_str();
         assert!(lower_hex.starts_with("0x"));
         assert_eq!(value, U64::from_hex_str(&lower_hex).unwrap());
@@ -683,30 +646,29 @@ mod tests {
 
     #[test]
     fn test_u64_from_hex_should_succeed() {
-        assert_eq!(U64::from(0u64), U64::from_hex_str("00").unwrap());
-        assert_eq!(U64::from(1u64), U64::from_hex_str("0x01").unwrap());
+        assert_eq!(U64::from(0u64), U64::from_hex_str("0x00").unwrap());
+        assert_eq!(U64::from(1u64), U64::from_hex_str("0X01").unwrap());
+        assert_eq!(U64::from(255u64), U64::from_hex_str("0xff").unwrap());
         assert_eq!(U64::from(255u64), U64::from_hex_str("ff").unwrap());
         assert_eq!(
             U64::from(72057594037927936u64),
-            U64::from_hex_str("100000000000000").unwrap()
+            U64::from_hex_str("0x100000000000000").unwrap()
         );
 
         assert_eq!(
             U64::from(0x0123456789abcdefu64),
-            U64::from_hex_str("0123456789abcdef").unwrap()
+            U64::from_hex_str("0x0123456789abcdef").unwrap()
         );
-        assert_eq!(
-            U64::max_value(),
-            U64::from_hex_str("0Xffffffffffffffff").unwrap()
-        );
+        assert_eq!(U64::MAX, U64::from_hex_str("0Xffffffffffffffff").unwrap());
     }
 
     #[test]
     fn test_u64_transparent_serde_serialization() {
-        let value: U64 = ethereum_types::U64::from(rand::random::<u64>()).into();
+        let value: U64 = alloy::primitives::U64::from(rand::random::<u64>()).into();
 
         let encoded_value = serde_json::json!(&value);
-        let decoded_primitive: ethereum_types::U64 = serde_json::from_value(encoded_value).unwrap();
+        let decoded_primitive: alloy::primitives::U64 =
+            serde_json::from_value(encoded_value).unwrap();
         let encoded_primitive = serde_json::json!(&decoded_primitive);
         let decoded_value: U64 = serde_json::from_value(encoded_primitive).unwrap();
 

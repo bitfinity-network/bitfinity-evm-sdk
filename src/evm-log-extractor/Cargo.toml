@@ -7,9 +7,9 @@ edition = "2021"
 anyhow = { workspace = true }
 clap = { workspace = true }
 chrono = { workspace = true }
-did = { path = "../did" }
+did = { workspace = true }
 env_logger = { workspace = true }
-evm-canister-client = { path = "../evm-canister-client", features = ["ic-agent-client"] }
+evm-canister-client = { workspace = true, features = ["ic-agent-client"] }
 lightspeed_scheduler = { workspace = true }
 log = { workspace = true }
 tokio = { workspace = true }

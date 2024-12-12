@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+use alloy::primitives::{keccak256, Log as AlloyLog, LogData};
+use alloy::rlp::{encode_list, Decodable, Encodable, Header, PayloadView};
+use bytes::BufMut;
 use candid::{CandidType, Deserialize};
-use ethers_core::types::Log as EthersLog;
 use ic_stable_structures::{Bound, Storable};
-use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use serde::Serialize;
 use serde_json::{json, Value};
 
@@ -15,7 +16,7 @@ use crate::constant::{EIP1559_BASE_FEE_MAX_CHANGE_DENOMINATOR, EIP1559_ELASTICIT
 use crate::error::EvmError;
 use crate::hash::H64;
 use crate::integer::U64;
-use crate::keccak::{keccak_hash, KECCAK_EMPTY_LIST_RLP, KECCAK_NULL_RLP};
+use crate::keccak::{KECCAK_EMPTY_LIST_RLP, KECCAK_NULL_RLP};
 use crate::{codec, HaltError, Transaction};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, CandidType)]
@@ -61,7 +62,7 @@ pub struct Block<TX> {
     #[serde(default)]
     pub difficulty: U256,
     /// Total difficulty
-    #[serde(rename = "totalDifficulty")]
+    #[serde(rename = "totalDifficulty", default)]
     pub total_difficulty: U256,
     /// Seal fields
     #[serde(default, rename = "sealFields")]
@@ -157,6 +158,71 @@ impl Block<H256> {
     }
 }
 
+impl<TX> Block<TX> {
+    /// Encodes the block header into RLP format
+    pub fn header_rlp_encoded(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        self.header_rlp_encoding(&mut buf);
+        buf
+    }
+
+    /// Encodes the block header into RLP format
+    pub fn header_rlp_encoding(&self, out: &mut dyn BufMut) {
+        let list_header = alloy::rlp::Header {
+            list: true,
+            payload_length: self.header_payload_length(),
+        };
+        list_header.encode(out);
+        self.parent_hash.encode(out);
+        self.uncles_hash.encode(out);
+        self.author.encode(out);
+        self.state_root.encode(out);
+        self.transactions_root.encode(out);
+        self.receipts_root.encode(out);
+        self.logs_bloom.encode(out);
+        self.difficulty.encode(out);
+        self.number.encode(out);
+        self.gas_limit.encode(out);
+        self.gas_used.encode(out);
+        self.timestamp.encode(out);
+        self.extra_data.encode(out);
+        self.mix_hash.encode(out);
+        self.nonce.encode(out);
+
+        // Encode all the fork specific fields
+        if let Some(ref base_fee) = self.base_fee_per_gas {
+            base_fee.encode(out);
+        }
+    }
+
+    /// Returns the length of the header payload for rlp encoding
+    pub fn header_payload_length(&self) -> usize {
+        let mut length = 0;
+        length += self.parent_hash.length();
+        length += self.uncles_hash.length();
+        length += self.author.length();
+        length += self.state_root.length();
+        length += self.transactions_root.length();
+        length += self.receipts_root.length();
+        length += self.logs_bloom.length();
+        length += self.difficulty.length();
+        length += self.number.length();
+        length += self.gas_limit.length();
+        length += self.gas_used.length();
+        length += self.timestamp.length();
+        length += self.extra_data.length();
+        length += self.mix_hash.length();
+        length += self.nonce.length();
+
+        if let Some(base_fee) = &self.base_fee_per_gas {
+            // Adding base fee length if it exists.
+            length += base_fee.length();
+        }
+
+        length
+    }
+}
+
 impl Default for Block<H256> {
     fn default() -> Self {
         Block::with_state_root(KECCAK_NULL_RLP)
@@ -196,106 +262,9 @@ impl From<Block<Transaction>> for Block<H256> {
     }
 }
 
-impl Encodable for Block<Transaction> {
-    fn rlp_append(&self, s: &mut RlpStream) {
-        s.begin_list(3); // block header, transactions, other block headers
-
-        // Block header
-        block_header_rlp(self, s);
-
-        // Block transactions
-        s.begin_list(self.transactions.len());
-        for transaction in &self.transactions {
-            let transaction = ethers_core::types::Transaction::from(transaction.clone());
-            s.append_raw(&transaction.rlp(), 1);
-        }
-
-        // Uncles block headers. Currently not supported
-        {
-            s.begin_list(0);
-        }
-    }
-}
-
-fn block_header_rlp<T>(block: &Block<T>, s: &mut RlpStream) {
-    // Block header
-    let len = 15 + (block.base_fee_per_gas.is_some() as usize);
-
-    s.begin_list(len);
-    s.append(&block.parent_hash);
-    s.append(&block.uncles_hash);
-    s.append(&block.author);
-    s.append(&block.state_root);
-    s.append(&block.transactions_root);
-    s.append(&block.receipts_root);
-    s.append(&block.logs_bloom);
-    s.append(&block.difficulty);
-    s.append(&block.number);
-    s.append(&block.gas_limit);
-    s.append(&block.gas_used);
-    s.append(&block.timestamp);
-    s.append(&block.extra_data);
-    s.append(&block.mix_hash);
-    s.append(&block.nonce);
-
-    if let Some(base_fee) = block.base_fee_per_gas.as_ref() {
-        s.append(base_fee);
-    }
-}
-
-impl Decodable for Block<Transaction> {
-    fn decode(r: &Rlp) -> Result<Self, DecoderError> {
-        let header = r.at(0)?;
-        let item_count = header.item_count()?;
-
-        let mut block = Self {
-            parent_hash: header.val_at(0)?,
-            uncles_hash: header.val_at(1)?,
-            author: header.val_at(2)?,
-            state_root: header.val_at(3)?,
-            transactions_root: header.val_at(4)?,
-            receipts_root: header.val_at(5)?,
-            logs_bloom: header.val_at(6)?,
-            difficulty: header.val_at(7)?,
-            number: header.val_at(8)?,
-            gas_limit: header.val_at(9)?,
-            gas_used: header.val_at(10)?,
-            timestamp: header.val_at(11)?,
-            extra_data: header.val_at::<Vec<_>>(12)?.into(),
-            mix_hash: header.val_at(13)?,
-            nonce: header.val_at(14)?,
-            hash: Default::default(),
-            total_difficulty: Default::default(),
-            seal_fields: Vec::new(),
-            uncles: Vec::new(),
-            transactions: Vec::new(),
-            size: None,
-            base_fee_per_gas: if item_count > 15 {
-                Some(header.val_at(15)?)
-            } else {
-                None
-            },
-        };
-
-        let transactions = r.at(1)?;
-        let transactions_count = transactions.item_count()?;
-        block.transactions.reserve(transactions_count);
-        for i in 0..transactions_count {
-            let transaction_rlp = transactions.at(i)?;
-            let tx = ethers_core::types::Transaction::decode(&transaction_rlp)?;
-
-            block.transactions.push(tx.into());
-        }
-
-        Ok(block)
-    }
-}
-
 /// Calculate the hash of a block
 pub fn calculate_block_hash<T>(block: &Block<T>) -> H256 {
-    let mut rlp = RlpStream::new();
-    block_header_rlp(block, &mut rlp);
-    keccak_hash(&rlp.out())
+    keccak256(block.header_rlp_encoded()).into()
 }
 
 /// Calculate the size of a block in bytes considering all of its transactions
@@ -312,7 +281,7 @@ pub fn calculate_block_size<'a>(
         Some(_) => 0,
     };
 
-    U256::from(block_size + transactions_size + size_field_size)
+    U256::from((block_size + transactions_size + size_field_size) as u64)
 }
 
 /// Calculate base fee for next block. [EIP-1559](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md) spec
@@ -343,7 +312,7 @@ pub fn calculate_next_block_base_fee(
         .unwrap_or_default();
 
     if parent_gas_used > &gas_target {
-        let base_fee_delta = std::cmp::max(U256::one(), base_fee_per_gas_delta);
+        let base_fee_delta = std::cmp::max(U256::from(1u64), base_fee_per_gas_delta);
         parent_base_fee + &base_fee_delta
     } else {
         parent_base_fee
@@ -364,66 +333,75 @@ impl Storable for Block<H256> {
     }
 }
 
-impl<D, T: From<D>> From<ethers_core::types::Block<D>> for Block<T> {
-    fn from(block: ethers_core::types::Block<D>) -> Self {
-        Block {
-            hash: block.hash.map(Into::into).unwrap_or_default(),
-            parent_hash: block.parent_hash.into(),
-            uncles_hash: block.uncles_hash.into(),
-            author: block.author.map(Into::into).unwrap_or_default(),
-            state_root: block.state_root.into(),
-            transactions_root: block.transactions_root.into(),
-            receipts_root: block.receipts_root.into(),
-            number: block.number.map(Into::into).unwrap_or_default(),
-            gas_used: block.gas_used.into(),
-            gas_limit: block.gas_limit.into(),
-            extra_data: block.extra_data.into(),
-            logs_bloom: block.logs_bloom.map(Into::into).unwrap_or_default(),
-            timestamp: block.timestamp.into(),
-            difficulty: block.difficulty.into(),
-            total_difficulty: block.total_difficulty.map(Into::into).unwrap_or_default(),
-            seal_fields: block.seal_fields.into_iter().map(Into::into).collect(),
-            uncles: block.uncles.into_iter().map(Into::into).collect(),
-            transactions: block.transactions.into_iter().map(Into::into).collect(),
-            size: block.size.map(Into::into),
-            mix_hash: block.mix_hash.map(Into::into).unwrap_or_default(),
-            nonce: block.nonce.map(Into::into).unwrap_or_default(),
-            base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
-        }
-    }
-}
+impl Decodable for Block<Transaction> {
+    fn decode(buf: &mut &[u8]) -> alloy::rlp::Result<Self> {
+        let payload = Header::decode_raw(buf)?;
+        match payload {
+            PayloadView::List(items) => {
+                let mut header = items[0];
+                let mut block = match Header::decode_raw(&mut header)? {
+                    PayloadView::List(mut header_items) => {
+                        let item_count = header_items.len();
+                        Self {
+                            parent_hash: alloy::primitives::B256::decode(&mut header_items[0])?
+                                .into(),
+                            uncles_hash: alloy::primitives::B256::decode(&mut header_items[1])?
+                                .into(),
+                            author: alloy::primitives::Address::decode(&mut header_items[2])?
+                                .into(),
+                            state_root: alloy::primitives::B256::decode(&mut header_items[3])?
+                                .into(),
+                            transactions_root: alloy::primitives::B256::decode(
+                                &mut header_items[4],
+                            )?
+                            .into(),
+                            receipts_root: alloy::primitives::B256::decode(&mut header_items[5])?
+                                .into(),
+                            logs_bloom: alloy::primitives::Bloom::decode(&mut header_items[6])?
+                                .into(),
+                            difficulty: alloy::primitives::U256::decode(&mut header_items[7])?
+                                .into(),
+                            number: alloy::primitives::U64::decode(&mut header_items[8])?.into(),
+                            gas_limit: alloy::primitives::U256::decode(&mut header_items[9])?
+                                .into(),
+                            gas_used: alloy::primitives::U256::decode(&mut header_items[10])?
+                                .into(),
+                            timestamp: alloy::primitives::U256::decode(&mut header_items[11])?
+                                .into(),
+                            extra_data: alloy::primitives::Bytes::decode(&mut header_items[12])?
+                                .into(),
+                            mix_hash: alloy::primitives::B256::decode(&mut header_items[13])?
+                                .into(),
+                            nonce: alloy::primitives::B64::decode(&mut header_items[14])?.into(),
+                            hash: Default::default(),
+                            total_difficulty: Default::default(),
+                            seal_fields: Vec::new(),
+                            uncles: Vec::new(),
+                            transactions: Vec::new(),
+                            size: None,
+                            base_fee_per_gas: if item_count > 15 {
+                                Some(alloy::primitives::U256::decode(&mut header_items[15])?.into())
+                            } else {
+                                None
+                            },
+                        }
+                    }
+                    PayloadView::String(_) => return Err(alloy::rlp::Error::UnexpectedString),
+                };
 
-impl<D, T: From<D>> From<Block<D>> for ethers_core::types::Block<T>
-where
-    T: Default,
-{
-    fn from(block: Block<D>) -> Self {
-        ethers_core::types::Block {
-            hash: Some(block.hash.into()),
-            parent_hash: block.parent_hash.into(),
-            uncles_hash: block.uncles_hash.into(),
-            author: Some(block.author.into()),
-            state_root: block.state_root.into(),
-            transactions_root: block.transactions_root.into(),
-            receipts_root: block.receipts_root.into(),
-            number: Some(block.number.into()),
-            gas_used: block.gas_used.into(),
-            gas_limit: block.gas_limit.into(),
-            extra_data: block.extra_data.into(),
-            logs_bloom: Some(block.logs_bloom.into()),
-            timestamp: block.timestamp.into(),
-            difficulty: block.difficulty.into(),
-            total_difficulty: Some(block.total_difficulty.into()),
-            seal_fields: block.seal_fields.into_iter().map(|x| x.into()).collect(),
-            uncles: block.uncles.into_iter().map(Into::into).collect(),
-            transactions: block.transactions.into_iter().map(Into::into).collect(),
-            size: block.size.map(Into::into),
-            mix_hash: Some(block.mix_hash.into()),
-            nonce: Some(block.nonce.into()),
-            base_fee_per_gas: block.base_fee_per_gas.map(Into::into),
-            other: ethers_core::types::OtherFields::default(),
-            // We can leave it empty because we don't need it for our fork
-            ..Default::default()
+                let mut transactions = items[1];
+                match Header::decode_raw(&mut transactions)? {
+                    PayloadView::List(transactions_header) => {
+                        for mut transaction in transactions_header {
+                            let tx = alloy::consensus::TxEnvelope::decode(&mut transaction)?;
+                            block.transactions.push(tx.into());
+                        }
+                    }
+                    PayloadView::String(_) => return Err(alloy::rlp::Error::UnexpectedString),
+                }
+                Ok(block)
+            }
+            PayloadView::String(_) => Err(alloy::rlp::Error::UnexpectedString),
         }
     }
 }
@@ -443,21 +421,31 @@ pub struct TransactionExecutionLog {
     pub data: Bytes,
 }
 
-impl rlp::Encodable for TransactionExecutionLog {
-    fn rlp_append(&self, s: &mut rlp::RlpStream) {
-        s.begin_list(3);
-        s.append(&self.address);
-        s.append_list(&self.topics);
-        s.append(&self.data.0);
+impl Encodable for TransactionExecutionLog {
+    fn encode(&self, out: &mut dyn bytes::BufMut) {
+        let enc: [&dyn Encodable; 3] = [&self.address, &self.topics, &self.data];
+        encode_list::<_, dyn Encodable>(&enc, out);
     }
 }
 
-impl From<EthersLog> for TransactionExecutionLog {
-    fn from(log: EthersLog) -> Self {
+impl From<AlloyLog> for TransactionExecutionLog {
+    fn from(log: AlloyLog) -> Self {
         Self {
             address: log.address.into(),
-            topics: log.topics.into_iter().map(|h| h.into()).collect(),
-            data: log.data.0.into(),
+            topics: log.topics().iter().map(|h| (*h).into()).collect(),
+            data: log.data.data.into(),
+        }
+    }
+}
+
+impl From<TransactionExecutionLog> for AlloyLog {
+    fn from(log: TransactionExecutionLog) -> Self {
+        Self {
+            address: log.address.into(),
+            data: LogData::new_unchecked(
+                log.topics.into_iter().map(|h| h.into()).collect(),
+                log.data.into(),
+            ),
         }
     }
 }
@@ -573,7 +561,7 @@ mod test {
     #[test]
     fn test_storable_block() {
         let mut block = Block {
-            author: ethereum_types::H160::random().into(),
+            author: alloy::primitives::Address::random().into(),
             number: rand::random::<u64>().into(),
             ..Default::default()
         };
@@ -611,46 +599,46 @@ mod test {
 
             let calculated_block_hash = calculate_block_hash(&block);
             assert_eq!(
-                ethereum_types::H256::from_str(&hash).unwrap(),
+                alloy::primitives::B256::from_str(&hash).unwrap(),
                 calculated_block_hash.0
             );
         }
     }
 
     fn create_transaction(gas_price: Option<U256>, chain_id: u64) -> Transaction {
-        let mut tx = ethers_core::types::Transaction {
-            from: ethereum_types::H160::from_slice(&[0u8; 20]),
+        let mut tx = Transaction {
+            from: alloy::primitives::Address::from_slice(&[0u8; 20]).into(),
             to: None,
-            nonce: ethereum_types::U256::zero(),
-            value: ethereum_types::U256::zero(),
+            nonce: U256::zero(),
+            value: U256::zero(),
             gas: 20u64.into(),
-            gas_price: gas_price.map(Into::into),
+            gas_price,
             input: vec![].into(),
             chain_id: Some(chain_id.into()),
             ..Default::default()
         };
-        tx.hash = tx.hash();
-        tx.into()
+        tx.hash = alloy::primitives::B256::random().into();
+        tx
     }
 
     #[test]
     fn test_block_result() {
         let block = Block::<Transaction> {
-            author: ethereum_types::H160::random().into(),
+            author: alloy::primitives::Address::random().into(),
             number: U64::from(rand::random::<u64>()),
-            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
-            nonce: ethereum_types::H64::random().into(),
+            logs_bloom: Bloom(alloy::primitives::Bloom::from_slice(&[4u8; 256])),
+            nonce: alloy::primitives::B64::random().into(),
             transactions: vec![create_transaction(
                 Some(U256::from(rand::random::<u64>())),
                 1,
             )],
-            mix_hash: ethereum_types::H256::random().into(),
+            mix_hash: alloy::primitives::B256::random().into(),
             hash: Default::default(),
-            parent_hash: ethereum_types::H256::random().into(),
-            uncles_hash: ethereum_types::H256::random().into(),
-            state_root: ethereum_types::H256::random().into(),
-            transactions_root: ethereum_types::H256::random().into(),
-            receipts_root: ethereum_types::H256::random().into(),
+            parent_hash: alloy::primitives::B256::random().into(),
+            uncles_hash: alloy::primitives::B256::random().into(),
+            state_root: alloy::primitives::B256::random().into(),
+            transactions_root: alloy::primitives::B256::random().into(),
+            receipts_root: alloy::primitives::B256::random().into(),
             gas_used: U256::from(rand::random::<u64>()),
             gas_limit: U256::from(rand::random::<u64>()),
             extra_data: Default::default(),
@@ -676,11 +664,11 @@ mod test {
     fn should_calc_block_base_fee_when_gas_used_eq_gas_target() {
         assert_eq!(
             calculate_next_block_base_fee(
-                &U256::new(2_u64.into()),
-                &U256::new(4_u64.into()), // gas target 2
-                &U256::new(1_u64.into())
+                &2_u64.into(),
+                &4_u64.into(), // gas target 2
+                &1_u64.into()
             ),
-            U256::one()
+            U256::from(1u64)
         );
     }
 
@@ -688,22 +676,22 @@ mod test {
     fn should_calc_block_base_fee_when_gas_used_is_gt_gas_target() {
         assert_eq!(
             calculate_next_block_base_fee(
-                &U256::new(10_u64.into()),
-                &U256::new(4_u64.into()), // gas target 2
-                &U256::new(1_u64.into())
+                &10_u64.into(),
+                &4_u64.into(), // gas target 2
+                &1_u64.into()
             ),
-            U256::new(2_u64.into())
+            U256::from(2_u64)
         );
     }
 
     #[test]
     fn should_calc_block_base_fee_eq_to_base_fee_when_gas_used_is_lt_gas_target_and_sub_overflows()
     {
-        let base_fee = U256::new(100_u64.into());
+        let base_fee = U256::from(100_u64);
         assert_eq!(
             calculate_next_block_base_fee(
-                &U256::new(4_u64.into()),
-                &U256::new(10_u64.into()), // gas target 5
+                &4_u64.into(),
+                &10_u64.into(), // gas target 5
                 &base_fee
             ),
             U256::from(98u64) // = 100 - 0.125 * ((5-4) / 5) * 100
@@ -712,9 +700,9 @@ mod test {
 
     #[test]
     fn should_calc_block_base_fee_eq_to_sum_of_one_and_base_fee_when_gas_limit_is_zero() {
-        let gas_used = U256::new(5_u64.into());
-        let base_fee = U256::new(100_u64.into());
-        let expected = &U256::one() + &base_fee;
+        let gas_used = U256::from(5_u64);
+        let base_fee = U256::from(100_u64);
+        let expected = &U256::from(1u64) + &base_fee;
         assert_eq!(
             calculate_next_block_base_fee(
                 &gas_used,
@@ -727,8 +715,8 @@ mod test {
 
     #[test]
     fn should_calc_base_fee_for_zero_used_gas() {
-        let gas_used = U256::new(0_u64.into());
-        let base_fee = U256::new(100_u64.into());
+        let gas_used = U256::from(0_u64);
+        let base_fee = U256::from(100_u64);
         let expected = U256::from(88u64); // 100 - 0.125 * 100
         assert_eq!(
             calculate_next_block_base_fee(
@@ -742,9 +730,9 @@ mod test {
 
     #[test]
     fn should_calc_base_fee_with_arithmetic_overflow() {
-        let gas_used = U256::new(2000_u64.into());
-        let gas_limit = U256::new(2010_u64.into());
-        let mut base_fee = U256::new(100_u64.into());
+        let gas_used = U256::from(2000_u64);
+        let gas_limit = U256::from(2010_u64);
+        let mut base_fee = U256::from(100_u64);
 
         for _ in 0..10000 {
             base_fee = calculate_next_block_base_fee(&gas_used, &gas_limit, &base_fee);
@@ -784,18 +772,18 @@ mod test {
             .collect::<Vec<_>>();
 
         let block = Block::<H256> {
-            author: ethereum_types::H160::random().into(),
+            author: alloy::primitives::Address::random().into(),
             number: U64::from(rand::random::<u64>()),
-            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
-            nonce: ethereum_types::H64::random().into(),
+            logs_bloom: Bloom(alloy::primitives::Bloom::from_slice(&[4u8; 256])),
+            nonce: alloy::primitives::B64::random().into(),
             transactions: tx_hashes,
-            mix_hash: ethereum_types::H256::random().into(),
+            mix_hash: alloy::primitives::B256::random().into(),
             hash: Default::default(),
-            parent_hash: ethereum_types::H256::random().into(),
-            uncles_hash: ethereum_types::H256::random().into(),
-            state_root: ethereum_types::H256::random().into(),
-            transactions_root: ethereum_types::H256::random().into(),
-            receipts_root: ethereum_types::H256::random().into(),
+            parent_hash: alloy::primitives::B256::random().into(),
+            uncles_hash: alloy::primitives::B256::random().into(),
+            state_root: alloy::primitives::B256::random().into(),
+            transactions_root: alloy::primitives::B256::random().into(),
+            receipts_root: alloy::primitives::B256::random().into(),
             gas_used: U256::from(rand::random::<u64>()),
             gas_limit: U256::from(rand::random::<u64>()),
             extra_data: Default::default(),
@@ -829,18 +817,18 @@ mod test {
             .collect::<Vec<_>>();
 
         let block = Block::<H256> {
-            author: ethereum_types::H160::random().into(),
+            author: alloy::primitives::Address::random().into(),
             number: U64::from(rand::random::<u64>()),
-            logs_bloom: Bloom(ethereum_types::Bloom::from_slice(&[4u8; 256])),
-            nonce: ethereum_types::H64::random().into(),
+            logs_bloom: Bloom(alloy::primitives::Bloom::from_slice(&[4u8; 256])),
+            nonce: alloy::primitives::B64::random().into(),
             transactions: tx_hashes,
-            mix_hash: ethereum_types::H256::random().into(),
+            mix_hash: alloy::primitives::B256::random().into(),
             hash: Default::default(),
-            parent_hash: ethereum_types::H256::random().into(),
-            uncles_hash: ethereum_types::H256::random().into(),
-            state_root: ethereum_types::H256::random().into(),
-            transactions_root: ethereum_types::H256::random().into(),
-            receipts_root: ethereum_types::H256::random().into(),
+            parent_hash: alloy::primitives::B256::random().into(),
+            uncles_hash: alloy::primitives::B256::random().into(),
+            state_root: alloy::primitives::B256::random().into(),
+            transactions_root: alloy::primitives::B256::random().into(),
+            receipts_root: alloy::primitives::B256::random().into(),
             gas_used: U256::from(rand::random::<u64>()),
             gas_limit: U256::from(rand::random::<u64>()),
             extra_data: Default::default(),

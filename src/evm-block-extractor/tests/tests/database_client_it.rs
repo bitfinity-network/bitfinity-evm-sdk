@@ -13,8 +13,8 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
 
         for i in 1..=10 {
             let dummy_block: Block<H256> = Block {
-                number: ethers_core::types::U64::from(i).into(),
-                hash: ethers_core::types::H256::random().into(),
+                number: alloy::primitives::U64::from(i).into(),
+                hash: alloy::primitives::B256::random().into(),
                 ..Default::default()
             };
 
@@ -27,7 +27,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
 
         for i in 1..=10 {
             for _ in 0..TRANSACTIONS_PER_BLOCK {
-                let tx_hash = ethers_core::types::H256::random();
+                let tx_hash = alloy::primitives::B256::random();
                 exe_results.push(did::H256::from(tx_hash));
                 blocks[i - 1].transactions.push(tx_hash.into());
             }
@@ -37,7 +37,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
         for i in 0..10 {
             for j in 0..TRANSACTIONS_PER_BLOCK {
                 let tx_hash = &exe_results[(i * TRANSACTIONS_PER_BLOCK + j) as usize];
-                let block_number = blocks[i as usize].number.0.as_u64();
+                let block_number = blocks[i as usize].number.0.to::<u64>();
                 let dummy_txn = Transaction {
                     hash: tx_hash.clone(),
                     block_number: Some(U64::from(block_number)),
@@ -58,7 +58,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
             assert_eq!(block.transactions[i as usize].hash, exe_results[i as usize]);
         }
 
-        assert_eq!(block.number.0.as_u64(), 1);
+        assert_eq!(block.number.0.to::<u64>(), 1);
 
         let tx = db_client
             .get_transaction(exe_results[0].clone())
@@ -69,7 +69,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
 
         let block = db_client.get_full_block_by_number(10).await.unwrap();
 
-        assert_eq!(block.number.0.as_u64(), 10);
+        assert_eq!(block.number.0.to::<u64>(), 10);
 
         let tx = db_client
             .get_transaction(exe_results[9 * TRANSACTIONS_PER_BLOCK as usize].clone())
@@ -91,8 +91,8 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
 
         for i in 1..=10 {
             let dummy_block: Block<H256> = Block {
-                number: ethers_core::types::U64::from(i).into(),
-                hash: ethers_core::types::H256::random().into(),
+                number: alloy::primitives::U64::from(i).into(),
+                hash: alloy::primitives::B256::random().into(),
                 ..Default::default()
             };
 
@@ -116,8 +116,8 @@ async fn test_init_idempotency() {
     test_with_clients(|db_client| async move {
         // Add a block
         let dummy_block: Block<H256> = Block {
-            number: ethers_core::types::U64::from(1).into(),
-            hash: ethers_core::types::H256::random().into(),
+            number: alloy::primitives::U64::from(1).into(),
+            hash: alloy::primitives::B256::random().into(),
             ..Default::default()
         };
 
@@ -131,8 +131,8 @@ async fn test_init_idempotency() {
 
         // Add a block
         let dummy_block: Block<H256> = Block {
-            number: ethers_core::types::U64::from(1).into(),
-            hash: ethers_core::types::H256::random().into(),
+            number: alloy::primitives::U64::from(1).into(),
+            hash: alloy::primitives::B256::random().into(),
             ..Default::default()
         };
 
@@ -146,7 +146,7 @@ async fn test_init_idempotency() {
         // Retrieve the block
         let block = db_client.get_block_by_number(1).await.unwrap();
 
-        assert_eq!(block.number.0.as_u64(), 1);
+        assert_eq!(block.number.0.to::<u64>(), 1);
     })
     .await;
 }
@@ -160,8 +160,8 @@ async fn test_retrieval_of_transactions_with_blocks() {
 
         for i in 1..=10 {
             let dummy_block: Block<H256> = Block {
-                number: ethers_core::types::U64::from(i).into(),
-                hash: ethers_core::types::H256::random().into(),
+                number: alloy::primitives::U64::from(i).into(),
+                hash: alloy::primitives::B256::random().into(),
                 ..Default::default()
             };
 
@@ -171,7 +171,7 @@ async fn test_retrieval_of_transactions_with_blocks() {
         let mut txn = vec![];
         for _ in 0..10 {
             let dummy_txn = Transaction {
-                hash: ethers_core::types::H256::random().into(),
+                hash: alloy::primitives::B256::random().into(),
                 block_number: Some(5_u64.into()),
                 block_hash: Some(blocks[4].hash.clone()),
                 ..Default::default()
@@ -189,17 +189,17 @@ async fn test_retrieval_of_transactions_with_blocks() {
         // Check the transactions
         assert_eq!(block.transactions.len(), 0);
 
-        assert_eq!(block.number.0.as_u64(), 1);
+        assert_eq!(block.number.0.to::<u64>(), 1);
 
         let block = db_client.get_full_block_by_number(5).await.unwrap();
 
         assert_eq!(block.hash, blocks[4].hash);
 
-        assert_eq!(block.number.0.as_u64(), 5);
+        assert_eq!(block.number.0.to::<u64>(), 5);
         assert_eq!(block.transactions.len(), 10);
 
         for txn in block.transactions {
-            assert_eq!(txn.block_number.unwrap().0.as_u64(), 5);
+            assert_eq!(txn.block_number.unwrap().0.to::<u64>(), 5);
             assert_eq!(txn.block_hash.unwrap(), block.hash);
         }
     })
@@ -210,16 +210,16 @@ async fn test_retrieval_of_transactions_with_blocks() {
 async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different() {
     test_with_clients(|db_client| async move {
         let block_one: Block<Transaction> = Block::<H256> {
-            number: ethers_core::types::U64::from(0).into(),
-            hash: ethers_core::types::H256::random().into(),
+            number: alloy::primitives::U64::from(0).into(),
+            hash: alloy::primitives::B256::random().into(),
             ..Default::default()
         }
         .into_full_block(vec![])
         .unwrap();
 
         let block_two: Block<Transaction> = Block::<H256> {
-            number: ethers_core::types::U64::from(0).into(),
-            hash: ethers_core::types::H256::random().into(),
+            number: alloy::primitives::U64::from(0).into(),
+            hash: alloy::primitives::B256::random().into(),
             ..Default::default()
         }
         .into_full_block(vec![])
@@ -234,7 +234,7 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
 
         let block = db_client.get_block_by_number(0).await.unwrap();
 
-        assert_eq!(block.number.0.as_u64(), 0);
+        assert_eq!(block.number.0.to::<u64>(), 0);
         assert_eq!(block.hash, block_one.hash);
 
         // Init with block_two
@@ -256,7 +256,7 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
         // Retrieve the block
         let block = db_client.get_block_by_number(0).await.unwrap();
 
-        assert_eq!(block.number.0.as_u64(), 0);
+        assert_eq!(block.number.0.to::<u64>(), 0);
         // hash should be block_two's hash
         assert_eq!(block.hash, block_two.hash);
     })
@@ -270,24 +270,22 @@ async fn test_deletion_and_clearing_of_database() {
 
         db_client
             .insert_block_data(
-                &[ethers_core::types::Block::<H256> {
-                    number: Some(ethers_core::types::U64::zero()),
-                    hash: Some(ethers_core::types::H256::random()),
+                &[Block::<H256> {
+                    number: U64::zero(),
+                    hash: alloy::primitives::B256::random().into(),
                     ..Default::default()
-                }
-                .into()],
-                &[ethers_core::types::Transaction {
-                    block_number: Some(ethers_core::types::U64::zero()),
-                    hash: ethers_core::types::H256::random(),
+                }],
+                &[Transaction {
+                    block_number: Some(U64::zero()),
+                    hash: alloy::primitives::B256::random().into(),
                     ..Default::default()
-                }
-                .into()],
+                }],
             )
             .await
             .unwrap();
 
         let block = db_client.get_block_by_number(0).await.unwrap();
-        assert_eq!(block.number.0.as_u64(), 0);
+        assert_eq!(block.number.0.to::<u64>(), 0);
 
         // Clear the database
         db_client.clear().await.unwrap();
@@ -315,8 +313,8 @@ async fn test_check_if_same_block_hash() {
         db_client.init(None, false).await.unwrap();
 
         let dummy_block: Block<H256> = Block {
-            number: ethers_core::types::U64::from(1).into(),
-            hash: ethers_core::types::H256::random().into(),
+            number: alloy::primitives::U64::from(1).into(),
+            hash: alloy::primitives::B256::random().into(),
             ..Default::default()
         };
 
@@ -333,8 +331,8 @@ async fn test_check_if_same_block_hash() {
         assert!(same_block);
 
         let dummy_block: Block<H256> = Block {
-            number: ethers_core::types::U64::from(1).into(),
-            hash: ethers_core::types::H256::random().into(),
+            number: alloy::primitives::U64::from(1).into(),
+            hash: alloy::primitives::B256::random().into(),
             ..Default::default()
         };
 
@@ -354,14 +352,14 @@ async fn test_insertion_of_blocks_with_txs() {
         db_client.init(None, false).await.unwrap();
 
         let dummy_txn = Transaction {
-            hash: ethers_core::types::H256::random().into(),
+            hash: alloy::primitives::B256::random().into(),
             block_number: Some(1_u64.into()),
             ..Default::default()
         };
 
         let dummy_block: Block<H256> = Block {
-            number: ethers_core::types::U64::from(1).into(),
-            hash: ethers_core::types::H256::random().into(),
+            number: alloy::primitives::U64::from(1).into(),
+            hash: alloy::primitives::B256::random().into(),
             transactions: vec![dummy_txn.hash.clone()],
             ..Default::default()
         };
@@ -373,7 +371,7 @@ async fn test_insertion_of_blocks_with_txs() {
 
         let block = db_client.get_full_block_by_number(1).await.unwrap();
 
-        assert_eq!(block.number.0.as_u64(), 1);
+        assert_eq!(block.number.0.to::<u64>(), 1);
         assert_eq!(block.hash, dummy_block.hash);
 
         assert_eq!(block.transactions.len(), 1);
@@ -388,8 +386,8 @@ async fn test_insertion_of_blocks_with_no_txs() {
         db_client.init(None, false).await.unwrap();
 
         let dummy_block: Block<H256> = Block {
-            number: ethers_core::types::U64::from(1).into(),
-            hash: ethers_core::types::H256::random().into(),
+            number: alloy::primitives::U64::from(1).into(),
+            hash: alloy::primitives::B256::random().into(),
             ..Default::default()
         };
 
@@ -400,7 +398,7 @@ async fn test_insertion_of_blocks_with_no_txs() {
 
         let block = db_client.get_block_by_number(1).await.unwrap();
 
-        assert_eq!(block.number.0.as_u64(), 1);
+        assert_eq!(block.number.0.to::<u64>(), 1);
         assert_eq!(block.hash, dummy_block.hash);
 
         assert_eq!(block.transactions.len(), 0);
@@ -414,7 +412,7 @@ async fn test_insertion_of_txs_with_no_blocks() {
         db_client.init(None, false).await.unwrap();
 
         let dummy_txn = Transaction {
-            hash: ethers_core::types::H256::random().into(),
+            hash: alloy::primitives::B256::random().into(),
             block_number: Some(1_u64.into()),
             ..Default::default()
         };
@@ -446,11 +444,11 @@ async fn test_insert_and_fetch_genesis_accounts() {
 
         let genesis_balances = vec![
             AccountBalance {
-                address: H160::from(ethers_core::types::H160::random()),
+                address: H160::from(alloy::primitives::Address::random()),
                 balance: U256::from(100_u64),
             },
             AccountBalance {
-                address: H160::from(ethers_core::types::H160::random()),
+                address: H160::from(alloy::primitives::Address::random()),
                 balance: U256::from(200_u64),
             },
         ];

@@ -16,18 +16,17 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+alloy = { workspace = true }
 anyhow = { workspace = true }
 candid = { workspace = true }
 clap = { workspace = true }
-did = { path = "../did" }
+did = { workspace = true }
 env_logger = { workspace = true }
-eth-signer = { path = "../eth-signer" }
-ethers-core = { workspace = true }
-evm-canister-client = { path = "../evm-canister-client", features = [
+eth-signer = { workspace = true }
+evm-canister-client = { workspace = true, features = [
     "ic-agent-client",
 ] }
-register_evm_agent_core = { path = "../register-evm-agent-core", features = ["tokio"] }
-hex = { workspace = true }
+register-evm-agent-core = { workspace = true, features = ["tokio"] }
 log = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }

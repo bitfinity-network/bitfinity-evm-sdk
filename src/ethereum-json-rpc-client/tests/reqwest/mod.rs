@@ -1,22 +1,19 @@
 mod rpc_client;
 
-use std::str::FromStr;
 use std::time::Duration;
 
+use alloy::dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
+use alloy::json_abi::Function;
+use alloy::rpc::types::{TransactionInput, TransactionRequest};
+use did::{BlockNumber, H160, H256, U256};
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
-use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
-use ethers_core::types::{BlockNumber, TransactionRequest, H160, H256, U256};
 use rpc_client::RpcReqwestClient;
 use serial_test::serial;
 
 const MAX_BATCH_SIZE: usize = 5;
 
 fn to_hash(string: &str) -> H256 {
-    H256::from_slice(
-        hex::decode(string.trim_start_matches("0x"))
-            .unwrap()
-            .as_slice(),
-    )
+    H256::from_hex_str(string).unwrap()
 }
 
 fn reqwest_client() -> EthJsonRpcClient<RpcReqwestClient> {
@@ -44,9 +41,8 @@ async fn should_get_block_number() {
 #[tokio::test]
 #[serial]
 async fn should_get_balance() {
-    let erc_1820_deployer_address = "0xa990077c3205cbDf861e17Fa532eeB069cE9fF96"
-        .parse()
-        .unwrap();
+    let erc_1820_deployer_address =
+        H160::from_hex_str("0xa990077c3205cbDf861e17Fa532eeB069cE9fF96").unwrap();
     let result = reqwest_client()
         .get_balance(erc_1820_deployer_address, BlockNumber::Latest)
         .await
@@ -64,9 +60,8 @@ async fn should_get_gas_price() {
 #[tokio::test]
 #[serial]
 async fn should_get_code() {
-    let erc_1820_address = "0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24"
-        .parse()
-        .unwrap();
+    let erc_1820_address =
+        H160::from_hex_str("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24").unwrap();
     let result = reqwest_client()
         .get_code(erc_1820_address, BlockNumber::Latest)
         .await
@@ -82,38 +77,24 @@ async fn should_get_code() {
 #[tokio::test]
 #[serial]
 async fn should_perform_eth_call() {
-    let erc_1820_address = "0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24"
-        .parse::<H160>()
-        .unwrap();
+    let erc_1820_address =
+        H160::from_hex_str("0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24").unwrap();
 
-    let caller = "0xf990077c3205cbDf861e17Fa532eeB069cE9fF96"
-        .parse()
-        .unwrap();
+    let caller = H160::from_hex_str("0xf990077c3205cbDf861e17Fa532eeB069cE9fF96").unwrap();
 
-    #[allow(deprecated)]
-    let func = Function {
-        name: "getManager".to_string(),
-        inputs: vec![Param {
-            name: "getManager".to_string(),
-            kind: ParamType::Address,
-            internal_type: None,
-        }],
-        outputs: vec![Param {
-            name: "".to_string(),
-            kind: ParamType::Address,
-            internal_type: None,
-        }],
-        constant: None,
-        state_mutability: StateMutability::View,
-    };
+    let func =
+        Function::parse("function getManager(address _addr) public view returns(address)").unwrap();
+    let input = func
+        .abi_encode_input(&[DynSolValue::Address(caller.0)])
+        .unwrap();
 
     let params = TransactionRequest {
-        from: Some(caller),
-        to: Some(erc_1820_address.into()),
-        gas: Some(1000000u64.into()),
+        from: Some(caller.0),
+        to: Some(erc_1820_address.0.into()),
+        gas: Some(1000000u64),
         gas_price: None,
         value: None,
-        data: Some(func.encode_input(&[Token::Address(caller)]).unwrap().into()),
+        input: TransactionInput::from(input),
         ..Default::default()
     };
 
@@ -123,23 +104,25 @@ async fn should_perform_eth_call() {
         .unwrap();
 
     let result_address = func
-        .decode_output(&hex::decode(result.trim_start_matches("0x")).unwrap())
+        .abi_decode_output(
+            &alloy::hex::decode(result.trim_start_matches("0x")).unwrap(),
+            false,
+        )
         .unwrap()
         .first()
         .cloned()
         .unwrap()
-        .into_address()
+        .as_address()
         .unwrap();
 
-    assert_eq!(result_address, caller);
+    assert_eq!(result_address, caller.0);
 }
 
 #[tokio::test]
 #[serial]
 async fn should_get_transaction_count() {
-    let erc_1820_deployer_address = "0xa990077c3205cbDf861e17Fa532eeB069cE9fF96"
-        .parse()
-        .unwrap();
+    let erc_1820_deployer_address =
+        H160::from_hex_str("0xa990077c3205cbDf861e17Fa532eeB069cE9fF96").unwrap();
     let result = reqwest_client()
         .get_transaction_count(erc_1820_deployer_address, BlockNumber::Latest)
         .await
@@ -151,7 +134,7 @@ async fn should_get_transaction_count() {
 #[serial]
 async fn should_get_block_by_number() {
     let result = reqwest_client()
-        .get_block_by_number(BlockNumber::Number(11588465.into()))
+        .get_block_by_number(BlockNumber::Number(11588465u64.into()))
         .await
         .unwrap();
 
@@ -160,7 +143,7 @@ async fn should_get_block_by_number() {
     let expected_state_root =
         to_hash("0xc9df81d6e32ac7b110c73ac283cfc84b97714a8e5fcaf36f1ff04822494e83fd");
 
-    assert_eq!(result.hash, Some(expected_hash));
+    assert_eq!(result.hash, expected_hash);
     assert_eq!(result.state_root, expected_state_root);
     assert_eq!(result.transactions.len(), 265);
 }
@@ -169,7 +152,7 @@ async fn should_get_block_by_number() {
 #[serial]
 async fn should_get_full_block_by_number() {
     let result = reqwest_client()
-        .get_full_block_by_number(BlockNumber::Number(11588465.into()))
+        .get_full_block_by_number(BlockNumber::Number(11588465u64.into()))
         .await
         .unwrap();
 
@@ -178,7 +161,7 @@ async fn should_get_full_block_by_number() {
     let expected_state_root =
         to_hash("0xc9df81d6e32ac7b110c73ac283cfc84b97714a8e5fcaf36f1ff04822494e83fd");
 
-    assert_eq!(result.hash, Some(expected_hash));
+    assert_eq!(result.hash, expected_hash);
     assert_eq!(result.state_root, expected_state_root);
     assert_eq!(result.transactions.len(), 265);
 
@@ -194,8 +177,8 @@ async fn should_get_full_blocks_by_number() {
     let result = reqwest_client()
         .get_full_blocks_by_number(
             vec![
-                BlockNumber::Number(11588465.into()),
-                BlockNumber::Number(11588466.into()),
+                BlockNumber::Number(11588465u64.into()),
+                BlockNumber::Number(11588466u64.into()),
             ],
             MAX_BATCH_SIZE,
         )
@@ -206,9 +189,7 @@ async fn should_get_full_blocks_by_number() {
 
     assert_eq!(
         result[0].hash,
-        Some(to_hash(
-            "0x719c3309fe7052a7adf34954418e1458c48d0e4b899d1d833d291ae6369f3500",
-        ))
+        to_hash("0x719c3309fe7052a7adf34954418e1458c48d0e4b899d1d833d291ae6369f3500",)
     );
     assert_eq!(
         result[0].state_root,
@@ -218,9 +199,7 @@ async fn should_get_full_blocks_by_number() {
 
     assert_eq!(
         result[1].hash,
-        Some(to_hash(
-            "0x78bc6c4e6a8628f4ffea4cc4d9413ed8a902a28ef7e4dd6332ead280abd77e61",
-        ))
+        to_hash("0x78bc6c4e6a8628f4ffea4cc4d9413ed8a902a28ef7e4dd6332ead280abd77e61",)
     );
     assert_eq!(
         result[1].state_root,
@@ -233,27 +212,25 @@ async fn should_get_full_blocks_by_number() {
 #[serial]
 async fn should_get_logs() {
     let params = EthGetLogsParams {
-        address: Some(vec!["0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907"
-            .parse()
-            .unwrap()]),
+        address: Some(vec![H160::from_hex_str(
+            "0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907",
+        )
+        .unwrap()]),
         from_block: BlockNumber::Latest,
         to_block: BlockNumber::Latest,
         topics: Some(vec![
-            vec![
-                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-                    .parse()
-                    .unwrap(),
-            ],
-            vec![
-                "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75"
-                    .parse()
-                    .unwrap(),
-            ],
-            vec![
-                "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078"
-                    .parse()
-                    .unwrap(),
-            ],
+            vec![H256::from_hex_str(
+                "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+            )
+            .unwrap()],
+            vec![H256::from_hex_str(
+                "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75",
+            )
+            .unwrap()],
+            vec![H256::from_hex_str(
+                "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078",
+            )
+            .unwrap()],
         ]),
     };
 
@@ -266,18 +243,18 @@ async fn should_get_transaction_receipts() {
     // this test is flaky for some reasons, so we try multiple times
     for _ in 0..3 {
         let block = reqwest_client()
-            .get_block_by_number(BlockNumber::Number(11588465.into()))
+            .get_block_by_number(BlockNumber::Number(11588465u64.into()))
             .await
             .unwrap();
         if let Ok(receipts) = reqwest_client()
             .get_receipts_by_hash(
-                vec![block.transactions[0], block.transactions[1]],
+                vec![block.transactions[0].clone(), block.transactions[1].clone()],
                 MAX_BATCH_SIZE,
             )
             .await
         {
-            assert_eq!(receipts[0].gas_used, Some(21000.into()));
-            assert_eq!(receipts[1].gas_used, Some(52358.into()));
+            assert_eq!(receipts[0].gas_used, Some(21000u64.into()));
+            assert_eq!(receipts[1].gas_used, Some(52358u64.into()));
             return;
         } else {
             tokio::time::sleep(Duration::from_secs(5)).await;
@@ -290,10 +267,11 @@ async fn should_get_transaction_receipts() {
 #[tokio::test]
 #[serial]
 async fn should_get_transaction_by_hash() {
-    let hash = H256::from_str("0xd5ac65792636f33afecfb829a42497c7062ee846b4e9bb16da7ddd67a8035b41")
-        .unwrap();
+    let hash =
+        H256::from_hex_str("0xd5ac65792636f33afecfb829a42497c7062ee846b4e9bb16da7ddd67a8035b41")
+            .unwrap();
     let tx = reqwest_client()
-        .get_transaction_by_hash(hash)
+        .get_transaction_by_hash(hash.clone())
         .await
         .unwrap()
         .unwrap();

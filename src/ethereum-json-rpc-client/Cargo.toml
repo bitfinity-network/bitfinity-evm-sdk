@@ -21,11 +21,10 @@ http-outcall = ["dep:url"]
 sanitize-http-outcall = []
 
 [dependencies]
+alloy = { workspace = true }
 anyhow = { workspace = true }
 candid = { workspace = true }
-did = { path = "../did" }
-ethers-core = { workspace = true }
-hex = { workspace = true }
+did = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }
 ic-exports = { workspace = true }
 itertools = { workspace = true }
@@ -43,8 +42,8 @@ serde_json = { workspace = true }
 url = { workspace = true, optional = true }
 
 [dev-dependencies]
+alloy = { workspace = true, features = ["dyn-abi", "json-abi"] }
 env_logger = { workspace = true }
-hex = { workspace = true }
 rand = { workspace = true }
 serial_test = { workspace = true }
 tokio = { workspace = true }
