@@ -527,7 +527,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Sets the min gas price
     pub async fn admin_set_min_gas_price(
         &self,
-        min_gas_price: U256,
+        min_gas_price: u128,
     ) -> CanisterClientResult<Result<()>> {
         self.client
             .update("admin_set_min_gas_price", (min_gas_price,))
@@ -565,7 +565,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Returns the min gas price
-    pub async fn get_min_gas_price(&self) -> CanisterClientResult<U256> {
+    pub async fn get_min_gas_price(&self) -> CanisterClientResult<u128> {
         self.client.query("get_min_gas_price", ()).await
     }
 
