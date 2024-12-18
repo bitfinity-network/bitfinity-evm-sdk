@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use alloy::eips::eip2718::Eip2718Error;
 use alloy::rlp::Error as DecoderError;
 use candid::{CandidType, Deserialize};
+use ethers_core::types::SignatureError;
 use jsonrpc_core::{Error, ErrorCode};
 use serde::Serialize;
 use thiserror::Error;
@@ -259,4 +260,23 @@ pub enum SignatureVerificationError {
     InternalError(String),
     #[error("unauthorized principal")]
     Unauthorized,
+}
+
+impl From<SignatureError> for SignatureVerificationError {
+    fn from(value: SignatureError) -> Self {
+        match value {
+            SignatureError::InvalidLength(len) => {
+                Self::InternalError(format!("invalid length: {len}"))
+            }
+            SignatureError::DecodingError(e) => Self::InternalError(format!("decoding error: {e}")),
+            SignatureError::VerificationError(expected, recovered) => Self::RecoveryError {
+                expected: expected.into(),
+                recovered: recovered.into(),
+            },
+            SignatureError::K256Error(e) => Self::InternalError(format!("K256 error: {e}")),
+            SignatureError::RecoveryError => {
+                Self::InternalError("internal signature recovery error".into())
+            }
+        }
+    }
 }
