@@ -98,19 +98,23 @@ impl TxSigner {
         &self,
         transaction: &mut dyn SignableTransaction<PrimitiveSignature>,
     ) -> TransactionSignerResult<DidSignature> {
-        match self {
-            Self::Local(signer) => signer.sign_transaction(transaction).await.map(Into::into),
-            #[cfg(feature = "ic_sign")]
-            Self::ManagementCanister(signer) => signer.sign_transaction(transaction).await,
-        }
+        let TO_DO = 0;
+        panic!("not implemented");
+        // match self {
+        //     Self::Local(signer) => signer.sign_transaction(transaction).await.map(Into::into),
+        //     #[cfg(feature = "ic_sign")]
+        //     Self::ManagementCanister(signer) => signer.sign_transaction(transaction).await,
+        // }
     }
 
     pub async fn sign_digest(&self, digest: [u8; 32]) -> TransactionSignerResult<DidSignature> {
-        match self {
-            Self::Local(signer) => signer.sign_digest(digest).await.map(Into::into),
-            #[cfg(feature = "ic_sign")]
-            Self::ManagementCanister(signer) => signer.sign_digest(digest).await,
-        }
+        let TO_DO = 0;
+        panic!("not implemented");
+        // match self {
+        //     Self::Local(signer) => signer.sign_digest(digest).await.map(Into::into),
+        //     #[cfg(feature = "ic_sign")]
+        //     Self::ManagementCanister(signer) => signer.sign_digest(digest).await,
+        // }
     }
 
     pub async fn get_public_key(&self) -> TransactionSignerResult<Vec<u8>> {
