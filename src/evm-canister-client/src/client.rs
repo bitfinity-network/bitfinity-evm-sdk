@@ -845,13 +845,13 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.update("revert_to_block", (args,)).await
     }
 
-    /// Receive a batch of  Transactions and append them to the blockchain.
+    /// Send a batch of  Transactions and append them to the blockchain.
     pub async fn send_transactions_unchecked(
         &self,
         transactions: Vec<Transaction>,
     ) -> CanisterClientResult<Result<()>> {
         self.client
-            .update("receive_transactions_unchecked", (transactions,))
+            .update("send_transactions_unchecked", (transactions,))
             .await
     }
 }
