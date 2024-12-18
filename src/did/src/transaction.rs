@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::rc::Rc;
 use std::str::FromStr;
 
+use alloy::consensus::transaction::to_eip155_value;
 use alloy::consensus::{
     SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy,
 };
@@ -365,11 +366,15 @@ impl From<Transaction> for alloy::consensus::TxEnvelope {
 
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
-        let signature: Signature = (*tx.inner.signature()).into();
+
+        let signature = tx.inner.signature();
+        let signature_v = signature.v();
+        let signature: Signature = (*signature).into();
 
         match tx.inner {
             alloy::consensus::TxEnvelope::Legacy(signed) => {
                 let inner_tx = signed.tx();
+                let signature_v = to_eip155_value(signature_v, inner_tx.chain_id());
                 Self {
                     hash: (*signed.hash()).into(),
                     nonce: inner_tx.nonce.into(),
@@ -386,7 +391,7 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     block_number: tx.block_number.map(Into::into),
                     transaction_index: tx.transaction_index.map(Into::into),
                     from: tx.from.into(),
-                    v: signature.v,
+                    v: (signature_v as u64).into(),
                     r: signature.r,
                     s: signature.s,
                     transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
@@ -1350,6 +1355,10 @@ mod test {
                 let (re_hash, re_rlp) = tx_from_rlp.slow_hash();
                 assert_eq!(hash, re_hash);
                 assert_eq!(rlp, re_rlp);
+
+                assert_eq!(transaction.s, tx_from_rlp.s);
+                assert_eq!(transaction.r, tx_from_rlp.r);
+                assert_eq!(transaction.v, tx_from_rlp.v);
             }
 
             let transaction_to_value = serde_json::to_value(transaction).unwrap();
@@ -1546,5 +1555,78 @@ mod test {
 
         // If signature S field exceeds the limit, it should return an error.
         Signature::check_malleability(&(s + U256::from(1u64))).unwrap_err();
+    }
+
+    #[test]
+    fn test_tx_rlp_encoding_should_preserve_signature_v() {
+        let mut tx = Transaction {
+            gas_price: Some(U256::from(1u64)),
+            transaction_type: Some(0u64.into()),
+            v: 27u64.into(),
+            r: U256::from(1u64),
+            s: U256::from(1u64),
+            ..Default::default()
+        };
+
+        tx.hash = tx.slow_hash().0;
+
+        let rlp = tx.rlp_encoded_2718();
+        let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
+
+        assert_eq!(tx, tx_from_rlp);
+    }
+
+    #[test]
+    fn test_tx_rlp_encoding_should_preserve_signature_v_for_eip1559() {
+
+        // This TX is from testnet block 5,169,760 (probably already reverted).
+        // It contains a legacy transaction with a wrong signature V value due to unneeded normalization of the value.
+        let tx = r#"
+        {
+            "blockHash": "0xaf2e9d3584c10c1a82500911027fe64edb892d36c650d68dcd063293cc08e638",
+            "blockNumber": "0x4ee260",
+            "chainId": "0x56b29",
+            "from": "0xb0e5863d0ddf7e105e409fee0ecc0123a362e14b",
+            "gas": "0xb71b00",
+            "gasPrice": "0xe",
+            "hash": "0x647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
+            "input": "0x",
+            "nonce": "0xf9ce30",
+            "r": "0x1d811034f7f6940c4271b3a1b6c7d479ae23fd765e80e90c40c98901b0d6f48a",
+            "s": "0x2d04ad2494a29743e6c8b85825ea799d71f75ebf2cfcc72efa0315fe901a1568",
+            "to": "0x36c4054a98366caef1abb11469b9519e24b3cb78",
+            "transactionIndex": "0x0",
+            "type": "0x0",
+            "v": "0x1",
+            "value": "0xde0b6b3a7640000"
+        }
+        "#;
+
+        let transaction: Transaction = serde_json::from_str(tx).unwrap();
+
+        assert_eq!(transaction.hash, transaction.slow_hash().0);
+
+
+            // from/to rlp
+            {
+                let (hash, rlp) = transaction.slow_hash();
+                let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
+
+                // rlp decoded TX should have the hash set
+                assert_eq!(hash, tx_from_rlp.hash);
+
+                let (re_hash, re_rlp) = tx_from_rlp.slow_hash();
+                assert_eq!(hash, re_hash);
+                assert_eq!(rlp, re_rlp);
+
+                assert_eq!(transaction.s, tx_from_rlp.s);
+                assert_eq!(transaction.r, tx_from_rlp.r);
+
+                // This is the expected V value, it corresponds to: (chain_id * 2) + 35 + signature_y_parity
+                let expected_v = (355113u64 * 2) + 35 + 1;
+
+                assert_eq!(expected_v, tx_from_rlp.v.as_u64());
+            }
+
     }
 }
