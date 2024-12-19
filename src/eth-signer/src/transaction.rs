@@ -52,8 +52,8 @@ impl TransactionBuilder<'_, '_> {
         };
 
         let alloy_signature = match self.signature {
-            SigningMethod::None => DidSignature::default().try_into()?,
-            SigningMethod::Signature(signature) => signature.try_into()?,
+            SigningMethod::None => DidSignature::default().into(),
+            SigningMethod::Signature(signature) => signature.into(),
             SigningMethod::SigningKey(key) => {
                 let wallet = LocalWallet::new_with_credential(
                     (*key).clone(),
@@ -91,7 +91,6 @@ mod test {
     use alloy::consensus::TxEnvelope;
     use alloy::signers::k256::ecdsa::signature::hazmat::PrehashVerifier;
     use alloy::signers::utils::secret_key_to_address;
-    use did::U64;
 
     use super::*;
 
@@ -110,7 +109,9 @@ mod test {
         };
         let tx = transaction_builder.calculate_hash_and_build().unwrap();
 
-        assert_eq!(tx.v, U64::zero());
+        // eip-155 legacy TX
+        let expected_v = 31540u64 * 2 + 35;
+        assert_eq!(tx.v.as_u64(), expected_v);
         assert_eq!(tx.r, U256::zero());
         assert_eq!(tx.s, U256::zero());
         assert_eq!(tx.chain_id, Some(31540u64.into()));
@@ -126,16 +127,14 @@ mod test {
             gas: 10_000u64.into(),
             gas_price: 20_000u64.into(),
             input: Vec::new(),
-            signature: SigningMethod::Signature(DidSignature {
-                r: 1u64.into(),
-                s: 2u64.into(),
-                v: 0u64.into(),
-            }),
+            signature: SigningMethod::Signature(DidSignature::new_from_rsv( 1u64.into(), 2u64.into(), 1u64.into()).unwrap()),
             chain_id: 31541,
         };
         let tx = transaction_builder.calculate_hash_and_build().unwrap();
 
-        assert_eq!(tx.v, U64::from(0u64));
+        // eip-155 legacy TX
+        let expected_v = 31541u64 * 2 + 35 + 1;
+        assert_eq!(tx.v.as_u64(), expected_v);
         assert_eq!(tx.r, U256::from(1u64));
         assert_eq!(tx.s, U256::from(2u64));
         assert_eq!(tx.chain_id, Some(31541u64.into()));
@@ -145,7 +144,7 @@ mod test {
     fn test_build_transaction_with_signing_key() {
         let key = SigningKey::random(&mut rand::thread_rng());
         let from = secret_key_to_address(&key);
-        let chain_id = 31540;
+        let chain_id = 31550;
         let transaction_builder = TransactionBuilder {
             from: &from.into(),
             to: None,
@@ -162,7 +161,7 @@ mod test {
 
         assert_eq!(tx.chain_id, Some(chain_id.into()));
 
-        let typed_tx: alloy::rpc::types::Transaction = tx.clone().into();
+        let typed_tx = alloy::rpc::types::Transaction::try_from(tx.clone()).unwrap();
 
         let signature_hash = typed_tx.inner.signature_hash();
         let signature = typed_tx.inner.signature();
@@ -183,6 +182,17 @@ mod test {
                 .verify_prehash(signature_hash.as_slice(), &signature.to_k256().unwrap())
                 .is_ok());
         }
+
+        // verify eip-155 signature
+        {
+            let signature = DidSignature::from(*signature);
+            let expected_v = signature.v(did::transaction::TxChainInfo::LegacyTx { chain_id: Some(chain_id) });
+            assert_eq!(tx.v.as_u64(), expected_v);
+            assert_eq!(tx.r, signature.r);
+            assert_eq!(tx.s, signature.s);
+            assert_eq!(tx.chain_id, Some(chain_id.into()));
+        }
+
     }
 
     #[test]
@@ -234,9 +244,9 @@ mod test {
             chain_id,
         };
 
-        let tx = alloy::rpc::types::Transaction::from(
+        let tx = alloy::rpc::types::Transaction::try_from(
             transaction_builder.calculate_hash_and_build().unwrap(),
-        );
+        ).unwrap();
 
         let recovered_from = tx
             .inner
@@ -267,7 +277,7 @@ mod test {
         .calculate_hash_and_build()
         .unwrap();
 
-        let tx_1_envelop: TxEnvelope = tx_1.clone().into();
+        let tx_1_envelop = TxEnvelope::try_from(tx_1.clone()).unwrap();
         let recovered_tx_1_from = tx_1_envelop.recover_signer().unwrap();
 
         // Replaying the same transaction with different chain_id
@@ -276,7 +286,7 @@ mod test {
             ..tx_1
         };
 
-        let tx_2_envelop: TxEnvelope = tx_2.into();
+        let tx_2_envelop = TxEnvelope::try_from(tx_2.clone()).unwrap();
         let recovered_tx_2_from = tx_2_envelop.recover_signer().unwrap();
 
         assert_ne!(recovered_tx_1_from, recovered_tx_2_from);

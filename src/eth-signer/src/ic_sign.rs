@@ -115,20 +115,25 @@ impl IcSigner {
         derivation_path: DerivationPath,
     ) -> Result<DidSignature, IcSignerError> {
         let hash = tx.signature_hash();
-        let mut signature = Self
+
+        Self
             .sign_digest(*hash, pubkey, key_id, derivation_path)
-            .await?;
+            .await
 
-        let v: u64 = signature.v.0.to();
+        // let mut signature = Self
+        //     .sign_digest(*hash, pubkey, key_id, derivation_path)
+        //     .await?;
 
-        // For non-legacy transactions recovery id should be updated.
-        // Details: https://eips.ethereum.org/EIPS/eip-155.
-        signature.v = match tx.chain_id() {
-            Some(chain_id) => (chain_id * 2 + 35 + (v - 27)).into(),
-            None => v.into(),
-        };
+        // let v: u64 = signature.v.0.to();
 
-        Ok(signature)
+        // // For non-legacy transactions recovery id should be updated.
+        // // Details: https://eips.ethereum.org/EIPS/eip-155.
+        // signature.v = match tx.chain_id() {
+        //     Some(chain_id) => (chain_id * 2 + 35 + (v - 27)).into(),
+        //     None => v.into(),
+        // };
+
+        // Ok(signature)
     }
 
     /// Signs the digest using `ManagementCanister::sign_with_ecdsa()` call.
@@ -166,7 +171,7 @@ impl IcSigner {
 
         let r = U256::from_be_slice(&signature_data[0..32]);
         let s = U256::from_be_slice(&signature_data[32..64]);
-        let v = recovery_id.is_y_odd() as u64 + 27;
+        let y_parity = recovery_id.is_y_odd();
 
         // Signature malleability check is not required, because dfinity uses `k256` crate
         // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
@@ -174,7 +179,7 @@ impl IcSigner {
         let signature = DidSignature {
             r: r.into(),
             s: s.into(),
-            v: v.into(),
+            y_parity,
         };
 
         Ok(signature)

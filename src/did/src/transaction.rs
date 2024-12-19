@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 use alloy::consensus::transaction::to_eip155_value;
 use alloy::consensus::{
@@ -172,41 +173,81 @@ impl From<u64> for BlockId {
 /// ECDSA signature representation
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 pub struct Signature {
-    pub v: U64,
+    pub y_parity: bool,
     pub r: U256,
     pub s: U256,
 }
 
+/// Transaction type and Chain id data required to generate the Signature V value for EIP-155
+pub enum TxChainInfo {
+    /// A legacy transation with (EIP-155) or without (not EIP-155) chain id 
+    LegacyTx {
+        chain_id: Option<u64>,
+    },
+    /// Other transaction types
+    OtherTx,
+}
+
 impl Signature {
+
+    /// Creates a new signature from the given r, s and v values.
+    pub fn new_from_rsv(r: U256, s: U256, v: u64) -> Result<Self, EvmError> {
+        let y_parity = normalize_v(v)
+            .ok_or_else(|| EvmError::InvalidSignatureParity(format!("{}", v)))?;
+        Ok(Self {
+            r,
+            s,
+            y_parity,
+        })
+    }
+
     /// Recovers an [`Address`] from this signature and the given prehashed message.
     /// e.g.: signature.recover_from(&tx.signature_hash())
     pub fn recover_from(&self, signature_hash: &H256) -> Result<H160, EvmError> {
-        let primitive_signature = alloy::primitives::PrimitiveSignature::try_from(self)?;
+        let primitive_signature = alloy::primitives::PrimitiveSignature::from(self);
         let recovered_from = primitive_signature
             .recover_address_from_prehash(&signature_hash.0)
             .map_err(|err| EvmError::SignatureError(format!("{err:?}")))?;
         Ok(recovered_from.into())
     }
     
-}
-
-impl TryFrom<Signature> for alloy::primitives::PrimitiveSignature {
-    type Error = EvmError;
-
-    fn try_from(value: Signature) -> Result<Self, Self::Error> {
-        Self::try_from(&value)
+    /// Calculates the V signature value from the signature and the [TxChainInfo].
+    /// The V value is calculated as follows:
+    /// - For legacy transactions, the V value is calculated based on the EIP-155 
+    /// - For other transactions, the V value is the Y parity value
+    pub fn v(&self, info: TxChainInfo) -> u64 {
+        match info {
+            TxChainInfo::LegacyTx { chain_id } => {
+                to_eip155_value(self.y_parity, chain_id) as u64
+            }
+            TxChainInfo::OtherTx => self.y_parity as u64,
+        }
     }
 }
 
-impl TryFrom<&Signature> for alloy::primitives::PrimitiveSignature {
-    type Error = EvmError;
+impl From<Signature> for alloy::primitives::PrimitiveSignature {
+    fn from(value: Signature) -> Self {
+        alloy::primitives::PrimitiveSignature::new(
+            value.r.0, value.s.0, value.y_parity,
+        )
+    }
+}
 
-    fn try_from(value: &Signature) -> Result<Self, Self::Error> {
-        let parity = normalize_v(value.v.0.to())
-            .ok_or_else(|| EvmError::InvalidSignatureParity(format!("{}", value.v)))?;
-        Ok(alloy::primitives::PrimitiveSignature::new(
-            value.r.0, value.s.0, parity,
-        ))
+impl From<&Signature> for alloy::primitives::PrimitiveSignature {
+    fn from(value: &Signature) -> Self {
+        alloy::primitives::PrimitiveSignature::new(
+            value.r.0, value.s.0, value.y_parity,
+        )
+    }
+}
+
+impl From<alloy::primitives::PrimitiveSignature> for Signature {
+    fn from(value: alloy::primitives::PrimitiveSignature) -> Self {
+        Self {
+            r: U256(value.r()),
+            s: U256(value.s()),
+            y_parity: value.v(),
+        }
     }
 }
 
@@ -215,6 +256,12 @@ impl Signature {
     /// See comment to `Signature::check_malleability()` for more details.
     pub const S_UPPER_LIMIT_HEX_STR: &'static str =
         "0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0";
+
+    /// Upper limit for signature S field.
+    /// See comment to `Signature::check_malleability()` for more details.
+    pub const S_UPPER_LIMIT: LazyLock<U256> = LazyLock::new(|| {
+        U256::from_hex_str(Self::S_UPPER_LIMIT_HEX_STR).expect("Invalid S upper limit")
+    });
 
     /// This comment copied from OpenZeppelin `ECDSA::tryRecover()` function.
     ///
@@ -228,13 +275,11 @@ impl Signature {
     /// vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept
     /// these malleable signatures as well.
     pub fn check_malleability(s: &U256) -> Result<(), EvmError> {
-        let upper_limit = U256::from_hex_str(Self::S_UPPER_LIMIT_HEX_STR)?;
-        if s > &upper_limit {
+        if s > &Self::S_UPPER_LIMIT {
             return Err(EvmError::TransactionSignature(format!(
-                "S value in transaction signature should not exceed {upper_limit}"
+                "S value in transaction signature should not exceed {}", Self::S_UPPER_LIMIT_HEX_STR
             )));
         }
-
         Ok(())
     }
 }
@@ -348,10 +393,11 @@ impl From<alloy::consensus::TxEnvelope> for Transaction {
     }
 }
 
-impl From<Transaction> for alloy::consensus::TxEnvelope {
-    fn from(value: Transaction) -> Self {
-        let tx: alloy::rpc::types::Transaction = value.into();
-        tx.inner
+impl TryFrom<Transaction> for alloy::consensus::TxEnvelope {
+    type Error = EvmError;
+    fn try_from(value: Transaction) -> Result<Self, Self::Error> {
+        let tx = alloy::rpc::types::Transaction::try_from(value)?;
+        Ok(tx.inner)
     }
 }
 
@@ -443,18 +489,18 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
     }
 }
 
-impl From<Transaction> for alloy::rpc::types::Transaction {
-    fn from(tx: Transaction) -> Self {
-        let signature = Signature {
-            v: tx.v,
-            r: tx.r,
-            s: tx.s,
-        };
-        let signature = alloy::primitives::PrimitiveSignature::try_from(signature).unwrap();
+impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
+
+    type Error = EvmError;
+    
+    fn try_from(tx: Transaction) -> Result<Self, EvmError> {
+        let signature = Signature::new_from_rsv(tx.r, tx.s, tx.v.as_u64())?;
+
+        let signature = alloy::primitives::PrimitiveSignature::from(signature);
 
         let tx_type = tx.transaction_type.unwrap_or_default().0.to::<u64>();
         match tx_type {
-            TRANSACTION_TYPE_LEGACY => alloy::rpc::types::Transaction {
+            TRANSACTION_TYPE_LEGACY => Ok(alloy::rpc::types::Transaction {
                 inner: TxLegacy {
                     nonce: tx.nonce.0.to(),
                     gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
@@ -471,8 +517,8 @@ impl From<Transaction> for alloy::rpc::types::Transaction {
                 transaction_index: tx.transaction_index.map(Into::into),
                 effective_gas_price: None,
                 from: tx.from.into(),
-            },
-            TRANSACTION_TYPE_EIP2930 => alloy::rpc::types::Transaction {
+            }),
+            TRANSACTION_TYPE_EIP2930 => Ok(alloy::rpc::types::Transaction {
                 inner: TxEip2930 {
                     nonce: tx.nonce.0.to(),
                     gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
@@ -490,8 +536,8 @@ impl From<Transaction> for alloy::rpc::types::Transaction {
                 transaction_index: tx.transaction_index.map(Into::into),
                 effective_gas_price: None,
                 from: tx.from.into(),
-            },
-            TRANSACTION_TYPE_EIP1559 => alloy::rpc::types::Transaction {
+            }),
+            TRANSACTION_TYPE_EIP1559 => Ok(alloy::rpc::types::Transaction {
                 inner: TxEip1559 {
                     nonce: tx.nonce.0.to(),
                     gas_limit: tx.gas.0.to(),
@@ -513,31 +559,32 @@ impl From<Transaction> for alloy::rpc::types::Transaction {
                 transaction_index: tx.transaction_index.map(Into::into),
                 effective_gas_price: None,
                 from: tx.from.into(),
-            },
+            }),
             _ => {
                 panic!("Unsupported transaction type: {}", tx_type);
             }
         }
     }
+    
 }
 
 impl Transaction {
     /// RLP encodes the transaction and recalculates the hash.
     /// It does not modify the transaction itself.
     /// It returns the calcualted hash and the RLP encoded bytes.
-    pub fn slow_hash(&self) -> (H256, bytes::Bytes) {
-        let encoded = self.rlp_encoded_2718();
-        (keccak_hash(&encoded), encoded)
+    pub fn slow_hash(&self) -> Result<(H256, bytes::Bytes), EvmError> {
+        let encoded = self.rlp_encoded_2718()?;
+        Ok((keccak_hash(&encoded), encoded))
     }
 
     /// Encode the transaction according to [EIP-2718] rules. First a 1-byte
     /// type flag in the range 0x0-0x7f, then the body of the transaction.
-    pub fn rlp_encoded_2718(&self) -> bytes::Bytes {
+    pub fn rlp_encoded_2718(&self) -> Result<bytes::Bytes, EvmError> {
         use alloy::eips::eip2718::Encodable2718;
-        let alloy_transaction: alloy::consensus::TxEnvelope = self.clone().into();
+        let alloy_transaction = alloy::consensus::TxEnvelope::try_from(self.clone())?;
         let mut buffer = BytesMut::new();
         alloy_transaction.encode_2718(&mut buffer);
-        buffer.freeze()
+        Ok(buffer.freeze())
     }
 
     /// Decode the transaction according to [EIP-2718] rules.
@@ -1331,18 +1378,18 @@ mod test {
 
             assert_eq!(
                 alloy::primitives::B256::from_str(&hash).unwrap(),
-                transaction.slow_hash().0 .0
+                transaction.slow_hash().unwrap().0 .0
             );
 
             // from/to rlp
             {
-                let (hash, rlp) = transaction.slow_hash();
+                let (hash, rlp) = transaction.slow_hash().unwrap();
                 let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
 
                 // rlp decoded TX should have the hash set
                 assert_eq!(hash, tx_from_rlp.hash);
 
-                let (re_hash, re_rlp) = tx_from_rlp.slow_hash();
+                let (re_hash, re_rlp) = tx_from_rlp.slow_hash().unwrap();
                 assert_eq!(hash, re_hash);
                 assert_eq!(rlp, re_rlp);
 
@@ -1532,13 +1579,11 @@ mod test {
             random(),
         );
 
-        let TO_DO = 0;
-
-        // let roundtrip_signature = Signature::from(signature);
-        // assert_eq!(
-        //     signature,
-        //     alloy::primitives::PrimitiveSignature::try_from(roundtrip_signature).unwrap()
-        // );
+        let roundtrip_signature = Signature::from(signature);
+        assert_eq!(
+            signature,
+            alloy::primitives::PrimitiveSignature::try_from(roundtrip_signature).unwrap()
+        );
     }
 
     #[test]
@@ -1561,9 +1606,9 @@ mod test {
             ..Default::default()
         };
 
-        tx.hash = tx.slow_hash().0;
+        tx.hash = tx.slow_hash().unwrap().0;
 
-        let rlp = tx.rlp_encoded_2718();
+        let rlp = tx.rlp_encoded_2718().unwrap();
         let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
 
         assert_eq!(tx, tx_from_rlp);
@@ -1597,18 +1642,18 @@ mod test {
 
         let transaction: Transaction = serde_json::from_str(tx).unwrap();
 
-        assert_eq!(transaction.hash, transaction.slow_hash().0);
+        assert_eq!(transaction.hash, transaction.slow_hash().unwrap().0);
 
 
             // from/to rlp
             {
-                let (hash, rlp) = transaction.slow_hash();
+                let (hash, rlp) = transaction.slow_hash().unwrap();
                 let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
 
                 // rlp decoded TX should have the hash set
                 assert_eq!(hash, tx_from_rlp.hash);
 
-                let (re_hash, re_rlp) = tx_from_rlp.slow_hash();
+                let (re_hash, re_rlp) = tx_from_rlp.slow_hash().unwrap();
                 assert_eq!(hash, re_hash);
                 assert_eq!(rlp, re_rlp);
 
@@ -1621,5 +1666,105 @@ mod test {
                 assert_eq!(expected_v, tx_from_rlp.v.as_u64());
             }
 
+    }
+
+    #[test]
+    pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_true() {
+        // Arrange
+        let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
+        assert_eq!(signature.r, 100u64.into());
+        assert_eq!(signature.s, 200u64.into());
+        assert_eq!(signature.y_parity, true);
+        
+        let chain_id = random::<u32>() as u64;
+
+        // Act
+        let v = signature.v(TxChainInfo::LegacyTx{ chain_id: Some(chain_id)});
+
+        // Assert
+        let expected_v = 35 + (chain_id * 2) + (signature.y_parity as u64);
+        assert_eq!(v, expected_v);
+    }
+
+    #[test]
+    pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_false() {
+        // Arrange
+        let signature = Signature::new_from_rsv(300u64.into(), 500u64.into(), 111u64.into()).unwrap();
+        assert_eq!(signature.r, 300u64.into());
+        assert_eq!(signature.s, 500u64.into());
+        assert_eq!(signature.y_parity, false);
+        
+        let chain_id = random::<u32>() as u64;
+
+        // Act
+        let v = signature.v(TxChainInfo::LegacyTx{ chain_id: Some(chain_id)});
+
+        // Assert
+        let expected_v = 35 + (chain_id * 2) + (signature.y_parity as u64);
+        assert_eq!(v, expected_v);
+    }
+
+    #[test]
+    pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_true() {
+        // Arrange
+        let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
+        assert_eq!(signature.r, 100u64.into());
+        assert_eq!(signature.s, 200u64.into());
+        assert_eq!(signature.y_parity, true);
+
+        // Act
+        let v = signature.v(TxChainInfo::LegacyTx{ chain_id: None});
+
+        // Assert
+        let expected_v = 28;
+        assert_eq!(v, expected_v);
+    }
+
+    #[test]
+    pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_false() {
+        // Arrange
+        let signature = Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64.into()).unwrap();
+        assert_eq!(signature.r, 1000u64.into());
+        assert_eq!(signature.s, 2000u64.into());
+        assert_eq!(signature.y_parity, false);
+
+        // Act
+        let v = signature.v(TxChainInfo::LegacyTx{ chain_id: None});
+
+        // Assert
+        let expected_v = 27;
+        assert_eq!(v, expected_v);
+    }
+
+    #[test]
+    pub fn test_signature_v_for_non_legacy_transaction_with_y_parity_true() {
+        // Arrange
+        let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
+        assert_eq!(signature.r, 100u64.into());
+        assert_eq!(signature.s, 200u64.into());
+        assert_eq!(signature.y_parity, true);
+
+        // Act
+        let v = signature.v(TxChainInfo::OtherTx);
+
+        // Assert
+        let expected_v = 1;
+        assert_eq!(v, expected_v);
+    }
+
+    #[test]
+    pub fn test_signature_v_for_non_legacy_transaction_with_y_parity_false() {
+        // Arrange
+        let signature = Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64.into()).unwrap();
+        assert_eq!(signature.r, 1000u64.into());
+        assert_eq!(signature.s, 2000u64.into());
+        assert_eq!(signature.y_parity, false);
+
+        // Act
+        let v = signature.v(TxChainInfo::OtherTx);
+
+        // Assert
+        let expected_v = 0;
+        assert_eq!(v, expected_v);
     }
 }

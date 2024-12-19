@@ -62,7 +62,7 @@ impl SignTransactionArgs {
 
         let tx = self.transaction_builder(wallet, &client).await?;
 
-        let tx_bytes = alloy::rlp::encode(&alloy::rpc::types::Transaction::from(tx.clone()).inner);
+        let tx_bytes = alloy::rlp::encode(&alloy::rpc::types::Transaction::try_from(tx.clone())?.inner);
 
         println!("Transaction: {:#?}", tx);
         println!("Transaction Bytes: {:#?}", tx_bytes);
