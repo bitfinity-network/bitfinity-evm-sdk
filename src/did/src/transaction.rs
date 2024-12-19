@@ -180,25 +180,18 @@ pub struct Signature {
 
 /// Transaction type and Chain id data required to generate the Signature V value for EIP-155
 pub enum TxChainInfo {
-    /// A legacy transation with (EIP-155) or without (not EIP-155) chain id 
-    LegacyTx {
-        chain_id: Option<u64>,
-    },
+    /// A legacy transation with (EIP-155) or without (not EIP-155) chain id
+    LegacyTx { chain_id: Option<u64> },
     /// Other transaction types
     OtherTx,
 }
 
 impl Signature {
-
     /// Creates a new signature from the given r, s and v values.
     pub fn new_from_rsv(r: U256, s: U256, v: u64) -> Result<Self, EvmError> {
-        let y_parity = normalize_v(v)
-            .ok_or_else(|| EvmError::InvalidSignatureParity(format!("{}", v)))?;
-        Ok(Self {
-            r,
-            s,
-            y_parity,
-        })
+        let y_parity =
+            normalize_v(v).ok_or_else(|| EvmError::InvalidSignatureParity(format!("{}", v)))?;
+        Ok(Self { r, s, y_parity })
     }
 
     /// Recovers an [`Address`] from this signature and the given prehashed message.
@@ -210,16 +203,14 @@ impl Signature {
             .map_err(|err| EvmError::SignatureError(format!("{err:?}")))?;
         Ok(recovered_from.into())
     }
-    
+
     /// Calculates the V signature value from the signature and the [TxChainInfo].
     /// The V value is calculated as follows:
-    /// - For legacy transactions, the V value is calculated based on the EIP-155 
+    /// - For legacy transactions, the V value is calculated based on the EIP-155
     /// - For other transactions, the V value is the Y parity value
     pub fn v(&self, info: TxChainInfo) -> u64 {
         match info {
-            TxChainInfo::LegacyTx { chain_id } => {
-                to_eip155_value(self.y_parity, chain_id) as u64
-            }
+            TxChainInfo::LegacyTx { chain_id } => to_eip155_value(self.y_parity, chain_id) as u64,
             TxChainInfo::OtherTx => self.y_parity as u64,
         }
     }
@@ -227,17 +218,13 @@ impl Signature {
 
 impl From<Signature> for alloy::primitives::PrimitiveSignature {
     fn from(value: Signature) -> Self {
-        alloy::primitives::PrimitiveSignature::new(
-            value.r.0, value.s.0, value.y_parity,
-        )
+        alloy::primitives::PrimitiveSignature::new(value.r.0, value.s.0, value.y_parity)
     }
 }
 
 impl From<&Signature> for alloy::primitives::PrimitiveSignature {
     fn from(value: &Signature) -> Self {
-        alloy::primitives::PrimitiveSignature::new(
-            value.r.0, value.s.0, value.y_parity,
-        )
+        alloy::primitives::PrimitiveSignature::new(value.r.0, value.s.0, value.y_parity)
     }
 }
 
@@ -277,7 +264,8 @@ impl Signature {
     pub fn check_malleability(s: &U256) -> Result<(), EvmError> {
         if s > &Self::S_UPPER_LIMIT {
             return Err(EvmError::TransactionSignature(format!(
-                "S value in transaction signature should not exceed {}", Self::S_UPPER_LIMIT_HEX_STR
+                "S value in transaction signature should not exceed {}",
+                Self::S_UPPER_LIMIT_HEX_STR
             )));
         }
         Ok(())
@@ -403,7 +391,6 @@ impl TryFrom<Transaction> for alloy::consensus::TxEnvelope {
 
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
-       
         match tx.inner {
             alloy::consensus::TxEnvelope::Legacy(signed) => {
                 let inner_tx = signed.tx();
@@ -490,9 +477,8 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
 }
 
 impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
-
     type Error = EvmError;
-    
+
     fn try_from(tx: Transaction) -> Result<Self, EvmError> {
         let signature = Signature::new_from_rsv(tx.r, tx.s, tx.v.as_u64())?;
 
@@ -565,7 +551,6 @@ impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
             }
         }
     }
-    
 }
 
 impl Transaction {
@@ -1616,7 +1601,6 @@ mod test {
 
     #[test]
     fn test_tx_rlp_encoding_should_preserve_signature_v_for_eip1559() {
-
         // This TX is from testnet block 5,169,760 (probably already reverted).
         // It contains a legacy transaction with a wrong signature V value due to unneeded normalization of the value.
         let tx = r#"
@@ -1644,42 +1628,43 @@ mod test {
 
         assert_eq!(transaction.hash, transaction.slow_hash().unwrap().0);
 
+        // from/to rlp
+        {
+            let (hash, rlp) = transaction.slow_hash().unwrap();
+            let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
 
-            // from/to rlp
-            {
-                let (hash, rlp) = transaction.slow_hash().unwrap();
-                let tx_from_rlp = Transaction::from_rlp_2718(&mut rlp.as_ref()).unwrap();
+            // rlp decoded TX should have the hash set
+            assert_eq!(hash, tx_from_rlp.hash);
 
-                // rlp decoded TX should have the hash set
-                assert_eq!(hash, tx_from_rlp.hash);
+            let (re_hash, re_rlp) = tx_from_rlp.slow_hash().unwrap();
+            assert_eq!(hash, re_hash);
+            assert_eq!(rlp, re_rlp);
 
-                let (re_hash, re_rlp) = tx_from_rlp.slow_hash().unwrap();
-                assert_eq!(hash, re_hash);
-                assert_eq!(rlp, re_rlp);
+            assert_eq!(transaction.s, tx_from_rlp.s);
+            assert_eq!(transaction.r, tx_from_rlp.r);
 
-                assert_eq!(transaction.s, tx_from_rlp.s);
-                assert_eq!(transaction.r, tx_from_rlp.r);
+            // This is the expected V value, it corresponds to: (chain_id * 2) + 35 + signature_y_parity
+            let expected_v = (355113u64 * 2) + 35 + 1;
 
-                // This is the expected V value, it corresponds to: (chain_id * 2) + 35 + signature_y_parity
-                let expected_v = (355113u64 * 2) + 35 + 1;
-
-                assert_eq!(expected_v, tx_from_rlp.v.as_u64());
-            }
-
+            assert_eq!(expected_v, tx_from_rlp.v.as_u64());
+        }
     }
 
     #[test]
     pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_true() {
         // Arrange
-        let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
+        let signature =
+            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
         assert_eq!(signature.r, 100u64.into());
         assert_eq!(signature.s, 200u64.into());
         assert_eq!(signature.y_parity, true);
-        
+
         let chain_id = random::<u32>() as u64;
 
         // Act
-        let v = signature.v(TxChainInfo::LegacyTx{ chain_id: Some(chain_id)});
+        let v = signature.v(TxChainInfo::LegacyTx {
+            chain_id: Some(chain_id),
+        });
 
         // Assert
         let expected_v = 35 + (chain_id * 2) + (signature.y_parity as u64);
@@ -1689,15 +1674,18 @@ mod test {
     #[test]
     pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_false() {
         // Arrange
-        let signature = Signature::new_from_rsv(300u64.into(), 500u64.into(), 111u64.into()).unwrap();
+        let signature =
+            Signature::new_from_rsv(300u64.into(), 500u64.into(), 111u64.into()).unwrap();
         assert_eq!(signature.r, 300u64.into());
         assert_eq!(signature.s, 500u64.into());
         assert_eq!(signature.y_parity, false);
-        
+
         let chain_id = random::<u32>() as u64;
 
         // Act
-        let v = signature.v(TxChainInfo::LegacyTx{ chain_id: Some(chain_id)});
+        let v = signature.v(TxChainInfo::LegacyTx {
+            chain_id: Some(chain_id),
+        });
 
         // Assert
         let expected_v = 35 + (chain_id * 2) + (signature.y_parity as u64);
@@ -1707,13 +1695,14 @@ mod test {
     #[test]
     pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_true() {
         // Arrange
-        let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
+        let signature =
+            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
         assert_eq!(signature.r, 100u64.into());
         assert_eq!(signature.s, 200u64.into());
         assert_eq!(signature.y_parity, true);
 
         // Act
-        let v = signature.v(TxChainInfo::LegacyTx{ chain_id: None});
+        let v = signature.v(TxChainInfo::LegacyTx { chain_id: None });
 
         // Assert
         let expected_v = 28;
@@ -1723,13 +1712,14 @@ mod test {
     #[test]
     pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_false() {
         // Arrange
-        let signature = Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64.into()).unwrap();
+        let signature =
+            Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64.into()).unwrap();
         assert_eq!(signature.r, 1000u64.into());
         assert_eq!(signature.s, 2000u64.into());
         assert_eq!(signature.y_parity, false);
 
         // Act
-        let v = signature.v(TxChainInfo::LegacyTx{ chain_id: None});
+        let v = signature.v(TxChainInfo::LegacyTx { chain_id: None });
 
         // Assert
         let expected_v = 27;
@@ -1739,7 +1729,8 @@ mod test {
     #[test]
     pub fn test_signature_v_for_non_legacy_transaction_with_y_parity_true() {
         // Arrange
-        let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
+        let signature =
+            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
         assert_eq!(signature.r, 100u64.into());
         assert_eq!(signature.s, 200u64.into());
         assert_eq!(signature.y_parity, true);
@@ -1755,7 +1746,8 @@ mod test {
     #[test]
     pub fn test_signature_v_for_non_legacy_transaction_with_y_parity_false() {
         // Arrange
-        let signature = Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64.into()).unwrap();
+        let signature =
+            Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64.into()).unwrap();
         assert_eq!(signature.r, 1000u64.into());
         assert_eq!(signature.s, 2000u64.into());
         assert_eq!(signature.y_parity, false);

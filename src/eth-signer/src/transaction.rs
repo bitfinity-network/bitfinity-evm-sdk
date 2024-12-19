@@ -127,7 +127,9 @@ mod test {
             gas: 10_000u64.into(),
             gas_price: 20_000u64.into(),
             input: Vec::new(),
-            signature: SigningMethod::Signature(DidSignature::new_from_rsv( 1u64.into(), 2u64.into(), 1u64.into()).unwrap()),
+            signature: SigningMethod::Signature(
+                DidSignature::new_from_rsv(1u64.into(), 2u64.into(), 1u64.into()).unwrap(),
+            ),
             chain_id: 31541,
         };
         let tx = transaction_builder.calculate_hash_and_build().unwrap();
@@ -186,13 +188,14 @@ mod test {
         // verify eip-155 signature
         {
             let signature = DidSignature::from(*signature);
-            let expected_v = signature.v(did::transaction::TxChainInfo::LegacyTx { chain_id: Some(chain_id) });
+            let expected_v = signature.v(did::transaction::TxChainInfo::LegacyTx {
+                chain_id: Some(chain_id),
+            });
             assert_eq!(tx.v.as_u64(), expected_v);
             assert_eq!(tx.r, signature.r);
             assert_eq!(tx.s, signature.s);
             assert_eq!(tx.chain_id, Some(chain_id.into()));
         }
-
     }
 
     #[test]
@@ -246,7 +249,8 @@ mod test {
 
         let tx = alloy::rpc::types::Transaction::try_from(
             transaction_builder.calculate_hash_and_build().unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         let recovered_from = tx
             .inner

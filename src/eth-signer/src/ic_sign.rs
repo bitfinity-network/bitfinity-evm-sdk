@@ -116,8 +116,7 @@ impl IcSigner {
     ) -> Result<DidSignature, IcSignerError> {
         let hash = tx.signature_hash();
 
-        Self
-            .sign_digest(*hash, pubkey, key_id, derivation_path)
+        Self.sign_digest(*hash, pubkey, key_id, derivation_path)
             .await
 
         // let mut signature = Self
