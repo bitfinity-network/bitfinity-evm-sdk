@@ -391,10 +391,12 @@ impl TryFrom<Transaction> for alloy::consensus::TxEnvelope {
 
 impl From<alloy::rpc::types::Transaction> for Transaction {
     fn from(tx: alloy::rpc::types::Transaction) -> Self {
+        let signature = tx.inner.signature();
+        let signature = Signature::from(*signature);
+
         match tx.inner {
             alloy::consensus::TxEnvelope::Legacy(signed) => {
                 let inner_tx = signed.tx();
-                let signature = signed.signature();
                 let chain_id = inner_tx.chain_id();
                 Self {
                     hash: (*signed.hash()).into(),
@@ -412,15 +414,14 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     block_number: tx.block_number.map(Into::into),
                     transaction_index: tx.transaction_index.map(Into::into),
                     from: tx.from.into(),
-                    v: (to_eip155_value(signature.v(), chain_id) as u64).into(),
-                    r: signature.r().into(),
-                    s: signature.s().into(),
+                    v: signature.v(TxChainInfo::LegacyTx { chain_id }).into(),
+                    r: signature.r,
+                    s: signature.s,
                     transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
                 }
             }
             alloy::consensus::TxEnvelope::Eip2930(signed) => {
                 let inner_tx = signed.tx();
-                let signature = signed.signature();
                 Self {
                     hash: (*signed.hash()).into(),
                     nonce: inner_tx.nonce.into(),
@@ -437,15 +438,14 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     block_number: tx.block_number.map(Into::into),
                     transaction_index: tx.transaction_index.map(Into::into),
                     from: tx.from.into(),
-                    v: (signature.v() as u64).into(),
-                    r: signature.r().into(),
-                    s: signature.s().into(),
+                    v: signature.v(TxChainInfo::OtherTx).into(),
+                    r: signature.r,
+                    s: signature.s,
                     transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
                 }
             }
             alloy::consensus::TxEnvelope::Eip1559(signed) => {
                 let inner_tx = signed.tx();
-                let signature = signed.signature();
                 Self {
                     hash: (*signed.hash()).into(),
                     nonce: inner_tx.nonce.into(),
@@ -462,9 +462,9 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     block_number: tx.block_number.map(Into::into),
                     transaction_index: tx.transaction_index.map(Into::into),
                     from: tx.from.into(),
-                    v: (signature.v() as u64).into(),
-                    r: signature.r().into(),
-                    s: signature.s().into(),
+                    v: signature.v(TxChainInfo::OtherTx).into(),
+                    r: signature.r,
+                    s: signature.s,
                     transaction_type: Some(TRANSACTION_TYPE_EIP1559.into()),
                 }
             }
@@ -1651,7 +1651,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_true() {
+    pub fn test_signature_v_for_legacy_eip155_transaction_with_y_parity_true() {
         // Arrange
         let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
         assert_eq!(signature.r, 100u64.into());
@@ -1671,7 +1671,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_false() {
+    pub fn test_signature_v_for_legacy_eip155_transaction_with_y_parity_false() {
         // Arrange
         let signature = Signature::new_from_rsv(300u64.into(), 500u64.into(), 111u64).unwrap();
         assert_eq!(signature.r, 300u64.into());
@@ -1691,7 +1691,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_true() {
+    pub fn test_signature_v_for_legacy_not_eip155_transaction_with_y_parity_true() {
         // Arrange
         let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
         assert_eq!(signature.r, 100u64.into());
@@ -1707,7 +1707,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_false() {
+    pub fn test_signature_v_for_legacy_not_eip155_transaction_with_y_parity_false() {
         // Arrange
         let signature = Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64).unwrap();
         assert_eq!(signature.r, 1000u64.into());
