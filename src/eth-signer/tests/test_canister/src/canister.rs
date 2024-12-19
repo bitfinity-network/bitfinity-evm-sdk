@@ -48,7 +48,7 @@ impl TestCanister {
             .await
             .unwrap();
 
-        let tx = tx.into_signed(signature.try_into().unwrap());
+        let tx = tx.into_signed(signature.into());
         let recovered_from = tx.recover_signer().unwrap();
         assert_eq!(recovered_from, from);
 
