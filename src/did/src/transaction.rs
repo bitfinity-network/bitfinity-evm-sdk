@@ -1653,8 +1653,7 @@ mod test {
     #[test]
     pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_true() {
         // Arrange
-        let signature =
-            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
+        let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
         assert_eq!(signature.r, 100u64.into());
         assert_eq!(signature.s, 200u64.into());
         assert!(signature.y_parity);
@@ -1674,8 +1673,7 @@ mod test {
     #[test]
     pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_false() {
         // Arrange
-        let signature =
-            Signature::new_from_rsv(300u64.into(), 500u64.into(), 111u64).unwrap();
+        let signature = Signature::new_from_rsv(300u64.into(), 500u64.into(), 111u64).unwrap();
         assert_eq!(signature.r, 300u64.into());
         assert_eq!(signature.s, 500u64.into());
         assert!(!signature.y_parity);
@@ -1695,8 +1693,7 @@ mod test {
     #[test]
     pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_true() {
         // Arrange
-        let signature =
-            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
+        let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
         assert_eq!(signature.r, 100u64.into());
         assert_eq!(signature.s, 200u64.into());
         assert!(signature.y_parity);
@@ -1712,8 +1709,7 @@ mod test {
     #[test]
     pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_false() {
         // Arrange
-        let signature =
-            Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64).unwrap();
+        let signature = Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64).unwrap();
         assert_eq!(signature.r, 1000u64.into());
         assert_eq!(signature.s, 2000u64.into());
         assert!(!signature.y_parity);
@@ -1729,8 +1725,7 @@ mod test {
     #[test]
     pub fn test_signature_v_for_non_legacy_transaction_with_y_parity_true() {
         // Arrange
-        let signature =
-            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
+        let signature = Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
         assert_eq!(signature.r, 100u64.into());
         assert_eq!(signature.s, 200u64.into());
         assert!(signature.y_parity);
@@ -1746,8 +1741,7 @@ mod test {
     #[test]
     pub fn test_signature_v_for_non_legacy_transaction_with_y_parity_false() {
         // Arrange
-        let signature =
-            Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64).unwrap();
+        let signature = Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64).unwrap();
         assert_eq!(signature.r, 1000u64.into());
         assert_eq!(signature.s, 2000u64.into());
         assert!(!signature.y_parity);

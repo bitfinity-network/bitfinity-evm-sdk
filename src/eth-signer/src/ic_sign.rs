@@ -296,8 +296,7 @@ mod tests {
             .await
             .unwrap();
 
-        let primitive_signature =
-            alloy::primitives::PrimitiveSignature::from(signature);
+        let primitive_signature = alloy::primitives::PrimitiveSignature::from(signature);
 
         let recovered_from = primitive_signature
             .recover_address_from_prehash(&tx.signature_hash())
