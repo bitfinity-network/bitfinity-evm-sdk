@@ -5,7 +5,7 @@ use alloy::primitives::{Address, PrimitiveSignature, SignatureError, U256};
 use alloy::signers::k256::ecdsa::{RecoveryId, Signature as EcsaSignature, VerifyingKey};
 use alloy::signers::utils::public_key_to_address;
 use candid::{CandidType, Principal};
-use did::transaction::Signature as DidSignature;
+use did::transaction::{Parity, Signature as DidSignature};
 use ic_canister::virtual_canister_call;
 use ic_exports::ic_cdk::api::call::RejectionCode;
 use ic_exports::ic_cdk::api::management_canister::ecdsa::{
@@ -119,20 +119,6 @@ impl IcSigner {
         Self.sign_digest(*hash, pubkey, key_id, derivation_path)
             .await
 
-        // let mut signature = Self
-        //     .sign_digest(*hash, pubkey, key_id, derivation_path)
-        //     .await?;
-
-        // let v: u64 = signature.v.0.to();
-
-        // // For non-legacy transactions recovery id should be updated.
-        // // Details: https://eips.ethereum.org/EIPS/eip-155.
-        // signature.v = match tx.chain_id() {
-        //     Some(chain_id) => (chain_id * 2 + 35 + (v - 27)).into(),
-        //     None => v.into(),
-        // };
-
-        // Ok(signature)
     }
 
     /// Signs the digest using `ManagementCanister::sign_with_ecdsa()` call.
@@ -170,7 +156,7 @@ impl IcSigner {
 
         let r = U256::from_be_slice(&signature_data[0..32]);
         let s = U256::from_be_slice(&signature_data[32..64]);
-        let y_parity = recovery_id.is_y_odd();
+        let y_parity_is_odd = recovery_id.is_y_odd();
 
         // Signature malleability check is not required, because dfinity uses `k256` crate
         // as `ecdsa_secp256k1` implementation, and it takes care about signature malleability.
@@ -178,7 +164,7 @@ impl IcSigner {
         let signature = DidSignature {
             r: r.into(),
             s: s.into(),
-            y_parity,
+            y_parity: Parity::from_y_parity_is_odd(y_parity_is_odd),
         };
 
         Ok(signature)
