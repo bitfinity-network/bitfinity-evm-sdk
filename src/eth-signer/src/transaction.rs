@@ -128,7 +128,7 @@ mod test {
             gas_price: 20_000u64.into(),
             input: Vec::new(),
             signature: SigningMethod::Signature(
-                DidSignature::new_from_rsv(1u64.into(), 2u64.into(), 1u64.into()).unwrap(),
+                DidSignature::new_from_rsv(1u64.into(), 2u64.into(), 1u64).unwrap(),
             ),
             chain_id: 31541,
         };

@@ -238,18 +238,18 @@ impl From<alloy::primitives::PrimitiveSignature> for Signature {
     }
 }
 
+/// Upper limit for signature S field.
+/// See comment to `Signature::check_malleability()` for more details.
+pub const SIGNATURE_S_UPPER_LIMIT_HEX_STR: &'static str =
+    "0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0";
+
+/// Upper limit for signature S field.
+/// See comment to `Signature::check_malleability()` for more details.
+pub static SIGNATURE_S_UPPER_LIMIT: LazyLock<U256> = LazyLock::new(|| {
+    U256::from_hex_str(SIGNATURE_S_UPPER_LIMIT_HEX_STR).expect("Invalid S upper limit")
+});
+
 impl Signature {
-    /// Upper limit for signature S field.
-    /// See comment to `Signature::check_malleability()` for more details.
-    pub const S_UPPER_LIMIT_HEX_STR: &'static str =
-        "0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0";
-
-    /// Upper limit for signature S field.
-    /// See comment to `Signature::check_malleability()` for more details.
-    pub const S_UPPER_LIMIT: LazyLock<U256> = LazyLock::new(|| {
-        U256::from_hex_str(Self::S_UPPER_LIMIT_HEX_STR).expect("Invalid S upper limit")
-    });
-
     /// This comment copied from OpenZeppelin `ECDSA::tryRecover()` function.
     ///
     /// EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
@@ -262,10 +262,10 @@ impl Signature {
     /// vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept
     /// these malleable signatures as well.
     pub fn check_malleability(s: &U256) -> Result<(), EvmError> {
-        if s > &Self::S_UPPER_LIMIT {
+        if s > &SIGNATURE_S_UPPER_LIMIT {
             return Err(EvmError::TransactionSignature(format!(
                 "S value in transaction signature should not exceed {}",
-                Self::S_UPPER_LIMIT_HEX_STR
+                SIGNATURE_S_UPPER_LIMIT_HEX_STR
             )));
         }
         Ok(())
@@ -1567,13 +1567,13 @@ mod test {
         let roundtrip_signature = Signature::from(signature);
         assert_eq!(
             signature,
-            alloy::primitives::PrimitiveSignature::try_from(roundtrip_signature).unwrap()
+            alloy::primitives::PrimitiveSignature::from(roundtrip_signature)
         );
     }
 
     #[test]
     fn test_signature_malleability_check() {
-        let s = U256::from_hex_str(Signature::S_UPPER_LIMIT_HEX_STR).unwrap();
+        let s = U256::from_hex_str(SIGNATURE_S_UPPER_LIMIT_HEX_STR).unwrap();
         Signature::check_malleability(&s).unwrap();
 
         // If signature S field exceeds the limit, it should return an error.
@@ -1654,10 +1654,10 @@ mod test {
     pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_true() {
         // Arrange
         let signature =
-            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
+            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
         assert_eq!(signature.r, 100u64.into());
         assert_eq!(signature.s, 200u64.into());
-        assert_eq!(signature.y_parity, true);
+        assert!(signature.y_parity);
 
         let chain_id = random::<u32>() as u64;
 
@@ -1675,10 +1675,10 @@ mod test {
     pub fn test_signature_v_for_legacy_eip_155_transaction_with_y_parity_false() {
         // Arrange
         let signature =
-            Signature::new_from_rsv(300u64.into(), 500u64.into(), 111u64.into()).unwrap();
+            Signature::new_from_rsv(300u64.into(), 500u64.into(), 111u64).unwrap();
         assert_eq!(signature.r, 300u64.into());
         assert_eq!(signature.s, 500u64.into());
-        assert_eq!(signature.y_parity, false);
+        assert!(!signature.y_parity);
 
         let chain_id = random::<u32>() as u64;
 
@@ -1696,10 +1696,10 @@ mod test {
     pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_true() {
         // Arrange
         let signature =
-            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
+            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
         assert_eq!(signature.r, 100u64.into());
         assert_eq!(signature.s, 200u64.into());
-        assert_eq!(signature.y_parity, true);
+        assert!(signature.y_parity);
 
         // Act
         let v = signature.v(TxChainInfo::LegacyTx { chain_id: None });
@@ -1713,10 +1713,10 @@ mod test {
     pub fn test_signature_v_for_legacy_not_eip_155_transaction_with_y_parity_false() {
         // Arrange
         let signature =
-            Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64.into()).unwrap();
+            Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64).unwrap();
         assert_eq!(signature.r, 1000u64.into());
         assert_eq!(signature.s, 2000u64.into());
-        assert_eq!(signature.y_parity, false);
+        assert!(!signature.y_parity);
 
         // Act
         let v = signature.v(TxChainInfo::LegacyTx { chain_id: None });
@@ -1730,10 +1730,10 @@ mod test {
     pub fn test_signature_v_for_non_legacy_transaction_with_y_parity_true() {
         // Arrange
         let signature =
-            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64.into()).unwrap();
+            Signature::new_from_rsv(100u64.into(), 200u64.into(), 100u64).unwrap();
         assert_eq!(signature.r, 100u64.into());
         assert_eq!(signature.s, 200u64.into());
-        assert_eq!(signature.y_parity, true);
+        assert!(signature.y_parity);
 
         // Act
         let v = signature.v(TxChainInfo::OtherTx);
@@ -1747,10 +1747,10 @@ mod test {
     pub fn test_signature_v_for_non_legacy_transaction_with_y_parity_false() {
         // Arrange
         let signature =
-            Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64.into()).unwrap();
+            Signature::new_from_rsv(1000u64.into(), 2000u64.into(), 101u64).unwrap();
         assert_eq!(signature.r, 1000u64.into());
         assert_eq!(signature.s, 2000u64.into());
-        assert_eq!(signature.y_parity, false);
+        assert!(!signature.y_parity);
 
         // Act
         let v = signature.v(TxChainInfo::OtherTx);
