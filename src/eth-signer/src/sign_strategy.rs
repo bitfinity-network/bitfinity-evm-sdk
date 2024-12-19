@@ -341,8 +341,7 @@ mod test {
         let digest = [42u8; 32];
         let signature = signer.sign_digest(digest).await.unwrap();
 
-        let recovered = alloy::primitives::PrimitiveSignature::try_from(signature)
-            .unwrap()
+        let recovered = alloy::primitives::PrimitiveSignature::from(signature)
             .recover_address_from_prehash(&alloy::primitives::B256::from_slice(&digest))
             .unwrap();
 
