@@ -1807,4 +1807,11 @@ mod test {
         let expected_v = 0;
         assert_eq!(v, expected_v);
     }
+
+    #[test]
+    pub fn test_signature_creation_should_fail_if_not_valid_v() {
+        assert!(Signature::new_from_rsv(100u64.into(), 200u64.into(), 2u64).is_err());
+        assert!(Signature::new_from_rsv(100u64.into(), 200u64.into(), 29u64).is_err());
+        assert!(Signature::new_from_rsv(100u64.into(), 200u64.into(), 32u64).is_err());
+    }
 }
