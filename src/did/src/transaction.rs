@@ -187,7 +187,6 @@ pub enum Parity {
 }
 
 impl Parity {
-
     /// Returns the parity bool value
     pub fn as_bool(&self) -> bool {
         match self {
@@ -204,7 +203,6 @@ impl Parity {
             Parity::Even
         }
     }
-
 }
 
 /// Transaction type and Chain id data required to generate the Signature V value for EIP-155
@@ -220,7 +218,11 @@ impl Signature {
     pub fn new_from_rsv(r: U256, s: U256, v: u64) -> Result<Self, EvmError> {
         let y_parity_is_odd =
             normalize_v(v).ok_or_else(|| EvmError::InvalidSignatureParity(format!("{}", v)))?;
-        Ok(Self { r, s, y_parity: Parity::from_y_parity_is_odd(y_parity_is_odd) })
+        Ok(Self {
+            r,
+            s,
+            y_parity: Parity::from_y_parity_is_odd(y_parity_is_odd),
+        })
     }
 
     /// Recovers an [`Address`] from this signature and the given prehashed message.
@@ -239,7 +241,9 @@ impl Signature {
     /// - For other transactions, the V value is the Y parity value
     pub fn v(&self, info: TxChainInfo) -> u64 {
         match info {
-            TxChainInfo::LegacyTx { chain_id } => to_eip155_value(self.y_parity.as_bool(), chain_id) as u64,
+            TxChainInfo::LegacyTx { chain_id } => {
+                to_eip155_value(self.y_parity.as_bool(), chain_id) as u64
+            }
             TxChainInfo::OtherTx => self.y_parity.as_bool() as u64,
         }
     }

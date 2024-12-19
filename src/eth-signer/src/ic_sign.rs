@@ -118,7 +118,6 @@ impl IcSigner {
 
         Self.sign_digest(*hash, pubkey, key_id, derivation_path)
             .await
-
     }
 
     /// Signs the digest using `ManagementCanister::sign_with_ecdsa()` call.
