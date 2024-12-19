@@ -1688,8 +1688,8 @@ mod test {
         assert_eq!(Parity::from_y_parity_is_odd(true), Parity::Odd);
         assert_eq!(Parity::from_y_parity_is_odd(false), Parity::Even);
 
-        assert_eq!(Parity::Odd.as_bool(), true);
-        assert_eq!(Parity::Even.as_bool(), false);
+        assert!(Parity::Odd.as_bool());
+        assert!(!Parity::Even.as_bool());
 
         let parity = Parity::from_y_parity_is_odd(true);
         assert!(parity.as_bool());
