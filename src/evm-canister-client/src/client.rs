@@ -7,6 +7,7 @@ use did::permission::{Permission, PermissionList};
 use did::revert_blocks::RevertToBlockArgs;
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
+use did::unsafe_blocks::ValidateUnsafeBlockArgs;
 use did::{
     Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
     TransactionReceipt, H160, H256, U256, U64,
@@ -532,6 +533,31 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client
             .update("admin_set_min_gas_price", (min_gas_price,))
             .await
+    }
+
+    /// Enable or disable unsafe blocks. This function requires admin permissions.
+    pub async fn admin_enable_unsafe_blocks(
+        &self,
+        enabled: bool,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_enable_unsafe_blocks", (enabled,))
+            .await
+    }
+
+    /// Returns whether unsafe blocks are enabled
+    pub async fn is_unsafe_blocks_enabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_unsafe_blocks_enabled", ()).await
+    }
+
+    /// Validate unsafe block on the EVM.
+    ///
+    /// Only those with [`did::permission::Permission::ValidateUnsafeBlocks`] can call this method.
+    pub async fn validate_unsafe_block(
+        &self,
+        args: ValidateUnsafeBlockArgs,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client.update("validate_unsafe_block", (args,)).await
     }
 
     /// Returns the chain ID used for signing replay-protected transactions.
