@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use alloy::eips::eip2718::Eip2718Error;
+use alloy::primitives::SignatureError;
 use alloy::rlp::Error as DecoderError;
 use candid::{CandidType, Deserialize};
 use jsonrpc_core::{Error, ErrorCode};
@@ -8,7 +9,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 use crate::transaction::BlockId;
-use crate::{BlockNumber, H160, U256};
+use crate::{BlockNumber, U256};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 
@@ -253,10 +254,16 @@ impl From<HaltError> for EvmError {
 
 #[derive(Error, Debug, CandidType, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub enum SignatureVerificationError {
-    #[error("signature is not correct: expected: {expected}, recovered: {recovered}")]
-    RecoveryError { expected: H160, recovered: H160 },
+    #[error("signature error: {0}")]
+    SignatureError(String),
     #[error("failed to verify signature: {0}")]
     InternalError(String),
     #[error("unauthorized principal")]
     Unauthorized,
+}
+
+impl From<SignatureError> for SignatureVerificationError {
+    fn from(value: SignatureError) -> Self {
+        SignatureVerificationError::SignatureError(format!("{:?}", value))
+    }
 }
