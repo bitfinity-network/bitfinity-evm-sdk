@@ -22,6 +22,7 @@ pub mod permission;
 pub mod revert_blocks;
 pub mod state;
 pub mod transaction;
+pub mod unsafe_blocks;
 
 pub mod fees;
 #[cfg(test)]
