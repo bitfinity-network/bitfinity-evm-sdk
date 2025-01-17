@@ -484,11 +484,15 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     ///
     /// * `disabled` - Whether to disable or enable the EVM.
+    /// 
+    /// This is equivalent to:
+    /// - admin_set_evm_global_state(EvmGlobalState::Disabled)
+    /// - admin_set_evm_global_state(EvmGlobalState::Enabled)
     pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<Result<()>> {
         self.client.update("admin_disable_evm", (disabled,)).await
     }
 
-    /// Returns whether the EVM is disabled
+    /// Returns true if the EVM global state is EvmGlobalState::Disabled
     pub async fn is_evm_disabled(&self) -> CanisterClientResult<bool> {
         self.client.query("is_evm_disabled", ()).await
     }
