@@ -1,9 +1,13 @@
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
+use did::evm_state::EvmGlobalState;
+use ethereum_json_rpc_client::{reqwest::ReqwestClient, Client};
 use ethereum_json_rpc_client::EthJsonRpcClient;
 use evm_block_extractor::database::AccountBalance;
-use evm_block_extractor::task::block_extractor::BlockExtractor;
+use evm_block_extractor::task::block_extractor::{BlockExtractCollectOutcome, BlockExtractor};
+use jsonrpc_core::{Call, Output, Request, Response};
 
 use crate::test_with_clients;
 
@@ -32,8 +36,13 @@ async fn test_extractor_collect_blocks() {
 
         let result = extractor.collect_all(start_block, end_block).await.unwrap();
 
-        assert_eq!(result.0, start_block);
-        assert_eq!(result.1, end_block);
+        match result {
+            BlockExtractCollectOutcome::BlocksExtracted { from_block, to_block } => {
+                assert_eq!(from_block, start_block);
+                assert_eq!(to_block, end_block);
+            }
+            _ => panic!("Expected BlocksExtracted"),
+        }
 
         // Check genesis accounts
         {
@@ -97,6 +106,119 @@ async fn test_extractor_collect_blocks() {
                 }
             }
         }
+    })
+    .await;
+}
+
+
+#[derive(Clone)]
+struct MockClient {
+    evm_global_state: EvmGlobalState,
+}
+
+impl Client for MockClient {
+    fn send_rpc_request(
+        &self,
+        request: Request,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
+        let response = match request {
+            Request::Single(call) => {
+                match call {
+                    Call::MethodCall(method_call) => {
+                        match method_call.method.as_str() {
+                            "ic_getEvmGlobalState" => {
+                                Response::Single(Output::Success(jsonrpc_core::Success {
+                                    jsonrpc: None,
+                                    result: serde_json::to_value(&self.evm_global_state).unwrap(),
+                                    id: jsonrpc_core::Id::Num(1),
+                                }))
+                            },
+                            _ => unimplemented!(),
+                        }
+                    },
+                _ => unimplemented!(),
+                }
+            }
+            _ => unimplemented!(),
+        };
+        Box::pin(async { Ok(response) })
+    }
+}
+
+#[tokio::test]
+async fn test_mock_client_returns_evm_state() {
+    let client = MockClient {
+        evm_global_state: EvmGlobalState::Enabled,
+    };
+
+    let response = client.send_rpc_request(Request::Single(Call::MethodCall(jsonrpc_core::MethodCall {
+        jsonrpc: None,
+        method: "ic_getEvmGlobalState".to_string(),
+        params: jsonrpc_core::Params::None,
+        id: jsonrpc_core::Id::Num(1),
+    }))).await.unwrap();
+
+    assert_eq!(response, Response::Single(Output::Success(jsonrpc_core::Success {
+        jsonrpc: None,
+        result: serde_json::to_value(EvmGlobalState::Enabled).unwrap(),
+        id: jsonrpc_core::Id::Num(1),
+    })));
+}
+
+#[tokio::test]
+async fn test_extractor_does_not_collect_blocks_if_evm_is_disabled() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, true).await.unwrap();
+
+        let client = MockClient {
+            evm_global_state: EvmGlobalState::Disabled,
+        };
+
+        let evm_client = Arc::new(EthJsonRpcClient::new(client));
+
+        let mut extractor = BlockExtractor::new(
+            evm_client.clone(),
+            10,
+            10,
+            db_client.clone(),
+        );
+
+        let result = extractor.collect_all(100, 1000).await.unwrap();
+
+        match result {
+            BlockExtractCollectOutcome::BlocksNotExtracted => {},
+            _ => panic!("Expected BlocksNotExtracted"),
+        }
+
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_extractor_does_not_collect_blocks_if_evm_is_staging() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, true).await.unwrap();
+
+        let client = MockClient {
+            evm_global_state: EvmGlobalState::Staging,
+        };
+
+        let evm_client = Arc::new(EthJsonRpcClient::new(client));
+
+        let mut extractor = BlockExtractor::new(
+            evm_client.clone(),
+            10,
+            10,
+            db_client.clone(),
+        );
+
+        let result = extractor.collect_all(100, 1000).await.unwrap();
+
+        match result {
+            BlockExtractCollectOutcome::BlocksNotExtracted => {},
+            _ => panic!("Expected BlocksNotExtracted"),
+        }
+
     })
     .await;
 }
