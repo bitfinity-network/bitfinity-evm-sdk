@@ -484,7 +484,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Arguments
     ///
     /// * `disabled` - Whether to disable or enable the EVM.
-    /// 
+    ///
     /// This is equivalent to:
     /// - admin_set_evm_global_state(EvmGlobalState::Disabled)
     /// - admin_set_evm_global_state(EvmGlobalState::Enabled)
@@ -507,9 +507,10 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         &self,
         state: EvmGlobalState,
     ) -> CanisterClientResult<Result<()>> {
-        self.client.update("admin_set_evm_global_state", (state,)).await
+        self.client
+            .update("admin_set_evm_global_state", (state,))
+            .await
     }
-
 
     /// Adds permissions to a principal and returns the principal permissions
     pub async fn admin_ic_permissions_add(
@@ -888,5 +889,4 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ) -> CanisterClientResult<Result<()>> {
         self.client.update("revert_to_block", (args,)).await
     }
-
 }

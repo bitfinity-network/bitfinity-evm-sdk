@@ -56,13 +56,10 @@ pub enum BlockExtractCollectOutcome {
     /// No blocks were extracted because EVM global state is not enabled
     BlocksNotExtracted,
     /// Blocks were extracted
-    BlocksExtracted{
-        from_block: u64,
-        to_block: u64,
-    },
+    BlocksExtracted { from_block: u64, to_block: u64 },
 }
 
-impl <C: Client> BlockExtractor<C> {
+impl<C: Client> BlockExtractor<C> {
     pub fn new(
         client: Arc<EthJsonRpcClient<C>>,
         request_time_out_secs: u64,
@@ -85,13 +82,15 @@ impl <C: Client> BlockExtractor<C> {
         from_block_inclusive: u64,
         to_block_inclusive: u64,
     ) -> anyhow::Result<BlockExtractCollectOutcome> {
-
         match self.client.get_evm_global_state().await? {
             EvmGlobalState::Enabled => {
                 debug!("EVM global state is enabled.");
-            },
+            }
             state => {
-                warn!("EVM global state is not enabled: {:?}. Blocks will not be extracted.", state);
+                warn!(
+                    "EVM global state is not enabled: {:?}. Blocks will not be extracted.",
+                    state
+                );
                 return Ok(BlockExtractCollectOutcome::BlocksNotExtracted);
             }
         }
@@ -150,7 +149,6 @@ impl <C: Client> BlockExtractor<C> {
             from_block: from_block_inclusive,
             to_block: to_block_inclusive,
         })
-
     }
 
     /// Collects last certified block
