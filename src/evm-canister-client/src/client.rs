@@ -2,7 +2,7 @@ use candid::Principal;
 use did::block::BlockResult;
 use did::build::BuildData;
 use did::error::Result;
-use did::evm_reset_state::EvmResetState;
+use did::evm_state::{EvmGlobalState, EvmResetState};
 use did::permission::{Permission, PermissionList};
 use did::revert_blocks::RevertToBlockArgs;
 use did::state::BasicAccount;
@@ -493,6 +493,20 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("is_evm_disabled", ()).await
     }
 
+    /// Returns the global state of the EVM.
+    pub async fn get_evm_global_state(&self) -> CanisterClientResult<EvmGlobalState> {
+        self.client.query("get_evm_global_state", ()).await
+    }
+
+    /// Sets the global state of the EVM.
+    pub async fn admin_set_evm_global_state(
+        &self,
+        state: EvmGlobalState,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client.update("admin_set_evm_global_state", (state,)).await
+    }
+
+
     /// Adds permissions to a principal and returns the principal permissions
     pub async fn admin_ic_permissions_add(
         &self,
@@ -870,4 +884,5 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ) -> CanisterClientResult<Result<()>> {
         self.client.update("revert_to_block", (args,)).await
     }
+
 }

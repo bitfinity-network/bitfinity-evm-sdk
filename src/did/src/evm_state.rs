@@ -16,3 +16,19 @@ pub enum EvmResetState {
     /// If the block state hash is not equal to the current state hash, it will fail.
     End(Block<H256>),
 }
+
+/// The EVM global state
+#[derive(Debug, Default, Deserialize, CandidType, Clone, PartialEq, Eq, Serialize)]
+pub enum EvmGlobalState {
+    /// The EVM is enabled.
+    /// All functions are available.
+    #[default]
+    Enabled,
+    /// The EVM is disabled.
+    /// Blocks are not processed and transactions are not executed.
+    Disabled,
+    /// The EVM is in staging mode.
+    /// All functions are available, but the state is under testing and could be reset at any time.
+    /// External users should not rely on the state.
+    Staging,
+}
