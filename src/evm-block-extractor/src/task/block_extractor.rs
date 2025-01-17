@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use did::evm_state::EvmGlobalState;
 use did::BlockNumber;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRpcClient;
@@ -15,6 +16,17 @@ pub async fn start_extractor(
     db_client: Arc<dyn DatabaseClient>,
     evm_client: Arc<EthJsonRpcClient<ReqwestClient>>,
 ) -> anyhow::Result<()> {
+
+    match evm_client.get_evm_global_state().await? {
+        EvmGlobalState::Enabled => {
+            debug!("EVM global state is enabled.");
+        },
+        state => {
+            warn!("EVM global state is not enabled: {:?}. Blocks will not be extracted.", state);
+            return Ok(());
+        }
+    }
+
     let earliest_block = evm_client
         .get_block_by_number(BlockNumber::Earliest)
         .await?;
