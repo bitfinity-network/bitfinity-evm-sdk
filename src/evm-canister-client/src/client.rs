@@ -479,24 +479,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("ic_logs", (count, offset)).await
     }
 
-    /// Disable or enable the EVM. This function requires admin permissions.
-    ///
-    /// # Arguments
-    ///
-    /// * `disabled` - Whether to disable or enable the EVM.
-    ///
-    /// This is equivalent to:
-    /// - admin_set_evm_global_state(EvmGlobalState::Disabled)
-    /// - admin_set_evm_global_state(EvmGlobalState::Enabled)
-    pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<Result<()>> {
-        self.client.update("admin_disable_evm", (disabled,)).await
-    }
-
-    /// Returns true if the EVM global state is EvmGlobalState::Disabled
-    pub async fn is_evm_disabled(&self) -> CanisterClientResult<bool> {
-        self.client.query("is_evm_disabled", ()).await
-    }
-
     /// Returns the global state of the EVM.
     pub async fn get_evm_global_state(&self) -> CanisterClientResult<EvmGlobalState> {
         self.client.query("get_evm_global_state", ()).await
