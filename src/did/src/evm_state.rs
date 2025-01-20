@@ -49,3 +49,29 @@ impl EvmGlobalState {
         matches!(self, EvmGlobalState::Staging)
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn test_evm_global_state() {
+
+        let enabled = EvmGlobalState::Enabled;
+        assert!(enabled.is_enabled());
+        assert!(!enabled.is_disabled());
+        assert!(!enabled.is_staging());
+        
+        let disabled = EvmGlobalState::Disabled;
+        assert!(!disabled.is_enabled());
+        assert!(disabled.is_disabled());
+        assert!(!disabled.is_staging());
+        
+        let staging = EvmGlobalState::Staging;
+        assert!(!staging.is_enabled());
+        assert!(!staging.is_disabled());
+        assert!(staging.is_staging());
+    }
+
+}
