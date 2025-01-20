@@ -32,3 +32,20 @@ pub enum EvmGlobalState {
     /// External users should not rely on the state.
     Staging,
 }
+
+impl EvmGlobalState {
+    /// Returns true if the EVM is enabled.
+    pub fn is_enabled(&self) -> bool {
+        matches!(self, EvmGlobalState::Enabled)
+    }
+
+    /// Returns true if the EVM is disabled.
+    pub fn is_disabled(&self) -> bool {
+        matches!(self, EvmGlobalState::Disabled)
+    }
+
+    /// Returns true if the EVM is in staging mode.
+    pub fn is_staging(&self) -> bool {
+        matches!(self, EvmGlobalState::Staging)
+    }
+}
