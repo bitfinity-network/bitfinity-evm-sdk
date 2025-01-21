@@ -49,7 +49,7 @@ impl EvmGlobalState {
 
     /// Returns true if the EVM is in staging mode.
     pub fn is_staging(&self) -> bool {
-        matches!(self, EvmGlobalState::Staging {..})
+        matches!(self, EvmGlobalState::Staging { .. })
     }
 }
 
