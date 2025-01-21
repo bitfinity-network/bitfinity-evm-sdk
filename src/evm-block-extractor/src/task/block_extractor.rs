@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use did::evm_state::EvmGlobalState;
 use did::BlockNumber;
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::EthJsonRpcClient;
+use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use log::*;
 use tokio::time::Duration;
 
@@ -10,10 +10,10 @@ use crate::config::ExtractorArgs;
 use crate::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 
 /// Starts the block extractor process
-pub async fn start_extractor(
+pub async fn start_extractor<C: Client>(
     config: ExtractorArgs,
     db_client: Arc<dyn DatabaseClient>,
-    evm_client: Arc<EthJsonRpcClient<ReqwestClient>>,
+    evm_client: Arc<EthJsonRpcClient<C>>,
 ) -> anyhow::Result<()> {
     let earliest_block = evm_client
         .get_block_by_number(BlockNumber::Earliest)
@@ -44,16 +44,24 @@ pub async fn start_extractor(
 }
 
 /// Extracts blocks from an EVMC and stores them in a database
-pub struct BlockExtractor {
-    client: Arc<EthJsonRpcClient<ReqwestClient>>,
+pub struct BlockExtractor<C: Client> {
+    client: Arc<EthJsonRpcClient<C>>,
     request_time_out_secs: u64,
     rpc_batch_size: usize,
     blockchain: Arc<dyn DatabaseClient>,
 }
 
-impl BlockExtractor {
+/// Outcome of the block extraction process
+pub enum BlockExtractCollectOutcome {
+    /// No blocks were extracted because EVM global state is not enabled
+    BlocksNotExtracted,
+    /// Blocks were extracted
+    BlocksExtracted { from_block: u64, to_block: u64 },
+}
+
+impl<C: Client> BlockExtractor<C> {
     pub fn new(
-        client: Arc<EthJsonRpcClient<ReqwestClient>>,
+        client: Arc<EthJsonRpcClient<C>>,
         request_time_out_secs: u64,
         rpc_batch_size: usize,
         blockchain: Arc<dyn DatabaseClient>,
@@ -73,7 +81,20 @@ impl BlockExtractor {
         &mut self,
         from_block_inclusive: u64,
         to_block_inclusive: u64,
-    ) -> anyhow::Result<(u64, u64)> {
+    ) -> anyhow::Result<BlockExtractCollectOutcome> {
+        match self.client.get_evm_global_state().await? {
+            EvmGlobalState::Enabled => {
+                debug!("EVM global state is enabled.");
+            }
+            state => {
+                warn!(
+                    "EVM global state is not enabled: {:?}. Blocks will not be extracted.",
+                    state
+                );
+                return Ok(BlockExtractCollectOutcome::BlocksNotExtracted);
+            }
+        }
+
         self.collect_chain_id().await?;
         self.collect_genesis_balances().await?;
         self.collect_last_certified_block().await?;
@@ -124,7 +145,10 @@ impl BlockExtractor {
                 .await?;
         }
 
-        Ok((from_block_inclusive, to_block_inclusive))
+        Ok(BlockExtractCollectOutcome::BlocksExtracted {
+            from_block: from_block_inclusive,
+            to_block: to_block_inclusive,
+        })
     }
 
     /// Collects last certified block

@@ -2,7 +2,7 @@ use candid::Principal;
 use did::block::BlockResult;
 use did::build::BuildData;
 use did::error::Result;
-use did::evm_reset_state::EvmResetState;
+use did::evm_state::{EvmGlobalState, EvmResetState};
 use did::permission::{Permission, PermissionList};
 use did::revert_blocks::RevertToBlockArgs;
 use did::state::BasicAccount;
@@ -479,18 +479,19 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("ic_logs", (count, offset)).await
     }
 
-    /// Disable or enable the EVM. This function requires admin permissions.
-    ///
-    /// # Arguments
-    ///
-    /// * `disabled` - Whether to disable or enable the EVM.
-    pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<Result<()>> {
-        self.client.update("admin_disable_evm", (disabled,)).await
+    /// Returns the global state of the EVM.
+    pub async fn get_evm_global_state(&self) -> CanisterClientResult<EvmGlobalState> {
+        self.client.query("get_evm_global_state", ()).await
     }
 
-    /// Returns whether the EVM is disabled
-    pub async fn is_evm_disabled(&self) -> CanisterClientResult<bool> {
-        self.client.query("is_evm_disabled", ()).await
+    /// Sets the global state of the EVM.
+    pub async fn admin_set_evm_global_state(
+        &self,
+        state: EvmGlobalState,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_evm_global_state", (state,))
+            .await
     }
 
     /// Adds permissions to a principal and returns the principal permissions

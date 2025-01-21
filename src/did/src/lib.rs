@@ -10,7 +10,7 @@ pub mod certified;
 pub mod codec;
 pub mod constant;
 pub mod error;
-pub mod evm_reset_state;
+pub mod evm_state;
 pub mod gas;
 pub mod hash;
 pub mod ic;

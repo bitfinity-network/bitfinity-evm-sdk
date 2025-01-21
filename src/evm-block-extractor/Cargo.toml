@@ -26,6 +26,7 @@ tokio = { workspace = true }
 
 
 [dev-dependencies]
+alloy = { workspace = true, features = ["rand"]}
 jsonrpc-core = { workspace = true }
 port_check = { workspace = true }
 rand = { workspace = true }
