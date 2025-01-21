@@ -30,7 +30,10 @@ pub enum EvmGlobalState {
     /// The EVM is in staging mode.
     /// All functions are available, but the state is under testing and could be reset at any time.
     /// External users should not rely on the state.
-    Staging,
+    Staging {
+        /// The maximum block number that the state can reach while in staging mode.
+        max_block_number: Option<u64>,
+    },
 }
 
 impl EvmGlobalState {
@@ -46,7 +49,7 @@ impl EvmGlobalState {
 
     /// Returns true if the EVM is in staging mode.
     pub fn is_staging(&self) -> bool {
-        matches!(self, EvmGlobalState::Staging)
+        matches!(self, EvmGlobalState::Staging {..})
     }
 }
 
@@ -67,7 +70,9 @@ mod test {
         assert!(disabled.is_disabled());
         assert!(!disabled.is_staging());
 
-        let staging = EvmGlobalState::Staging;
+        let staging = EvmGlobalState::Staging {
+            max_block_number: None,
+        };
         assert!(!staging.is_enabled());
         assert!(!staging.is_disabled());
         assert!(staging.is_staging());
