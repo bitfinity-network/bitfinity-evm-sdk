@@ -200,7 +200,9 @@ async fn test_extractor_does_not_collect_blocks_if_evm_is_staging() {
         db_client.init(None, true).await.unwrap();
 
         let client = MockClient {
-            evm_global_state: EvmGlobalState::Staging,
+            evm_global_state: EvmGlobalState::Staging {
+                max_block_number: None,
+            },
         };
 
         let evm_client = Arc::new(EthJsonRpcClient::new(client));
