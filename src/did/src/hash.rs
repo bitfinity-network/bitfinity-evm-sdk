@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use alloy::hex::FromHexError;
 use candid::types::{Type, TypeInner};
@@ -74,6 +75,14 @@ impl H64 {
     }
 }
 
+impl FromStr for H64 {
+    type Err = FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_hex_str(s)
+    }
+}
+
 impl H160 {
     pub const BYTE_SIZE: usize = 20;
 
@@ -100,6 +109,14 @@ impl H160 {
     }
 }
 
+impl FromStr for H160 {
+    type Err = FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_hex_str(s)
+    }
+}
+
 impl H256 {
     pub const BYTE_SIZE: usize = 32;
 
@@ -121,6 +138,14 @@ impl H256 {
 
     pub const fn zero() -> Self {
         Self(alloy::primitives::B256::ZERO)
+    }
+}
+
+impl FromStr for H256 {
+    type Err = FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_hex_str(s)
     }
 }
 
