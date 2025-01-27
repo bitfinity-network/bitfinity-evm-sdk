@@ -82,16 +82,25 @@ impl<C: Client> BlockExtractor<C> {
         from_block_inclusive: u64,
         to_block_inclusive: u64,
     ) -> anyhow::Result<BlockExtractCollectOutcome> {
-        match self.client.get_evm_global_state().await? {
-            EvmGlobalState::Enabled => {
+        match self.client.get_evm_global_state().await {
+            Ok(EvmGlobalState::Enabled) => {
                 debug!("EVM global state is enabled.");
             }
-            state => {
+            Ok(state) => {
                 warn!(
                     "EVM global state is not enabled: {:?}. Blocks will not be extracted.",
                     state
                 );
                 return Ok(BlockExtractCollectOutcome::BlocksNotExtracted);
+            }
+            // We can't get the EVM global state if the evm-canister version is too old.
+            // Once all the canisters are updated, we can remove this logic and return instead of proceed.
+            // TODO: Remove this logic in EPROD-1123
+            Err(e) => {
+                warn!(
+                    "Error getting EVM global state: {:?}. The blocks will not be extracted anyway.",
+                    e
+                );
             }
         }
 
