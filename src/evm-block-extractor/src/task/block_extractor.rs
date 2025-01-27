@@ -98,7 +98,7 @@ impl<C: Client> BlockExtractor<C> {
             // TODO: Remove this logic in EPROD-1123
             Err(e) => {
                 warn!(
-                    "Error getting EVM global state: {:?}. The blocks will not be extracted anyway.",
+                    "Error getting EVM global state: {:?}. The blocks will be extracted anyway.",
                     e
                 );
             }
