@@ -312,7 +312,7 @@ async fn test_get_last_certified_block() {
 async fn new_server(
     db_client: Arc<dyn DatabaseClient>,
 ) -> (EthJsonRpcClient<ReqwestClient>, u16, ServerHandle) {
-    let eth = EthImpl::new(db_client);
+    let eth = EthImpl::new(db_client, None);
     let mut module = RpcModule::new(());
     module.merge(EthServer::into_rpc(eth.clone())).unwrap();
     module.merge(ICServer::into_rpc(eth)).unwrap();
@@ -323,6 +323,23 @@ async fn new_server(
             let client =
                 EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
             return (client, port, server.start(module));
+        }
+    }
+}
+
+async fn new_server_with_evm_client(
+    db_client: Arc<dyn DatabaseClient>,
+    evm_client: Arc<EthJsonRpcClient<ReqwestClient>>,
+) -> (u16, ServerHandle) {
+    loop {
+        let eth = EthImpl::new(db_client.clone(), Some(evm_client.clone()));
+        let mut module = RpcModule::new(());
+        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
+        module.merge(ICServer::into_rpc(eth)).unwrap();
+
+        let port = port_check::free_local_port().unwrap();
+        if let Ok(server) = Server::builder().build(format!("0.0.0.0:{port}")).await {
+            return (port, server.start(module));
         }
     }
 }

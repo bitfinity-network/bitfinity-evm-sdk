@@ -2,19 +2,30 @@ use std::sync::Arc;
 
 use alloy::eips::BlockNumberOrTag;
 use alloy::primitives::{Address, U256, U64};
+use did::evm_state::EvmGlobalState;
+use ethereum_json_rpc_client::reqwest::ReqwestClient;
+use ethereum_json_rpc_client::EthJsonRpcClient;
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
+use jsonrpsee::types::{ErrorCode, ErrorObject};
 
 use crate::database::{CertifiedBlock, DatabaseClient};
 
 #[derive(Clone)]
 pub struct EthImpl {
     pub blockchain: Arc<dyn DatabaseClient + 'static>,
+    pub evm_client: Option<Arc<EthJsonRpcClient<ReqwestClient>>>,
 }
 
 impl EthImpl {
-    pub fn new(db: Arc<dyn DatabaseClient + 'static>) -> Self {
-        Self { blockchain: db }
+    pub fn new(
+        db: Arc<dyn DatabaseClient + 'static>,
+        evm_client: Option<Arc<EthJsonRpcClient<ReqwestClient>>>,
+    ) -> Self {
+        Self {
+            blockchain: db,
+            evm_client,
+        }
     }
 }
 
@@ -46,6 +57,9 @@ pub trait IC {
 
     #[method(name = "getLastCertifiedBlock")]
     async fn get_last_block_certified_data(&self) -> RpcResult<CertifiedBlock>;
+
+    #[method(name = "getEvmGlobalState")]
+    async fn get_evm_global_state(&self) -> RpcResult<EvmGlobalState>;
 }
 
 #[async_trait::async_trait]
@@ -53,7 +67,7 @@ impl ICServer for EthImpl {
     async fn get_genesis_balances(&self) -> RpcResult<Vec<(Address, U256)>> {
         let tx = self.blockchain.get_genesis_balances().await.map_err(|e| {
             log::error!("Error getting genesis balances: {:?}", e);
-            jsonrpsee::types::error::ErrorCode::InternalError
+            ErrorCode::InternalError
         })?;
 
         Ok(tx
@@ -70,10 +84,27 @@ impl ICServer for EthImpl {
             .await
             .map_err(|e| {
                 log::error!("Error getting last block certified data: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
+                ErrorCode::InternalError
             })?;
 
         Ok(certified_data)
+    }
+
+    async fn get_evm_global_state(&self) -> RpcResult<EvmGlobalState> {
+        if let Some(evm_client) = &self.evm_client {
+            evm_client.get_evm_global_state().await.map_err(|e| {
+                log::error!("Error getting EVM global state: {:?}", e);
+                ErrorObject::from(ErrorCode::InternalError)
+            })
+        } else {
+            log::error!("EVM client not found");
+
+            return Err(ErrorObject::owned(
+                ErrorCode::InternalError.code(),
+                "EVM client not found",
+                None::<()>,
+            ));
+        }
     }
 }
 
@@ -92,12 +123,12 @@ impl EthServer for EthImpl {
                 .await
                 .map_err(|e| {
                     log::error!("Error getting block number: {:?}", e);
-                    jsonrpsee::types::error::ErrorCode::InternalError
+                    ErrorCode::InternalError
                 })?
                 .unwrap_or(0),
             BlockNumberOrTag::Earliest => db.get_earliest_block_number().await.map_err(|e| {
                 log::error!("Error getting earliest block number: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
+                ErrorCode::InternalError
             })?,
             BlockNumberOrTag::Number(num) => num,
             BlockNumberOrTag::Pending => return Ok(serde_json::Value::Null),
@@ -110,12 +141,12 @@ impl EthServer for EthImpl {
                 .await
                 .map_err(|e| {
                     log::error!("Error getting block: {:?}", e);
-                    jsonrpsee::types::error::ErrorCode::InternalError
+                    ErrorCode::InternalError
                 })?;
 
             let block = serde_json::to_value(&block).map_err(|e| {
                 log::error!("Error serializing block: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
+                ErrorCode::InternalError
             })?;
 
             Ok(block)
@@ -126,12 +157,12 @@ impl EthServer for EthImpl {
                 .await
                 .map_err(|e| {
                     log::error!("Error getting block: {:?}", e);
-                    jsonrpsee::types::error::ErrorCode::InternalError
+                    ErrorCode::InternalError
                 })?;
 
             let block = serde_json::to_value(&block).map_err(|e| {
                 log::error!("Error serializing block: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
+                ErrorCode::InternalError
             })?;
 
             Ok(block)
@@ -145,7 +176,7 @@ impl EthServer for EthImpl {
             .await
             .map_err(|e| {
                 log::error!("Error getting block number: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
+                ErrorCode::InternalError
             })?
             .unwrap_or(0);
 
@@ -159,9 +190,9 @@ impl EthServer for EthImpl {
             .await
             .map_err(|e| {
                 log::error!("Error getting chain id: {:?}", e);
-                jsonrpsee::types::error::ErrorCode::InternalError
+                ErrorCode::InternalError
             })?
-            .ok_or(jsonrpsee::types::error::ErrorCode::InternalError)?;
+            .ok_or(ErrorCode::InternalError)?;
 
         Ok(U64::from(chain_id))
     }

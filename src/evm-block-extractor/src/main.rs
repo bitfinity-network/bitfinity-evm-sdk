@@ -70,8 +70,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Start the job executor
     let _job_executor_handle = job_executor.run().await?;
 
+    // Create EVM client if remote RPC URL is provided
+    let evm_client = config
+        .remote_rpc_url
+        .as_ref()
+        .map(|url| Arc::new(EthJsonRpcClient::new(ReqwestClient::new(url.clone()))));
+
     // Start JSON RPC server
-    let server_handle = server_start(&config.server_address, db_client).await?;
+    let server_handle = server_start(&config.server_address, db_client, evm_client).await?;
 
     // Subscribe to the termination signals
     match tokio::signal::ctrl_c().await {
