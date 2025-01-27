@@ -84,6 +84,8 @@ pub struct EvmStats {
     pub receipts_history_count: u64,
     /// The total number of transactions in the history
     pub transactions_history_count: u64,
+    /// The oldest version in the trie
+    pub oldest_block_in_trie_history: u64,
 }
 
 /// The limits for the blockchain storage
