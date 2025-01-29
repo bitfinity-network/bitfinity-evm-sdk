@@ -2,18 +2,20 @@ use std::future::Future;
 use std::sync::Arc;
 
 use alloy::primitives::{Address, B256};
+use did::evm_state::EvmGlobalState;
 use did::{Block, BlockNumber, H160, H256, U256, U64};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
+use ethereum_json_rpc_client::{Client, EthJsonRpcClient, Response};
 use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
-use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
+use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Version};
 use jsonrpsee::server::{Server, ServerHandle};
 use jsonrpsee::RpcModule;
 use rand::random;
 use serde_json::json;
 
 use crate::test_with_clients;
+use crate::tests::block_extractor_it::MockClient;
 
 const BLOCK_COUNT: u64 = 10;
 
@@ -309,10 +311,46 @@ async fn test_get_last_certified_block() {
     .await
 }
 
+#[tokio::test]
+async fn test_get_evm_global_state() {
+    with_filled_db(|db_client| async {
+        // Create mock EVM client that will return a predefined state
+        let mock_evm_client = Arc::new(EthJsonRpcClient::new(MockClient::new(
+            EvmGlobalState::Enabled,
+        )));
+
+        // Create server with mock client
+        let eth = EthImpl::new(db_client, Some(mock_evm_client));
+        let mut module = RpcModule::new(());
+        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
+        module.merge(ICServer::into_rpc(eth)).unwrap();
+
+        let port = port_check::free_local_port().unwrap();
+        let server = Server::builder()
+            .build(format!("0.0.0.0:{port}"))
+            .await
+            .unwrap();
+        let handle = server.start(module);
+
+        // Create client to test the server
+        let http_client =
+            EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
+
+        // Call get_evm_global_state and verify we get back the expected state
+        let state = http_client.get_evm_global_state().await.unwrap();
+        assert_eq!(state, EvmGlobalState::Enabled);
+
+        // Cleanup
+        handle.stop().unwrap();
+        handle.stopped().await;
+    })
+    .await
+}
+
 async fn new_server(
     db_client: Arc<dyn DatabaseClient>,
 ) -> (EthJsonRpcClient<ReqwestClient>, u16, ServerHandle) {
-    let eth = EthImpl::new(db_client, None);
+    let eth = EthImpl::<ReqwestClient>::new(db_client, None);
     let mut module = RpcModule::new(());
     module.merge(EthServer::into_rpc(eth.clone())).unwrap();
     module.merge(ICServer::into_rpc(eth)).unwrap();
@@ -323,23 +361,6 @@ async fn new_server(
             let client =
                 EthJsonRpcClient::new(ReqwestClient::new(format!("http://127.0.0.1:{port}")));
             return (client, port, server.start(module));
-        }
-    }
-}
-
-async fn new_server_with_evm_client(
-    db_client: Arc<dyn DatabaseClient>,
-    evm_client: Arc<EthJsonRpcClient<ReqwestClient>>,
-) -> (u16, ServerHandle) {
-    loop {
-        let eth = EthImpl::new(db_client.clone(), Some(evm_client.clone()));
-        let mut module = RpcModule::new(());
-        module.merge(EthServer::into_rpc(eth.clone())).unwrap();
-        module.merge(ICServer::into_rpc(eth)).unwrap();
-
-        let port = port_check::free_local_port().unwrap();
-        if let Ok(server) = Server::builder().build(format!("0.0.0.0:{port}")).await {
-            return (port, server.start(module));
         }
     }
 }

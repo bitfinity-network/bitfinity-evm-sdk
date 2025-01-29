@@ -3,8 +3,7 @@ use std::sync::Arc;
 use alloy::eips::BlockNumberOrTag;
 use alloy::primitives::{Address, U256, U64};
 use did::evm_state::EvmGlobalState;
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::EthJsonRpcClient;
+use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::{ErrorCode, ErrorObject};
@@ -12,15 +11,21 @@ use jsonrpsee::types::{ErrorCode, ErrorObject};
 use crate::database::{CertifiedBlock, DatabaseClient};
 
 #[derive(Clone)]
-pub struct EthImpl {
+pub struct EthImpl<C>
+where
+    C: Client + Send + Sync + 'static,
+{
     pub blockchain: Arc<dyn DatabaseClient + 'static>,
-    pub evm_client: Option<Arc<EthJsonRpcClient<ReqwestClient>>>,
+    pub evm_client: Option<Arc<EthJsonRpcClient<C>>>,
 }
 
-impl EthImpl {
+impl<C> EthImpl<C>
+where
+    C: Client + Send + Sync + 'static,
+{
     pub fn new(
         db: Arc<dyn DatabaseClient + 'static>,
-        evm_client: Option<Arc<EthJsonRpcClient<ReqwestClient>>>,
+        evm_client: Option<Arc<EthJsonRpcClient<C>>>,
     ) -> Self {
         Self {
             blockchain: db,
@@ -63,7 +68,10 @@ pub trait IC {
 }
 
 #[async_trait::async_trait]
-impl ICServer for EthImpl {
+impl<C> ICServer for EthImpl<C>
+where
+    C: Client + Send + Sync + 'static,
+{
     async fn get_genesis_balances(&self) -> RpcResult<Vec<(Address, U256)>> {
         let tx = self.blockchain.get_genesis_balances().await.map_err(|e| {
             log::error!("Error getting genesis balances: {:?}", e);
@@ -91,25 +99,23 @@ impl ICServer for EthImpl {
     }
 
     async fn get_evm_global_state(&self) -> RpcResult<EvmGlobalState> {
-        if let Some(evm_client) = &self.evm_client {
-            evm_client.get_evm_global_state().await.map_err(|e| {
-                log::error!("Error getting EVM global state: {:?}", e);
-                ErrorObject::from(ErrorCode::InternalError)
-            })
-        } else {
+        let Some(evm_client) = &self.evm_client else {
             log::error!("EVM client not found");
+            return Err(ErrorObject::from(ErrorCode::InternalError));
+        };
 
-            return Err(ErrorObject::owned(
-                ErrorCode::InternalError.code(),
-                "EVM client not found",
-                None::<()>,
-            ));
-        }
+        evm_client.get_evm_global_state().await.map_err(|e| {
+            log::error!("Error getting EVM global state: {:?}", e);
+            ErrorObject::from(ErrorCode::InternalError)
+        })
     }
 }
 
 #[async_trait::async_trait]
-impl EthServer for EthImpl {
+impl<C> EthServer for EthImpl<C>
+where
+    C: Client + Send + Sync + 'static,
+{
     async fn get_block_by_number(
         &self,
         block: BlockNumberOrTag,

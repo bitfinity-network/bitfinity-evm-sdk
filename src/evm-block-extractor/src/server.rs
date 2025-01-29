@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::EthJsonRpcClient;
+use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use jsonrpsee::server::{Server, ServerHandle};
 use jsonrpsee::RpcModule;
 use log::*;
@@ -13,7 +12,7 @@ use crate::rpc::{EthImpl, EthServer, ICServer};
 pub async fn server_start(
     server_address: &str,
     db_client: Arc<dyn DatabaseClient>,
-    evm_client: Option<Arc<EthJsonRpcClient<ReqwestClient>>>,
+    evm_client: Option<Arc<EthJsonRpcClient<impl Client + Send + Sync + 'static>>>,
 ) -> anyhow::Result<ServerHandle> {
     info!("Start server");
 
