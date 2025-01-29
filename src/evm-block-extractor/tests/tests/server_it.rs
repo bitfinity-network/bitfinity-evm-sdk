@@ -314,24 +314,24 @@ async fn test_get_last_certified_block() {
 #[tokio::test]
 async fn test_get_evm_global_state() {
     with_filled_db(|db_client| async {
-
-        let expected_state = EvmGlobalState::Staging { max_block_number: Some(random()) };
+        let expected_state = EvmGlobalState::Staging {
+            max_block_number: Some(random()),
+        };
 
         // Create mock EVM client that will return a predefined state
         let mock_evm_client = Arc::new(EthJsonRpcClient::new(MockClient::new(
             expected_state.clone(),
         )));
-        
+
         let (http_client, _port, handle) = new_server(db_client, Some(mock_evm_client)).await;
 
         // Call get_evm_global_state and verify we get back the expected state
         let state = http_client.get_evm_global_state().await.unwrap();
         assert_eq!(state, expected_state);
-        
+
         // Cleanup
         handle.stop().unwrap();
         handle.stopped().await;
-
     })
     .await
 }
@@ -340,9 +340,10 @@ async fn new_server(
     db_client: Arc<dyn DatabaseClient>,
     evm_client: Option<Arc<EthJsonRpcClient<MockClient>>>,
 ) -> (EthJsonRpcClient<ReqwestClient>, u16, ServerHandle) {
-
     let evm_client = evm_client.unwrap_or_else(|| {
-        Arc::new(EthJsonRpcClient::new(MockClient::new(EvmGlobalState::Enabled)))
+        Arc::new(EthJsonRpcClient::new(MockClient::new(
+            EvmGlobalState::Enabled,
+        )))
     });
 
     let eth = EthImpl::<MockClient>::new(db_client, evm_client);

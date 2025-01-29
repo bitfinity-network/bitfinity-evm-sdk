@@ -36,7 +36,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let db_client = config.command.clone().build_client().await?;
 
     let job_executor = JobExecutor::new_with_local_tz();
-    let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(config.remote_rpc_url.clone())));
+    let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(
+        config.remote_rpc_url.clone(),
+    )));
 
     // Configure and start the block extractor task
     {
