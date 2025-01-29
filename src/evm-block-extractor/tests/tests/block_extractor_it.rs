@@ -114,8 +114,15 @@ async fn test_extractor_collect_blocks() {
 }
 
 #[derive(Clone)]
-struct MockClient {
+pub struct MockClient {
     evm_global_state: EvmGlobalState,
+}
+
+impl MockClient {
+    /// Create a new mock client
+    pub fn new(evm_global_state: EvmGlobalState) -> Self {
+        Self { evm_global_state }
+    }
 }
 
 impl Client for MockClient {

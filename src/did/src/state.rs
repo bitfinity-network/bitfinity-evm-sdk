@@ -4,8 +4,7 @@ use candid::CandidType;
 use ic_stable_structures::{Bound, Storable};
 use serde::{Deserialize, Serialize};
 
-use crate::codec;
-use crate::U256;
+use crate::{codec, U256};
 
 /// Describes basic state of an EVM account.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, CandidType)]
