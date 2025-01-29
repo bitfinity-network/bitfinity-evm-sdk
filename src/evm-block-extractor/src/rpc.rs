@@ -16,7 +16,7 @@ where
     C: Client + Send + Sync + 'static,
 {
     pub blockchain: Arc<dyn DatabaseClient + 'static>,
-    pub evm_client: Option<Arc<EthJsonRpcClient<C>>>,
+    pub evm_client: Arc<EthJsonRpcClient<C>>,
 }
 
 impl<C> EthImpl<C>
@@ -25,7 +25,7 @@ where
 {
     pub fn new(
         db: Arc<dyn DatabaseClient + 'static>,
-        evm_client: Option<Arc<EthJsonRpcClient<C>>>,
+        evm_client: Arc<EthJsonRpcClient<C>>,
     ) -> Self {
         Self {
             blockchain: db,
@@ -99,12 +99,7 @@ where
     }
 
     async fn get_evm_global_state(&self) -> RpcResult<EvmGlobalState> {
-        let Some(evm_client) = &self.evm_client else {
-            log::error!("EVM client not found");
-            return Err(ErrorObject::from(ErrorCode::InternalError));
-        };
-
-        evm_client.get_evm_global_state().await.map_err(|e| {
+        self.evm_client.get_evm_global_state().await.map_err(|e| {
             log::error!("Error getting EVM global state: {:?}", e);
             ErrorObject::from(ErrorCode::InternalError)
         })

@@ -12,7 +12,7 @@ use crate::rpc::{EthImpl, EthServer, ICServer};
 pub async fn server_start(
     server_address: &str,
     db_client: Arc<dyn DatabaseClient>,
-    evm_client: Option<Arc<EthJsonRpcClient<impl Client + 'static>>>,
+    evm_client: Arc<EthJsonRpcClient<impl Client + 'static>>,
 ) -> anyhow::Result<ServerHandle> {
     info!("Start server");
 

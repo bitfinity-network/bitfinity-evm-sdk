@@ -36,10 +36,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let db_client = config.command.clone().build_client().await?;
 
     let job_executor = JobExecutor::new_with_local_tz();
+    let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(config.remote_rpc_url.clone())));
 
     // Configure and start the block extractor task
-    if let Some(rpc_url) = config.remote_rpc_url.clone() {
-        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
+    {
         let config = config.clone();
         let evm_client = evm_client.clone();
         let db_client = db_client.clone();
@@ -63,18 +63,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }),
             )
             .await;
-    } else {
-        warn!("remote_rpc_url is empty, fetching blocks is disabled");
     }
 
     // Start the job executor
     let _job_executor_handle = job_executor.run().await?;
-
-    // Create EVM client if remote RPC URL is provided
-    let evm_client = config
-        .remote_rpc_url
-        .as_ref()
-        .map(|url| Arc::new(EthJsonRpcClient::new(ReqwestClient::new(url.clone()))));
 
     // Start JSON RPC server
     let server_handle = server_start(&config.server_address, db_client, evm_client).await?;
