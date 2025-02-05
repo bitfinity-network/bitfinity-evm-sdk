@@ -7,7 +7,7 @@ use anyhow::Context;
 pub use did::certified::CertifiedResult;
 use did::evm_state::EvmGlobalState;
 pub use did::transaction::StorableExecutionResult;
-use did::{Block, BlockNumber, Transaction, TransactionReceipt, H160, H256, U256, U64};
+use did::{Block, BlockNumber, BlockchainBlockInfo, Transaction, TransactionReceipt, H160, H256, U256, U64};
 use itertools::Itertools;
 pub use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
@@ -38,6 +38,7 @@ const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 const IC_GET_GENESIS_BALANCES: &str = "ic_getGenesisBalances";
 const IC_GET_LAST_CERTIFIED_BLOCK: &str = "ic_getLastCertifiedBlock";
 const IC_GET_EVM_GLOBAL_STATE: &str = "ic_getEvmGlobalState";
+const IC_GET_BLOCKCHAIN_BLOCK_INFO: &str = "ic_getBlockchainBlockInfo";
 const ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD: &str = "eth_maxPriorityFeePerGas";
 
 macro_rules! make_params_array {
@@ -324,6 +325,16 @@ impl<C: Client> EthJsonRpcClient<C> {
             IC_GET_EVM_GLOBAL_STATE.to_string(),
             make_params_array!(),
             Id::Str(IC_GET_EVM_GLOBAL_STATE.to_string()),
+        )
+        .await
+    }
+
+    /// Returns the blockchain block info
+    pub async fn get_blockchain_block_info(&self) -> anyhow::Result<BlockchainBlockInfo> {
+        self.single_request(
+            IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string(),
+            make_params_array!(),
+            Id::Str(IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string()),
         )
         .await
     }
