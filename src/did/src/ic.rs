@@ -101,11 +101,13 @@ pub struct BlockchainStorageLimits {
 #[derive(Debug, Clone, CandidType, Serialize, Deserialize)]
 pub struct BlockchainBlockInfo {
     /// The number of the first block in the blockchain
-    pub earliest_block_number: Option<u64>,
+    pub earliest_block_number: u64,
     /// The number of the latest block in the blockchain
-    pub latest_block_number: Option<u64>,
+    pub latest_block_number: u64,
     /// The number of the safe block in the blockchain
     pub safe_block_number: u64,
+    /// The number of the finalized block in the blockchain
+    pub finalized_block_number: u64,
     /// The number of the pending block in the blockchain
     pub pending_block_number: u64,
 }
