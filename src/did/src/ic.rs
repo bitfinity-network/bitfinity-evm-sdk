@@ -1,9 +1,10 @@
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 
 use candid::CandidType;
+use ic_stable_structures::Storable;
 use serde::{Deserialize, Serialize};
 
-use crate::{Bytes, H160, H256, U256};
+use crate::{codec, Bytes, H160, H256, U256};
 
 /// Account full data
 #[derive(Debug, candid::CandidType, PartialEq, Eq, Clone, Serialize, Deserialize)]
@@ -112,6 +113,56 @@ pub struct BlockchainBlockInfo {
     pub pending_block_number: u64,
 }
 
+/// Strategy for confirming a block.
+/// When a block is confirmed, it becomes `safe`.
+#[derive(Debug, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
+pub enum BlockConfirmationStrategy {
+    /// The block does not require any particular confirmation, 
+    /// it is always considered safe.
+    None,
+
+    /// The block requires a proof of work to be considered safe.
+    Hash
+}
+
+impl Storable for BlockConfirmationStrategy {
+    const BOUND: ic_stable_structures::Bound = ic_stable_structures::Bound::Unbounded;
+
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        codec::encode(self).into()
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        codec::decode(&bytes)
+    }
+}
+
+/// Data required to confirm a block and mark it `safe`.
+#[derive(Debug, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BlockConfirmationData {
+    /// Hash of the block
+    pub hash: H256,
+    /// State root of the block
+    pub state_root: H256,
+    /// Transactions root of the block
+    pub transactions_root: H256,
+    /// Receipts root of the block
+    pub receipts_root: H256,
+    /// Proof of work of the block provided by the validator
+    pub proof_of_work: H256,
+}
+
+/// Result of confirming a block.
+#[derive(Debug, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
+pub enum BlockConfirmationResult {
+    /// The block is confirmed and is now safe.
+    Confirmed,
+    /// The block is not confirmed and is not safe.
+    NotConfirmed,
+    /// The block is already confirmed and is safe.
+    AlreadyConfirmed,
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -185,5 +236,15 @@ mod tests {
 
         assert_eq!(account_info_size, 32 + 32 + 3 + (32 * 4));
         assert_eq!(account_info_map_size, 3 * (account_info_size + 20));
+    }
+
+    #[test]
+    fn test_storable_block_confirmation_strategy() {
+        let strategy = BlockConfirmationStrategy::Hash;
+
+        let serialized = strategy.to_bytes();
+        let deserialized = BlockConfirmationStrategy::from_bytes(serialized);
+
+        assert_eq!(strategy, deserialized);
     }
 }
