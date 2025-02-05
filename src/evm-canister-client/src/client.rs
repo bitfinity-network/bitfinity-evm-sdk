@@ -9,8 +9,7 @@ use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::unsafe_blocks::ValidateUnsafeBlockArgs;
 use did::{
-    Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
-    TransactionReceipt, H160, H256, U256, U64,
+    Block, BlockConfirmationStrategy, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction, TransactionReceipt, H160, H256, U256, U64
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
@@ -871,4 +870,19 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     ) -> CanisterClientResult<Result<()>> {
         self.client.update("revert_to_block", (args,)).await
     }
+
+    /// Returns the current block confirmation strategy
+    pub async fn get_block_confirmation_strategy(&self) -> CanisterClientResult<BlockConfirmationStrategy> {
+        self.client.query("get_block_confirmation_strategy", ()).await
+    }
+
+    /// Sets the block confirmation strategy.
+    /// This function can only be called by the admin.
+    pub async fn admin_set_block_confirmation_strategy(
+        &mut self,
+        strategy: BlockConfirmationStrategy,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client.update("admin_set_block_confirmation_strategy", (strategy,)).await
+    }
+
 }
