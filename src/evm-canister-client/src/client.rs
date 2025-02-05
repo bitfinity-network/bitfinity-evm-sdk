@@ -9,7 +9,7 @@ use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::unsafe_blocks::ValidateUnsafeBlockArgs;
 use did::{
-    Block, BlockConfirmationData, BlockConfirmationResult, BlockConfirmationStrategy, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction, TransactionReceipt, H160, H256, U256, U64
+    Block, BlockConfirmationData, BlockConfirmationResult, BlockConfirmationStrategy, BlockNumber, BlockchainBlockInfo, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction, TransactionReceipt, H160, H256, U256, U64
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
@@ -888,6 +888,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Attempt to confirm the block with the given hash
     pub async fn confirm_block(&mut self, data: BlockConfirmationData) -> CanisterClientResult<Result<BlockConfirmationResult>> {
         self.client.update("confirm_block", (data,)).await
+    }
+
+    /// Returns information about the blockchain blocks
+    pub async fn get_blockchain_block_info(&self) -> CanisterClientResult<BlockchainBlockInfo> {
+        self.client.query("get_blockchain_block_info", ()).await
     }
 
 }
