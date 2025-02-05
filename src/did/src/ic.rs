@@ -140,6 +140,8 @@ impl Storable for BlockConfirmationStrategy {
 /// Data required to confirm a block and mark it `safe`.
 #[derive(Debug, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BlockConfirmationData {
+    /// the block number
+    pub block_number: u64,
     /// Hash of the block
     pub hash: H256,
     /// State root of the block
