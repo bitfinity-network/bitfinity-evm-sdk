@@ -98,7 +98,7 @@ pub struct BlockchainStorageLimits {
 }
 
 /// Information about the blockchain
-#[derive(Debug, Clone, CandidType, Serialize, Deserialize)]
+#[derive(Debug, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BlockchainBlockInfo {
     /// The number of the first block in the blockchain
     pub earliest_block_number: u64,
