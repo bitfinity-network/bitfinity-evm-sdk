@@ -7,7 +7,9 @@ use anyhow::Context;
 pub use did::certified::CertifiedResult;
 use did::evm_state::EvmGlobalState;
 pub use did::transaction::StorableExecutionResult;
-use did::{Block, BlockNumber, BlockchainBlockInfo, Transaction, TransactionReceipt, H160, H256, U256, U64};
+use did::{
+    Block, BlockNumber, BlockchainBlockInfo, Transaction, TransactionReceipt, H160, H256, U256, U64,
+};
 use itertools::Itertools;
 pub use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
