@@ -138,7 +138,7 @@ impl Storable for BlockConfirmationStrategy {
 }
 
 /// Data required to confirm a block and mark it `safe`.
-#[derive(Debug, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BlockConfirmationData {
     /// the block number
     pub block_number: u64,
