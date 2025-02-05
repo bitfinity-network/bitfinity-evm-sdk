@@ -97,6 +97,19 @@ pub struct BlockchainStorageLimits {
     pub transactions_and_receipts_max_history_size: u64,
 }
 
+/// Information about the blockchain
+#[derive(Debug, Clone, CandidType, Serialize, Deserialize)]
+pub struct BlockchainBlockInfo {
+    /// The number of the first block in the blockchain
+    pub earliest_block_number: Option<u64>,
+    /// The number of the latest block in the blockchain
+    pub latest_block_number: Option<u64>,
+    /// The number of the safe block in the blockchain
+    pub safe_block_number: u64,
+    /// The number of the pending block in the blockchain
+    pub pending_block_number: u64,
+}
+
 #[cfg(test)]
 mod tests {
 
