@@ -118,13 +118,15 @@ impl DatabaseClient for PostgresDbClient {
         blocks: &[Block<H256>],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
-        if !blocks.is_empty() {
-            log::info!(
-                "Insert block data for blocks in range {} to {}",
-                blocks[0].number,
-                blocks[blocks.len() - 1].number
-            );
+        if blocks.is_empty() {
+            return Ok(());
         };
+
+        log::info!(
+            "Insert block data for blocks in range {} to {}",
+            blocks[0].number,
+            blocks[blocks.len() - 1].number
+        );
 
         let mut tx = self.pool.begin().await?;
 
@@ -236,6 +238,37 @@ impl DatabaseClient for PostgresDbClient {
             .await
             .map_err(|e| anyhow::anyhow!("Error getting transaction {}: {:?}", hex_tx_hash, e))
             .and_then(|row| from_row_value(&row, 0))
+    }
+
+    async fn discard_tail(&self, start_from: u64, reason: &str) -> anyhow::Result<()> {
+        sqlx::query(
+            "
+            WITH deleted_txs AS (
+            	DELETE FROM evm_transaction
+            	WHERE block_number >= $1
+            	RETURNING *
+            ) 
+            INSERT INTO discarded_evm_transaction 
+            SELECT * FROM deleted_txs;
+
+            WITH deleted_blocks AS (
+            	DELETE FROM evm_block
+            	WHERE id >= $1
+            	RETURNING *
+            ) 
+            INSERT INTO discarded_evm_block (id, data, reason, discarded_at)
+            SELECT id, data, '$2', now() FROM deleted_blocks;
+
+            DELETE FROM certified_evm_block WHERE id >= $1;
+            ",
+        )
+        .bind(start_from as i64)
+        .bind(reason)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to discard tail: {e}"))?;
+
+        Ok(())
     }
 }
 

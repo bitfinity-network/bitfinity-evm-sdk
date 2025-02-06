@@ -92,4 +92,9 @@ pub trait DatabaseClient: Send + Sync {
 
     /// Get earliest block number
     async fn get_earliest_block_number(&self) -> anyhow::Result<u64>;
+
+    /// Delete latest blocks starting with `start_from`, and related transactions.
+    /// Deleted blocks and transactions will be preserved in special table with
+    /// the given 'reason' and timestamp.
+    async fn discard_tail(&self, start_from: u64, reason: &str) -> anyhow::Result<()>;
 }

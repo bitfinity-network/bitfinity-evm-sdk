@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::{anyhow, Context};
 use did::evm_state::EvmGlobalState;
 use did::BlockNumber;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
@@ -134,6 +135,24 @@ impl<C: Client> BlockExtractor<C> {
             )
             .await??;
 
+            // Validate chain consistency, including new blocks sequence.
+            let validation_result = self.validate_chain(&evm_blocks).await;
+            match validation_result {
+                Ok(_) => {}
+                Err(ChainError::Other(e)) => return Err(e),
+                Err(ChainError::InconsistentStorage(_)) => {
+                    let last_consistent_block = self.find_latest_consistent_block().await?;
+                    let first_block_to_discard =
+                        last_consistent_block.map(|n| n + 1).unwrap_or_default();
+
+                    self.blockchain
+                        .discard_tail(first_block_to_discard, "inconsistent")
+                        .await?;
+
+                    anyhow::bail!("Inconsistency found next to block#{last_consistent_block:?}. Tail discarded.")
+                }
+            }
+
             let all_transactions = evm_blocks
                 .iter()
                 .flat_map(|block| &block.transactions)
@@ -221,4 +240,100 @@ impl<C: Client> BlockExtractor<C> {
 
         Ok(())
     }
+
+    /// This function:
+    /// - checks if the `new_blocks` sequence have correct hashes.
+    /// - checks if `last_stored_block.hash == new_blocks[0].prev_block_hash`.
+    async fn validate_chain(
+        &self,
+        new_blocks: &[did::Block<did::Transaction>],
+    ) -> Result<(), ChainError> {
+        if new_blocks
+            .windows(2)
+            .any(|blocks_pair| blocks_pair[0].hash != blocks_pair[1].parent_hash)
+        {
+            return Err(anyhow!("inconsistence in received blocks sequence").into());
+        }
+
+        let Some(first_new_block) = new_blocks.first() else {
+            return Ok(());
+        };
+
+        if first_new_block.number.as_u64() == 0 {
+            return Ok(());
+        }
+        let expected_latest_block_number = first_new_block.number.as_u64() - 1;
+
+        let expected_latest_block = self
+            .blockchain
+            .get_block_by_number(expected_latest_block_number)
+            .await
+            .context("unexpected first new queried block index")?;
+
+        if expected_latest_block.hash != first_new_block.parent_hash {
+            return Err(ChainError::InconsistentStorage(
+                expected_latest_block_number,
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Run through latest blocks in storage and compare their hashes with source of truth.
+    /// Returns last consisntent block number.
+    /// If there are no consistent blocks, returns None.
+    async fn find_latest_consistent_block(&self) -> anyhow::Result<Option<u64>> {
+        let Some(latest_block_number) = self.blockchain.get_latest_block_number().await? else {
+            return Ok(None);
+        };
+
+        let mut block_to_check = self
+            .blockchain
+            .get_block_by_number(latest_block_number)
+            .await?;
+
+        // On each iteration check consistency of two blocks: current and parent.
+        loop {
+            let block_number = block_to_check.number.as_u64();
+            let original_block = self
+                .client
+                .get_block_by_number(BlockNumber::Number(block_number.into()))
+                .await?;
+
+            // Check the current block
+            if block_to_check.hash == original_block.hash {
+                return Ok(Some(block_number));
+            }
+
+            if block_number == 0 {
+                return Ok(None);
+            }
+            let parent_index = block_number - 1;
+
+            // Check the parent block
+            if block_to_check.parent_hash == original_block.parent_hash {
+                return Ok(Some(parent_index));
+            }
+
+            if parent_index == 0 {
+                return Ok(None);
+            }
+            let next_to_check_block_number = parent_index - 1;
+
+            // If the current block and it's parent are incorrect, continue check blocks
+            // on the next iteration.
+            block_to_check = self
+                .blockchain
+                .get_block_by_number(next_to_check_block_number)
+                .await?;
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+enum ChainError {
+    #[error("inconsistent block in storage: {0}")]
+    InconsistentStorage(u64),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
