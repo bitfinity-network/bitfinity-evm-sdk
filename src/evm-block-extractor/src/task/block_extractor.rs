@@ -283,6 +283,7 @@ impl<C: Client> BlockExtractor<C> {
     /// Returns last consisntent block number.
     /// If there are no consistent blocks, returns None.
     async fn find_latest_consistent_block(&self) -> anyhow::Result<Option<u64>> {
+        let earliest_block_number = self.blockchain.get_earliest_block_number().await?;
         let Some(latest_block_number) = self.blockchain.get_latest_block_number().await? else {
             return Ok(None);
         };
@@ -305,7 +306,7 @@ impl<C: Client> BlockExtractor<C> {
                 return Ok(Some(block_number));
             }
 
-            if block_number == 0 {
+            if block_number == earliest_block_number {
                 return Ok(None);
             }
             let parent_index = block_number - 1;
@@ -315,7 +316,7 @@ impl<C: Client> BlockExtractor<C> {
                 return Ok(Some(parent_index));
             }
 
-            if parent_index == 0 {
+            if parent_index == earliest_block_number {
                 return Ok(None);
             }
             let next_to_check_block_number = parent_index - 1;
