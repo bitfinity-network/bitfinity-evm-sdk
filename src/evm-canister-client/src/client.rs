@@ -885,7 +885,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Sets the block confirmation strategy.
     /// This function can only be called by the admin.
     pub async fn admin_set_block_confirmation_strategy(
-        &mut self,
+        &self,
         strategy: BlockConfirmationStrategy,
     ) -> CanisterClientResult<Result<()>> {
         self.client
@@ -895,7 +895,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Attempt to confirm the block with the given hash
     pub async fn confirm_block(
-        &mut self,
+        &self,
         data: BlockConfirmationData,
     ) -> CanisterClientResult<Result<BlockConfirmationResult>> {
         self.client.update("confirm_block", (data,)).await
