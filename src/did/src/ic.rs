@@ -123,7 +123,12 @@ pub enum BlockConfirmationStrategy {
     None,
 
     /// The block requires a proof of work to be considered safe.
-    Hash,
+    /// The block is dropped if the proof of work is not provided in time.
+    HashDropOnTimeout {
+        /// The number of seconds to wait before dropping the block.
+        /// If the block is not confirmed by then, it is dropped.
+        timeout_secs: u64,
+    },
 }
 
 impl Storable for BlockConfirmationStrategy {
@@ -243,7 +248,7 @@ mod tests {
 
     #[test]
     fn test_storable_block_confirmation_strategy() {
-        let strategy = BlockConfirmationStrategy::Hash;
+        let strategy = BlockConfirmationStrategy::HashDropOnTimeout { timeout_secs: 10 };
 
         let serialized = strategy.to_bytes();
         let deserialized = BlockConfirmationStrategy::from_bytes(serialized);
