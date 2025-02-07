@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use did::evm_state::EvmGlobalState;
 use did::BlockNumber;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
