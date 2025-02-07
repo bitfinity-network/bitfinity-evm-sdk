@@ -271,7 +271,7 @@ async fn test_extractor_validate_and_recover_blockchain() {
 
         for i in first_broken_block_number..=last_broken_block_number {
             let dummy_block: did::Block<did::H256> = did::Block {
-                number: (i as u64).into(),
+                number: i.into(),
                 hash: alloy::primitives::B256::random().into(),
                 ..Default::default()
             };
