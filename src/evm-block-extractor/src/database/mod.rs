@@ -97,4 +97,14 @@ pub trait DatabaseClient: Send + Sync {
     /// Deleted blocks and transactions will be preserved in special table with
     /// the given 'reason' and timestamp.
     async fn discard_tail(&self, start_from: u64, reason: &str) -> anyhow::Result<()>;
+
+    /// Returns discarded block by its number.
+    async fn get_discarded_block_by_number(&self, number: u64) -> anyhow::Result<DiscardedBlock>;
+}
+
+#[derive(Debug)]
+pub struct DiscardedBlock {
+    pub block: Block<H256>,
+    pub reason: String,
+    pub timestamp: chrono::NaiveDateTime,
 }

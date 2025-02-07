@@ -6,7 +6,7 @@ use serde::Serialize;
 use sqlx::postgres::PgRow;
 
 use super::{
-    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY,
+    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, DiscardedBlock, CHAIN_ID_KEY,
     GENESIS_BALANCES_KEY,
 };
 
@@ -241,6 +241,7 @@ impl DatabaseClient for PostgresDbClient {
     }
 
     async fn discard_tail(&self, start_from: u64, reason: &str) -> anyhow::Result<()> {
+        let mut tx = self.pool.begin().await?;
         sqlx::query(
             "
             WITH deleted_txs AS (
@@ -249,8 +250,16 @@ impl DatabaseClient for PostgresDbClient {
             	RETURNING *
             ) 
             INSERT INTO discarded_evm_transaction 
-            SELECT * FROM deleted_txs;
+            SELECT * FROM deleted_txs
+            ",
+        )
+        .bind(start_from as i64)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to discard tail: {e}"))?;
 
+        sqlx::query(
+            "
             WITH deleted_blocks AS (
             	DELETE FROM evm_block
             	WHERE id >= $1
@@ -258,17 +267,40 @@ impl DatabaseClient for PostgresDbClient {
             ) 
             INSERT INTO discarded_evm_block (id, data, reason, discarded_at)
             SELECT id, data, '$2', now() FROM deleted_blocks;
-
-            DELETE FROM certified_evm_block WHERE id >= $1;
             ",
         )
         .bind(start_from as i64)
         .bind(reason)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to discard tail: {e}"))?;
 
+        sqlx::query("DELETE FROM certified_evm_block WHERE id >= $1")
+            .bind(start_from as i64)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to discard tail: {e}"))?;
+
+        tx.commit().await?;
+
         Ok(())
+    }
+
+    async fn get_discarded_block_by_number(&self, number: u64) -> anyhow::Result<DiscardedBlock> {
+        sqlx::query(
+            "SELECT data, reason, discarded_at FROM DISCARDED_EVM_BLOCK WHERE DISCARDED_EVM_BLOCK.id = $1",
+        )
+        .bind(number as i64)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Error getting discarded block {}: {:?}", number, e))
+        .and_then(|row| {
+            Ok(DiscardedBlock {
+                block: from_row_value(&row, 0)?,
+                reason: row.try_get(1)?,
+                timestamp: row.try_get(2)?,
+            })
+        })
     }
 }
 
