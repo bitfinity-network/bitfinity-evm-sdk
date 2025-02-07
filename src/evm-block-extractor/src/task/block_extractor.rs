@@ -259,21 +259,26 @@ impl<C: Client> BlockExtractor<C> {
             return Ok(());
         };
 
-        if first_new_block.number.as_u64() == 0 {
+        let Some(latest_block_number) = self.blockchain.get_latest_block_number().await? else {
+            // there is no blocks in storage, so nothing to validate
             return Ok(());
-        }
+        };
+
         let expected_latest_block_number = first_new_block.number.as_u64() - 1;
+        if expected_latest_block_number != latest_block_number {
+            return Err(anyhow!(
+                "received blocks sequence starts with block#{}, but latest block in storage is {latest_block_number}",
+                first_new_block.number.as_u64()).into()
+            );
+        }
 
-        let expected_latest_block = self
+        let latest_block_in_storage = self
             .blockchain
-            .get_block_by_number(expected_latest_block_number)
-            .await
-            .context("unexpected first new queried block index")?;
+            .get_block_by_number(latest_block_number)
+            .await?;
 
-        if expected_latest_block.hash != first_new_block.parent_hash {
-            return Err(ChainError::InconsistentStorage(
-                expected_latest_block_number,
-            ));
+        if latest_block_in_storage.hash != first_new_block.parent_hash {
+            return Err(ChainError::InconsistentStorage(latest_block_number));
         }
 
         Ok(())
