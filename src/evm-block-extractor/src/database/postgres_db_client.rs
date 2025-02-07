@@ -118,15 +118,13 @@ impl DatabaseClient for PostgresDbClient {
         blocks: &[Block<H256>],
         transactions: &[Transaction],
     ) -> anyhow::Result<()> {
-        if blocks.is_empty() {
-            return Ok(());
+        if !blocks.is_empty() {
+            log::info!(
+                "Insert block data for blocks in range {} to {}",
+                blocks[0].number,
+                blocks[blocks.len() - 1].number
+            );
         };
-
-        log::info!(
-            "Insert block data for blocks in range {} to {}",
-            blocks[0].number,
-            blocks[blocks.len() - 1].number
-        );
 
         let mut tx = self.pool.begin().await?;
 

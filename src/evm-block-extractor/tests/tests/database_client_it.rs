@@ -699,6 +699,11 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
                 .iter()
                 .zip(block.transactions.iter())
                 .all(|(a, b)| a == b));
+
+            for tx in &block.transactions {
+                let discarded = db_client.get_discarded_transaction(tx.clone()).await;
+                assert!(discarded.is_ok());
+            }
         }
     })
     .await;
