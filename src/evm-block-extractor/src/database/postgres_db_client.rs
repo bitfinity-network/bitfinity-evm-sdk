@@ -302,6 +302,16 @@ impl DatabaseClient for PostgresDbClient {
             })
         })
     }
+
+    async fn get_discarded_transaction(&self, tx_hash: H256) -> anyhow::Result<Transaction> {
+        let hex_tx_hash = did::H256::from(tx_hash).to_hex_str();
+        sqlx::query("SELECT data FROM DISCARDED_EVM_TRANSACTION WHERE id = $1")
+            .bind(&hex_tx_hash)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Error getting transaction {}: {:?}", hex_tx_hash, e))
+            .and_then(|row| from_row_value(&row, 0))
+    }
 }
 
 fn from_row_value<T: DeserializeOwned>(row: &PgRow, index: usize) -> anyhow::Result<T> {

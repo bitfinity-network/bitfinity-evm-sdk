@@ -623,12 +623,9 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
 
         const TRANSACTIONS_PER_BLOCK: u64 = 10;
 
-        let mut exe_results = Vec::new();
-
         for i in FIRST_BLOCK..=LAST_BLOCK {
             for _ in 0..TRANSACTIONS_PER_BLOCK {
                 let tx_hash = alloy::primitives::B256::random();
-                exe_results.push(did::H256::from(tx_hash));
                 blocks[i as usize - 1].transactions.push(tx_hash.into());
             }
         }

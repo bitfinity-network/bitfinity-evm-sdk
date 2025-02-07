@@ -98,8 +98,11 @@ pub trait DatabaseClient: Send + Sync {
     /// the given 'reason' and timestamp.
     async fn discard_tail(&self, start_from: u64, reason: &str) -> anyhow::Result<()>;
 
-    /// Returns discarded block by its number.
+    /// Returns a discarded block by its number.
     async fn get_discarded_block_by_number(&self, number: u64) -> anyhow::Result<DiscardedBlock>;
+
+    /// Returns a discarded transaction from the database.
+    async fn get_discarded_transaction(&self, tx_hash: H256) -> anyhow::Result<Transaction>;
 }
 
 #[derive(Debug)]

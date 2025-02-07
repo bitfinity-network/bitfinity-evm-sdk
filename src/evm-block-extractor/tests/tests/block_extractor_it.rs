@@ -225,3 +225,112 @@ async fn test_extractor_does_not_collect_blocks_if_evm_is_staging() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_extractor_validate_and_recover_blockchain() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, true).await.unwrap();
+
+        let rpc_url =
+            "https://block-extractor-testnet-1052151659755.europe-west9.run.app".to_string();
+        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
+
+        let request_time_out_secs = 10;
+        let rpc_batch_size = 10;
+        let mut extractor = BlockExtractor::new(
+            evm_client.clone(),
+            request_time_out_secs,
+            rpc_batch_size,
+            db_client.clone(),
+        );
+
+        let end_block = evm_client.get_block_number().await.unwrap() - 50;
+        let start_block = end_block - 10;
+
+        println!("Getting blocks from {:?} to {}", start_block, end_block);
+
+        let result = extractor.collect_all(start_block, end_block).await.unwrap();
+
+        match result {
+            BlockExtractCollectOutcome::BlocksExtracted {
+                from_block,
+                to_block,
+            } => {
+                assert_eq!(from_block, start_block);
+                assert_eq!(to_block, end_block);
+            }
+            _ => panic!("Expected BlocksExtracted"),
+        }
+
+        // Add several broken blocks to DB
+        const BROKEN_BLOCKS_NUMBER: u64 = 4;
+        let first_broken_block_number = end_block + 1;
+        let last_broken_block_number = first_broken_block_number + BROKEN_BLOCKS_NUMBER;
+
+        let mut broken_blocks = vec![];
+
+        for i in first_broken_block_number..=last_broken_block_number {
+            let dummy_block: did::Block<did::H256> = did::Block {
+                number: (i as u64).into(),
+                hash: alloy::primitives::B256::random().into(),
+                ..Default::default()
+            };
+
+            broken_blocks.push(dummy_block);
+        }
+
+        const TRANSACTIONS_PER_BLOCK: u64 = 10;
+
+        for block in &mut broken_blocks {
+            for _ in 0..TRANSACTIONS_PER_BLOCK {
+                let tx_hash = alloy::primitives::B256::random();
+                block.transactions.push(tx_hash.into());
+            }
+        }
+
+        let mut txn = vec![];
+        for block in &broken_blocks {
+            for j in 0..TRANSACTIONS_PER_BLOCK {
+                let tx_hash = block.transactions[j as usize].clone();
+                let block_number = block.number.0.to::<u64>();
+                let dummy_txn = did::Transaction {
+                    hash: tx_hash,
+                    block_number: Some(did::U64::from(block_number)),
+                    ..Default::default()
+                };
+
+                txn.push(dummy_txn);
+            }
+        }
+
+        db_client
+            .insert_block_data(&broken_blocks, &txn)
+            .await
+            .unwrap();
+
+        let collect_result = extractor
+            .collect_all(last_broken_block_number + 1, last_broken_block_number + 11)
+            .await;
+        assert!(collect_result.is_err());
+
+        // check the blockchain state recovered: invalid blocks discarded
+        for block in &broken_blocks {
+            let block_result = db_client.get_block_by_number(block.number.as_u64()).await;
+            assert!(block_result.is_err());
+
+            let block_result = db_client
+                .get_discarded_block_by_number(block.number.as_u64())
+                .await;
+            assert!(block_result.is_ok());
+
+            for tx in &block.transactions {
+                let tx_result = db_client.get_transaction(tx.clone()).await;
+                assert!(tx_result.is_err());
+
+                let tx_result = db_client.get_discarded_transaction(tx.clone()).await;
+                assert!(tx_result.is_ok());
+            }
+        }
+    })
+    .await;
+}
