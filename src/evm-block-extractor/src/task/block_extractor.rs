@@ -53,6 +53,7 @@ pub struct BlockExtractor<C: Client> {
 }
 
 /// Outcome of the block extraction process
+#[derive(Debug)]
 pub enum BlockExtractCollectOutcome {
     /// No blocks were extracted because EVM global state is not enabled
     BlocksNotExtracted,
@@ -144,6 +145,8 @@ impl<C: Client> BlockExtractor<C> {
                     let last_consistent_block = self.find_latest_consistent_block().await?;
                     let first_block_to_discard =
                         last_consistent_block.map(|n| n + 1).unwrap_or_default();
+
+                    log::info!("Discarding blockchain tail starting with {first_block_to_discard}");
 
                     self.blockchain
                         .discard_tail(first_block_to_discard, "inconsistent")

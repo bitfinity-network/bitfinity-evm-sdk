@@ -115,8 +115,6 @@ async fn test_extractor_collect_blocks() {
     .await;
 }
 
-pub const CHAIN_ID: u64 = 42;
-
 #[derive(Clone)]
 pub struct MockClient {
     evm_global_state: EvmGlobalState,
@@ -134,11 +132,11 @@ impl MockClient {
     /// Create a new mock client with the given blocks in storage.
     pub fn with_blocks<I>(evm_global_state: EvmGlobalState, blocks: I) -> Self
     where
-        I: IntoIterator<Item = (u64, did::Block<did::Transaction>)>,
+        I: IntoIterator<Item = did::Block<did::Transaction>>,
     {
         Self {
             evm_global_state,
-            blocks: blocks.into_iter().collect(),
+            blocks: blocks.into_iter().map(|b| (b.number.as_u64(), b)).collect(),
         }
     }
 
@@ -306,7 +304,7 @@ async fn test_extractor_validate_and_recover_blockchain() {
         let end_block = evm_client.get_block_number().await.unwrap() - 50;
         let start_block = end_block - 10;
 
-        println!("Getting blocks from {:?} to {}", start_block, end_block);
+        log::info!("Getting blocks from {:?} to {}", start_block, end_block);
 
         let result = extractor.collect_all(start_block, end_block).await.unwrap();
 
@@ -338,6 +336,8 @@ async fn test_extractor_validate_and_recover_blockchain() {
             broken_blocks.push(dummy_block);
         }
 
+        broken_blocks[0].parent_hash = db_client.get_block_by_number(end_block).await.unwrap().hash;
+
         const TRANSACTIONS_PER_BLOCK: u64 = 10;
 
         for block in &mut broken_blocks {
@@ -347,7 +347,7 @@ async fn test_extractor_validate_and_recover_blockchain() {
             }
         }
 
-        let mut txn = vec![];
+        let mut txs = vec![];
         for block in &broken_blocks {
             for j in 0..TRANSACTIONS_PER_BLOCK {
                 let tx_hash = block.transactions[j as usize].clone();
@@ -358,12 +358,12 @@ async fn test_extractor_validate_and_recover_blockchain() {
                     ..Default::default()
                 };
 
-                txn.push(dummy_txn);
+                txs.push(dummy_txn);
             }
         }
 
         db_client
-            .insert_block_data(&broken_blocks, &txn)
+            .insert_block_data(&broken_blocks, &txs)
             .await
             .unwrap();
 
@@ -390,6 +390,156 @@ async fn test_extractor_validate_and_recover_blockchain() {
                 assert!(tx_result.is_ok());
             }
         }
+
+        let last_block_after_recovery = db_client.get_latest_block_number().await.unwrap();
+        assert_eq!(last_block_after_recovery, Some(end_block));
+
+        extractor
+            .collect_all(end_block + 1, end_block + 10)
+            .await
+            .unwrap();
+        let last_block = db_client.get_latest_block_number().await.unwrap();
+        assert_eq!(last_block, Some(end_block + 10));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, true).await.unwrap();
+
+        let rpc_url =
+            "https://block-extractor-testnet-1052151659755.europe-west9.run.app".to_string();
+        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
+
+        let request_time_out_secs = 10;
+        let rpc_batch_size = 10;
+        let mut extractor = BlockExtractor::new(
+            evm_client.clone(),
+            request_time_out_secs,
+            rpc_batch_size,
+            db_client.clone(),
+        );
+
+        let end_block = evm_client.get_block_number().await.unwrap() - 50;
+        let start_block = end_block - 10;
+
+        log::info!("Getting blocks from {:?} to {}", start_block, end_block);
+
+        let result = extractor.collect_all(start_block, end_block).await.unwrap();
+
+        match result {
+            BlockExtractCollectOutcome::BlocksExtracted {
+                from_block,
+                to_block,
+            } => {
+                assert_eq!(from_block, start_block);
+                assert_eq!(to_block, end_block);
+            }
+            _ => panic!("Expected BlocksExtracted"),
+        }
+
+        // Add several broken blocks to DB
+        const BROKEN_BLOCKS_NUMBER: u64 = 4;
+        let first_broken_block_number = end_block + 1;
+        let last_broken_block_number = first_broken_block_number + BROKEN_BLOCKS_NUMBER;
+
+        let mut broken_blocks = vec![];
+
+        for i in first_broken_block_number..=last_broken_block_number {
+            let dummy_block: did::Block<did::H256> = did::Block {
+                number: i.into(),
+                hash: alloy::primitives::B256::random().into(),
+                ..Default::default()
+            };
+
+            broken_blocks.push(dummy_block);
+        }
+
+        // make first new block consistent with last block in storage
+        broken_blocks[0].parent_hash = db_client.get_block_by_number(end_block).await.unwrap().hash;
+
+        const TRANSACTIONS_PER_BLOCK: u64 = 10;
+
+        for block in &mut broken_blocks {
+            for _ in 0..TRANSACTIONS_PER_BLOCK {
+                let tx_hash = alloy::primitives::B256::random();
+                block.transactions.push(tx_hash.into());
+            }
+        }
+
+        let chain_id = db_client.get_chain_id().await.unwrap().unwrap();
+        let mut blocks_with_txs = vec![];
+        for block in &broken_blocks {
+            let mut txs = vec![];
+            for j in 0..TRANSACTIONS_PER_BLOCK {
+                let tx_hash = block.transactions[j as usize].clone();
+                let block_number = block.number.0.to::<u64>();
+                let dummy_tx = did::Transaction {
+                    hash: tx_hash,
+                    block_number: Some(did::U64::from(block_number)),
+                    chain_id: Some(chain_id.into()),
+                    ..Default::default()
+                };
+
+                txs.push(dummy_tx);
+            }
+            blocks_with_txs.push(block.clone().into_full_block(txs).unwrap());
+        }
+
+        // Create mock extractor, which will return broken blocks sequence.
+        let mock_client = MockClient::with_blocks(EvmGlobalState::Enabled, blocks_with_txs);
+        let mock_evm_client = Arc::new(EthJsonRpcClient::new(mock_client));
+        let mut extractor = BlockExtractor::new(
+            mock_evm_client,
+            request_time_out_secs,
+            rpc_batch_size,
+            db_client.clone(),
+        );
+
+        let collect_result = extractor
+            .collect_all(first_broken_block_number, last_broken_block_number)
+            .await;
+        // broken blocks sequence should be ignored.
+        assert!(collect_result.is_err());
+
+        // check the blockchain state is not changed: invalid blocks sequence not stored
+        for block in &broken_blocks {
+            let block_result = db_client.get_block_by_number(block.number.as_u64()).await;
+            assert!(block_result.is_err());
+
+            let block_result = db_client
+                .get_discarded_block_by_number(block.number.as_u64())
+                .await;
+            assert!(block_result.is_err());
+
+            for tx in &block.transactions {
+                let tx_result = db_client.get_transaction(tx.clone()).await;
+                assert!(tx_result.is_err());
+
+                let tx_result = db_client.get_discarded_transaction(tx.clone()).await;
+                assert!(tx_result.is_err());
+            }
+        }
+
+        let last_block_after_incorrect_blocks_ignored =
+            db_client.get_latest_block_number().await.unwrap();
+        assert_eq!(last_block_after_incorrect_blocks_ignored, Some(end_block));
+
+        // Try to collect correct blocks.
+        let mut extractor = BlockExtractor::new(
+            evm_client.clone(),
+            request_time_out_secs,
+            rpc_batch_size,
+            db_client.clone(),
+        );
+        extractor
+            .collect_all(end_block + 1, end_block + 10)
+            .await
+            .unwrap();
+        let last_block = db_client.get_latest_block_number().await.unwrap();
+        assert_eq!(last_block, Some(end_block + 10));
     })
     .await;
 }
