@@ -1,13 +1,15 @@
+use std::collections::BTreeMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
 use did::evm_state::EvmGlobalState;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
+use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient};
 use evm_block_extractor::database::AccountBalance;
 use evm_block_extractor::task::block_extractor::{BlockExtractCollectOutcome, BlockExtractor};
-use jsonrpc_core::{Call, Output, Request, Response};
+use jsonrpc_core::{Call, Failure, Output, Params, Request, Response};
+use serde::de::DeserializeOwned;
 
 use crate::test_with_clients;
 
@@ -113,15 +115,83 @@ async fn test_extractor_collect_blocks() {
     .await;
 }
 
+pub const CHAIN_ID: u64 = 42;
+
 #[derive(Clone)]
 pub struct MockClient {
     evm_global_state: EvmGlobalState,
+    blocks: BTreeMap<u64, did::Block<did::Transaction>>,
 }
 
 impl MockClient {
-    /// Create a new mock client
     pub fn new(evm_global_state: EvmGlobalState) -> Self {
-        Self { evm_global_state }
+        Self {
+            evm_global_state,
+            blocks: BTreeMap::new(),
+        }
+    }
+
+    /// Create a new mock client with the given blocks in storage.
+    pub fn with_blocks<I>(evm_global_state: EvmGlobalState, blocks: I) -> Self
+    where
+        I: IntoIterator<Item = (u64, did::Block<did::Transaction>)>,
+    {
+        Self {
+            evm_global_state,
+            blocks: blocks.into_iter().collect(),
+        }
+    }
+
+    fn process_single_call(&self, call: Call) -> Output {
+        match call {
+            Call::MethodCall(method_call) => match method_call.method.as_str() {
+                "ic_getEvmGlobalState" => Output::Success(jsonrpc_core::Success {
+                    jsonrpc: None,
+                    result: serde_json::to_value(&self.evm_global_state).unwrap(),
+                    id: method_call.id,
+                }),
+                "eth_getBlockByNumber" => {
+                    let number: u64 = Self::get_from_vec(&method_call.params, 0);
+                    let block = self.blocks.get(&number);
+                    match block {
+                        Some(block) => Output::Success(jsonrpc_core::Success {
+                            jsonrpc: None,
+                            result: serde_json::to_value(&block).unwrap(),
+                            id: method_call.id,
+                        }),
+                        None => Output::Failure(Failure {
+                            jsonrpc: None,
+                            error: jsonrpc_core::Error::invalid_params("block not found"),
+                            id: method_call.id,
+                        }),
+                    }
+                }
+                "ic_getLastCertifiedBlock" => Output::Success(jsonrpc_core::Success {
+                    jsonrpc: None,
+                    result: serde_json::to_value(&CertifiedResult {
+                        data: [1, 2, 3u8],
+                        witness: vec![4, 5, 6u8],
+                        certificate: vec![7, 8, 9],
+                    })
+                    .unwrap(),
+                    id: method_call.id,
+                }),
+
+                _ => unimplemented!(),
+            },
+            _ => unimplemented!(),
+        }
+    }
+
+    fn get_from_vec<T: DeserializeOwned>(params: &Params, index: usize) -> T {
+        let Params::Array(params) = params else {
+            panic!("missing params");
+        };
+
+        match params.get(index) {
+            Some(value) => serde_json::from_value(value.clone()).unwrap(),
+            None => panic!("index {} exceeds length of params {}", index, params.len()),
+        }
     }
 }
 
@@ -131,20 +201,15 @@ impl Client for MockClient {
         request: Request,
     ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
         let response = match request {
-            Request::Single(call) => match call {
-                Call::MethodCall(method_call) => match method_call.method.as_str() {
-                    "ic_getEvmGlobalState" => {
-                        Response::Single(Output::Success(jsonrpc_core::Success {
-                            jsonrpc: None,
-                            result: serde_json::to_value(&self.evm_global_state).unwrap(),
-                            id: jsonrpc_core::Id::Num(1),
-                        }))
-                    }
-                    _ => unimplemented!(),
-                },
-                _ => unimplemented!(),
-            },
-            _ => unimplemented!(),
+            Request::Single(call) => Response::Single(self.process_single_call(call)),
+            Request::Batch(calls) => {
+                let processed = calls
+                    .into_iter()
+                    .map(|c| self.process_single_call(c))
+                    .collect();
+
+                Response::Batch(processed)
+            }
         };
         Box::pin(async { Ok(response) })
     }
@@ -152,9 +217,7 @@ impl Client for MockClient {
 
 #[tokio::test]
 async fn test_mock_client_returns_evm_state() {
-    let client = MockClient {
-        evm_global_state: EvmGlobalState::Enabled,
-    };
+    let client = MockClient::new(EvmGlobalState::Enabled);
 
     let response = client
         .send_rpc_request(Request::Single(Call::MethodCall(
@@ -183,9 +246,7 @@ async fn test_extractor_does_not_collect_blocks_if_evm_is_disabled() {
     test_with_clients(|db_client| async move {
         db_client.init(None, true).await.unwrap();
 
-        let client = MockClient {
-            evm_global_state: EvmGlobalState::Disabled,
-        };
+        let client = MockClient::new(EvmGlobalState::Disabled);
 
         let evm_client = Arc::new(EthJsonRpcClient::new(client));
 
@@ -206,11 +267,9 @@ async fn test_extractor_does_not_collect_blocks_if_evm_is_staging() {
     test_with_clients(|db_client| async move {
         db_client.init(None, true).await.unwrap();
 
-        let client = MockClient {
-            evm_global_state: EvmGlobalState::Staging {
-                max_block_number: None,
-            },
-        };
+        let client = MockClient::new(EvmGlobalState::Staging {
+            max_block_number: None,
+        });
 
         let evm_client = Arc::new(EthJsonRpcClient::new(client));
 

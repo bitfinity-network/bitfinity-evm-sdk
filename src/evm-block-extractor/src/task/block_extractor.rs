@@ -248,14 +248,12 @@ impl<C: Client> BlockExtractor<C> {
         &self,
         new_blocks: &[did::Block<did::Transaction>],
     ) -> Result<(), ChainError> {
-        if new_blocks
-            .windows(2)
-            .any(|blocks_pair| blocks_pair[0].hash != blocks_pair[1].parent_hash)
-        {
-            return Err(anyhow!("inconsistence in received blocks sequence").into());
-        }
+        // Validate new blocks.
+        Self::validate_blocks_sequence(new_blocks)?;
 
+        // Validate first new block is consistent with last block in storage.
         let Some(first_new_block) = new_blocks.first() else {
+            // there is no new blocks, so nothing to validate
             return Ok(());
         };
 
@@ -264,7 +262,14 @@ impl<C: Client> BlockExtractor<C> {
             return Ok(());
         };
 
-        let expected_latest_block_number = first_new_block.number.as_u64() - 1;
+        let first_new_block_number = first_new_block.number.as_u64();
+
+        // To prevent overflow.
+        if first_new_block_number == 0 {
+            return Err(ChainError::Other(anyhow::anyhow!("first received block has number 0, but latest block in storage is {latest_block_number}")));
+        }
+
+        let expected_latest_block_number = first_new_block_number - 1;
         if expected_latest_block_number != latest_block_number {
             return Err(anyhow!(
                 "received blocks sequence starts with block#{}, but latest block in storage is {latest_block_number}",
@@ -277,8 +282,20 @@ impl<C: Client> BlockExtractor<C> {
             .get_block_by_number(latest_block_number)
             .await?;
 
+        // Check hashes
         if latest_block_in_storage.hash != first_new_block.parent_hash {
             return Err(ChainError::InconsistentStorage(latest_block_number));
+        }
+
+        Ok(())
+    }
+
+    fn validate_blocks_sequence(new_blocks: &[did::Block<did::Transaction>]) -> anyhow::Result<()> {
+        if new_blocks
+            .windows(2)
+            .any(|blocks_pair| blocks_pair[0].hash != blocks_pair[1].parent_hash)
+        {
+            anyhow::bail!("inconsistence in received blocks sequence");
         }
 
         Ok(())
