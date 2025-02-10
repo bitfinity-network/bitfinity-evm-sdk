@@ -154,7 +154,7 @@ impl MockClient {
                     match block {
                         Some(block) => Output::Success(jsonrpc_core::Success {
                             jsonrpc: None,
-                            result: serde_json::to_value(&block).unwrap(),
+                            result: serde_json::to_value(block).unwrap(),
                             id: method_call.id,
                         }),
                         None => Output::Failure(Failure {
