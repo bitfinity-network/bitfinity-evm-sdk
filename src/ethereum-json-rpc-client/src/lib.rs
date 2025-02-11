@@ -8,7 +8,7 @@ pub use did::certified::CertifiedResult;
 use did::evm_state::EvmGlobalState;
 pub use did::transaction::StorableExecutionResult;
 use did::{
-    Block, BlockNumber, BlockchainBlockInfo, Transaction, TransactionReceipt, H160, H256, U256, U64,
+    Block, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo, Transaction, TransactionReceipt, H160, H256, U256, U64
 };
 use itertools::Itertools;
 pub use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
@@ -33,7 +33,6 @@ const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
 const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 const ETH_CALL_METHOD: &str = "eth_call";
-const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const ETH_GET_TRANSACTION_BY_HASH_METHOD: &str = "eth_getTransactionByHash";
 const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
@@ -42,6 +41,16 @@ const IC_GET_LAST_CERTIFIED_BLOCK: &str = "ic_getLastCertifiedBlock";
 const IC_GET_EVM_GLOBAL_STATE: &str = "ic_getEvmGlobalState";
 const IC_GET_BLOCKCHAIN_BLOCK_INFO: &str = "ic_getBlockchainBlockInfo";
 const ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD: &str = "eth_maxPriorityFeePerGas";
+
+// List of methods that require an `update` IC query endpoint
+const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
+const IC_SEND_CONFIRM_BLOCK: &str = "ic_sendConfirmBlock";
+
+/// The methods will be upgraded when doing http outcalls
+pub(crate) const UPGRADE_HTTP_METHODS: &[&str] = &[
+    ETH_SEND_RAW_TRANSACTION_METHOD,
+    IC_SEND_CONFIRM_BLOCK,
+];
 
 macro_rules! make_params_array {
     ($($items:expr),*) => {
@@ -347,6 +356,16 @@ impl<C: Client> EthJsonRpcClient<C> {
             IC_GET_LAST_CERTIFIED_BLOCK.to_string(),
             make_params_array!(),
             Id::Str(IC_GET_LAST_CERTIFIED_BLOCK.to_string()),
+        )
+        .await
+    }
+
+    /// Sends the confirm block
+    pub async fn send_confirm_block(&self, params: BlockConfirmationData) -> anyhow::Result<BlockConfirmationResult> {
+        self.single_request(
+            IC_SEND_CONFIRM_BLOCK.to_string(),
+            make_params_array!(params),
+            Id::Str(IC_SEND_CONFIRM_BLOCK.to_string()),
         )
         .await
     }
