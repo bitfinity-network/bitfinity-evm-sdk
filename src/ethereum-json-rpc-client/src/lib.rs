@@ -8,7 +8,8 @@ pub use did::certified::CertifiedResult;
 use did::evm_state::EvmGlobalState;
 pub use did::transaction::StorableExecutionResult;
 use did::{
-    Block, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo, Transaction, TransactionReceipt, H160, H256, U256, U64
+    Block, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo,
+    Transaction, TransactionReceipt, H160, H256, U256, U64,
 };
 use itertools::Itertools;
 pub use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
@@ -47,10 +48,8 @@ const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const IC_SEND_CONFIRM_BLOCK: &str = "ic_sendConfirmBlock";
 
 /// The methods will be upgraded when doing http outcalls
-pub(crate) const UPGRADE_HTTP_METHODS: &[&str] = &[
-    ETH_SEND_RAW_TRANSACTION_METHOD,
-    IC_SEND_CONFIRM_BLOCK,
-];
+pub(crate) const UPGRADE_HTTP_METHODS: &[&str] =
+    &[ETH_SEND_RAW_TRANSACTION_METHOD, IC_SEND_CONFIRM_BLOCK];
 
 macro_rules! make_params_array {
     ($($items:expr),*) => {
@@ -361,7 +360,10 @@ impl<C: Client> EthJsonRpcClient<C> {
     }
 
     /// Sends the confirm block
-    pub async fn send_confirm_block(&self, params: BlockConfirmationData) -> anyhow::Result<BlockConfirmationResult> {
+    pub async fn send_confirm_block(
+        &self,
+        params: BlockConfirmationData,
+    ) -> anyhow::Result<BlockConfirmationResult> {
         self.single_request(
             IC_SEND_CONFIRM_BLOCK.to_string(),
             make_params_array!(params),
