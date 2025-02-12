@@ -1,10 +1,11 @@
 use std::collections::BTreeMap;
 use std::future::Future;
+use std::ops::Range;
 use std::pin::Pin;
 use std::sync::Arc;
 
 use did::evm_state::EvmGlobalState;
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
+use did::{keccak, BlockNumber, BlockchainBlockInfo, H160};
 use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient};
 use evm_block_extractor::database::AccountBalance;
 use evm_block_extractor::task::block_extractor::{BlockExtractCollectOutcome, BlockExtractor};
@@ -18,21 +19,20 @@ async fn test_extractor_collect_blocks() {
     test_with_clients(|db_client| async move {
         db_client.init(None, true).await.unwrap();
 
-        let rpc_url =
-            "https://block-extractor-testnet-1052151659755.europe-west9.run.app".to_string();
-        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
-
+        let start_block = 0;
+        let end_block = 100;
+        let blocks =
+            generate_correct_block_sequence(start_block..end_block + 1, Default::default(), 10);
+        let mock_client = MockClient::with_blocks(EvmGlobalState::Enabled, blocks.clone());
+        let mock_evm_client = Arc::new(EthJsonRpcClient::new(mock_client));
         let request_time_out_secs = 10;
         let rpc_batch_size = 10;
         let mut extractor = BlockExtractor::new(
-            evm_client.clone(),
+            mock_evm_client.clone(),
             request_time_out_secs,
             rpc_batch_size,
             db_client.clone(),
         );
-
-        let end_block = evm_client.get_block_number().await.unwrap();
-        let start_block = end_block - 10;
 
         println!("Getting blocks from {:?} to {}", start_block, end_block);
 
@@ -51,7 +51,7 @@ async fn test_extractor_collect_blocks() {
 
         // Check genesis accounts
         {
-            let evmc_genesis_balances = evm_client.get_genesis_balances().await.unwrap();
+            let evmc_genesis_balances = mock_evm_client.get_genesis_balances().await.unwrap();
             let db_genesis_balances = db_client.get_genesis_balances().await.unwrap().unwrap();
 
             assert!(!evmc_genesis_balances.is_empty());
@@ -66,7 +66,7 @@ async fn test_extractor_collect_blocks() {
 
         // Check chain id
         {
-            let evmc_chain_id = evm_client.get_chain_id().await.unwrap();
+            let evmc_chain_id = mock_evm_client.get_chain_id().await.unwrap();
             let db_chain_id = db_client.get_chain_id().await.unwrap().unwrap();
 
             assert_eq!(evmc_chain_id, db_chain_id);
@@ -83,13 +83,16 @@ async fn test_extractor_collect_blocks() {
             assert!(end_block + 10 >= certified_data.data.number.0.to::<u64>());
         }
 
+        let blocks_map = BTreeMap::from_iter(blocks.into_iter().map(|b| (b.number.as_u64(), b)));
         for block_num in start_block..=end_block {
             let block = db_client.get_block_by_number(block_num).await.unwrap();
 
             let full_block = db_client.get_full_block_by_number(block_num).await.unwrap();
 
+            let source_block = &blocks_map[&block_num];
             // Check blocks
             {
+                assert_eq!(source_block.hash, full_block.hash);
                 assert_eq!(block_num, full_block.number.0.to::<u64>());
                 assert_eq!(block_num, block.number.0.to::<u64>());
                 assert_eq!(block.hash, full_block.hash);
@@ -103,9 +106,15 @@ async fn test_extractor_collect_blocks() {
                     block.transactions.len()
                 );
                 assert_eq!(block.transactions.len(), full_block.transactions.len());
+                assert_eq!(
+                    source_block.transactions.len(),
+                    full_block.transactions.len()
+                );
 
+                let simple_source_block: did::Block<did::H256> = source_block.clone().into();
                 for tx in &full_block.transactions {
                     assert!(block.transactions.contains(&tx.hash));
+                    assert!(simple_source_block.transactions.contains(&tx.hash));
                     assert_eq!(tx.block_number, tx.block_number);
                     assert_eq!(tx.block_hash, tx.block_hash);
                 }
@@ -114,6 +123,8 @@ async fn test_extractor_collect_blocks() {
     })
     .await;
 }
+
+const CHAIN_ID: u64 = 42;
 
 #[derive(Clone)]
 pub struct MockClient {
@@ -149,8 +160,17 @@ impl MockClient {
                     id: method_call.id,
                 }),
                 "eth_getBlockByNumber" => {
-                    let number: u64 = Self::get_from_vec(&method_call.params, 0);
-                    let block = self.blocks.get(&number);
+                    let number: BlockNumber = Self::get_from_vec(&method_call.params, 0);
+                    let block = match number {
+                        BlockNumber::Latest | BlockNumber::Finalized | BlockNumber::Safe => {
+                            self.blocks.last_key_value().map(|(_, v)| v.clone())
+                        }
+                        BlockNumber::Earliest => {
+                            self.blocks.last_key_value().map(|(_, v)| v.clone())
+                        }
+                        BlockNumber::Pending => unimplemented!(),
+                        BlockNumber::Number(n) => self.blocks.get(&n.as_u64()).cloned(),
+                    };
                     match block {
                         Some(block) => Output::Success(jsonrpc_core::Success {
                             jsonrpc: None,
@@ -164,17 +184,70 @@ impl MockClient {
                         }),
                     }
                 }
-                "ic_getLastCertifiedBlock" => Output::Success(jsonrpc_core::Success {
+                "ic_getLastCertifiedBlock" => {
+                    let data = self
+                        .blocks
+                        .last_key_value()
+                        .map(|(_, v)| v)
+                        .cloned()
+                        .unwrap_or_else(|| did::Block::default().into_full_block(vec![]).unwrap());
+                    Output::Success(jsonrpc_core::Success {
+                        jsonrpc: None,
+                        result: serde_json::to_value(&CertifiedResult {
+                            data,
+                            witness: vec![4, 5, 6u8],
+                            certificate: vec![7, 8, 9],
+                        })
+                        .unwrap(),
+                        id: method_call.id,
+                    })
+                }
+                "eth_chainId" => Output::Success(jsonrpc_core::Success {
                     jsonrpc: None,
-                    result: serde_json::to_value(&CertifiedResult {
-                        data: [1, 2, 3u8],
-                        witness: vec![4, 5, 6u8],
-                        certificate: vec![7, 8, 9],
+                    result: serde_json::to_value(&CHAIN_ID.to_string()).unwrap(),
+                    id: method_call.id,
+                }),
+                "ic_getGenesisBalances" => {
+                    let balances: Vec<_> =
+                        (1..=32).map(|i| (i32_to_h160(i), i32_to_h256(i))).collect();
+                    Output::Success(jsonrpc_core::Success {
+                        jsonrpc: None,
+                        result: serde_json::to_value(balances).unwrap(),
+                        id: method_call.id,
+                    })
+                }
+                "ic_getBlockchainBlockInfo" => Output::Success(jsonrpc_core::Success {
+                    jsonrpc: None,
+                    result: serde_json::to_value(BlockchainBlockInfo {
+                        earliest_block_number: self
+                            .blocks
+                            .first_key_value()
+                            .map(|(k, _)| *k)
+                            .unwrap_or_default(),
+                        latest_block_number: self
+                            .blocks
+                            .last_key_value()
+                            .map(|(k, _)| *k)
+                            .unwrap_or_default(),
+                        safe_block_number: self
+                            .blocks
+                            .last_key_value()
+                            .map(|(k, _)| *k)
+                            .unwrap_or_default(),
+                        finalized_block_number: self
+                            .blocks
+                            .last_key_value()
+                            .map(|(k, _)| *k)
+                            .unwrap_or_default(),
+                        pending_block_number: self
+                            .blocks
+                            .last_key_value()
+                            .map(|(k, _)| *k + 1)
+                            .unwrap_or_default(),
                     })
                     .unwrap(),
                     id: method_call.id,
                 }),
-
                 _ => unimplemented!(),
             },
             _ => unimplemented!(),
@@ -191,6 +264,16 @@ impl MockClient {
             None => panic!("index {} exceeds length of params {}", index, params.len()),
         }
     }
+}
+
+fn i32_to_h160(i: i32) -> did::H160 {
+    let mut buf = [0; 20];
+    buf[..4].copy_from_slice(&i.to_be_bytes());
+    H160::from_slice(&buf)
+}
+
+fn i32_to_h256(i: i32) -> did::H256 {
+    keccak::keccak_hash(&i.to_be_bytes())
 }
 
 impl Client for MockClient {
@@ -288,21 +371,22 @@ async fn test_extractor_validate_and_recover_blockchain() {
     test_with_clients(|db_client| async move {
         db_client.init(None, true).await.unwrap();
 
-        let rpc_url =
-            "https://block-extractor-testnet-1052151659755.europe-west9.run.app".to_string();
-        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
+        let start_block = 10;
+        let end_block = 20;
+        let blocks =
+            generate_correct_block_sequence(start_block..end_block + 1, Default::default(), 10);
+        let init_blocks_last_hash = blocks.last().cloned().unwrap().hash;
+        let mock_client = MockClient::with_blocks(EvmGlobalState::Enabled, blocks);
+        let mock_evm_client = Arc::new(EthJsonRpcClient::new(mock_client));
 
         let request_time_out_secs = 10;
         let rpc_batch_size = 10;
         let mut extractor = BlockExtractor::new(
-            evm_client.clone(),
+            mock_evm_client,
             request_time_out_secs,
             rpc_batch_size,
             db_client.clone(),
         );
-
-        let end_block = evm_client.get_block_number().await.unwrap() - 50;
-        let start_block = end_block - 10;
 
         log::info!("Getting blocks from {:?} to {}", start_block, end_block);
 
@@ -320,56 +404,42 @@ async fn test_extractor_validate_and_recover_blockchain() {
         }
 
         // Add several broken blocks to DB
-        const BROKEN_BLOCKS_NUMBER: u64 = 4;
-        let first_broken_block_number = end_block + 1;
-        let last_broken_block_number = first_broken_block_number + BROKEN_BLOCKS_NUMBER;
-
-        let mut broken_blocks = vec![];
-
-        for i in first_broken_block_number..=last_broken_block_number {
-            let dummy_block: did::Block<did::H256> = did::Block {
-                number: i.into(),
-                hash: alloy::primitives::B256::random().into(),
-                ..Default::default()
-            };
-
-            broken_blocks.push(dummy_block);
-        }
-
-        broken_blocks[0].parent_hash = db_client.get_block_by_number(end_block).await.unwrap().hash;
-
-        const TRANSACTIONS_PER_BLOCK: u64 = 10;
-
-        for block in &mut broken_blocks {
-            for _ in 0..TRANSACTIONS_PER_BLOCK {
-                let tx_hash = alloy::primitives::B256::random();
-                block.transactions.push(tx_hash.into());
-            }
-        }
-
-        let mut txs = vec![];
-        for block in &broken_blocks {
-            for j in 0..TRANSACTIONS_PER_BLOCK {
-                let tx_hash = block.transactions[j as usize].clone();
-                let block_number = block.number.0.to::<u64>();
-                let dummy_txn = did::Transaction {
-                    hash: tx_hash,
-                    block_number: Some(did::U64::from(block_number)),
-                    ..Default::default()
-                };
-
-                txs.push(dummy_txn);
-            }
-        }
-
+        let block_before_broken = end_block;
+        let first_broken_block = end_block + 1;
+        let last_broken_block = end_block + 5;
+        let broken_blocks = generate_correct_block_sequence(
+            first_broken_block..last_broken_block,
+            init_blocks_last_hash.clone(),
+            10,
+        );
+        let txs: Vec<_> = broken_blocks
+            .iter()
+            .map(|b| b.transactions.iter())
+            .flatten()
+            .cloned()
+            .collect();
+        let broken_blocks: Vec<_> = broken_blocks.into_iter().map(Into::into).collect();
         db_client
             .insert_block_data(&broken_blocks, &txs)
             .await
             .unwrap();
 
-        let collect_result = extractor
-            .collect_all(last_broken_block_number + 1, last_broken_block_number + 11)
-            .await;
+        let start_block = last_broken_block + 1;
+        let end_block = last_broken_block + 10;
+        let blocks = generate_correct_block_sequence(
+            start_block..end_block + 1,
+            keccak::keccak_hash(&[1, 2]),
+            10,
+        );
+        let mock_client = MockClient::with_blocks(EvmGlobalState::Enabled, blocks);
+        let mock_evm_client = Arc::new(EthJsonRpcClient::new(mock_client));
+        let mut extractor = BlockExtractor::new(
+            mock_evm_client,
+            request_time_out_secs,
+            rpc_batch_size,
+            db_client.clone(),
+        );
+        let collect_result = extractor.collect_all(start_block, end_block).await;
         assert!(collect_result.is_err());
 
         // check the blockchain state recovered: invalid blocks discarded
@@ -392,14 +462,23 @@ async fn test_extractor_validate_and_recover_blockchain() {
         }
 
         let last_block_after_recovery = db_client.get_latest_block_number().await.unwrap();
-        assert_eq!(last_block_after_recovery, Some(end_block));
+        assert_eq!(last_block_after_recovery, Some(block_before_broken));
 
-        extractor
-            .collect_all(end_block + 1, end_block + 10)
-            .await
-            .unwrap();
+        let start_block = block_before_broken + 1;
+        let end_block = start_block + 10;
+        let blocks =
+            generate_correct_block_sequence(start_block..end_block + 1, init_blocks_last_hash, 10);
+        let mock_client = MockClient::with_blocks(EvmGlobalState::Enabled, blocks);
+        let mock_evm_client = Arc::new(EthJsonRpcClient::new(mock_client));
+        let mut extractor = BlockExtractor::new(
+            mock_evm_client,
+            request_time_out_secs,
+            rpc_batch_size,
+            db_client.clone(),
+        );
+        extractor.collect_all(start_block, end_block).await.unwrap();
         let last_block = db_client.get_latest_block_number().await.unwrap();
-        assert_eq!(last_block, Some(end_block + 10));
+        assert_eq!(last_block, Some(end_block));
     })
     .await;
 }
@@ -409,21 +488,22 @@ async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
     test_with_clients(|db_client| async move {
         db_client.init(None, true).await.unwrap();
 
-        let rpc_url =
-            "https://block-extractor-testnet-1052151659755.europe-west9.run.app".to_string();
-        let evm_client = Arc::new(EthJsonRpcClient::new(ReqwestClient::new(rpc_url)));
+        let start_block = 10;
+        let end_block = 20;
+        let blocks =
+            generate_correct_block_sequence(start_block..end_block + 1, Default::default(), 10);
+        let init_blocks_last_hash = blocks.last().cloned().unwrap().hash;
+        let mock_client = MockClient::with_blocks(EvmGlobalState::Enabled, blocks);
+        let mock_evm_client = Arc::new(EthJsonRpcClient::new(mock_client));
 
         let request_time_out_secs = 10;
         let rpc_batch_size = 10;
         let mut extractor = BlockExtractor::new(
-            evm_client.clone(),
+            mock_evm_client,
             request_time_out_secs,
             rpc_batch_size,
             db_client.clone(),
         );
-
-        let end_block = evm_client.get_block_number().await.unwrap() - 50;
-        let start_block = end_block - 10;
 
         log::info!("Getting blocks from {:?} to {}", start_block, end_block);
 
@@ -440,56 +520,20 @@ async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
             _ => panic!("Expected BlocksExtracted"),
         }
 
-        // Add several broken blocks to DB
+        // Try to add broken blocks sequence
         const BROKEN_BLOCKS_NUMBER: u64 = 4;
         let first_broken_block_number = end_block + 1;
         let last_broken_block_number = first_broken_block_number + BROKEN_BLOCKS_NUMBER;
 
-        let mut broken_blocks = vec![];
+        let mut broken_blocks = generate_correct_block_sequence(
+            first_broken_block_number..last_broken_block_number + 1,
+            init_blocks_last_hash.clone(),
+            10,
+        );
 
-        for i in first_broken_block_number..=last_broken_block_number {
-            let dummy_block: did::Block<did::H256> = did::Block {
-                number: i.into(),
-                hash: alloy::primitives::B256::random().into(),
-                ..Default::default()
-            };
+        broken_blocks[2].parent_hash = keccak::keccak_hash(&[1, 2, 3]);
 
-            broken_blocks.push(dummy_block);
-        }
-
-        // make first new block consistent with last block in storage
-        broken_blocks[0].parent_hash = db_client.get_block_by_number(end_block).await.unwrap().hash;
-
-        const TRANSACTIONS_PER_BLOCK: u64 = 10;
-
-        for block in &mut broken_blocks {
-            for _ in 0..TRANSACTIONS_PER_BLOCK {
-                let tx_hash = alloy::primitives::B256::random();
-                block.transactions.push(tx_hash.into());
-            }
-        }
-
-        let chain_id = db_client.get_chain_id().await.unwrap().unwrap();
-        let mut blocks_with_txs = vec![];
-        for block in &broken_blocks {
-            let mut txs = vec![];
-            for j in 0..TRANSACTIONS_PER_BLOCK {
-                let tx_hash = block.transactions[j as usize].clone();
-                let block_number = block.number.0.to::<u64>();
-                let dummy_tx = did::Transaction {
-                    hash: tx_hash,
-                    block_number: Some(did::U64::from(block_number)),
-                    chain_id: Some(chain_id.into()),
-                    ..Default::default()
-                };
-
-                txs.push(dummy_tx);
-            }
-            blocks_with_txs.push(block.clone().into_full_block(txs).unwrap());
-        }
-
-        // Create mock extractor, which will return broken blocks sequence.
-        let mock_client = MockClient::with_blocks(EvmGlobalState::Enabled, blocks_with_txs);
+        let mock_client = MockClient::with_blocks(EvmGlobalState::Enabled, broken_blocks.clone());
         let mock_evm_client = Arc::new(EthJsonRpcClient::new(mock_client));
         let mut extractor = BlockExtractor::new(
             mock_evm_client,
@@ -515,10 +559,10 @@ async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
             assert!(block_result.is_err());
 
             for tx in &block.transactions {
-                let tx_result = db_client.get_transaction(tx.clone()).await;
+                let tx_result = db_client.get_transaction(tx.hash.clone()).await;
                 assert!(tx_result.is_err());
 
-                let tx_result = db_client.get_discarded_transaction(tx.clone()).await;
+                let tx_result = db_client.get_discarded_transaction(tx.hash.clone()).await;
                 assert!(tx_result.is_err());
             }
         }
@@ -528,18 +572,65 @@ async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
         assert_eq!(last_block_after_incorrect_blocks_ignored, Some(end_block));
 
         // Try to collect correct blocks.
+        let start_block = 21;
+        let end_block = 30;
+        let blocks =
+            generate_correct_block_sequence(start_block..end_block + 1, init_blocks_last_hash, 10);
+        let mock_client = MockClient::with_blocks(EvmGlobalState::Enabled, blocks);
+        let mock_evm_client = Arc::new(EthJsonRpcClient::new(mock_client));
         let mut extractor = BlockExtractor::new(
-            evm_client.clone(),
+            mock_evm_client,
             request_time_out_secs,
             rpc_batch_size,
             db_client.clone(),
         );
-        extractor
-            .collect_all(end_block + 1, end_block + 10)
-            .await
-            .unwrap();
+        extractor.collect_all(start_block, end_block).await.unwrap();
         let last_block = db_client.get_latest_block_number().await.unwrap();
-        assert_eq!(last_block, Some(end_block + 10));
+        assert_eq!(last_block, Some(end_block));
     })
     .await;
+}
+
+fn generate_correct_block_sequence(
+    ids: Range<u64>,
+    parent_hash: did::H256,
+    txs_per_block: usize,
+) -> Vec<did::Block<did::Transaction>> {
+    if ids.end <= ids.start {
+        return vec![];
+    }
+
+    let mut blocks = ids
+        .map(|id| did::Block {
+            number: id.into(),
+            hash: i32_to_h256(id as _),
+            ..Default::default()
+        })
+        .collect::<Vec<_>>();
+
+    blocks[0].parent_hash = parent_hash;
+
+    for i in 1..blocks.len() {
+        blocks[i].parent_hash = blocks[i - 1].hash.clone();
+    }
+
+    let mut blocks_with_txs = vec![];
+    for block in blocks {
+        let mut txs = vec![];
+        for j in 0..txs_per_block {
+            let tx_num = block.number.as_u64() << 4 + j;
+            let tx_hash = keccak::keccak_hash(&tx_num.to_be_bytes());
+            let block_number = block.number.0.to::<u64>();
+            let dummy_tx = did::Transaction {
+                hash: tx_hash,
+                block_number: Some(did::U64::from(block_number)),
+                ..Default::default()
+            };
+
+            txs.push(dummy_tx);
+        }
+        blocks_with_txs.push(block.clone().into_full_block(txs).unwrap());
+    }
+
+    blocks_with_txs
 }

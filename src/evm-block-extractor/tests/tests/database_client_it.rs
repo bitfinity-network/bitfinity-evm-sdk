@@ -661,7 +661,7 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
         // Certified block should be alse removed.
         const FIRST_REMOVED_BLOCK: u64 = LAST_BLOCK - 1;
         db_client
-            .discard_tail(FIRST_REMOVED_BLOCK, "test reason")
+            .discard_blocks_starting_with(FIRST_REMOVED_BLOCK, "test reason")
             .await
             .unwrap();
 

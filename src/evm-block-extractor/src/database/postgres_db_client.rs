@@ -1,13 +1,13 @@
 use ::sqlx::migrate::Migrator;
 use ::sqlx::*;
-use did::{Block, Transaction, H256};
+use did::{Block, BlockchainBlockInfo, Transaction, H256};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sqlx::postgres::PgRow;
 
 use super::{
-    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, DiscardedBlock, CHAIN_ID_KEY,
-    GENESIS_BALANCES_KEY,
+    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, DiscardedBlock,
+    BLOCKCHAIN_BLOCK_INFO_KEY, CHAIN_ID_KEY, GENESIS_BALANCES_KEY,
 };
 
 static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migrations");
@@ -42,13 +42,16 @@ impl PostgresDbClient {
     }
 
     async fn insert_key_value_data<D: Serialize>(&self, key: &str, data: D) -> anyhow::Result<()> {
-        sqlx::query("INSERT INTO EVM_KEY_VALUE_DATA (key, data) VALUES ($1, $2)")
-            .bind(key)
-            .bind(serde_json::to_value(data)?)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| anyhow::anyhow!("Error inserting value data for key {}: {:?}", key, e))
-            .map(|_| ())
+        sqlx::query(
+            "INSERT INTO EVM_KEY_VALUE_DATA (key, data) VALUES ($1, $2)
+            ON CONFLICT (key) DO UPDATE SET data = $2",
+        )
+        .bind(key)
+        .bind(serde_json::to_value(data)?)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Error inserting value data for key {}: {:?}", key, e))
+        .map(|_| ())
     }
 }
 
@@ -238,7 +241,13 @@ impl DatabaseClient for PostgresDbClient {
             .and_then(|row| from_row_value(&row, 0))
     }
 
-    async fn discard_tail(&self, start_from: u64, reason: &str) -> anyhow::Result<()> {
+    async fn discard_blocks_starting_with(
+        &self,
+        start_from: u64,
+        reason: &str,
+    ) -> anyhow::Result<()> {
+        log::warn!("Discarding blocks starting with {start_from}");
+
         let mut tx = self.pool.begin().await?;
         sqlx::query(
             "
@@ -309,6 +318,15 @@ impl DatabaseClient for PostgresDbClient {
             .await
             .map_err(|e| anyhow::anyhow!("Error getting transaction {}: {:?}", hex_tx_hash, e))
             .and_then(|row| from_row_value(&row, 0))
+    }
+
+    async fn get_block_info(&self) -> anyhow::Result<Option<BlockchainBlockInfo>> {
+        self.fetch_key_value_data(BLOCKCHAIN_BLOCK_INFO_KEY).await
+    }
+
+    async fn set_block_info(&self, info: BlockchainBlockInfo) -> anyhow::Result<()> {
+        self.insert_key_value_data(BLOCKCHAIN_BLOCK_INFO_KEY, info)
+            .await
     }
 }
 

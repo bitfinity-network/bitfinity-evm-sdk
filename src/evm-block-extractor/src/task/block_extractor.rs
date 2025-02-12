@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use did::evm_state::EvmGlobalState;
 use did::BlockNumber;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
@@ -110,6 +109,11 @@ impl<C: Client> BlockExtractor<C> {
         self.collect_genesis_balances().await?;
         self.collect_last_certified_block().await?;
 
+        // Can't set the block info to the DB right now, because we can't be sure
+        // the new block_info.safe_block numbers match with blocks in DB.
+        // This must be set to DB after successful validation of the new blocks sequence.
+        let block_info = self.client.get_blockchain_block_info().await?;
+
         info!(
             "Getting blocks from {:?} to {}",
             from_block_inclusive, to_block_inclusive
@@ -137,24 +141,13 @@ impl<C: Client> BlockExtractor<C> {
             .await??;
 
             // Validate chain consistency, including new blocks sequence.
-            let validation_result = self.validate_chain(&evm_blocks).await;
-            match validation_result {
-                Ok(_) => {}
-                Err(ChainError::Other(e)) => return Err(e),
-                Err(ChainError::InconsistentStorage(_)) => {
-                    let last_consistent_block = self.find_latest_consistent_block().await?;
-                    let first_block_to_discard =
-                        last_consistent_block.map(|n| n + 1).unwrap_or_default();
-
-                    log::info!("Discarding blockchain tail starting with {first_block_to_discard}");
-
-                    self.blockchain
-                        .discard_tail(first_block_to_discard, "inconsistent")
-                        .await?;
-
-                    anyhow::bail!("Inconsistency found next to block#{last_consistent_block:?}. Tail discarded.")
-                }
-            }
+            let latest_storage_block_number = self.blockchain.get_latest_block_number().await?;
+            let latest_block = match latest_storage_block_number {
+                Some(n) => self.blockchain.get_block_by_number(n).await.ok(),
+                None => None,
+            };
+            let validation_result = Self::validate_chain(latest_block, &evm_blocks);
+            self.process_validation_result(validation_result).await?;
 
             let all_transactions = evm_blocks
                 .iter()
@@ -175,6 +168,10 @@ impl<C: Client> BlockExtractor<C> {
                 .insert_block_data(&blocks, &all_transactions)
                 .await?;
         }
+
+        // Now we are sure the numbers in the `block_info` describe
+        // correct block sequence in DB.
+        self.blockchain.set_block_info(block_info).await?;
 
         Ok(BlockExtractCollectOutcome::BlocksExtracted {
             from_block: from_block_inclusive,
@@ -246,120 +243,156 @@ impl<C: Client> BlockExtractor<C> {
 
     /// This function:
     /// - checks if the `new_blocks` sequence have correct hashes.
-    /// - checks if `last_stored_block.hash == new_blocks[0].prev_block_hash`.
-    async fn validate_chain(
-        &self,
-        new_blocks: &[did::Block<did::Transaction>],
+    /// - checks if `latest_block_in_storage.hash == new_blocks[0].prev_block_hash`.
+    fn validate_chain<T1, T2>(
+        latest_block_in_storage: Option<did::Block<T1>>,
+        new_blocks: &[did::Block<T2>],
     ) -> Result<(), ChainError> {
-        // Validate new blocks.
-        Self::validate_blocks_sequence(new_blocks)?;
-
-        // Validate first new block is consistent with last block in storage.
-        let Some(first_new_block) = new_blocks.first() else {
-            // there is no new blocks, so nothing to validate
-            return Ok(());
+        // if there are no blocks in storage, we don't need parent hash of
+        // first new block
+        let to_skip = if latest_block_in_storage.is_none() {
+            1
+        } else {
+            0
         };
+        let new_blocks_parent_hashes = new_blocks.iter().map(|b| &b.parent_hash).skip(to_skip);
 
-        let Some(latest_block_number) = self.blockchain.get_latest_block_number().await? else {
-            // there is no blocks in storage, so nothing to validate
-            return Ok(());
-        };
+        let latest_block_hash = latest_block_in_storage.map(|b| b.hash);
+        let all_blocks_hashes = latest_block_hash
+            .iter()
+            .chain(new_blocks.iter().map(|b| &b.hash));
 
-        let first_new_block_number = first_new_block.number.as_u64();
+        let inconsistency = all_blocks_hashes
+            .zip(new_blocks_parent_hashes)
+            .enumerate()
+            .find(|(_, (block_hash, next_block_parent))| block_hash != next_block_parent);
 
-        // To prevent overflow.
-        if first_new_block_number == 0 {
-            return Err(ChainError::Other(anyhow::anyhow!("first received block has number 0, but latest block in storage is {latest_block_number}")));
+        match inconsistency {
+            Some((0, _)) if latest_block_hash.is_some() => Err(ChainError::InconsistentStorage),
+            Some(_) => Err(ChainError::InconsistentSequence),
+            None => Ok(()),
         }
-
-        let expected_latest_block_number = first_new_block_number - 1;
-        if expected_latest_block_number != latest_block_number {
-            return Err(anyhow!(
-                "received blocks sequence starts with block#{}, but latest block in storage is {latest_block_number}",
-                first_new_block.number.as_u64()).into()
-            );
-        }
-
-        let latest_block_in_storage = self
-            .blockchain
-            .get_block_by_number(latest_block_number)
-            .await?;
-
-        // Check hashes
-        if latest_block_in_storage.hash != first_new_block.parent_hash {
-            return Err(ChainError::InconsistentStorage(latest_block_number));
-        }
-
-        Ok(())
     }
 
-    fn validate_blocks_sequence(new_blocks: &[did::Block<did::Transaction>]) -> anyhow::Result<()> {
-        if new_blocks
-            .windows(2)
-            .any(|blocks_pair| blocks_pair[0].hash != blocks_pair[1].parent_hash)
-        {
-            anyhow::bail!("inconsistence in received blocks sequence");
-        }
-
-        Ok(())
-    }
-
-    /// Run through latest blocks in storage and compare their hashes with source of truth.
-    /// Returns last consisntent block number.
-    /// If there are no consistent blocks, returns None.
-    async fn find_latest_consistent_block(&self) -> anyhow::Result<Option<u64>> {
-        let earliest_block_number = self.blockchain.get_earliest_block_number().await?;
-        let Some(latest_block_number) = self.blockchain.get_latest_block_number().await? else {
-            return Ok(None);
-        };
-
-        let mut block_to_check = self
-            .blockchain
-            .get_block_by_number(latest_block_number)
-            .await?;
-
-        // On each iteration check consistency of two blocks: current and parent.
-        loop {
-            let block_number = block_to_check.number.as_u64();
-            let original_block = self
-                .client
-                .get_block_by_number(BlockNumber::Number(block_number.into()))
-                .await?;
-
-            // Check the current block
-            if block_to_check.hash == original_block.hash {
-                return Ok(Some(block_number));
+    async fn process_validation_result(
+        &self,
+        validation_result: Result<(), ChainError>,
+    ) -> anyhow::Result<()> {
+        match validation_result {
+            Ok(_) => Ok(()),
+            Err(ChainError::InconsistentSequence) => {
+                Err(anyhow::anyhow!("inconsistence block sequence fetched"))
             }
+            Err(ChainError::InconsistentStorage) => {
+                // Discard all blocks after the safe blocks
+                let first_block_to_discard = self
+                    .blockchain
+                    .get_block_info()
+                    .await?
+                    .map(|info| info.safe_block_number + 1)
+                    .unwrap_or_default();
 
-            if block_number == earliest_block_number {
-                return Ok(None);
+                log::warn!("Discarding blockchain tail starting with {first_block_to_discard}");
+
+                self.blockchain
+                    .discard_blocks_starting_with(first_block_to_discard, "inconsistent")
+                    .await?;
+
+                Err(anyhow::anyhow!("Inconsistency found strating with block #{first_block_to_discard:?}. Inconsistent blocks discarded."))
             }
-            let parent_index = block_number - 1;
-
-            // Check the parent block
-            if block_to_check.parent_hash == original_block.parent_hash {
-                return Ok(Some(parent_index));
-            }
-
-            if parent_index == earliest_block_number {
-                return Ok(None);
-            }
-            let next_to_check_block_number = parent_index - 1;
-
-            // If the current block and it's parent are incorrect, continue check blocks
-            // on the next iteration.
-            block_to_check = self
-                .blockchain
-                .get_block_by_number(next_to_check_block_number)
-                .await?;
         }
     }
 }
 
 #[derive(Debug, thiserror::Error)]
 enum ChainError {
-    #[error("inconsistent block in storage: {0}")]
-    InconsistentStorage(u64),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
+    #[error("inconsistent block in storage")]
+    InconsistentStorage,
+    #[error("inconsistent block in new blocks sequence")]
+    InconsistentSequence,
+}
+
+#[cfg(test)]
+mod tests {
+    use did::keccak;
+    use ethereum_json_rpc_client::reqwest::ReqwestClient;
+
+    use super::*;
+
+    #[test]
+    fn test_validate_chain_without_blocks_in_storage() {
+        let latest_block_in_storage = Option::<did::Block<did::H256>>::None;
+        let sequence = generate_valid_blocks_sequence(10, did::H256::default());
+        BlockExtractor::<ReqwestClient>::validate_chain(latest_block_in_storage, &sequence)
+            .unwrap();
+    }
+
+    #[test]
+    fn test_validate_chain_with_block_in_storage() {
+        let block = generate_valid_blocks_sequence(1, did::H256::default())
+            .pop()
+            .unwrap();
+        let hash = block.hash.clone();
+        let latest_block_in_storage = Some(block);
+        let sequence = generate_valid_blocks_sequence(10, hash);
+        BlockExtractor::<ReqwestClient>::validate_chain(latest_block_in_storage, &sequence)
+            .unwrap();
+    }
+
+    #[test]
+    fn test_validate_chain_inconsistence_storage() {
+        let block = generate_valid_blocks_sequence(1, did::H256::default())
+            .pop()
+            .unwrap();
+        let latest_block_in_storage = Some(block);
+        let invalid_parent_hash = keccak::keccak_hash(&[1, 2, 3]);
+        let sequence = generate_valid_blocks_sequence(10, invalid_parent_hash);
+        let err =
+            BlockExtractor::<ReqwestClient>::validate_chain(latest_block_in_storage, &sequence)
+                .unwrap_err();
+        assert!(matches!(err, ChainError::InconsistentStorage))
+    }
+
+    #[test]
+    fn test_validate_chain_inconsistence_sequence() {
+        let block = generate_valid_blocks_sequence(1, did::H256::default())
+            .pop()
+            .unwrap();
+        let hash = block.hash.clone();
+        let latest_block_in_storage = Some(block);
+        let mut sequence = generate_valid_blocks_sequence(10, hash);
+
+        // break the sequnce
+        sequence[5].parent_hash = keccak::keccak_hash(&[1, 2, 3, 4]);
+
+        let err =
+            BlockExtractor::<ReqwestClient>::validate_chain(latest_block_in_storage, &sequence)
+                .unwrap_err();
+        assert!(matches!(err, ChainError::InconsistentSequence))
+    }
+
+    fn generate_valid_blocks_sequence(
+        len: usize,
+        parent_hash: did::H256,
+    ) -> Vec<did::Block<did::H256>> {
+        if len == 0 {
+            return vec![];
+        }
+
+        let mut blocks = (0..len)
+            .map(|idx| did::Block {
+                number: (idx as u64).into(),
+                hash: keccak::keccak_hash(&idx.to_be_bytes()),
+                ..Default::default()
+            })
+            .collect::<Vec<_>>();
+
+        blocks[0].parent_hash = parent_hash;
+
+        for i in 1..blocks.len() {
+            blocks[i].parent_hash = blocks[i - 1].hash.clone();
+        }
+
+        blocks
+    }
 }
