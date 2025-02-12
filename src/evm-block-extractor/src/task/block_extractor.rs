@@ -147,7 +147,10 @@ impl<C: Client> BlockExtractor<C> {
                 None => None,
             };
             let validation_result = Self::validate_chain(latest_block, &evm_blocks);
-            self.process_validation_result(validation_result).await?;
+            if let Err(e) = validation_result {
+                self.process_validation_error(&e).await?;
+                return Err(e.into());
+            }
 
             let all_transactions = evm_blocks
                 .iter()
@@ -274,16 +277,15 @@ impl<C: Client> BlockExtractor<C> {
         }
     }
 
-    async fn process_validation_result(
-        &self,
-        validation_result: Result<(), ChainError>,
-    ) -> anyhow::Result<()> {
-        match validation_result {
-            Ok(_) => Ok(()),
-            Err(ChainError::InconsistentSequence) => {
-                Err(anyhow::anyhow!("inconsistence block sequence fetched"))
+    /// Processes result of blocks sequnce validation:
+    /// - If error is in blocks sequence, do nothing
+    /// - If error in storage, discards all blocks after the safe block.
+    async fn process_validation_error(&self, validation_error: &ChainError) -> anyhow::Result<()> {
+        match validation_error {
+            ChainError::InconsistentSequence => {
+                log::warn!("inconsistent blocks sequnce fetched");
             }
-            Err(ChainError::InconsistentStorage) => {
+            ChainError::InconsistentStorage => {
                 // Discard all blocks after the safe blocks
                 let first_block_to_discard = self
                     .blockchain
@@ -297,10 +299,10 @@ impl<C: Client> BlockExtractor<C> {
                 self.blockchain
                     .discard_blocks_starting_with(first_block_to_discard, "inconsistent")
                     .await?;
-
-                Err(anyhow::anyhow!("Inconsistency found strating with block #{first_block_to_discard:?}. Inconsistent blocks discarded."))
             }
         }
+
+        Ok(())
     }
 }
 

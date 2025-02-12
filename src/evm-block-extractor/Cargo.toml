@@ -22,8 +22,8 @@ log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "tls-rustls", "chrono"] }
-tokio = { workspace = true }
 thiserror = { workspace = true }
+tokio = { workspace = true }
 chrono = { workspace = true }
 
 
