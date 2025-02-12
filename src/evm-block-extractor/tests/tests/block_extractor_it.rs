@@ -204,7 +204,7 @@ impl MockClient {
                 }
                 "eth_chainId" => Output::Success(jsonrpc_core::Success {
                     jsonrpc: None,
-                    result: serde_json::to_value(&CHAIN_ID.to_string()).unwrap(),
+                    result: serde_json::to_value(CHAIN_ID.to_string()).unwrap(),
                     id: method_call.id,
                 }),
                 "ic_getGenesisBalances" => {
@@ -414,8 +414,7 @@ async fn test_extractor_validate_and_recover_blockchain() {
         );
         let txs: Vec<_> = broken_blocks
             .iter()
-            .map(|b| b.transactions.iter())
-            .flatten()
+            .flat_map(|b| &b.transactions)
             .cloned()
             .collect();
         let broken_blocks: Vec<_> = broken_blocks.into_iter().map(Into::into).collect();
@@ -618,7 +617,7 @@ fn generate_correct_block_sequence(
     for block in blocks {
         let mut txs = vec![];
         for j in 0..txs_per_block {
-            let tx_num = block.number.as_u64() << 4 + j;
+            let tx_num = (block.number.as_u64() << 4) + j as u64;
             let tx_hash = keccak::keccak_hash(&tx_num.to_be_bytes());
             let block_number = block.number.0.to::<u64>();
             let dummy_tx = did::Transaction {
