@@ -3,11 +3,14 @@ use std::future::Future;
 use std::ops::Range;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use did::evm_state::EvmGlobalState;
 use did::{keccak, BlockNumber, BlockchainBlockInfo, H160};
+use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient};
 use evm_block_extractor::database::AccountBalance;
+use evm_block_extractor::server;
 use evm_block_extractor::task::block_extractor::{BlockExtractCollectOutcome, BlockExtractor};
 use jsonrpc_core::{Call, Failure, Output, Params, Request, Response};
 use serde::de::DeserializeOwned;
@@ -588,6 +591,91 @@ async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
         assert_eq!(last_block, Some(end_block));
     })
     .await;
+}
+
+#[tokio::test]
+async fn test_server_returns_blocks_according_to_tags() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, true).await.unwrap();
+
+        // fill db with blocks
+        let block_numbers = 1..100;
+        let blocks = generate_correct_block_sequence(block_numbers.clone(), Default::default(), 10);
+        let txs: Vec<_> = blocks
+            .iter()
+            .flat_map(|b| &b.transactions)
+            .cloned()
+            .collect();
+        let broken_blocks: Vec<_> = blocks.into_iter().map(Into::into).collect();
+        db_client
+            .insert_block_data(&broken_blocks, &txs)
+            .await
+            .unwrap();
+        let block_info = BlockchainBlockInfo {
+            earliest_block_number: 0,
+            latest_block_number: 1000,
+            safe_block_number: 90,
+            finalized_block_number: 95,
+            pending_block_number: 123,
+        };
+        db_client.set_block_info(block_info.clone()).await.unwrap();
+
+        let addr = "127.0.0.1:49763";
+        let client = Arc::new(EthJsonRpcClient::new(MockClient::new(
+            EvmGlobalState::Enabled,
+        )));
+        let _server = server::server_start(addr, db_client.clone(), client)
+            .await
+            .unwrap();
+        let extractor_client = EthJsonRpcClient::new(ReqwestClient::new(format!("http://{addr}")));
+
+        let block = extractor_client
+            .get_block_by_number(BlockNumber::Latest)
+            .await
+            .unwrap();
+        assert_eq!(block.number.as_u64(), block_numbers.end - 1);
+
+        let block = extractor_client
+            .get_block_by_number(BlockNumber::Earliest)
+            .await
+            .unwrap();
+        assert_eq!(block.number.as_u64(), block_numbers.start);
+
+        let block = extractor_client
+            .get_block_by_number(BlockNumber::Safe)
+            .await
+            .unwrap();
+        assert_eq!(block.number.as_u64(), block_info.safe_block_number);
+
+        let block = extractor_client
+            .get_block_by_number(BlockNumber::Finalized)
+            .await
+            .unwrap();
+        assert_eq!(block.number.as_u64(), block_info.finalized_block_number);
+
+        // when safe and finalized blocks are not extracted, server should return latest block in storage.
+        let block_info = BlockchainBlockInfo {
+            earliest_block_number: 0,
+            latest_block_number: 1000,
+            safe_block_number: 1000,
+            finalized_block_number: 1000,
+            pending_block_number: 123,
+        };
+        db_client.set_block_info(block_info).await.unwrap();
+
+        let block = extractor_client
+            .get_block_by_number(BlockNumber::Safe)
+            .await
+            .unwrap();
+        assert_eq!(block.number.as_u64(), block_numbers.end - 1);
+
+        let block = extractor_client
+            .get_block_by_number(BlockNumber::Finalized)
+            .await
+            .unwrap();
+        assert_eq!(block.number.as_u64(), block_numbers.end - 1);
+    })
+    .await
 }
 
 fn generate_correct_block_sequence(

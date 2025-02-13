@@ -122,11 +122,11 @@ where
             match db.get_block_info().await {
                 Ok(Some(info)) => Ok(info),
                 Ok(None) => {
-                    log::error!("No block info set, can't select {block} block.");
+                    log::warn!("No block info set, can't select {block} block.");
                     Err(ErrorCode::InternalError)
                 }
                 Err(e) => {
-                    log::error!("Error getting blockchain block info: {:?}", e);
+                    log::warn!("Error getting blockchain block info: {:?}", e);
                     Err(ErrorCode::InternalError)
                 }
             }
@@ -137,7 +137,7 @@ where
                 .get_latest_block_number()
                 .await
                 .map_err(|e| {
-                    log::error!("Error getting earliest block number: {:?}", e);
+                    log::warn!("Error getting earliest block number: {:?}", e);
                     ErrorCode::InternalError
                 })?
         else {
