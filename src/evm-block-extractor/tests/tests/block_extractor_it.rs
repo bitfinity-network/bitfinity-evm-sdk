@@ -5,7 +5,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use did::evm_state::EvmGlobalState;
-use did::{keccak, BlockNumber, BlockchainBlockInfo, H160};
+use did::{
+    keccak, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo, H160,
+};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient};
 use evm_block_extractor::database::AccountBalance;
@@ -207,6 +209,11 @@ impl MockClient {
                 "eth_chainId" => Output::Success(jsonrpc_core::Success {
                     jsonrpc: None,
                     result: serde_json::to_value(CHAIN_ID.to_string()).unwrap(),
+                    id: method_call.id,
+                }),
+                "ic_sendConfirmBlock" => Output::Success(jsonrpc_core::Success {
+                    jsonrpc: None,
+                    result: serde_json::to_value(BlockConfirmationResult::Confirmed).unwrap(),
                     id: method_call.id,
                 }),
                 "ic_getGenesisBalances" => {
@@ -605,11 +612,8 @@ async fn test_server_returns_blocks_according_to_tags() {
             .flat_map(|b| &b.transactions)
             .cloned()
             .collect();
-        let broken_blocks: Vec<_> = blocks.into_iter().map(Into::into).collect();
-        db_client
-            .insert_block_data(&broken_blocks, &txs)
-            .await
-            .unwrap();
+        let blocks: Vec<_> = blocks.into_iter().map(Into::into).collect();
+        db_client.insert_block_data(&blocks, &txs).await.unwrap();
         let block_info = BlockchainBlockInfo {
             earliest_block_number: 0,
             latest_block_number: 1000,
@@ -619,7 +623,7 @@ async fn test_server_returns_blocks_according_to_tags() {
         };
         db_client.set_block_info(block_info.clone()).await.unwrap();
 
-        let addr = "127.0.0.1:49763";
+        let addr = "127.0.0.1:49764";
         let client = Arc::new(EthJsonRpcClient::new(MockClient::new(
             EvmGlobalState::Enabled,
         )));
@@ -673,6 +677,52 @@ async fn test_server_returns_blocks_according_to_tags() {
             .await
             .unwrap();
         assert_eq!(block.number.as_u64(), block_numbers.end - 1);
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_extractor_forwards_confirm_block_requests() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, true).await.unwrap();
+
+        let block_info = BlockchainBlockInfo {
+            earliest_block_number: 0,
+            latest_block_number: 1000,
+            safe_block_number: 90,
+            finalized_block_number: 95,
+            pending_block_number: 123,
+        };
+        db_client.set_block_info(block_info.clone()).await.unwrap();
+
+        let addr = "127.0.0.1:49763";
+        let client = Arc::new(EthJsonRpcClient::new(MockClient::new(
+            EvmGlobalState::Enabled,
+        )));
+        let _server = server::server_start(addr, db_client.clone(), client)
+            .await
+            .unwrap();
+        let extractor_client = EthJsonRpcClient::new(ReqwestClient::new(format!("http://{addr}")));
+
+        // Should not be forwarded
+        let confirm_result = extractor_client
+            .send_confirm_block(BlockConfirmationData {
+                block_number: 90,
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+        assert_eq!(confirm_result, BlockConfirmationResult::AlreadyConfirmed);
+
+        // Should be forwarded
+        let confirm_result = extractor_client
+            .send_confirm_block(BlockConfirmationData {
+                block_number: 100,
+                ..Default::default()
+            })
+            .await
+            .unwrap();
+        assert_eq!(confirm_result, BlockConfirmationResult::Confirmed);
     })
     .await
 }

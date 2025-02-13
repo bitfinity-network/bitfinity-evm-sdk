@@ -3,6 +3,7 @@ use std::sync::Arc;
 use alloy::eips::BlockNumberOrTag;
 use alloy::primitives::{Address, U256, U64};
 use did::evm_state::EvmGlobalState;
+use did::{BlockConfirmationData, BlockConfirmationResult};
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
@@ -65,6 +66,12 @@ pub trait IC {
 
     #[method(name = "getEvmGlobalState")]
     async fn get_evm_global_state(&self) -> RpcResult<EvmGlobalState>;
+
+    #[method(name = "sendConfirmBlock")]
+    async fn send_confirm_block(
+        &self,
+        data: BlockConfirmationData,
+    ) -> RpcResult<BlockConfirmationResult>;
 }
 
 #[async_trait::async_trait]
@@ -103,6 +110,36 @@ where
             log::error!("Error getting EVM global state: {:?}", e);
             ErrorObject::from(ErrorCode::InternalError)
         })
+    }
+
+    async fn send_confirm_block(
+        &self,
+        data: BlockConfirmationData,
+    ) -> RpcResult<BlockConfirmationResult> {
+        let block_info = self.blockchain.get_block_info().await.map_err(|e| {
+            log::warn!("failed to get block info from database: {e}");
+            ErrorCode::InternalError
+        })?;
+
+        let should_forward = match block_info {
+            Some(info) if info.safe_block_number < data.block_number => true,
+            None => true,
+            _ => false,
+        };
+
+        let confirmation_result = if should_forward {
+            self.evm_client
+                .send_confirm_block(data)
+                .await
+                .map_err(|e| {
+                    log::warn!("failed to send block confirmation to evm: {e}");
+                    ErrorCode::InternalError
+                })?
+        } else {
+            BlockConfirmationResult::AlreadyConfirmed
+        };
+
+        Ok(confirmation_result)
     }
 }
 
