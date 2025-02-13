@@ -3,7 +3,6 @@ use std::future::Future;
 use std::ops::Range;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::time::Duration;
 
 use did::evm_state::EvmGlobalState;
 use did::{keccak, BlockNumber, BlockchainBlockInfo, H160};
