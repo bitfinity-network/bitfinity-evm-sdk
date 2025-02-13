@@ -1021,6 +1021,21 @@ impl From<Bloom> for alloy::primitives::Bloom {
     }
 }
 
+impl Transaction {
+    /// This transaction is a special transaction that is used
+    /// for computing the PoW of the EVM.
+    pub fn pow_transaction() -> Self {
+        Self {
+            from: H160::from_slice(&[1]),
+            to: Some(H160::zero()),
+            value: U256::from(1_u64),
+            gas_price: U256::from(1_u64).into(),
+            gas: U256::from(23000_u64),
+            ..Default::default()
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::str::FromStr;
