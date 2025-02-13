@@ -1026,7 +1026,7 @@ impl Transaction {
     /// for computing the PoW of the EVM.
     pub fn pow_transaction() -> Self {
         Self {
-            from: H160::from_slice(&[1]),
+            from: H160::from_slice(&[1; 20]),
             to: Some(H160::zero()),
             value: U256::from(1_u64),
             gas_price: U256::from(1_u64).into(),
