@@ -98,11 +98,7 @@ pub trait DatabaseClient: Send + Sync {
     /// Delete latest blocks starting with `start_from`, and related transactions.
     /// Deleted blocks and transactions will be preserved in 'discarded' table with
     /// the given 'reason' and timestamp.
-    async fn discard_blocks_starting_with(
-        &self,
-        start_from: u64,
-        reason: &str,
-    ) -> anyhow::Result<()>;
+    async fn discard_blocks_from(&self, start_from: u64, reason: &str) -> anyhow::Result<()>;
 
     /// Returns a discarded block by its number.
     async fn get_discarded_block_by_number(&self, number: u64) -> anyhow::Result<DiscardedBlock>;

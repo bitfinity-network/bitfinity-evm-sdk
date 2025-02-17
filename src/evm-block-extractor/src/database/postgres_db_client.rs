@@ -42,6 +42,20 @@ impl PostgresDbClient {
     }
 
     async fn insert_key_value_data<D: Serialize>(&self, key: &str, data: D) -> anyhow::Result<()> {
+        sqlx::query("INSERT INTO EVM_KEY_VALUE_DATA (key, data) VALUES ($1, $2)")
+            .bind(key)
+            .bind(serde_json::to_value(data)?)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| anyhow::anyhow!("Error inserting value data for key {}: {:?}", key, e))
+            .map(|_| ())
+    }
+
+    async fn override_key_value_data<D: Serialize>(
+        &self,
+        key: &str,
+        data: D,
+    ) -> anyhow::Result<()> {
         sqlx::query(
             "INSERT INTO EVM_KEY_VALUE_DATA (key, data) VALUES ($1, $2)
             ON CONFLICT (key) DO UPDATE SET data = $2",
@@ -241,11 +255,7 @@ impl DatabaseClient for PostgresDbClient {
             .and_then(|row| from_row_value(&row, 0))
     }
 
-    async fn discard_blocks_starting_with(
-        &self,
-        start_from: u64,
-        reason: &str,
-    ) -> anyhow::Result<()> {
+    async fn discard_blocks_from(&self, start_from: u64, reason: &str) -> anyhow::Result<()> {
         log::warn!("Discarding blocks starting with {start_from}");
 
         let mut tx = self.pool.begin().await?;
@@ -325,7 +335,7 @@ impl DatabaseClient for PostgresDbClient {
     }
 
     async fn set_block_info(&self, info: BlockchainBlockInfo) -> anyhow::Result<()> {
-        self.insert_key_value_data(BLOCKCHAIN_BLOCK_INFO_KEY, info)
+        self.override_key_value_data(BLOCKCHAIN_BLOCK_INFO_KEY, info)
             .await
     }
 }

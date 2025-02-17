@@ -297,7 +297,7 @@ impl<C: Client> BlockExtractor<C> {
                 log::warn!("Discarding blockchain tail starting with {first_block_to_discard}");
 
                 self.blockchain
-                    .discard_blocks_starting_with(first_block_to_discard, "inconsistent")
+                    .discard_blocks_from(first_block_to_discard, "inconsistent")
                     .await?;
             }
         }
