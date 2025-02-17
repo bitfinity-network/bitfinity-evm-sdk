@@ -169,18 +169,21 @@ impl<C: Client> BlockExtractor<C> {
     /// Validate chain consistency, including new blocks sequence.
     async fn validate(
         &mut self,
-        evm_blocks: &Vec<did::Block<did::Transaction>>,
+        evm_blocks: &[did::Block<did::Transaction>],
     ) -> Result<(), anyhow::Error> {
         let latest_storage_block_number = self.blockchain.get_latest_block_number().await?;
         let latest_block = match latest_storage_block_number {
             Some(n) => self.blockchain.get_block_by_number(n).await.ok(),
             None => None,
         };
+
         let validation_result = Self::validate_chain(latest_block, evm_blocks);
-        Ok(if let Err(e) = validation_result {
+        if let Err(e) = validation_result {
             self.process_validation_error(&e).await?;
             return Err(e.into());
-        })
+        }
+
+        Ok(())
     }
 
     /// Store the given blocks in database.
