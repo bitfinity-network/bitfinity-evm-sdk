@@ -456,16 +456,20 @@ async fn test_extractor_validate_and_recover_blockchain() {
             assert!(block_result.is_err());
 
             let block_result = db_client
-                .get_discarded_block_by_number(block.number.as_u64())
-                .await;
-            assert!(block_result.is_ok());
+                .get_discarded_block_by_hash(block.hash.clone())
+                .await
+                .unwrap();
 
-            for tx in &block.transactions {
-                let tx_result = db_client.get_transaction(tx.clone()).await;
+            for tx_hash in &block.transactions {
+                let tx_result = db_client.get_transaction(tx_hash.clone()).await;
                 assert!(tx_result.is_err());
 
-                let tx_result = db_client.get_discarded_transaction(tx.clone()).await;
-                assert!(tx_result.is_ok());
+                let discarded_tx = block_result
+                    .block
+                    .transactions
+                    .iter()
+                    .find(|tx| &tx.hash == tx_hash);
+                assert!(discarded_tx.is_some());
             }
         }
 
@@ -562,15 +566,12 @@ async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
             assert!(block_result.is_err());
 
             let block_result = db_client
-                .get_discarded_block_by_number(block.number.as_u64())
+                .get_discarded_block_by_hash(block.hash.clone())
                 .await;
             assert!(block_result.is_err());
 
             for tx in &block.transactions {
                 let tx_result = db_client.get_transaction(tx.hash.clone()).await;
-                assert!(tx_result.is_err());
-
-                let tx_result = db_client.get_discarded_transaction(tx.hash.clone()).await;
                 assert!(tx_result.is_err());
             }
         }

@@ -689,7 +689,7 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
         // Check if blocks and txs present in DB as discarded.
         for block in &blocks[FIRST_REMOVED_BLOCK as usize..] {
             let discarded = db_client
-                .get_discarded_block_by_number(block.number.as_u64())
+                .get_discarded_block_by_hash(block.hash.clone())
                 .await
                 .unwrap();
 
@@ -698,12 +698,7 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
                 .transactions
                 .iter()
                 .zip(block.transactions.iter())
-                .all(|(a, b)| a == b));
-
-            for tx in &block.transactions {
-                let discarded = db_client.get_discarded_transaction(tx.clone()).await;
-                assert!(discarded.is_ok());
-            }
+                .all(|(a, b)| &a.hash == b));
         }
     })
     .await;

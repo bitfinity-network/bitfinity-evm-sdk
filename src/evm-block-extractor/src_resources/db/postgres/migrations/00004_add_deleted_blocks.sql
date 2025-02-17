@@ -4,27 +4,10 @@
 -----------------------------
 
 create table DISCARDED_EVM_BLOCK (
-    ID bigint primary key,
-    DATA JSONB,
-    DISCARDED_AT TIMESTAMP,
-    REASON TEXT 
-);
-
-CREATE INDEX DISCARDED_EVM_BLOCK_INDEX_DISCARDED_AT ON DISCARDED_EVM_BLOCK( DISCARDED_AT );
-
--- End - DISCARDED_EVM_BLOCK -
-
------------------------------------------
--- Begin - DISCARDED_EVM_TRANSACTION -
------------------------------------------
-
-create table DISCARDED_EVM_TRANSACTION (
     ID char(66) primary key, -- 64 is the length of a H256 in hex, plus 0x
     DATA JSONB,
-    BLOCK_NUMBER bigint
+    REASON TEXT, 
+    DISCARDED_AT TIMESTAMPTZ default (now() AT TIME ZONE 'utc')
 );
 
-CREATE INDEX DISCARDED_EVM_TRANSACTION_INDEX_BLOCK_NUMBER ON DISCARDED_EVM_TRANSACTION( BLOCK_NUMBER );
-
--- End - DISCARDED_EVM_TRANSACTION -
-
+-- End - DISCARDED_EVM_BLOCK -

@@ -1,5 +1,6 @@
 pub mod postgres_db_client;
 
+use chrono::{DateTime, Utc};
 use did::certified::CertifiedResult;
 use did::{Block, BlockchainBlockInfo, Transaction, H160, H256, U256};
 use serde::{Deserialize, Serialize};
@@ -100,11 +101,9 @@ pub trait DatabaseClient: Send + Sync {
     /// the given 'reason' and timestamp.
     async fn discard_blocks_from(&self, start_from: u64, reason: &str) -> anyhow::Result<()>;
 
-    /// Returns a discarded block by its number.
-    async fn get_discarded_block_by_number(&self, number: u64) -> anyhow::Result<DiscardedBlock>;
-
-    /// Returns a discarded transaction from the database.
-    async fn get_discarded_transaction(&self, tx_hash: H256) -> anyhow::Result<Transaction>;
+    /// Returns a discarded block by its hash.
+    async fn get_discarded_block_by_hash(&self, block_hash: H256)
+        -> anyhow::Result<DiscardedBlock>;
 
     /// Returns block info from storage.
     ///
@@ -122,9 +121,10 @@ pub trait DatabaseClient: Send + Sync {
     async fn set_block_info(&self, info: BlockchainBlockInfo) -> anyhow::Result<()>;
 }
 
+/// Discarded block with metadata.
 #[derive(Debug)]
 pub struct DiscardedBlock {
-    pub block: Block<H256>,
+    pub block: Block<Transaction>,
     pub reason: String,
-    pub timestamp: chrono::NaiveDateTime,
+    pub timestamp: DateTime<Utc>,
 }
