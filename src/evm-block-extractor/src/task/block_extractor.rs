@@ -118,58 +118,19 @@ impl<C: Client> BlockExtractor<C> {
             "Getting blocks from {:?} to {}",
             from_block_inclusive, to_block_inclusive
         );
-        let client = self.client.clone();
-
-        let request_time_out_secs = self.request_time_out_secs;
-        let batch_size = self.rpc_batch_size;
 
         let mut next_from = from_block_inclusive;
 
         while next_from <= to_block_inclusive {
-            let to = (to_block_inclusive + 1).min(next_from + batch_size as u64);
-            let blocks_batch = next_from..to;
-            next_from = to;
+            let evm_blocks = self.fetch_new_blocks(next_from, to_block_inclusive).await?;
 
-            let block_numbers = blocks_batch
-                .into_iter()
-                .map(|block| BlockNumber::Number(block.into()));
-
-            let evm_blocks = tokio::time::timeout(
-                Duration::from_secs(request_time_out_secs),
-                client.get_full_blocks_by_number(block_numbers, batch_size),
-            )
-            .await??;
-
-            // Validate chain consistency, including new blocks sequence.
-            let latest_storage_block_number = self.blockchain.get_latest_block_number().await?;
-            let latest_block = match latest_storage_block_number {
-                Some(n) => self.blockchain.get_block_by_number(n).await.ok(),
-                None => None,
-            };
-            let validation_result = Self::validate_chain(latest_block, &evm_blocks);
-            if let Err(e) = validation_result {
-                self.process_validation_error(&e).await?;
-                return Err(e.into());
+            if let Some(last_new_block) = evm_blocks.last() {
+                next_from = last_new_block.number.as_u64() + 1;
             }
 
-            let all_transactions = evm_blocks
-                .iter()
-                .flat_map(|block| &block.transactions)
-                .cloned()
-                .collect::<Vec<_>>();
+            self.validate(&evm_blocks).await?;
 
-            let blocks = evm_blocks
-                .into_iter()
-                .map(|block| block.into())
-                .collect::<Vec<did::Block<did::H256>>>();
-
-            let all_transactions = all_transactions
-                .into_iter()
-                .collect::<Vec<did::Transaction>>();
-
-            self.blockchain
-                .insert_block_data(&blocks, &all_transactions)
-                .await?;
+            self.persist_data(evm_blocks).await?;
         }
 
         // Now we are sure the numbers in the `block_info` describe
@@ -180,6 +141,69 @@ impl<C: Client> BlockExtractor<C> {
             from_block: from_block_inclusive,
             to_block: to_block_inclusive,
         })
+    }
+
+    /// Fetch new blocks from the EVM client.
+    async fn fetch_new_blocks(
+        &self,
+        from: u64,
+        to_block_inclusive: u64,
+    ) -> Result<Vec<did::Block<did::Transaction>>, anyhow::Error> {
+        let request_time_out_secs = self.request_time_out_secs;
+        let batch_size = self.rpc_batch_size;
+
+        let to = (to_block_inclusive + 1).min(from + batch_size as u64);
+        let blocks_batch = from..to;
+        let block_numbers = blocks_batch
+            .into_iter()
+            .map(|block| BlockNumber::Number(block.into()));
+        let evm_blocks = tokio::time::timeout(
+            Duration::from_secs(request_time_out_secs),
+            self.client
+                .get_full_blocks_by_number(block_numbers, batch_size),
+        )
+        .await??;
+        Ok(evm_blocks)
+    }
+
+    /// Validate chain consistency, including new blocks sequence.
+    async fn validate(
+        &mut self,
+        evm_blocks: &Vec<did::Block<did::Transaction>>,
+    ) -> Result<(), anyhow::Error> {
+        let latest_storage_block_number = self.blockchain.get_latest_block_number().await?;
+        let latest_block = match latest_storage_block_number {
+            Some(n) => self.blockchain.get_block_by_number(n).await.ok(),
+            None => None,
+        };
+        let validation_result = Self::validate_chain(latest_block, evm_blocks);
+        Ok(if let Err(e) = validation_result {
+            self.process_validation_error(&e).await?;
+            return Err(e.into());
+        })
+    }
+
+    /// Store the given blocks in database.
+    async fn persist_data(
+        &mut self,
+        evm_blocks: Vec<did::Block<did::Transaction>>,
+    ) -> Result<(), anyhow::Error> {
+        let all_transactions = evm_blocks
+            .iter()
+            .flat_map(|block| &block.transactions)
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let blocks = evm_blocks
+            .into_iter()
+            .map(|block| block.into())
+            .collect::<Vec<did::Block<did::H256>>>();
+
+        self.blockchain
+            .insert_block_data(&blocks, &all_transactions)
+            .await?;
+
+        Ok(())
     }
 
     /// Collects last certified block
