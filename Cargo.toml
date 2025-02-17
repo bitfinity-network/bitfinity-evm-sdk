@@ -8,8 +8,6 @@ members = [
     "src/evm-block-extractor",
     "src/evm-canister-client",
     "src/evm-log-extractor",
-    "src/register-evm-agent-core",
-    "src/register-evm-agent",
     "src/signature-verification-canister-client",
 ]
 resolver = "2"
@@ -37,7 +35,14 @@ register-evm-agent-core = { path = "src/register-evm-agent-core" }
 register-evm-agent = { path = "src/register-evm-agent" }
 signature-verification-canister-client = { path = "src/signature-verification-canister-client" }
 
-alloy = { version = "0.9", features = ["consensus", "k256", "eips", "rpc-types-eth", "rlp", "serde"] }
+alloy = { version = "0.9", features = [
+    "consensus",
+    "k256",
+    "eips",
+    "rpc-types-eth",
+    "rlp",
+    "serde",
+] }
 anyhow = "1.0"
 async-trait = "0.1"
 bincode = "1.3"
