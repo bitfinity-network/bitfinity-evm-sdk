@@ -88,7 +88,10 @@ impl<C: CanisterClient, W: TimeWaiter> ReservationService<C, W> {
         .calculate_hash_and_build()?;
 
         info!("sending transaction to reserve address...");
-        let tx_hash = self.client.send_raw_transaction(tx).await??;
+        let tx_hash = self
+            .client
+            .send_raw_transaction(tx.try_into().map_err(|_| Error::BadTransaction)?)
+            .await??;
 
         self.wait_for_transaction(tx_hash.clone()).await?;
 

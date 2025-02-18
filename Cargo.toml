@@ -23,7 +23,7 @@ homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.42.0"
+version = "0.43.0"
 
 [workspace.dependencies]
 did = { path = "src/did" }
@@ -37,7 +37,14 @@ register-evm-agent-core = { path = "src/register-evm-agent-core" }
 register-evm-agent = { path = "src/register-evm-agent" }
 signature-verification-canister-client = { path = "src/signature-verification-canister-client" }
 
-alloy = { version = "0.9", features = ["consensus", "k256", "eips", "rpc-types-eth", "rlp", "serde"] }
+alloy = { version = "0.9", features = [
+    "consensus",
+    "k256",
+    "eips",
+    "rpc-types-eth",
+    "rlp",
+    "serde",
+] }
 anyhow = "1.0"
 async-trait = "0.1"
 bincode = "1.3"

@@ -26,6 +26,8 @@ pub enum Error {
     TransactionNotFinalized(H256),
     #[error("transaction failed")]
     TransactionFailed,
+    #[error("bad transaction type")]
+    BadTransaction,
 }
 
 #[cfg(feature = "ic-agent-client")]
