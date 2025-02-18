@@ -361,3 +361,103 @@ impl TryFrom<Transaction> for TxEip1559 {
         })
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use crate::transaction::AccessListItem;
+
+    #[test]
+    fn test_should_convert_transaction_to_user_transaction_for_legacy() {
+        let legacy = TxLegacy {
+            hash: Hash::<FixedBytes<32>>::from_hex_str(
+                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
+            )
+            .expect("Failed to parse hash"),
+            chain_id: Some(U256::from(5u64)),
+            nonce: U256::from(1u64),
+            gas_price: U256::from(10u64),
+            gas_limit: U256::from(27_000u64),
+            from: H160::default(),
+            to: Some(H160::default()),
+            value: U256::from(10_000_000_000u64),
+            input: Bytes::default(),
+            v: U64::from(4722869645213696u64),
+            r: U256::from(2036234056283528097u64),
+            s: U256::from(3946284991422819502u64),
+        };
+
+        let transaction = Transaction::from(legacy.clone());
+
+        // convert back
+        let legacy_check = TxLegacy::try_from(transaction.clone()).expect("Failed to convert");
+
+        assert_eq!(legacy, legacy_check);
+    }
+
+    #[test]
+    fn test_should_convert_transaction_to_user_transaction_for_eip2930() {
+        let eip2930 = TxEip2930 {
+            hash: Hash::<FixedBytes<32>>::from_hex_str(
+                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
+            )
+            .expect("Failed to parse hash"),
+            chain_id: U256::from(5u64),
+            nonce: U256::from(1u64),
+            gas_price: U256::from(10u64),
+            gas_limit: U256::from(27_000u64),
+            from: H160::default(),
+            to: Some(H160::default()),
+            value: U256::from(10_000_000_000u64),
+            access_list: AccessList(vec![AccessListItem {
+                address: alloy::primitives::Address::random().into(),
+                storage_keys: vec![alloy::primitives::B256::random().into()],
+            }]),
+            input: Bytes::default(),
+            v: U64::from(4722869645213696u64),
+            r: U256::from(2036234056283528097u64),
+            s: U256::from(3946284991422819502u64),
+        };
+
+        let transaction = Transaction::from(eip2930.clone());
+
+        // convert back
+        let eip2930_check = TxEip2930::try_from(transaction.clone()).expect("Failed to convert");
+
+        assert_eq!(eip2930, eip2930_check);
+    }
+
+    #[test]
+    fn test_should_convert_transaction_to_user_transaction_for_eip1559() {
+        let eip1559 = TxEip1559 {
+            hash: Hash::<FixedBytes<32>>::from_hex_str(
+                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
+            )
+            .expect("Failed to parse hash"),
+            chain_id: Some(U256::from(5u64)),
+            nonce: U256::from(1u64),
+            gas_limit: U256::from(27_000u64),
+            max_fee_per_gas: U256::from(10u64),
+            max_priority_fee_per_gas: U256::from(5u64),
+            from: H160::default(),
+            to: Some(H160::default()),
+            value: U256::from(10_000_000_000u64),
+            access_list: AccessList(vec![AccessListItem {
+                address: alloy::primitives::Address::random().into(),
+                storage_keys: vec![alloy::primitives::B256::random().into()],
+            }]),
+            input: Bytes::default(),
+            v: U64::from(4722869645213696u64),
+            r: U256::from(2036234056283528097u64),
+            s: U256::from(3946284991422819502u64),
+        };
+
+        let transaction = Transaction::from(eip1559.clone());
+
+        // convert back
+        let eip1559_check = TxEip1559::try_from(transaction.clone()).expect("Failed to convert");
+
+        assert_eq!(eip1559, eip1559_check);
+    }
+}
