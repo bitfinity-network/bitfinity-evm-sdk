@@ -37,7 +37,7 @@ pub struct TxLegacy {
     /// Added as EIP-155: Simple replay attack protection
     pub chain_id: Option<U256>,
     /// A scalar value equal to the number of transactions sent by the sender; formally Tn.
-    pub nonce: u64,
+    pub nonce: U256,
     /// A scalar value equal to the number of
     /// Wei to be paid per unit of gas for all computation
     /// costs incurred as a result of the execution of this transaction; formally Tp.
@@ -45,13 +45,13 @@ pub struct TxLegacy {
     /// As ethereum circulation is around 120mil eth as of 2022 that is around
     /// 120000000000000000000000000 wei we are safe to use u128 as its max number is:
     /// 340282366920938463463374607431768211455
-    pub gas_price: u128,
+    pub gas_price: U256,
     /// A scalar value equal to the maximum
     /// amount of gas that should be used in executing
     /// this transaction. This is paid up-front, before any
     /// computation is done and may not be increased
     /// later; formally Tg.
-    pub gas_limit: u64,
+    pub gas_limit: U256,
     /// The 160-bit address of the message call’s sender; formally Ts.
     #[serde(default)]
     pub from: H160,
@@ -84,7 +84,7 @@ impl From<TxLegacy> for Transaction {
             transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
             chain_id: value.chain_id,
             hash: value.hash,
-            nonce: value.nonce.into(),
+            nonce: value.nonce,
             from: value.from,
             to: value.to,
             value: value.value,
@@ -92,8 +92,8 @@ impl From<TxLegacy> for Transaction {
             v: value.v,
             r: value.r,
             s: value.s,
-            gas_price: Some(value.gas_price.into()),
-            gas: value.gas_limit.into(),
+            gas_price: Some(value.gas_price),
+            gas: value.gas_limit,
             block_hash: None,
             block_number: None,
             transaction_index: None,
@@ -113,7 +113,7 @@ pub struct TxEip2930 {
     /// Added as EIP-pub 155: Simple replay attack protection
     pub chain_id: U256,
     /// A scalar value equal to the number of transactions sent by the sender; formally Tn.
-    pub nonce: u64,
+    pub nonce: U256,
     /// A scalar value equal to the number of
     /// Wei to be paid per unit of gas for all computation
     /// costs incurred as a result of the execution of this transaction; formally Tp.
@@ -121,13 +121,13 @@ pub struct TxEip2930 {
     /// As ethereum circulation is around 120mil eth as of 2022 that is around
     /// 120000000000000000000000000 wei we are safe to use u128 as its max number is:
     /// 340282366920938463463374607431768211455
-    pub gas_price: u128,
+    pub gas_price: U256,
     /// A scalar value equal to the maximum
     /// amount of gas that should be used in executing
     /// this transaction. This is paid up-front, before any
     /// computation is done and may not be increased
     /// later; formally Tg.
-    pub gas_limit: u64,
+    pub gas_limit: U256,
     /// The 160-bit address of the message call’s sender; formally Ts.
     #[serde(default)]
     pub from: H160,
@@ -166,7 +166,7 @@ impl From<TxEip2930> for Transaction {
             transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
             chain_id: Some(value.chain_id),
             hash: value.hash,
-            nonce: value.nonce.into(),
+            nonce: value.nonce,
             from: value.from,
             to: value.to,
             value: value.value,
@@ -174,8 +174,8 @@ impl From<TxEip2930> for Transaction {
             v: value.v,
             r: value.r,
             s: value.s,
-            gas_price: Some(value.gas_price.into()),
-            gas: value.gas_limit.into(),
+            gas_price: Some(value.gas_price),
+            gas: value.gas_limit,
             access_list: Some(value.access_list),
             block_hash: None,
             block_number: None,
@@ -196,13 +196,13 @@ pub struct TxEip1559 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chain_id: Option<U256>,
     /// A scalar value equal to the number of transactions sent by the sender; formally Tn.
-    pub nonce: u64,
+    pub nonce: U256,
     /// A scalar value equal to the maximum
     /// amount of gas that should be used in executing
     /// this transaction. This is paid up-front, before any
     /// computation is done and may not be increased
     /// later; formally Tg.
-    pub gas_limit: u64,
+    pub gas_limit: U256,
     /// A scalar value equal to the maximum
     /// amount of gas that should be used in executing
     /// this transaction. This is paid up-front, before any
@@ -214,7 +214,7 @@ pub struct TxEip1559 {
     /// 340282366920938463463374607431768211455
     ///
     /// This is also known as `GasFeeCap`
-    pub max_fee_per_gas: u128,
+    pub max_fee_per_gas: U256,
     /// Max Priority fee that transaction is paying
     ///
     /// As ethereum circulation is around 120mil eth as of 2022 that is around
@@ -222,7 +222,7 @@ pub struct TxEip1559 {
     /// 340282366920938463463374607431768211455
     ///
     /// This is also known as `GasTipCap`
-    pub max_priority_fee_per_gas: u128,
+    pub max_priority_fee_per_gas: U256,
     /// The 160-bit address of the message call’s sender; formally Ts.
     #[serde(default)]
     pub from: H160,
@@ -261,7 +261,7 @@ impl From<TxEip1559> for Transaction {
             transaction_type: Some(TRANSACTION_TYPE_EIP1559.into()),
             chain_id: value.chain_id,
             hash: value.hash,
-            nonce: value.nonce.into(),
+            nonce: value.nonce,
             from: value.from,
             to: value.to,
             value: value.value,
@@ -269,10 +269,10 @@ impl From<TxEip1559> for Transaction {
             v: value.v,
             r: value.r,
             s: value.s,
-            gas: value.gas_limit.into(),
+            gas: value.gas_limit,
             access_list: Some(value.access_list),
-            max_fee_per_gas: Some(value.max_fee_per_gas.into()),
-            max_priority_fee_per_gas: Some(value.max_priority_fee_per_gas.into()),
+            max_fee_per_gas: Some(value.max_fee_per_gas),
+            max_priority_fee_per_gas: Some(value.max_priority_fee_per_gas),
             gas_price: None,
             block_hash: None,
             block_number: None,
