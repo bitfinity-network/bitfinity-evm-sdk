@@ -17,6 +17,24 @@ pub enum UserTransaction {
     Eip1559(TxEip1559),
 }
 
+impl From<TxLegacy> for UserTransaction {
+    fn from(value: TxLegacy) -> Self {
+        Self::Legacy(value)
+    }
+}
+
+impl From<TxEip2930> for UserTransaction {
+    fn from(value: TxEip2930) -> Self {
+        Self::Eip2930(value)
+    }
+}
+
+impl From<TxEip1559> for UserTransaction {
+    fn from(value: TxEip1559) -> Self {
+        Self::Eip1559(value)
+    }
+}
+
 impl From<UserTransaction> for Transaction {
     fn from(value: UserTransaction) -> Self {
         match value {
@@ -42,7 +60,6 @@ impl TryFrom<Transaction> for UserTransaction {
 
 /// Legacy transaction format
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
 pub struct TxLegacy {
     /// Transaction hash
     pub hash: Hash<FixedBytes<32>>,
@@ -70,7 +87,7 @@ pub struct TxLegacy {
     pub from: H160,
     /// The 160-bit address of the message call’s recipient or, for a contract creation
     /// transaction, ∅, used here to denote the only member of B0 ; formally Tt.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub to: Option<H160>,
     /// A scalar value equal to the number of Wei to
     /// be transferred to the message call’s recipient or,
@@ -140,7 +157,6 @@ impl TryFrom<Transaction> for TxLegacy {
 
 /// EIP-2930 transaction format
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
 pub struct TxEip2930 {
     /// Transaction hash
     pub hash: Hash<FixedBytes<32>>,
@@ -167,7 +183,7 @@ pub struct TxEip2930 {
     pub from: H160,
     /// The 160-bit address of the message call’s recipient or, for a contract creation
     /// transaction, ∅, used here to denote the only member of B0 ; formally Tt.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub to: Option<H160>,
     /// A scalar value equal to the number of Wei to
     /// be transferred to the message call’s recipient or,
@@ -244,7 +260,6 @@ impl From<TxEip2930> for Transaction {
 
 /// EIP-1559 transaction format
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
 pub struct TxEip1559 {
     /// Transaction hash
     pub hash: Hash<FixedBytes<32>>,
@@ -284,7 +299,7 @@ pub struct TxEip1559 {
     pub from: H160,
     /// The 160-bit address of the message call’s recipient or, for a contract creation
     /// transaction, ∅, used here to denote the only member of B0 ; formally Tt.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub to: Option<H160>,
     /// A scalar value equal to the number of Wei to
     /// be transferred to the message call’s recipient or,
@@ -365,8 +380,97 @@ impl TryFrom<Transaction> for TxEip1559 {
 #[cfg(test)]
 mod test {
 
+    use candid::{Decode, Encode};
+
     use super::*;
     use crate::transaction::AccessListItem;
+
+    #[test]
+    fn test_should_candid_encode_decode_legacy_transaction() {
+        let legacy = UserTransaction::Legacy(TxLegacy {
+            hash: Hash::<FixedBytes<32>>::from_hex_str(
+                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
+            )
+            .expect("Failed to parse hash"),
+            chain_id: Some(U256::from(5u64)),
+            nonce: U256::from(1u64),
+            gas_price: U256::from(10u64),
+            gas_limit: U256::from(27_000u64),
+            from: H160::default(),
+            to: Some(H160::default()),
+            value: U256::from(10_000_000_000u64),
+            input: Bytes::default(),
+            v: U64::from(4722869645213696u64),
+            r: U256::from(2036234056283528097u64),
+            s: U256::from(3946284991422819502u64),
+        });
+
+        let encoded = Encode!(&legacy).expect("Failed to encode");
+        let decoded = Decode!(&encoded, UserTransaction).expect("Failed to decode");
+
+        assert_eq!(legacy, decoded);
+    }
+
+    #[test]
+    fn test_should_candid_encode_decode_eip2930() {
+        let eip2930 = UserTransaction::Eip2930(TxEip2930 {
+            hash: Hash::<FixedBytes<32>>::from_hex_str(
+                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
+            )
+            .expect("Failed to parse hash"),
+            chain_id: U256::from(5u64),
+            nonce: U256::from(1u64),
+            gas_price: U256::from(10u64),
+            gas_limit: U256::from(27_000u64),
+            from: H160::default(),
+            to: Some(H160::default()),
+            value: U256::from(10_000_000_000u64),
+            access_list: AccessList(vec![AccessListItem {
+                address: alloy::primitives::Address::random().into(),
+                storage_keys: vec![alloy::primitives::B256::random().into()],
+            }]),
+            input: Bytes::default(),
+            v: U64::from(4722869645213696u64),
+            r: U256::from(2036234056283528097u64),
+            s: U256::from(3946284991422819502u64),
+        });
+
+        let encoded = Encode!(&eip2930).expect("Failed to encode");
+        let decoded = Decode!(&encoded, UserTransaction).expect("Failed to decode");
+
+        assert_eq!(eip2930, decoded);
+    }
+
+    #[test]
+    fn test_should_candid_encode_decode_eip1559() {
+        let eip1559 = UserTransaction::Eip1559(TxEip1559 {
+            hash: Hash::<FixedBytes<32>>::from_hex_str(
+                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
+            )
+            .expect("Failed to parse hash"),
+            chain_id: Some(U256::from(5u64)),
+            nonce: U256::from(1u64),
+            gas_limit: U256::from(27_000u64),
+            max_fee_per_gas: U256::from(10u64),
+            max_priority_fee_per_gas: U256::from(5u64),
+            from: H160::default(),
+            to: Some(H160::default()),
+            value: U256::from(10_000_000_000u64),
+            access_list: AccessList(vec![AccessListItem {
+                address: alloy::primitives::Address::random().into(),
+                storage_keys: vec![alloy::primitives::B256::random().into()],
+            }]),
+            input: Bytes::default(),
+            v: U64::from(4722869645213696u64),
+            r: U256::from(2036234056283528097u64),
+            s: U256::from(3946284991422819502u64),
+        });
+
+        let encoded = Encode!(&eip1559).expect("Failed to encode");
+        let decoded = Decode!(&encoded, UserTransaction).expect("Failed to decode");
+
+        assert_eq!(eip1559, decoded);
+    }
 
     #[test]
     fn test_should_convert_transaction_to_user_transaction_for_legacy() {
