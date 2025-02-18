@@ -27,6 +27,19 @@ impl From<UserTransaction> for Transaction {
     }
 }
 
+impl TryFrom<Transaction> for UserTransaction {
+    type Error = &'static str;
+
+    fn try_from(value: Transaction) -> Result<Self, Self::Error> {
+        match value.transaction_type.map(|val| val.as_u64()) {
+            Some(TRANSACTION_TYPE_EIP1559) => Ok(Self::Eip1559(TxEip1559::try_from(value)?)),
+            Some(TRANSACTION_TYPE_EIP2930) => Ok(Self::Eip2930(TxEip2930::try_from(value)?)),
+            None | Some(TRANSACTION_TYPE_LEGACY) => Ok(Self::Legacy(TxLegacy::try_from(value)?)),
+            _ => Err("Unknown transaction type"),
+        }
+    }
+}
+
 /// Legacy transaction format
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -104,6 +117,27 @@ impl From<TxLegacy> for Transaction {
     }
 }
 
+impl TryFrom<Transaction> for TxLegacy {
+    type Error = &'static str;
+
+    fn try_from(value: Transaction) -> Result<Self, Self::Error> {
+        Ok(Self {
+            chain_id: value.chain_id,
+            hash: value.hash,
+            nonce: value.nonce,
+            gas_price: value.gas_price.ok_or("Missing gas price")?,
+            gas_limit: value.gas,
+            from: value.from,
+            to: value.to,
+            value: value.value,
+            input: value.input,
+            v: value.v,
+            r: value.r,
+            s: value.s,
+        })
+    }
+}
+
 /// EIP-2930 transaction format
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -158,6 +192,28 @@ pub struct TxEip2930 {
     pub r: U256,
     /// ECDSA signature s
     pub s: U256,
+}
+
+impl TryFrom<Transaction> for TxEip2930 {
+    type Error = &'static str;
+
+    fn try_from(value: Transaction) -> Result<Self, Self::Error> {
+        Ok(Self {
+            hash: value.hash,
+            chain_id: value.chain_id.ok_or("Missing chain id")?,
+            nonce: value.nonce,
+            gas_price: value.gas_price.ok_or("Missing gas price")?,
+            gas_limit: value.gas,
+            from: value.from,
+            to: value.to,
+            value: value.value,
+            access_list: value.access_list.ok_or("Missing access list")?,
+            input: value.input,
+            v: value.v,
+            r: value.r,
+            s: value.s,
+        })
+    }
 }
 
 impl From<TxEip2930> for Transaction {
@@ -278,5 +334,30 @@ impl From<TxEip1559> for Transaction {
             block_number: None,
             transaction_index: None,
         }
+    }
+}
+
+impl TryFrom<Transaction> for TxEip1559 {
+    type Error = &'static str;
+
+    fn try_from(value: Transaction) -> Result<Self, Self::Error> {
+        Ok(Self {
+            hash: value.hash,
+            chain_id: value.chain_id,
+            nonce: value.nonce,
+            gas_limit: value.gas,
+            max_fee_per_gas: value.max_fee_per_gas.ok_or("Missing max fee per gas")?,
+            max_priority_fee_per_gas: value
+                .max_priority_fee_per_gas
+                .ok_or("Missing max priority fee per gas")?,
+            from: value.from,
+            to: value.to,
+            value: value.value,
+            access_list: value.access_list.ok_or("Missing access list")?,
+            input: value.input,
+            v: value.v,
+            r: value.r,
+            s: value.s,
+        })
     }
 }
