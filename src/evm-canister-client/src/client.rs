@@ -412,48 +412,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
-    /// Reserves address for a given principal
-    ///
-    /// This is two step process:
-    /// 1. Send a transaction using the `send_raw_transaction` method,
-    ///    attaching the principal that should be reserved as input
-    ///
-    /// 2. Call this method with the principal and the transaction hash from
-    ///    the previous step
-    ///
-    /// # Arguments
-    /// * `principal` - The principal to reserve address for
-    /// * `tx_hash` - The transaction hash of the transaction that reserved the
-    ///   address
-    pub async fn reserve_address(
-        &self,
-        principal: Principal,
-        tx_hash: H256,
-    ) -> CanisterClientResult<EvmResult<()>> {
-        self.client
-            .update("reserve_address", (principal, tx_hash))
-            .await
-    }
-
-    /// Checks if address with given principal is reserved
-    ///
-    /// # Arguments
-    /// * `principal` - The principal to check
-    /// * `address` - The address to check
-    ///
-    /// # Returns
-    ///
-    /// True if address is reserved, false otherwise
-    pub async fn is_address_reserved(
-        &self,
-        principal: Principal,
-        address: H160,
-    ) -> CanisterClientResult<bool> {
-        self.client
-            .query("is_address_reserved", (principal, address))
-            .await
-    }
-
     /// Returns the current logger filter
     pub async fn get_logger_filter(&self) -> CanisterClientResult<Option<String>> {
         self.client.query("get_logger_filter", ()).await
