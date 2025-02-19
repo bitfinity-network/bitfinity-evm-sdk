@@ -8,8 +8,6 @@ members = [
     "src/evm-block-extractor",
     "src/evm-canister-client",
     "src/evm-log-extractor",
-    "src/register-evm-agent-core",
-    "src/register-evm-agent",
     "src/signature-verification-canister-client",
 ]
 resolver = "2"
