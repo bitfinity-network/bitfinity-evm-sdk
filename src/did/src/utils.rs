@@ -1,13 +1,13 @@
 use crate::{Transaction, H160, U256};
 
-/// Creates a Proof of Work (PoW) transaction with specified parameters
-/// This transaction is ephemeral and is not meant to be used in a real
-/// blockchain.
+/// Creates an ephemeral transaction to calculate the Proof of Work (PoW)
+/// required by the EVM block confirmation endpoint.
+/// This transaction is not meant to be used in a real blockchain.
 /// # Arguments
 ///
 /// * `base_fee` - Optional base fee to be added to gas price. If None, defaults to 0
 ///
-pub fn pow_transaction(base_fee: Option<U256>) -> Transaction {
+pub fn block_confirmation_pow_transaction(base_fee: Option<U256>) -> Transaction {
     let base_fee = base_fee.unwrap_or_default();
     Transaction {
         from: H160::from_slice(&[1; 20]),
