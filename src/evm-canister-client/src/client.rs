@@ -894,11 +894,11 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Attempt to confirm the block with the given hash
-    pub async fn confirm_block(
+    pub async fn send_confirm_block(
         &self,
         data: BlockConfirmationData,
     ) -> CanisterClientResult<Result<BlockConfirmationResult>> {
-        self.client.update("confirm_block", (data,)).await
+        self.client.update("send_confirm_block", (data,)).await
     }
 
     /// Returns information about the blockchain blocks
