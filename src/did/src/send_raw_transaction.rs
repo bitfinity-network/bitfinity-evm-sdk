@@ -1,47 +1,70 @@
-use alloy::primitives::FixedBytes;
+mod signature;
+
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
+pub use self::signature::Signature;
 use crate::constant::{
     TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
 };
-use crate::hash::Hash;
 use crate::transaction::AccessList;
-use crate::{Bytes, Transaction, H160, U256, U64};
+use crate::{Bytes, Transaction, H160, U256};
 
 /// A transaction is a single cryptographically signed instruction sent by an external account.
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize)]
-pub enum UserTransaction {
-    Legacy(TxLegacy),
-    Eip2930(TxEip2930),
-    Eip1559(TxEip1559),
-}
-
-impl From<TxLegacy> for UserTransaction {
-    fn from(value: TxLegacy) -> Self {
-        Self::Legacy(value)
-    }
-}
-
-impl From<TxEip2930> for UserTransaction {
-    fn from(value: TxEip2930) -> Self {
-        Self::Eip2930(value)
-    }
-}
-
-impl From<TxEip1559> for UserTransaction {
-    fn from(value: TxEip1559) -> Self {
-        Self::Eip1559(value)
-    }
+pub struct UserTransaction {
+    /// The signature of the transaction
+    pub signature: Signature,
+    /// The transaction data
+    pub transaction: TransactionData,
 }
 
 impl From<UserTransaction> for Transaction {
     fn from(value: UserTransaction) -> Self {
-        match value {
-            UserTransaction::Legacy(tx) => tx.into(),
-            UserTransaction::Eip2930(tx) => tx.into(),
-            UserTransaction::Eip1559(tx) => tx.into(),
+        let mut tx = Transaction {
+            r: value.signature.r,
+            s: value.signature.s,
+            v: value.signature.v,
+            ..Default::default()
+        };
+
+        match value.transaction {
+            TransactionData::Eip1559(eip1159) => {
+                tx.transaction_type = Some(TRANSACTION_TYPE_EIP1559.into());
+                tx.nonce = eip1159.nonce;
+                tx.access_list = Some(eip1159.access_list);
+                tx.chain_id = eip1159.chain_id;
+                tx.gas = eip1159.gas_limit;
+                tx.max_fee_per_gas = Some(eip1159.max_fee_per_gas);
+                tx.max_priority_fee_per_gas = Some(eip1159.max_priority_fee_per_gas);
+                tx.to = eip1159.to;
+                tx.value = eip1159.value;
+                tx.input = eip1159.input.into();
+            }
+            TransactionData::Eip2930(eip2930) => {
+                tx.transaction_type = Some(TRANSACTION_TYPE_EIP2930.into());
+                tx.nonce = eip2930.nonce;
+                tx.access_list = Some(eip2930.access_list);
+                tx.chain_id = Some(eip2930.chain_id);
+                tx.gas = eip2930.gas_limit;
+                tx.gas_price = Some(eip2930.gas_price);
+                tx.to = eip2930.to;
+                tx.value = eip2930.value;
+                tx.input = eip2930.input.into();
+            }
+            TransactionData::Legacy(legacy) => {
+                tx.transaction_type = Some(TRANSACTION_TYPE_LEGACY.into());
+                tx.nonce = legacy.nonce;
+                tx.chain_id = legacy.chain_id;
+                tx.gas = legacy.gas_limit;
+                tx.gas_price = Some(legacy.gas_price);
+                tx.to = legacy.to;
+                tx.value = legacy.value;
+                tx.input = legacy.input.into();
+            }
         }
+
+        tx
     }
 }
 
@@ -49,20 +72,96 @@ impl TryFrom<Transaction> for UserTransaction {
     type Error = &'static str;
 
     fn try_from(value: Transaction) -> Result<Self, Self::Error> {
-        match value.transaction_type.map(|val| val.as_u64()) {
-            Some(TRANSACTION_TYPE_EIP1559) => Ok(Self::Eip1559(TxEip1559::try_from(value)?)),
-            Some(TRANSACTION_TYPE_EIP2930) => Ok(Self::Eip2930(TxEip2930::try_from(value)?)),
-            None | Some(TRANSACTION_TYPE_LEGACY) => Ok(Self::Legacy(TxLegacy::try_from(value)?)),
-            _ => Err("Unknown transaction type"),
+        let signature = Signature {
+            r: value.r,
+            s: value.s,
+            v: value.v,
+        };
+
+        let data = match value
+            .transaction_type
+            .map(|x| x.as_u64())
+            .unwrap_or(TRANSACTION_TYPE_LEGACY)
+        {
+            TRANSACTION_TYPE_LEGACY => TransactionData::Legacy(Legacy {
+                chain_id: value.chain_id,
+                nonce: value.nonce,
+                gas_price: value.gas_price.ok_or("Gas price is missing")?,
+                gas_limit: value.gas,
+                to: value.to,
+                value: value.value,
+                input: value.input.into(),
+            }),
+            TRANSACTION_TYPE_EIP1559 => TransactionData::Eip1559(Eip1559 {
+                chain_id: value.chain_id,
+                nonce: value.nonce,
+                gas_limit: value.gas,
+                max_fee_per_gas: value.max_fee_per_gas.ok_or("Max fee per gas is missing")?,
+                max_priority_fee_per_gas: value
+                    .max_priority_fee_per_gas
+                    .ok_or("Max priority fee per gas is missing")?,
+                to: value.to,
+                value: value.value,
+                access_list: value.access_list.ok_or("Access list is missing")?,
+                input: value.input.into(),
+            }),
+            TRANSACTION_TYPE_EIP2930 => TransactionData::Eip2930(Eip2930 {
+                chain_id: value.chain_id.ok_or("Chain id is missing")?,
+                nonce: value.nonce,
+                gas_price: value.gas_price.ok_or("Gas price is missing")?,
+                gas_limit: value.gas,
+                to: value.to,
+                value: value.value,
+                access_list: value.access_list.ok_or("Access list is missing")?,
+                input: value.input.into(),
+            }),
+            _ => return Err("Unknown transaction type"),
+        };
+
+        Ok(UserTransaction {
+            signature,
+            transaction: data,
+        })
+    }
+}
+
+/// Transaction type and data
+#[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize)]
+pub enum TransactionData {
+    Legacy(Legacy),
+    Eip2930(Eip2930),
+    Eip1559(Eip1559),
+}
+
+/// Transaction input
+#[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
+pub enum TransactionInput {
+    #[default]
+    Transfer,
+    Call(Bytes),
+}
+
+impl From<Bytes> for TransactionInput {
+    fn from(value: Bytes) -> Self {
+        if value.0.is_empty() {
+            return TransactionInput::Transfer;
+        }
+        TransactionInput::Call(value)
+    }
+}
+
+impl From<TransactionInput> for Bytes {
+    fn from(value: TransactionInput) -> Self {
+        match value {
+            TransactionInput::Transfer => Bytes::default(),
+            TransactionInput::Call(bytes) => bytes,
         }
     }
 }
 
 /// Legacy transaction format
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
-pub struct TxLegacy {
-    /// Transaction hash
-    pub hash: Hash<FixedBytes<32>>,
+pub struct Legacy {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     /// Added as EIP-155: Simple replay attack protection
     pub chain_id: Option<U256>,
@@ -82,9 +181,6 @@ pub struct TxLegacy {
     /// computation is done and may not be increased
     /// later; formally Tg.
     pub gas_limit: U256,
-    /// The 160-bit address of the message call’s sender; formally Ts.
-    #[serde(default)]
-    pub from: H160,
     /// The 160-bit address of the message call’s recipient or, for a contract creation
     /// transaction, ∅, used here to denote the only member of B0 ; formally Tt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -99,67 +195,12 @@ pub struct TxLegacy {
     /// EVM-code for the account initialisation procedure CREATE,
     /// data: An unlimited size byte array specifying the
     /// input data of the message call, formally Td.
-    pub input: Bytes,
-    /// ECDSA recovery id
-    pub v: U64,
-    /// ECDSA signature r
-    pub r: U256,
-    /// ECDSA signature s
-    pub s: U256,
-}
-
-impl From<TxLegacy> for Transaction {
-    fn from(value: TxLegacy) -> Self {
-        Transaction {
-            transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
-            chain_id: value.chain_id,
-            hash: value.hash,
-            nonce: value.nonce,
-            from: value.from,
-            to: value.to,
-            value: value.value,
-            input: value.input,
-            v: value.v,
-            r: value.r,
-            s: value.s,
-            gas_price: Some(value.gas_price),
-            gas: value.gas_limit,
-            block_hash: None,
-            block_number: None,
-            transaction_index: None,
-            access_list: None,
-            max_fee_per_gas: None,
-            max_priority_fee_per_gas: None,
-        }
-    }
-}
-
-impl TryFrom<Transaction> for TxLegacy {
-    type Error = &'static str;
-
-    fn try_from(value: Transaction) -> Result<Self, Self::Error> {
-        Ok(Self {
-            chain_id: value.chain_id,
-            hash: value.hash,
-            nonce: value.nonce,
-            gas_price: value.gas_price.ok_or("Missing gas price")?,
-            gas_limit: value.gas,
-            from: value.from,
-            to: value.to,
-            value: value.value,
-            input: value.input,
-            v: value.v,
-            r: value.r,
-            s: value.s,
-        })
-    }
+    pub input: TransactionInput,
 }
 
 /// EIP-2930 transaction format
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
-pub struct TxEip2930 {
-    /// Transaction hash
-    pub hash: Hash<FixedBytes<32>>,
+pub struct Eip2930 {
     /// Added as EIP-pub 155: Simple replay attack protection
     pub chain_id: U256,
     /// A scalar value equal to the number of transactions sent by the sender; formally Tn.
@@ -178,9 +219,6 @@ pub struct TxEip2930 {
     /// computation is done and may not be increased
     /// later; formally Tg.
     pub gas_limit: U256,
-    /// The 160-bit address of the message call’s sender; formally Ts.
-    #[serde(default)]
-    pub from: H160,
     /// The 160-bit address of the message call’s recipient or, for a contract creation
     /// transaction, ∅, used here to denote the only member of B0 ; formally Tt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -201,68 +239,12 @@ pub struct TxEip2930 {
     /// EVM-code for the account initialisation procedure CREATE,
     /// data: An unlimited size byte array specifying the
     /// input data of the message call, formally Td.
-    pub input: Bytes,
-    /// ECDSA recovery id
-    pub v: U64,
-    /// ECDSA signature r
-    pub r: U256,
-    /// ECDSA signature s
-    pub s: U256,
-}
-
-impl TryFrom<Transaction> for TxEip2930 {
-    type Error = &'static str;
-
-    fn try_from(value: Transaction) -> Result<Self, Self::Error> {
-        Ok(Self {
-            hash: value.hash,
-            chain_id: value.chain_id.ok_or("Missing chain id")?,
-            nonce: value.nonce,
-            gas_price: value.gas_price.ok_or("Missing gas price")?,
-            gas_limit: value.gas,
-            from: value.from,
-            to: value.to,
-            value: value.value,
-            access_list: value.access_list.ok_or("Missing access list")?,
-            input: value.input,
-            v: value.v,
-            r: value.r,
-            s: value.s,
-        })
-    }
-}
-
-impl From<TxEip2930> for Transaction {
-    fn from(value: TxEip2930) -> Self {
-        Transaction {
-            transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
-            chain_id: Some(value.chain_id),
-            hash: value.hash,
-            nonce: value.nonce,
-            from: value.from,
-            to: value.to,
-            value: value.value,
-            input: value.input,
-            v: value.v,
-            r: value.r,
-            s: value.s,
-            gas_price: Some(value.gas_price),
-            gas: value.gas_limit,
-            access_list: Some(value.access_list),
-            block_hash: None,
-            block_number: None,
-            transaction_index: None,
-            max_fee_per_gas: None,
-            max_priority_fee_per_gas: None,
-        }
-    }
+    pub input: TransactionInput,
 }
 
 /// EIP-1559 transaction format
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
-pub struct TxEip1559 {
-    /// Transaction hash
-    pub hash: Hash<FixedBytes<32>>,
+pub struct Eip1559 {
     /// EIP-155: Simple replay attack protection
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chain_id: Option<U256>,
@@ -294,9 +276,6 @@ pub struct TxEip1559 {
     ///
     /// This is also known as `GasTipCap`
     pub max_priority_fee_per_gas: U256,
-    /// The 160-bit address of the message call’s sender; formally Ts.
-    #[serde(default)]
-    pub from: H160,
     /// The 160-bit address of the message call’s recipient or, for a contract creation
     /// transaction, ∅, used here to denote the only member of B0 ; formally Tt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -317,64 +296,7 @@ pub struct TxEip1559 {
     /// EVM-code for the account initialisation procedure CREATE,
     /// data: An unlimited size byte array specifying the
     /// input data of the message call, formally Td.
-    pub input: Bytes,
-    /// ECDSA recovery id
-    pub v: U64,
-    /// ECDSA signature r
-    pub r: U256,
-    /// ECDSA signature s
-    pub s: U256,
-}
-
-impl From<TxEip1559> for Transaction {
-    fn from(value: TxEip1559) -> Self {
-        Transaction {
-            transaction_type: Some(TRANSACTION_TYPE_EIP1559.into()),
-            chain_id: value.chain_id,
-            hash: value.hash,
-            nonce: value.nonce,
-            from: value.from,
-            to: value.to,
-            value: value.value,
-            input: value.input,
-            v: value.v,
-            r: value.r,
-            s: value.s,
-            gas: value.gas_limit,
-            access_list: Some(value.access_list),
-            max_fee_per_gas: Some(value.max_fee_per_gas),
-            max_priority_fee_per_gas: Some(value.max_priority_fee_per_gas),
-            gas_price: None,
-            block_hash: None,
-            block_number: None,
-            transaction_index: None,
-        }
-    }
-}
-
-impl TryFrom<Transaction> for TxEip1559 {
-    type Error = &'static str;
-
-    fn try_from(value: Transaction) -> Result<Self, Self::Error> {
-        Ok(Self {
-            hash: value.hash,
-            chain_id: value.chain_id,
-            nonce: value.nonce,
-            gas_limit: value.gas,
-            max_fee_per_gas: value.max_fee_per_gas.ok_or("Missing max fee per gas")?,
-            max_priority_fee_per_gas: value
-                .max_priority_fee_per_gas
-                .ok_or("Missing max priority fee per gas")?,
-            from: value.from,
-            to: value.to,
-            value: value.value,
-            access_list: value.access_list.ok_or("Missing access list")?,
-            input: value.input,
-            v: value.v,
-            r: value.r,
-            s: value.s,
-        })
-    }
+    pub input: TransactionInput,
 }
 
 #[cfg(test)]
@@ -384,26 +306,26 @@ mod test {
 
     use super::*;
     use crate::transaction::AccessListItem;
+    use crate::U64;
 
     #[test]
     fn test_should_candid_encode_decode_legacy_transaction() {
-        let legacy = UserTransaction::Legacy(TxLegacy {
-            hash: Hash::<FixedBytes<32>>::from_hex_str(
-                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
-            )
-            .expect("Failed to parse hash"),
-            chain_id: Some(U256::from(5u64)),
-            nonce: U256::from(1u64),
-            gas_price: U256::from(10u64),
-            gas_limit: U256::from(27_000u64),
-            from: H160::default(),
-            to: Some(H160::default()),
-            value: U256::from(10_000_000_000u64),
-            input: Bytes::default(),
-            v: U64::from(4722869645213696u64),
-            r: U256::from(2036234056283528097u64),
-            s: U256::from(3946284991422819502u64),
-        });
+        let legacy = UserTransaction {
+            transaction: TransactionData::Legacy(Legacy {
+                chain_id: Some(U256::from(5u64)),
+                nonce: U256::from(1u64),
+                gas_price: U256::from(10u64),
+                gas_limit: U256::from(27_000u64),
+                to: Some(H160::default()),
+                value: U256::from(10_000_000_000u64),
+                input: TransactionInput::Call(vec![0xca, 0xfe].into()),
+            }),
+            signature: Signature {
+                v: U64::from(4722869645213696u64),
+                r: U256::from(2036234056283528097u64),
+                s: U256::from(3946284991422819502u64),
+            },
+        };
 
         let encoded = Encode!(&legacy).expect("Failed to encode");
         let decoded = Decode!(&encoded, UserTransaction).expect("Failed to decode");
@@ -413,27 +335,26 @@ mod test {
 
     #[test]
     fn test_should_candid_encode_decode_eip2930() {
-        let eip2930 = UserTransaction::Eip2930(TxEip2930 {
-            hash: Hash::<FixedBytes<32>>::from_hex_str(
-                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
-            )
-            .expect("Failed to parse hash"),
-            chain_id: U256::from(5u64),
-            nonce: U256::from(1u64),
-            gas_price: U256::from(10u64),
-            gas_limit: U256::from(27_000u64),
-            from: H160::default(),
-            to: Some(H160::default()),
-            value: U256::from(10_000_000_000u64),
-            access_list: AccessList(vec![AccessListItem {
-                address: alloy::primitives::Address::random().into(),
-                storage_keys: vec![alloy::primitives::B256::random().into()],
-            }]),
-            input: Bytes::default(),
-            v: U64::from(4722869645213696u64),
-            r: U256::from(2036234056283528097u64),
-            s: U256::from(3946284991422819502u64),
-        });
+        let eip2930 = UserTransaction {
+            transaction: TransactionData::Eip2930(Eip2930 {
+                chain_id: U256::from(5u64),
+                nonce: U256::from(1u64),
+                gas_price: U256::from(10u64),
+                gas_limit: U256::from(27_000u64),
+                to: Some(H160::default()),
+                value: U256::from(10_000_000_000u64),
+                access_list: AccessList(vec![AccessListItem {
+                    address: alloy::primitives::Address::random().into(),
+                    storage_keys: vec![alloy::primitives::B256::random().into()],
+                }]),
+                input: TransactionInput::Transfer,
+            }),
+            signature: Signature {
+                v: U64::from(4722869645213696u64),
+                r: U256::from(2036234056283528097u64),
+                s: U256::from(3946284991422819502u64),
+            },
+        };
 
         let encoded = Encode!(&eip2930).expect("Failed to encode");
         let decoded = Decode!(&encoded, UserTransaction).expect("Failed to decode");
@@ -443,28 +364,27 @@ mod test {
 
     #[test]
     fn test_should_candid_encode_decode_eip1559() {
-        let eip1559 = UserTransaction::Eip1559(TxEip1559 {
-            hash: Hash::<FixedBytes<32>>::from_hex_str(
-                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
-            )
-            .expect("Failed to parse hash"),
-            chain_id: Some(U256::from(5u64)),
-            nonce: U256::from(1u64),
-            gas_limit: U256::from(27_000u64),
-            max_fee_per_gas: U256::from(10u64),
-            max_priority_fee_per_gas: U256::from(5u64),
-            from: H160::default(),
-            to: Some(H160::default()),
-            value: U256::from(10_000_000_000u64),
-            access_list: AccessList(vec![AccessListItem {
-                address: alloy::primitives::Address::random().into(),
-                storage_keys: vec![alloy::primitives::B256::random().into()],
-            }]),
-            input: Bytes::default(),
-            v: U64::from(4722869645213696u64),
-            r: U256::from(2036234056283528097u64),
-            s: U256::from(3946284991422819502u64),
-        });
+        let eip1559 = UserTransaction {
+            transaction: TransactionData::Eip1559(Eip1559 {
+                chain_id: Some(U256::from(5u64)),
+                nonce: U256::from(1u64),
+                gas_limit: U256::from(27_000u64),
+                max_fee_per_gas: U256::from(10u64),
+                max_priority_fee_per_gas: U256::from(5u64),
+                to: Some(H160::default()),
+                value: U256::from(10_000_000_000u64),
+                access_list: AccessList(vec![AccessListItem {
+                    address: alloy::primitives::Address::random().into(),
+                    storage_keys: vec![alloy::primitives::B256::random().into()],
+                }]),
+                input: TransactionInput::Call(vec![0xca, 0xfe].into()),
+            }),
+            signature: Signature {
+                v: U64::from(4722869645213696u64),
+                r: U256::from(2036234056283528097u64),
+                s: U256::from(3946284991422819502u64),
+            },
+        };
 
         let encoded = Encode!(&eip1559).expect("Failed to encode");
         let decoded = Decode!(&encoded, UserTransaction).expect("Failed to decode");
@@ -474,93 +394,93 @@ mod test {
 
     #[test]
     fn test_should_convert_transaction_to_user_transaction_for_legacy() {
-        let legacy = TxLegacy {
-            hash: Hash::<FixedBytes<32>>::from_hex_str(
-                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
-            )
-            .expect("Failed to parse hash"),
-            chain_id: Some(U256::from(5u64)),
-            nonce: U256::from(1u64),
-            gas_price: U256::from(10u64),
-            gas_limit: U256::from(27_000u64),
-            from: H160::default(),
-            to: Some(H160::default()),
-            value: U256::from(10_000_000_000u64),
-            input: Bytes::default(),
-            v: U64::from(4722869645213696u64),
-            r: U256::from(2036234056283528097u64),
-            s: U256::from(3946284991422819502u64),
+        let legacy = UserTransaction {
+            transaction: TransactionData::Legacy(Legacy {
+                chain_id: Some(U256::from(5u64)),
+                nonce: U256::from(1u64),
+                gas_price: U256::from(10u64),
+                gas_limit: U256::from(27_000u64),
+                to: Some(H160::default()),
+                value: U256::from(10_000_000_000u64),
+                input: TransactionInput::Call(vec![0xca, 0xfe].into()),
+            }),
+            signature: Signature {
+                v: U64::from(4722869645213696u64),
+                r: U256::from(2036234056283528097u64),
+                s: U256::from(3946284991422819502u64),
+            },
         };
 
         let transaction = Transaction::from(legacy.clone());
 
         // convert back
-        let legacy_check = TxLegacy::try_from(transaction.clone()).expect("Failed to convert");
+        let legacy_check =
+            UserTransaction::try_from(transaction.clone()).expect("Failed to convert");
 
         assert_eq!(legacy, legacy_check);
     }
 
     #[test]
     fn test_should_convert_transaction_to_user_transaction_for_eip2930() {
-        let eip2930 = TxEip2930 {
-            hash: Hash::<FixedBytes<32>>::from_hex_str(
-                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
-            )
-            .expect("Failed to parse hash"),
-            chain_id: U256::from(5u64),
-            nonce: U256::from(1u64),
-            gas_price: U256::from(10u64),
-            gas_limit: U256::from(27_000u64),
-            from: H160::default(),
-            to: Some(H160::default()),
-            value: U256::from(10_000_000_000u64),
-            access_list: AccessList(vec![AccessListItem {
-                address: alloy::primitives::Address::random().into(),
-                storage_keys: vec![alloy::primitives::B256::random().into()],
-            }]),
-            input: Bytes::default(),
-            v: U64::from(4722869645213696u64),
-            r: U256::from(2036234056283528097u64),
-            s: U256::from(3946284991422819502u64),
+        let eip2930 = UserTransaction {
+            transaction: TransactionData::Eip2930(Eip2930 {
+                chain_id: U256::from(5u64),
+                nonce: U256::from(1u64),
+                gas_price: U256::from(10u64),
+                gas_limit: U256::from(27_000u64),
+                to: Some(H160::default()),
+                value: U256::from(10_000_000_000u64),
+                access_list: AccessList(vec![AccessListItem {
+                    address: alloy::primitives::Address::random().into(),
+                    storage_keys: vec![alloy::primitives::B256::random().into()],
+                }]),
+                input: TransactionInput::Transfer,
+            }),
+            signature: Signature {
+                v: U64::from(4722869645213696u64),
+                r: U256::from(2036234056283528097u64),
+                s: U256::from(3946284991422819502u64),
+            },
         };
 
         let transaction = Transaction::from(eip2930.clone());
 
         // convert back
-        let eip2930_check = TxEip2930::try_from(transaction.clone()).expect("Failed to convert");
+        let eip2930_check =
+            UserTransaction::try_from(transaction.clone()).expect("Failed to convert");
 
         assert_eq!(eip2930, eip2930_check);
     }
 
     #[test]
     fn test_should_convert_transaction_to_user_transaction_for_eip1559() {
-        let eip1559 = TxEip1559 {
-            hash: Hash::<FixedBytes<32>>::from_hex_str(
-                "647bef21f7b58209d202e92d719ad5670aee3fb9a7bc70ddc5245fd8889e2e11",
-            )
-            .expect("Failed to parse hash"),
-            chain_id: Some(U256::from(5u64)),
-            nonce: U256::from(1u64),
-            gas_limit: U256::from(27_000u64),
-            max_fee_per_gas: U256::from(10u64),
-            max_priority_fee_per_gas: U256::from(5u64),
-            from: H160::default(),
-            to: Some(H160::default()),
-            value: U256::from(10_000_000_000u64),
-            access_list: AccessList(vec![AccessListItem {
-                address: alloy::primitives::Address::random().into(),
-                storage_keys: vec![alloy::primitives::B256::random().into()],
-            }]),
-            input: Bytes::default(),
-            v: U64::from(4722869645213696u64),
-            r: U256::from(2036234056283528097u64),
-            s: U256::from(3946284991422819502u64),
+        let eip1559 = UserTransaction {
+            transaction: TransactionData::Eip1559(Eip1559 {
+                chain_id: Some(U256::from(5u64)),
+                nonce: U256::from(1u64),
+                gas_limit: U256::from(27_000u64),
+                max_fee_per_gas: U256::from(10u64),
+                max_priority_fee_per_gas: U256::from(5u64),
+                to: Some(H160::default()),
+                value: U256::from(10_000_000_000u64),
+                access_list: AccessList(vec![AccessListItem {
+                    address: alloy::primitives::Address::random().into(),
+                    storage_keys: vec![alloy::primitives::B256::random().into()],
+                }]),
+                input: TransactionInput::Call(vec![0xca, 0xfe].into()),
+            }),
+            signature: Signature {
+                v: U64::from(4722869645213696u64),
+                r: U256::from(2036234056283528097u64),
+                s: U256::from(3946284991422819502u64),
+            },
         };
 
         let transaction = Transaction::from(eip1559.clone());
 
         // convert back
-        let eip1559_check = TxEip1559::try_from(transaction.clone()).expect("Failed to convert");
+        let eip1559_check =
+            UserTransaction::try_from(transaction.clone()).expect("Failed to convert");
 
         assert_eq!(eip1559, eip1559_check);
     }
