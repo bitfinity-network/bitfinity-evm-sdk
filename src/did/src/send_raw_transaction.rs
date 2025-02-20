@@ -10,65 +10,16 @@ use crate::constant::{
 use crate::transaction::AccessList;
 use crate::{Bytes, Transaction, H160, U256};
 
-/// A transaction is a single cryptographically signed instruction sent by an external account.
+/// `send_raw_transaction` request payload
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize)]
-pub struct UserTransaction {
+pub struct SendRawTransactionRequest {
     /// The signature of the transaction
     pub signature: Signature,
     /// The transaction data
     pub transaction: TransactionData,
 }
 
-impl From<UserTransaction> for Transaction {
-    fn from(value: UserTransaction) -> Self {
-        let mut tx = Transaction {
-            r: value.signature.r,
-            s: value.signature.s,
-            v: value.signature.v,
-            ..Default::default()
-        };
-
-        match value.transaction {
-            TransactionData::Eip1559(eip1159) => {
-                tx.transaction_type = Some(TRANSACTION_TYPE_EIP1559.into());
-                tx.nonce = eip1159.nonce;
-                tx.access_list = Some(eip1159.access_list);
-                tx.chain_id = eip1159.chain_id;
-                tx.gas = eip1159.gas_limit;
-                tx.max_fee_per_gas = Some(eip1159.max_fee_per_gas);
-                tx.max_priority_fee_per_gas = Some(eip1159.max_priority_fee_per_gas);
-                tx.to = eip1159.to;
-                tx.value = eip1159.value;
-                tx.input = eip1159.input.into();
-            }
-            TransactionData::Eip2930(eip2930) => {
-                tx.transaction_type = Some(TRANSACTION_TYPE_EIP2930.into());
-                tx.nonce = eip2930.nonce;
-                tx.access_list = Some(eip2930.access_list);
-                tx.chain_id = Some(eip2930.chain_id);
-                tx.gas = eip2930.gas_limit;
-                tx.gas_price = Some(eip2930.gas_price);
-                tx.to = eip2930.to;
-                tx.value = eip2930.value;
-                tx.input = eip2930.input.into();
-            }
-            TransactionData::Legacy(legacy) => {
-                tx.transaction_type = Some(TRANSACTION_TYPE_LEGACY.into());
-                tx.nonce = legacy.nonce;
-                tx.chain_id = legacy.chain_id;
-                tx.gas = legacy.gas_limit;
-                tx.gas_price = Some(legacy.gas_price);
-                tx.to = legacy.to;
-                tx.value = legacy.value;
-                tx.input = legacy.input.into();
-            }
-        }
-
-        tx
-    }
-}
-
-impl TryFrom<Transaction> for UserTransaction {
+impl TryFrom<Transaction> for SendRawTransactionRequest {
     type Error = &'static str;
 
     fn try_from(value: Transaction) -> Result<Self, Self::Error> {
@@ -118,7 +69,7 @@ impl TryFrom<Transaction> for UserTransaction {
             _ => return Err("Unknown transaction type"),
         };
 
-        Ok(UserTransaction {
+        Ok(SendRawTransactionRequest {
             signature,
             transaction: data,
         })
@@ -310,7 +261,7 @@ mod test {
 
     #[test]
     fn test_should_candid_encode_decode_legacy_transaction() {
-        let legacy = UserTransaction {
+        let legacy = SendRawTransactionRequest {
             transaction: TransactionData::Legacy(Legacy {
                 chain_id: Some(U256::from(5u64)),
                 nonce: U256::from(1u64),
@@ -328,14 +279,14 @@ mod test {
         };
 
         let encoded = Encode!(&legacy).expect("Failed to encode");
-        let decoded = Decode!(&encoded, UserTransaction).expect("Failed to decode");
+        let decoded = Decode!(&encoded, SendRawTransactionRequest).expect("Failed to decode");
 
         assert_eq!(legacy, decoded);
     }
 
     #[test]
     fn test_should_candid_encode_decode_eip2930() {
-        let eip2930 = UserTransaction {
+        let eip2930 = SendRawTransactionRequest {
             transaction: TransactionData::Eip2930(Eip2930 {
                 chain_id: U256::from(5u64),
                 nonce: U256::from(1u64),
@@ -357,14 +308,14 @@ mod test {
         };
 
         let encoded = Encode!(&eip2930).expect("Failed to encode");
-        let decoded = Decode!(&encoded, UserTransaction).expect("Failed to decode");
+        let decoded = Decode!(&encoded, SendRawTransactionRequest).expect("Failed to decode");
 
         assert_eq!(eip2930, decoded);
     }
 
     #[test]
     fn test_should_candid_encode_decode_eip1559() {
-        let eip1559 = UserTransaction {
+        let eip1559 = SendRawTransactionRequest {
             transaction: TransactionData::Eip1559(Eip1559 {
                 chain_id: Some(U256::from(5u64)),
                 nonce: U256::from(1u64),
@@ -387,14 +338,14 @@ mod test {
         };
 
         let encoded = Encode!(&eip1559).expect("Failed to encode");
-        let decoded = Decode!(&encoded, UserTransaction).expect("Failed to decode");
+        let decoded = Decode!(&encoded, SendRawTransactionRequest).expect("Failed to decode");
 
         assert_eq!(eip1559, decoded);
     }
 
     #[test]
     fn test_should_convert_transaction_to_user_transaction_for_legacy() {
-        let legacy = UserTransaction {
+        let legacy = SendRawTransactionRequest {
             transaction: TransactionData::Legacy(Legacy {
                 chain_id: Some(U256::from(5u64)),
                 nonce: U256::from(1u64),
@@ -411,18 +362,18 @@ mod test {
             },
         };
 
-        let transaction = Transaction::from(legacy.clone());
+        let transaction = convert_to_tx(legacy.clone());
 
         // convert back
         let legacy_check =
-            UserTransaction::try_from(transaction.clone()).expect("Failed to convert");
+            SendRawTransactionRequest::try_from(transaction.clone()).expect("Failed to convert");
 
         assert_eq!(legacy, legacy_check);
     }
 
     #[test]
     fn test_should_convert_transaction_to_user_transaction_for_eip2930() {
-        let eip2930 = UserTransaction {
+        let eip2930 = SendRawTransactionRequest {
             transaction: TransactionData::Eip2930(Eip2930 {
                 chain_id: U256::from(5u64),
                 nonce: U256::from(1u64),
@@ -443,18 +394,18 @@ mod test {
             },
         };
 
-        let transaction = Transaction::from(eip2930.clone());
+        let transaction = convert_to_tx(eip2930.clone());
 
         // convert back
         let eip2930_check =
-            UserTransaction::try_from(transaction.clone()).expect("Failed to convert");
+            SendRawTransactionRequest::try_from(transaction.clone()).expect("Failed to convert");
 
         assert_eq!(eip2930, eip2930_check);
     }
 
     #[test]
     fn test_should_convert_transaction_to_user_transaction_for_eip1559() {
-        let eip1559 = UserTransaction {
+        let eip1559 = SendRawTransactionRequest {
             transaction: TransactionData::Eip1559(Eip1559 {
                 chain_id: Some(U256::from(5u64)),
                 nonce: U256::from(1u64),
@@ -476,12 +427,60 @@ mod test {
             },
         };
 
-        let transaction = Transaction::from(eip1559.clone());
+        let transaction = convert_to_tx(eip1559.clone());
 
         // convert back
         let eip1559_check =
-            UserTransaction::try_from(transaction.clone()).expect("Failed to convert");
+            SendRawTransactionRequest::try_from(transaction.clone()).expect("Failed to convert");
 
         assert_eq!(eip1559, eip1559_check);
+    }
+
+    /// Test function which converts `SendRawTransactionRequest` to `Transaction`.
+    fn convert_to_tx(value: SendRawTransactionRequest) -> Transaction {
+        let mut tx = Transaction {
+            r: value.signature.r,
+            s: value.signature.s,
+            v: value.signature.v,
+            ..Default::default()
+        };
+
+        match value.transaction {
+            TransactionData::Eip1559(eip1159) => {
+                tx.transaction_type = Some(TRANSACTION_TYPE_EIP1559.into());
+                tx.nonce = eip1159.nonce;
+                tx.access_list = Some(eip1159.access_list);
+                tx.chain_id = eip1159.chain_id;
+                tx.gas = eip1159.gas_limit;
+                tx.max_fee_per_gas = Some(eip1159.max_fee_per_gas);
+                tx.max_priority_fee_per_gas = Some(eip1159.max_priority_fee_per_gas);
+                tx.to = eip1159.to;
+                tx.value = eip1159.value;
+                tx.input = eip1159.input.into();
+            }
+            TransactionData::Eip2930(eip2930) => {
+                tx.transaction_type = Some(TRANSACTION_TYPE_EIP2930.into());
+                tx.nonce = eip2930.nonce;
+                tx.access_list = Some(eip2930.access_list);
+                tx.chain_id = Some(eip2930.chain_id);
+                tx.gas = eip2930.gas_limit;
+                tx.gas_price = Some(eip2930.gas_price);
+                tx.to = eip2930.to;
+                tx.value = eip2930.value;
+                tx.input = eip2930.input.into();
+            }
+            TransactionData::Legacy(legacy) => {
+                tx.transaction_type = Some(TRANSACTION_TYPE_LEGACY.into());
+                tx.nonce = legacy.nonce;
+                tx.chain_id = legacy.chain_id;
+                tx.gas = legacy.gas_limit;
+                tx.gas_price = Some(legacy.gas_price);
+                tx.to = legacy.to;
+                tx.value = legacy.value;
+                tx.input = legacy.input.into();
+            }
+        }
+
+        tx
     }
 }
