@@ -86,32 +86,6 @@ pub enum TransactionData {
     Eip1559(Eip1559),
 }
 
-/// Transaction input
-#[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
-pub enum TransactionInput {
-    #[default]
-    Transfer,
-    Call(Bytes),
-}
-
-impl From<Bytes> for TransactionInput {
-    fn from(value: Bytes) -> Self {
-        if value.0.is_empty() {
-            return TransactionInput::Transfer;
-        }
-        TransactionInput::Call(value)
-    }
-}
-
-impl From<TransactionInput> for Bytes {
-    fn from(value: TransactionInput) -> Self {
-        match value {
-            TransactionInput::Transfer => Bytes::default(),
-            TransactionInput::Call(bytes) => bytes,
-        }
-    }
-}
-
 /// Legacy transaction format
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize, Default)]
 pub struct Legacy {
