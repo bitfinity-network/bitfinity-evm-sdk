@@ -1,14 +1,16 @@
 mod signature;
+mod tx_kind;
 
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
 pub use self::signature::Signature;
+pub use self::tx_kind::TxKind;
 use crate::constant::{
     TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
 };
 use crate::transaction::AccessList;
-use crate::{Bytes, Transaction, H160, U256};
+use crate::{Bytes, Transaction, U256};
 
 /// `send_raw_transaction` request payload
 #[derive(Debug, Clone, PartialEq, Eq, CandidType, Serialize, Deserialize)]
@@ -39,9 +41,9 @@ impl TryFrom<Transaction> for SendRawTransactionRequest {
                 nonce: value.nonce,
                 gas_price: value.gas_price.ok_or("Gas price is missing")?,
                 gas_limit: value.gas,
-                to: value.to,
+                to: value.to.into(),
                 value: value.value,
-                input: value.input.into(),
+                input: value.input,
             }),
             TRANSACTION_TYPE_EIP1559 => TransactionData::Eip1559(Eip1559 {
                 chain_id: value.chain_id,
@@ -51,20 +53,20 @@ impl TryFrom<Transaction> for SendRawTransactionRequest {
                 max_priority_fee_per_gas: value
                     .max_priority_fee_per_gas
                     .ok_or("Max priority fee per gas is missing")?,
-                to: value.to,
+                to: value.to.into(),
                 value: value.value,
                 access_list: value.access_list.ok_or("Access list is missing")?,
-                input: value.input.into(),
+                input: value.input,
             }),
             TRANSACTION_TYPE_EIP2930 => TransactionData::Eip2930(Eip2930 {
                 chain_id: value.chain_id.ok_or("Chain id is missing")?,
                 nonce: value.nonce,
                 gas_price: value.gas_price.ok_or("Gas price is missing")?,
                 gas_limit: value.gas,
-                to: value.to,
+                to: value.to.into(),
                 value: value.value,
                 access_list: value.access_list.ok_or("Access list is missing")?,
-                input: value.input.into(),
+                input: value.input,
             }),
             _ => return Err("Unknown transaction type"),
         };
@@ -134,8 +136,7 @@ pub struct Legacy {
     pub gas_limit: U256,
     /// The 160-bit address of the message call’s recipient or, for a contract creation
     /// transaction, ∅, used here to denote the only member of B0 ; formally Tt.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub to: Option<H160>,
+    pub to: TxKind,
     /// A scalar value equal to the number of Wei to
     /// be transferred to the message call’s recipient or,
     /// in the case of contract creation, as an endowment
@@ -146,7 +147,7 @@ pub struct Legacy {
     /// EVM-code for the account initialisation procedure CREATE,
     /// data: An unlimited size byte array specifying the
     /// input data of the message call, formally Td.
-    pub input: TransactionInput,
+    pub input: Bytes,
 }
 
 /// EIP-2930 transaction format
@@ -172,8 +173,7 @@ pub struct Eip2930 {
     pub gas_limit: U256,
     /// The 160-bit address of the message call’s recipient or, for a contract creation
     /// transaction, ∅, used here to denote the only member of B0 ; formally Tt.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub to: Option<H160>,
+    pub to: TxKind,
     /// A scalar value equal to the number of Wei to
     /// be transferred to the message call’s recipient or,
     /// in the case of contract creation, as an endowment
@@ -190,7 +190,7 @@ pub struct Eip2930 {
     /// EVM-code for the account initialisation procedure CREATE,
     /// data: An unlimited size byte array specifying the
     /// input data of the message call, formally Td.
-    pub input: TransactionInput,
+    pub input: Bytes,
 }
 
 /// EIP-1559 transaction format
@@ -229,8 +229,7 @@ pub struct Eip1559 {
     pub max_priority_fee_per_gas: U256,
     /// The 160-bit address of the message call’s recipient or, for a contract creation
     /// transaction, ∅, used here to denote the only member of B0 ; formally Tt.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub to: Option<H160>,
+    pub to: TxKind,
     /// A scalar value equal to the number of Wei to
     /// be transferred to the message call’s recipient or,
     /// in the case of contract creation, as an endowment
@@ -247,7 +246,7 @@ pub struct Eip1559 {
     /// EVM-code for the account initialisation procedure CREATE,
     /// data: An unlimited size byte array specifying the
     /// input data of the message call, formally Td.
-    pub input: TransactionInput,
+    pub input: Bytes,
 }
 
 #[cfg(test)]
@@ -257,7 +256,7 @@ mod test {
 
     use super::*;
     use crate::transaction::AccessListItem;
-    use crate::U64;
+    use crate::{H160, U64};
 
     #[test]
     fn test_should_candid_encode_decode_legacy_transaction() {
@@ -267,9 +266,9 @@ mod test {
                 nonce: U256::from(1u64),
                 gas_price: U256::from(10u64),
                 gas_limit: U256::from(27_000u64),
-                to: Some(H160::default()),
+                to: TxKind::Call(H160::default()),
                 value: U256::from(10_000_000_000u64),
-                input: TransactionInput::Call(vec![0xca, 0xfe].into()),
+                input: vec![0xca, 0xfe].into(),
             }),
             signature: Signature {
                 v: U64::from(4722869645213696u64),
@@ -292,13 +291,13 @@ mod test {
                 nonce: U256::from(1u64),
                 gas_price: U256::from(10u64),
                 gas_limit: U256::from(27_000u64),
-                to: Some(H160::default()),
+                to: TxKind::Create,
                 value: U256::from(10_000_000_000u64),
                 access_list: AccessList(vec![AccessListItem {
                     address: alloy::primitives::Address::random().into(),
                     storage_keys: vec![alloy::primitives::B256::random().into()],
                 }]),
-                input: TransactionInput::Transfer,
+                input: Bytes::default(),
             }),
             signature: Signature {
                 v: U64::from(4722869645213696u64),
@@ -322,13 +321,13 @@ mod test {
                 gas_limit: U256::from(27_000u64),
                 max_fee_per_gas: U256::from(10u64),
                 max_priority_fee_per_gas: U256::from(5u64),
-                to: Some(H160::default()),
+                to: TxKind::Call(H160::default()),
                 value: U256::from(10_000_000_000u64),
                 access_list: AccessList(vec![AccessListItem {
                     address: alloy::primitives::Address::random().into(),
                     storage_keys: vec![alloy::primitives::B256::random().into()],
                 }]),
-                input: TransactionInput::Call(vec![0xca, 0xfe].into()),
+                input: vec![0xca, 0xfe].into(),
             }),
             signature: Signature {
                 v: U64::from(4722869645213696u64),
@@ -351,9 +350,9 @@ mod test {
                 nonce: U256::from(1u64),
                 gas_price: U256::from(10u64),
                 gas_limit: U256::from(27_000u64),
-                to: Some(H160::default()),
+                to: TxKind::Call(H160::default()),
                 value: U256::from(10_000_000_000u64),
-                input: TransactionInput::Call(vec![0xca, 0xfe].into()),
+                input: vec![0xca, 0xfe].into(),
             }),
             signature: Signature {
                 v: U64::from(4722869645213696u64),
@@ -379,13 +378,13 @@ mod test {
                 nonce: U256::from(1u64),
                 gas_price: U256::from(10u64),
                 gas_limit: U256::from(27_000u64),
-                to: Some(H160::default()),
+                to: TxKind::Call(H160::default()),
                 value: U256::from(10_000_000_000u64),
                 access_list: AccessList(vec![AccessListItem {
                     address: alloy::primitives::Address::random().into(),
                     storage_keys: vec![alloy::primitives::B256::random().into()],
                 }]),
-                input: TransactionInput::Transfer,
+                input: Bytes::default(),
             }),
             signature: Signature {
                 v: U64::from(4722869645213696u64),
@@ -412,13 +411,13 @@ mod test {
                 gas_limit: U256::from(27_000u64),
                 max_fee_per_gas: U256::from(10u64),
                 max_priority_fee_per_gas: U256::from(5u64),
-                to: Some(H160::default()),
+                to: TxKind::Call(H160::default()),
                 value: U256::from(10_000_000_000u64),
                 access_list: AccessList(vec![AccessListItem {
                     address: alloy::primitives::Address::random().into(),
                     storage_keys: vec![alloy::primitives::B256::random().into()],
                 }]),
-                input: TransactionInput::Call(vec![0xca, 0xfe].into()),
+                input: vec![0xca, 0xfe].into(),
             }),
             signature: Signature {
                 v: U64::from(4722869645213696u64),
@@ -454,9 +453,9 @@ mod test {
                 tx.gas = eip1159.gas_limit;
                 tx.max_fee_per_gas = Some(eip1159.max_fee_per_gas);
                 tx.max_priority_fee_per_gas = Some(eip1159.max_priority_fee_per_gas);
-                tx.to = eip1159.to;
+                tx.to = eip1159.to.to().cloned();
                 tx.value = eip1159.value;
-                tx.input = eip1159.input.into();
+                tx.input = eip1159.input;
             }
             TransactionData::Eip2930(eip2930) => {
                 tx.transaction_type = Some(TRANSACTION_TYPE_EIP2930.into());
@@ -465,9 +464,9 @@ mod test {
                 tx.chain_id = Some(eip2930.chain_id);
                 tx.gas = eip2930.gas_limit;
                 tx.gas_price = Some(eip2930.gas_price);
-                tx.to = eip2930.to;
+                tx.to = eip2930.to.to().cloned();
                 tx.value = eip2930.value;
-                tx.input = eip2930.input.into();
+                tx.input = eip2930.input;
             }
             TransactionData::Legacy(legacy) => {
                 tx.transaction_type = Some(TRANSACTION_TYPE_LEGACY.into());
@@ -475,9 +474,9 @@ mod test {
                 tx.chain_id = legacy.chain_id;
                 tx.gas = legacy.gas_limit;
                 tx.gas_price = Some(legacy.gas_price);
-                tx.to = legacy.to;
+                tx.to = legacy.to.to().cloned();
                 tx.value = legacy.value;
-                tx.input = legacy.input.into();
+                tx.input = legacy.input;
             }
         }
 
