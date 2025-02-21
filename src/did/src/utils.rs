@@ -6,11 +6,12 @@ use crate::{Transaction, H160, U256};
 /// # Arguments
 ///
 /// * `base_fee` - Optional base fee to be added to gas price. If None, defaults to 0
+/// * `from` - The address of the sender of the transaction
 ///
-pub fn block_confirmation_pow_transaction(base_fee: Option<U256>) -> Transaction {
+pub fn block_confirmation_pow_transaction(from: H160, base_fee: Option<U256>) -> Transaction {
     let base_fee = base_fee.unwrap_or_default();
     Transaction {
-        from: H160::from_slice(&[1; 20]),
+        from,
         to: Some(H160::zero()),
         value: U256::from(1_u64),
         gas_price: Some(U256::from(1_u64) + base_fee),
