@@ -238,9 +238,7 @@ mod ic_sign {
                     self.derivation_path.clone(),
                 )
                 .await
-                .map_err(TransactionSignerError::IcSignError)
-                .map(Into::into)
-        }
+                .map_err(TransactionSignerError::IcSignError)}
 
         pub async fn sign_digest(
             &self,
@@ -256,9 +254,7 @@ mod ic_sign {
                     self.derivation_path.clone(),
                 )
                 .await
-                .map_err(TransactionSignerError::IcSignError)
-                .map(Into::into)
-        }
+                .map_err(TransactionSignerError::IcSignError)}
 
         pub async fn get_public_key(&self) -> Result<Vec<u8>, TransactionSignerError> {
             self.get_or_compute_pubkey().await
