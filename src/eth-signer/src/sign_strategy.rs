@@ -239,7 +239,6 @@ mod ic_sign {
                 )
                 .await
                 .map_err(TransactionSignerError::IcSignError)
-                .map(Into::into)
         }
 
         pub async fn sign_digest(
@@ -257,7 +256,6 @@ mod ic_sign {
                 )
                 .await
                 .map_err(TransactionSignerError::IcSignError)
-                .map(Into::into)
         }
 
         pub async fn get_public_key(&self) -> Result<Vec<u8>, TransactionSignerError> {
