@@ -5,6 +5,7 @@ use did::error::Result;
 use did::evm_state::{EvmGlobalState, EvmResetState};
 use did::permission::{Permission, PermissionList};
 use did::revert_blocks::RevertToBlockArgs;
+use did::send_raw_transaction::SendRawTransactionRequest;
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::unsafe_blocks::ValidateUnsafeBlockArgs;
@@ -64,7 +65,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// The hash of the transaction
     pub async fn send_raw_transaction(
         &self,
-        transaction: Transaction,
+        transaction: SendRawTransactionRequest,
     ) -> CanisterClientResult<EvmResult<H256>> {
         self.client
             .update("send_raw_transaction", (transaction,))
