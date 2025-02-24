@@ -7,7 +7,7 @@ use crate::H256;
 
 /// Arguments for `revert_to_block` method of EVM canister
 ///
-/// The target block is speicified by the `to_block_number` field and the other fields are used to
+/// The target block is specified by the `to_block_number` field and the other fields are used to
 /// verify that the caller actually knows what they are doing.
 #[derive(Debug, Serialize, Deserialize, CandidType, PartialEq, Eq, Clone)]
 pub struct RevertToBlockArgs {
