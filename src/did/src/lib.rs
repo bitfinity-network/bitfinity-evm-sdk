@@ -20,6 +20,7 @@ pub mod keccak;
 pub mod logs;
 pub mod permission;
 pub mod revert_blocks;
+pub mod send_raw_transaction;
 pub mod state;
 pub mod transaction;
 pub mod unsafe_blocks;
