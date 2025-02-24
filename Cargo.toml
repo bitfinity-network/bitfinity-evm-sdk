@@ -35,7 +35,7 @@ register-evm-agent-core = { path = "src/register-evm-agent-core" }
 register-evm-agent = { path = "src/register-evm-agent" }
 signature-verification-canister-client = { path = "src/signature-verification-canister-client" }
 
-alloy = { version = "0.9", features = [
+alloy = { version = "0.9", default-features = false, features = [
     "consensus",
     "k256",
     "eips",
