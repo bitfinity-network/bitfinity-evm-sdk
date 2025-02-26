@@ -49,7 +49,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn eth_get_transaction_receipt(
         &self,
         hash: H256,
-    ) -> CanisterClientResult<EvmResult<Option<TransactionReceipt>>> {
+    ) -> CanisterClientResult<Option<TransactionReceipt>> {
         self.client
             .query("eth_get_transaction_receipt", (hash,))
             .await
