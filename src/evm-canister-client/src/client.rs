@@ -295,19 +295,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
-    /// Returns the number of transactions in a block matching the given block number.
-    pub async fn eth_get_block_transaction_count_by_block_number(
-        &self,
-        block_number: BlockNumber,
-    ) -> CanisterClientResult<EvmResult<usize>> {
-        self.client
-            .query(
-                "eth_get_block_transaction_count_by_block_number",
-                (block_number,),
-            )
-            .await
-    }
-
     /// Get the transaction count of an address at a given block number
     /// See [eth_getTransactionCount](https://eth.wiki/json-rpc/API#eth_gettransactioncount)
     ///
