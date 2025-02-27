@@ -50,7 +50,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn eth_get_transaction_receipt(
         &self,
         hash: H256,
-    ) -> CanisterClientResult<EvmResult<Option<TransactionReceipt>>> {
+    ) -> CanisterClientResult<Option<TransactionReceipt>> {
         self.client
             .query("eth_get_transaction_receipt", (hash,))
             .await
@@ -282,7 +282,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Returns
     ///
     /// The block at the given block number or tag
-    pub async fn eth_get_blocks_by_number(
+    pub async fn get_blocks_by_number(
         &self,
         from: U64,
         count: U64,
@@ -292,19 +292,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .query(
                 "eth_get_blocks_by_number",
                 (from, count, include_transactions),
-            )
-            .await
-    }
-
-    /// Returns the number of transactions in a block matching the given block number.
-    pub async fn eth_get_block_transaction_count_by_block_number(
-        &self,
-        block_number: BlockNumber,
-    ) -> CanisterClientResult<EvmResult<usize>> {
-        self.client
-            .query(
-                "eth_get_block_transaction_count_by_block_number",
-                (block_number,),
             )
             .await
     }
