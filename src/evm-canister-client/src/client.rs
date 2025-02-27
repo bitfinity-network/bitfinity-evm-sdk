@@ -281,7 +281,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Returns
     ///
     /// The block at the given block number or tag
-    pub async fn eth_get_blocks_by_number(
+    pub async fn get_blocks_by_number(
         &self,
         from: U64,
         count: U64,
