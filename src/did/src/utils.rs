@@ -10,16 +10,15 @@ pub fn block_confirmation_pow_transaction(
     nonce: Option<U256>,
     gas_price: Option<U256>,
 ) -> Transaction {
-    let base_fee = base_fee.unwrap_or_default();
-    let gas_price = gas_price.unwrap_or(U256::from(1_u64) + base_fee);
     let nonce = nonce.unwrap_or(U256::from(0_u64));
+    let gas_price = gas_price.or_else(|| Some(U256::from(1_u64) + base_fee.unwrap_or_default()));
 
     Transaction {
         from,
         to: Some(H160::zero()),
         value: U256::from(1_u64),
         gas: U256::from(23000_u64),
-        gas_price: Some(gas_price),
+        gas_price,
         nonce,
         ..Default::default()
     }
