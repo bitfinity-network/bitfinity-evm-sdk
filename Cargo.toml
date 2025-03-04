@@ -35,7 +35,7 @@ register-evm-agent-core = { path = "src/register-evm-agent-core" }
 register-evm-agent = { path = "src/register-evm-agent" }
 signature-verification-canister-client = { path = "src/signature-verification-canister-client" }
 
-alloy = { version = "0.9", features = [
+alloy = { version = "0.9", default-features = false, features = [
     "consensus",
     "k256",
     "eips",
@@ -50,7 +50,7 @@ bytes = "1.7"
 candid = "0.10"
 clap = { version = "4", features = ["derive", "env"] }
 chrono = { version = "0.4", default-features = false }
-derive_more = { version = "1", features = ["display", "from", "into"] }
+derive_more = { version = "2", features = ["display", "from", "into"] }
 env_logger = { version = "0.11.4", default-features = false }
 futures = { version = "0.3", default-features = false }
 ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.23.x" }

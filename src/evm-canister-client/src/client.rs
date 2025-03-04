@@ -10,7 +10,8 @@ use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::unsafe_blocks::ValidateUnsafeBlockArgs;
 use did::{
-    Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
+    Block, BlockConfirmationData, BlockConfirmationResult, BlockConfirmationStrategy, BlockNumber,
+    BlockchainBlockInfo, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
     TransactionReceipt, H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
@@ -816,5 +817,38 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         args: RevertToBlockArgs,
     ) -> CanisterClientResult<Result<()>> {
         self.client.update("revert_to_block", (args,)).await
+    }
+
+    /// Returns the current block confirmation strategy
+    pub async fn get_block_confirmation_strategy(
+        &self,
+    ) -> CanisterClientResult<BlockConfirmationStrategy> {
+        self.client
+            .query("get_block_confirmation_strategy", ())
+            .await
+    }
+
+    /// Sets the block confirmation strategy.
+    /// This function can only be called by the admin.
+    pub async fn admin_set_block_confirmation_strategy(
+        &self,
+        strategy: BlockConfirmationStrategy,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_block_confirmation_strategy", (strategy,))
+            .await
+    }
+
+    /// Attempt to confirm the block with the given hash
+    pub async fn send_confirm_block(
+        &self,
+        data: BlockConfirmationData,
+    ) -> CanisterClientResult<Result<BlockConfirmationResult>> {
+        self.client.update("send_confirm_block", (data,)).await
+    }
+
+    /// Returns information about the blockchain blocks
+    pub async fn get_blockchain_block_info(&self) -> CanisterClientResult<BlockchainBlockInfo> {
+        self.client.query("get_blockchain_block_info", ()).await
     }
 }

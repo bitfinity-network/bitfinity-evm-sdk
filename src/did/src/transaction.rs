@@ -589,7 +589,7 @@ impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
 impl Transaction {
     /// RLP encodes the transaction and recalculates the hash.
     /// It does not modify the transaction itself.
-    /// It returns the calcualted hash and the RLP encoded bytes.
+    /// It returns the calculated hash and the RLP encoded bytes.
     pub fn slow_hash(&self) -> Result<(H256, bytes::Bytes), EvmError> {
         let encoded = self.rlp_encoded_2718()?;
         Ok((keccak_hash(&encoded), encoded))
