@@ -894,8 +894,14 @@ impl Storable for StorableExecutionResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Bloom(pub alloy::primitives::Bloom);
+
+impl serde::Serialize for Bloom {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.to_hex_str())
+    }
+}
 
 impl<'de> serde::Deserialize<'de> for Bloom {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
