@@ -21,7 +21,7 @@ homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.44.0"
+version = "0.45.0"
 
 [workspace.dependencies]
 did = { path = "src/did" }
@@ -53,11 +53,11 @@ chrono = { version = "0.4", default-features = false }
 derive_more = { version = "1", features = ["display", "from", "into"] }
 env_logger = { version = "0.11.4", default-features = false }
 futures = { version = "0.3", default-features = false }
-ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.23.x" }
-ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.23.x" }
-ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.23.x" }
-ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.23.x" }
-ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.23.x" }
+ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.24.x" }
+ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.24.x" }
+ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.24.x" }
+ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.24.x" }
+ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.24.x" }
 itertools = "0.14"
 jsonrpc-core = "18.0"
 jsonrpsee = { version = "0.24", features = ["server", "macros"] }
