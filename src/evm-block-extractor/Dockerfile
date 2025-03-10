@@ -2,7 +2,7 @@
 # This dockerfile has to be called from the root folder of the project
 # > docker build -f src/evm-block-extractor/Dockerfile -t evm-block-extractor .
 #
-FROM rust:slim-bookworm as builder
+FROM rust:slim-bookworm AS builder
 WORKDIR /app
 
 ADD . .

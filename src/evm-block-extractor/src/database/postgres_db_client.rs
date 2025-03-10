@@ -1,13 +1,15 @@
+use std::collections::HashMap;
+
 use ::sqlx::migrate::Migrator;
 use ::sqlx::*;
-use did::{Block, Transaction, H256};
+use did::{Block, BlockchainBlockInfo, Transaction, H256};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sqlx::postgres::PgRow;
 
 use super::{
-    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, CHAIN_ID_KEY,
-    GENESIS_BALANCES_KEY,
+    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, DiscardedBlock,
+    BLOCKCHAIN_BLOCK_INFO_KEY, CHAIN_ID_KEY, GENESIS_BALANCES_KEY,
 };
 
 static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migrations");
@@ -49,6 +51,23 @@ impl PostgresDbClient {
             .await
             .map_err(|e| anyhow::anyhow!("Error inserting value data for key {}: {:?}", key, e))
             .map(|_| ())
+    }
+
+    async fn override_key_value_data<D: Serialize>(
+        &self,
+        key: &str,
+        data: D,
+    ) -> anyhow::Result<()> {
+        sqlx::query(
+            "INSERT INTO EVM_KEY_VALUE_DATA (key, data) VALUES ($1, $2)
+            ON CONFLICT (key) DO UPDATE SET data = $2",
+        )
+        .bind(key)
+        .bind(serde_json::to_value(data)?)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Error inserting value data for key {}: {:?}", key, e))
+        .map(|_| ())
     }
 }
 
@@ -236,6 +255,109 @@ impl DatabaseClient for PostgresDbClient {
             .await
             .map_err(|e| anyhow::anyhow!("Error getting transaction {}: {:?}", hex_tx_hash, e))
             .and_then(|row| from_row_value(&row, 0))
+    }
+
+    async fn discard_blocks_from(&self, start_from: u64, reason: &str) -> anyhow::Result<()> {
+        log::warn!("Discarding blocks starting with {start_from}");
+
+        let mut tx = self.pool.begin().await?;
+
+        let block_rows = sqlx::query("DELETE FROM evm_block WHERE id >= $1 RETURNING data")
+            .bind(start_from as i64)
+            .bind(reason)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to discard tail: {e}"))?;
+
+        let blocks_with_hashes = from_rows_value::<did::Block<did::H256>>(&block_rows, 0)?;
+
+        let tx_rows =
+            sqlx::query("DELETE FROM evm_transaction WHERE block_number >= $1 RETURNING data")
+                .bind(start_from as i64)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to discard tail: {e}"))?;
+
+        let tx_by_hash: HashMap<_, _> = tx_rows
+            .into_iter()
+            .filter_map(|r| {
+                let tx = from_row_value::<did::Transaction>(&r, 0)
+                    .inspect_err(|e| {
+                        log::warn!("failed to decode tx data while discardirding: {e}");
+                    })
+                    .ok()?;
+                Some((tx.hash.clone(), tx))
+            })
+            .collect();
+
+        let full_blocks = blocks_with_hashes.into_iter().filter_map(|b| {
+            let txs = b
+                .transactions
+                .iter()
+                .filter_map(|h| tx_by_hash.get(h).cloned())
+                .collect();
+            b.into_full_block(txs)
+                .inspect_err(|e| {
+                    log::warn!("failed to build full block from txs while discarding: {e}")
+                })
+                .ok()
+        });
+
+        for block in full_blocks {
+            let block_hash_str = block.hash.to_hex_str();
+
+            sqlx::query("INSERT INTO DISCARDED_EVM_BLOCK (id, data, reason) VALUES ($1, $2, $3)")
+                .bind(&block_hash_str)
+                .bind(serde_json::to_value(block)?)
+                .bind(reason)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "Error inserting discarded block {}: {:?}",
+                        block_hash_str,
+                        e
+                    )
+                })
+                .map(|_| ())?;
+        }
+
+        sqlx::query("DELETE FROM certified_evm_block WHERE id >= $1")
+            .bind(start_from as i64)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to discard tail: {e}"))?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn get_discarded_block_by_hash(&self, hash: H256) -> anyhow::Result<DiscardedBlock> {
+        let hash_str = hash.to_hex_str();
+        sqlx::query(
+            "SELECT data, reason, discarded_at FROM DISCARDED_EVM_BLOCK WHERE DISCARDED_EVM_BLOCK.id = $1",
+        )
+        .bind(&hash_str)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| anyhow::anyhow!("Error getting discarded block {}: {:?}", hash_str, e))
+        .and_then(|row| {
+            Ok(DiscardedBlock {
+                block: from_row_value(&row, 0)?,
+                reason: row.try_get(1)?,
+                timestamp: row.try_get(2)?,
+            })
+        })
+    }
+
+    async fn get_block_info(&self) -> anyhow::Result<Option<BlockchainBlockInfo>> {
+        self.fetch_key_value_data(BLOCKCHAIN_BLOCK_INFO_KEY).await
+    }
+
+    async fn set_block_info(&self, info: BlockchainBlockInfo) -> anyhow::Result<()> {
+        self.override_key_value_data(BLOCKCHAIN_BLOCK_INFO_KEY, info)
+            .await
     }
 }
 

@@ -8,6 +8,7 @@ edition = "2021"
 alloy = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
+chrono = { workspace = true }
 clap = { workspace = true }
 did = { workspace = true }
 env_logger = { workspace = true }
@@ -21,7 +22,8 @@ lightspeed_scheduler = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sqlx = { workspace = true, features = ["postgres", "tls-rustls"] }
+sqlx = { workspace = true, features = ["postgres", "tls-rustls", "chrono"] }
+thiserror = { workspace = true }
 tokio = { workspace = true }
 
 
