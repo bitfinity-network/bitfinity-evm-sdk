@@ -4,9 +4,11 @@ use std::time::Duration;
 
 use alloy::dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
 use alloy::json_abi::Function;
+use alloy::primitives::U64;
 use alloy::rpc::types::{TransactionInput, TransactionRequest};
 use did::{BlockNumber, H160, H256, U256};
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
+use jsonrpc_core::{Id, Params};
 use rpc_client::RpcReqwestClient;
 use serial_test::serial;
 
@@ -128,6 +130,41 @@ async fn should_get_transaction_count() {
         .await
         .unwrap();
     assert_eq!(result, 1u64);
+}
+
+#[tokio::test]
+#[serial]
+async fn should_perform_batch_request_to_different_methods() {
+    let erc_1820_deployer_address =
+        H160::from_hex_str("0xa990077c3205cbDf861e17Fa532eeB069cE9fF96").unwrap();
+
+    let tx_count_input = Params::Array(vec![
+        serde_json::to_value(erc_1820_deployer_address).unwrap(),
+        serde_json::to_value(BlockNumber::Latest).unwrap(),
+    ]);
+    let tx_count_params = (
+        "eth_getTransactionCount",
+        tx_count_input,
+        Id::Str("eth_getTransactionCount".into()),
+    );
+
+    let block_number_input = Params::Array(vec![]);
+    let block_number_params = (
+        "eth_blockNumber",
+        block_number_input,
+        Id::Str("eth_blockNumber".into()),
+    );
+
+    let mut response = reqwest_client()
+        .batch_request_raw([tx_count_params, block_number_params], 2)
+        .await
+        .unwrap();
+
+    let tx_count_result: U64 = serde_json::from_value(response.remove(0)).unwrap();
+    assert_eq!(tx_count_result.to::<u64>(), 1u64);
+
+    let block_number_result: U64 = serde_json::from_value(response.remove(0)).unwrap();
+    assert!(block_number_result.to::<u64>() > 16896634);
 }
 
 #[tokio::test]
