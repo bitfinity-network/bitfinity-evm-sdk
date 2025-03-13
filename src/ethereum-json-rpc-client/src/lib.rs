@@ -379,7 +379,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         max_batch_size: usize,
     ) -> anyhow::Result<Vec<R>> {
         let value_from_json =
-            |value| serde_json::from_value::<R>(value).map_err(|e| anyhow::Error::from(e));
+            |value| serde_json::from_value::<R>(value).map_err(anyhow::Error::from);
 
         let raw_results = self
             .batch_request_raw(
@@ -388,10 +388,10 @@ impl<C: Client> EthJsonRpcClient<C> {
             )
             .await?;
 
-        Ok(raw_results
+        raw_results
             .into_iter()
             .map(value_from_json)
-            .collect::<anyhow::Result<Vec<R>>>()?)
+            .collect::<anyhow::Result<Vec<R>>>()
     }
 
     /// Performs a batch request to different eth metods.
