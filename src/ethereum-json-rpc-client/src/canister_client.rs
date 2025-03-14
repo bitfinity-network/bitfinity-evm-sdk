@@ -4,13 +4,14 @@ use std::pin::Pin;
 
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
+use did::constant::UPGRADE_HTTP_METHODS;
 use did::rpc::request::RpcRequest;
 use did::rpc::response::RpcResponse;
 use ic_canister_client::CanisterClient;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
-use crate::{Client, UPGRADE_HTTP_METHODS};
+use crate::Client;
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(

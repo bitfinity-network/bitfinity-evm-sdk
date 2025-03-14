@@ -51,10 +51,6 @@ const ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD: &str = "eth_maxPriorityFeePerGas";
 const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const IC_SEND_CONFIRM_BLOCK: &str = "ic_sendConfirmBlock";
 
-/// The methods will be upgraded when doing http outcalls
-pub(crate) const UPGRADE_HTTP_METHODS: &[&str] =
-    &[ETH_SEND_RAW_TRANSACTION_METHOD, IC_SEND_CONFIRM_BLOCK];
-
 macro_rules! make_params_array {
     ($($items:expr),*) => {
         Params::Array(vec![$(serde_json::to_value($items)?, )*])
@@ -351,7 +347,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string(),
             make_params_array!(),
-            Id::Str(IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string()),
+            Id::String(IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string()),
         )
         .await
     }
@@ -374,7 +370,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             IC_SEND_CONFIRM_BLOCK.to_string(),
             make_params_array!(params),
-            Id::Str(IC_SEND_CONFIRM_BLOCK.to_string()),
+            Id::String(IC_SEND_CONFIRM_BLOCK.to_string()),
         )
         .await
     }
@@ -397,6 +393,8 @@ impl<C: Client> EthJsonRpcClient<C> {
         });
 
         let response = self.client.send_rpc_request(request).await?;
+
+        println!("response: {:?}", response);
 
         match response {
             RpcResponse::Single(response) => match response.payload {
