@@ -28,7 +28,6 @@ did = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }
 ic-exports = { workspace = true }
 itertools = { workspace = true }
-jsonrpc-core = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true, optional = true, features = [
   "gzip",

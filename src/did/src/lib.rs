@@ -28,6 +28,7 @@ pub mod unsafe_blocks;
 pub mod fees;
 #[cfg(test)]
 mod test_utils;
+pub mod rpc;
 
 pub use block::Block;
 pub use error::{ExitFatal, HaltError};

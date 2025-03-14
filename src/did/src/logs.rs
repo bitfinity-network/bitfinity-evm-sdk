@@ -1,3 +1,6 @@
+use std::borrow::Cow;
+
+use alloy::rpc::json_rpc::ErrorPayload;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::formats::PreferOne;
@@ -37,7 +40,7 @@ pub struct LogFilter {
 }
 
 impl TryFrom<Value> for LogFilter {
-    type Error = jsonrpc_core::Error;
+    type Error = alloy::rpc::json_rpc::ErrorPayload;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Object(ref map) = value {
@@ -45,9 +48,14 @@ impl TryFrom<Value> for LogFilter {
             if map.contains_key("blockHash")
                 && (map.contains_key("fromBlock") || map.contains_key("toBlock"))
             {
-                Err(Self::Error::invalid_params(
-                    "'blockHash' property cannot be used with 'fromBlock' or 'toBlock'",
-                ))
+                let err = ErrorPayload {
+                    code: -32602,
+                    message: Cow::Owned(
+                        "'blockHash' property cannot be used with 'fromBlock' or 'toBlock'".into(),
+                    ),
+                    data: None,
+                };
+                return Err(err);
             } else {
                 let mut filter: LogFilter =
                     serde_json::from_value(value).map_err(|_| Self::Error::parse_error())?;
@@ -65,7 +73,7 @@ impl TryFrom<Value> for LogFilter {
                 Ok(filter)
             }
         } else {
-            Err(Self::Error::invalid_params("invalid json value"))
+            Err(Self::Error::invalid_params())
         }
     }
 }

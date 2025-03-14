@@ -5,10 +5,12 @@ use std::time::Duration;
 use alloy::dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
 use alloy::json_abi::Function;
 use alloy::primitives::U64;
+use alloy::rpc::json_rpc::Id;
 use alloy::rpc::types::{TransactionInput, TransactionRequest};
+use did::rpc::params::Params;
 use did::{BlockNumber, H160, H256, U256};
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
-use jsonrpc_core::{Id, Params};
+
 use rpc_client::RpcReqwestClient;
 use serial_test::serial;
 
@@ -19,18 +21,18 @@ fn to_hash(string: &str) -> H256 {
 }
 
 fn reqwest_client() -> EthJsonRpcClient<RpcReqwestClient> {
-    let rpc_client = match std::env::var("ALCHEMY_API_KEY").ok() {
-        Some(apikey) => {
-            log::info!("ALCHEMY_API_KEY set, using Alchemy RPC endpoint");
-            RpcReqwestClient::alchemy(apikey)
-        }
-        None => {
-            log::warn!("ALCHEMY_API_KEY not set, using public RPC endpoint");
-            RpcReqwestClient::public()
-        }
-    };
-
-    EthJsonRpcClient::new(rpc_client)
+    // let rpc_client = match std::env::var("ALCHEMY_API_KEY").ok() {
+    //     Some(apikey) => {
+    //         log::info!("ALCHEMY_API_KEY set, using Alchemy RPC endpoint");
+    //         RpcReqwestClient::alchemy(apikey)
+    //     }
+    //     None => {
+    //         log::warn!("ALCHEMY_API_KEY not set, using public RPC endpoint");
+    //         RpcReqwestClient::public()
+    //     }
+    // };
+    let client = RpcReqwestClient::alchemy("".to_string());
+    EthJsonRpcClient::new(client)
 }
 
 #[tokio::test]
@@ -145,14 +147,14 @@ async fn should_perform_batch_request_to_different_methods() {
     let tx_count_params = (
         "eth_getTransactionCount",
         tx_count_input,
-        Id::Str("eth_getTransactionCount".into()),
+        Id::String("eth_getTransactionCount".into()),
     );
 
     let block_number_input = Params::Array(vec![]);
     let block_number_params = (
         "eth_blockNumber",
         block_number_input,
-        Id::Str("eth_blockNumber".into()),
+        Id::String("eth_blockNumber".into()),
     );
 
     let mut response = reqwest_client()

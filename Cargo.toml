@@ -31,8 +31,6 @@ ethereum-json-rpc-client = { path = "src/ethereum-json-rpc-client" }
 evm-block-extractor = { path = "src/evm-block-extractor" }
 evm-canister-client = { path = "src/evm-canister-client" }
 evm-log-extractor = { path = "src/evm-log-extractor" }
-register-evm-agent-core = { path = "src/register-evm-agent-core" }
-register-evm-agent = { path = "src/register-evm-agent" }
 signature-verification-canister-client = { path = "src/signature-verification-canister-client" }
 
 alloy = { version = "0.9", features = [
@@ -42,6 +40,7 @@ alloy = { version = "0.9", features = [
     "rpc-types-eth",
     "rlp",
     "serde",
+    "json-rpc",
 ] }
 anyhow = "1.0"
 async-trait = "0.1"
@@ -59,7 +58,6 @@ ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", packag
 ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.24.x" }
 ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.24.x" }
 itertools = "0.14"
-jsonrpc-core = "18.0"
 jsonrpsee = { version = "0.24", features = ["server", "macros"] }
 lightspeed_scheduler = "0.60"
 log = "0.4"

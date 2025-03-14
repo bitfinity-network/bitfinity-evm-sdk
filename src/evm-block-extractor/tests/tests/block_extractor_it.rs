@@ -2,12 +2,15 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use alloy::rpc::json_rpc::{Id, Request, RequestMeta, Response, ResponsePayload};
 use did::evm_state::EvmGlobalState;
+use did::rpc::params::Params;
+use did::rpc::request::RpcRequest;
+use did::rpc::response::RpcResponse;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use evm_block_extractor::database::AccountBalance;
 use evm_block_extractor::task::block_extractor::{BlockExtractCollectOutcome, BlockExtractor};
-use jsonrpc_core::{Call, Output, Request, Response};
 
 use crate::test_with_clients;
 
@@ -128,20 +131,16 @@ impl MockClient {
 impl Client for MockClient {
     fn send_rpc_request(
         &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
+        request: RpcRequest,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<RpcResponse>> + Send>> {
         let response = match request {
-            Request::Single(call) => match call {
-                Call::MethodCall(method_call) => match method_call.method.as_str() {
-                    "ic_getEvmGlobalState" => {
-                        Response::Single(Output::Success(jsonrpc_core::Success {
-                            jsonrpc: None,
-                            result: serde_json::to_value(&self.evm_global_state).unwrap(),
-                            id: jsonrpc_core::Id::Num(1),
-                        }))
-                    }
-                    _ => unimplemented!(),
-                },
+            RpcRequest::Single(call) => match call.meta.method.to_string().as_str() {
+                "ic_getEvmGlobalState" => RpcResponse::Single(Response {
+                    id: Id::Number(1),
+                    payload: ResponsePayload::Success(
+                        serde_json::value::to_raw_value(&self.evm_global_state).unwrap(),
+                    ),
+                }),
                 _ => unimplemented!(),
             },
             _ => unimplemented!(),
@@ -157,24 +156,22 @@ async fn test_mock_client_returns_evm_state() {
     };
 
     let response = client
-        .send_rpc_request(Request::Single(Call::MethodCall(
-            jsonrpc_core::MethodCall {
-                jsonrpc: None,
-                method: "ic_getEvmGlobalState".to_string(),
-                params: jsonrpc_core::Params::None,
-                id: jsonrpc_core::Id::Num(1),
-            },
-        )))
+        .send_rpc_request(RpcRequest::Single(Request {
+            meta: RequestMeta::new("ic_getEvmGlobalState".to_string().into(), Id::Number(1)),
+            params: Params::None,
+        }))
         .await
         .unwrap();
 
     assert_eq!(
-        response,
-        Response::Single(Output::Success(jsonrpc_core::Success {
-            jsonrpc: None,
-            result: serde_json::to_value(EvmGlobalState::Enabled).unwrap(),
-            id: jsonrpc_core::Id::Num(1),
+        serde_json::to_value(response).unwrap(),
+        serde_json::to_value(RpcResponse::Single(Response {
+            id: Id::Number(1),
+            payload: ResponsePayload::Success(
+                serde_json::value::to_raw_value(&EvmGlobalState::Enabled).unwrap(),
+            ),
         }))
+        .unwrap()
     );
 }
 
