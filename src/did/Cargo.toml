@@ -32,7 +32,7 @@ sha3 = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-alloy = { workspace = true, features = ["rand"]}
+alloy = { workspace = true, features = ["rand"] }
 eth-signer = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }

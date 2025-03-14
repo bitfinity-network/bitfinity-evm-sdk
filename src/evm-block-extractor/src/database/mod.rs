@@ -1,7 +1,8 @@
 pub mod postgres_db_client;
 
+use chrono::{DateTime, Utc};
 use did::certified::CertifiedResult;
-use did::{Block, Transaction, H160, H256, U256};
+use did::{Block, BlockchainBlockInfo, Transaction, H160, H256, U256};
 use serde::{Deserialize, Serialize};
 
 /// Account balance
@@ -27,6 +28,8 @@ impl<D> DataContainer<D> {
 const GENESIS_BALANCES_KEY: &str = "genesis_balances";
 /// The chain id key in the key value store
 const CHAIN_ID_KEY: &str = "chain_id";
+/// The blockchain block info key in the key value store
+const BLOCKCHAIN_BLOCK_INFO_KEY: &str = "blockchain_block_info";
 
 /// Certified block data
 pub type CertifiedBlock = CertifiedResult<Block<H256>>;
@@ -92,4 +95,36 @@ pub trait DatabaseClient: Send + Sync {
 
     /// Get earliest block number
     async fn get_earliest_block_number(&self) -> anyhow::Result<u64>;
+
+    /// Delete latest blocks starting with `start_from`, and related transactions.
+    /// Deleted blocks and transactions will be preserved in 'discarded' table with
+    /// the given 'reason' and timestamp.
+    async fn discard_blocks_from(&self, start_from: u64, reason: &str) -> anyhow::Result<()>;
+
+    /// Returns a discarded block by its hash.
+    async fn get_discarded_block_by_hash(&self, block_hash: H256)
+        -> anyhow::Result<DiscardedBlock>;
+
+    /// Returns block info from storage.
+    ///
+    /// # Warning
+    /// Do not use this info fields as indexes for blocks in storage.
+    /// The following numbers are about block numbers in the source blockchain
+    /// and can exceed the latest block number in the database.
+    /// - latest_block_number: u64,
+    /// - safe_block_number: u64,
+    /// - finalized_block_number: u64,
+    /// - pending_block_number: u64,
+    async fn get_block_info(&self) -> anyhow::Result<Option<BlockchainBlockInfo>>;
+
+    /// Stores blockchain block info.
+    async fn set_block_info(&self, info: BlockchainBlockInfo) -> anyhow::Result<()>;
+}
+
+/// Discarded block with metadata.
+#[derive(Debug)]
+pub struct DiscardedBlock {
+    pub block: Block<Transaction>,
+    pub reason: String,
+    pub timestamp: DateTime<Utc>,
 }

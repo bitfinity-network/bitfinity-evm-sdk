@@ -1,5 +1,5 @@
 use did::{Block, Transaction, H160, H256, U256, U64};
-use evm_block_extractor::database::{AccountBalance, CertifiedBlock};
+use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use rand::random;
 
 use crate::test_with_clients;
@@ -599,4 +599,144 @@ async fn test_insert_and_fetch_last_block_certified_data() {
         }
     })
     .await;
+}
+
+#[tokio::test]
+async fn test_blockchain_tail_discard_and_get_discarded_entries() {
+    test_with_clients(|db_client| async move {
+        db_client.init(None, false).await.unwrap();
+
+        let mut blocks = Vec::new();
+
+        const FIRST_BLOCK: u64 = 1;
+        const LAST_BLOCK: u64 = 10;
+
+        for i in FIRST_BLOCK..=LAST_BLOCK {
+            let dummy_block: Block<H256> = Block {
+                number: alloy::primitives::U64::from(i).into(),
+                hash: alloy::primitives::B256::random().into(),
+                ..Default::default()
+            };
+
+            blocks.push(dummy_block);
+        }
+
+        const TRANSACTIONS_PER_BLOCK: u64 = 10;
+
+        for i in FIRST_BLOCK..=LAST_BLOCK {
+            for _ in 0..TRANSACTIONS_PER_BLOCK {
+                let tx_hash = alloy::primitives::B256::random();
+                blocks[i as usize - 1].transactions.push(tx_hash.into());
+            }
+        }
+
+        let mut txn = vec![];
+        for i in 0..10 {
+            for j in 0..TRANSACTIONS_PER_BLOCK {
+                let tx_hash = blocks[i as usize].transactions[j as usize].clone();
+                let block_number = blocks[i as usize].number.0.to::<u64>();
+                let dummy_txn = Transaction {
+                    hash: tx_hash,
+                    block_number: Some(U64::from(block_number)),
+                    ..Default::default()
+                };
+
+                txn.push(dummy_txn);
+            }
+        }
+
+        db_client.insert_block_data(&blocks, &txn).await.unwrap();
+
+        let certified_block = CertifiedBlock {
+            certificate: vec![1, 2, 3],
+            witness: vec![5, 6, 7],
+            data: blocks.last().unwrap().clone(),
+        };
+        db_client
+            .insert_certified_block_data(certified_block)
+            .await
+            .unwrap();
+
+        // Discard two latest blocks with it's transactions.
+        // Certified block should be alse removed.
+        const FIRST_REMOVED_BLOCK: u64 = LAST_BLOCK - 1;
+        db_client
+            .discard_blocks_from(FIRST_REMOVED_BLOCK, "test reason")
+            .await
+            .unwrap();
+
+        assert!(
+            check_blocks_with_txs_storage_state(
+                &*db_client,
+                &blocks[..FIRST_REMOVED_BLOCK as usize - 1],
+                StorageState::Present,
+            )
+            .await
+        );
+
+        assert!(
+            check_blocks_with_txs_storage_state(
+                &*db_client,
+                &blocks[FIRST_REMOVED_BLOCK as usize - 1..],
+                StorageState::NotPresent,
+            )
+            .await
+        );
+
+        let certified_block_result = db_client.get_last_certified_block_data().await;
+        assert!(certified_block_result.is_err());
+
+        // Check if blocks and txs present in DB as discarded.
+        for block in &blocks[FIRST_REMOVED_BLOCK as usize..] {
+            let discarded = db_client
+                .get_discarded_block_by_hash(block.hash.clone())
+                .await
+                .unwrap();
+
+            assert!(discarded
+                .block
+                .transactions
+                .iter()
+                .zip(block.transactions.iter())
+                .all(|(a, b)| &a.hash == b));
+        }
+    })
+    .await;
+}
+
+async fn check_blocks_with_txs_storage_state(
+    db_client: &dyn DatabaseClient,
+    blocks: &[Block<did::H256>],
+    storage_state: StorageState,
+) -> bool {
+    for block in blocks {
+        let block_result = db_client.get_block_by_number(block.number.as_u64()).await;
+        if !storage_state.check(&block_result) {
+            return false;
+        }
+
+        for tx in &block.transactions {
+            let tx_result = db_client.get_transaction(tx.clone()).await;
+            if !storage_state.check(&tx_result) {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
+#[derive(Debug)]
+enum StorageState {
+    Present,
+    NotPresent,
+}
+
+impl StorageState {
+    pub fn check<T, E>(&self, query_result: &Result<T, E>) -> bool {
+        match self {
+            StorageState::Present => query_result.is_ok(),
+            StorageState::NotPresent => query_result.is_err(),
+        }
+    }
 }
