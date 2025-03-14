@@ -10,7 +10,7 @@ use ic_canister_client::CanisterClient;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
-use crate::{Client, ETH_SEND_RAW_TRANSACTION_METHOD};
+use crate::{Client, UPGRADE_HTTP_METHODS};
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(
@@ -96,18 +96,19 @@ pub struct HttpResponse {
 
 #[inline]
 fn is_update_call(method: &str) -> bool {
-    method.eq(ETH_SEND_RAW_TRANSACTION_METHOD)
+    UPGRADE_HTTP_METHODS.contains(&method)
 }
 
 #[cfg(test)]
 mod test {
 
     use super::*;
-    use crate::ETH_CHAIN_ID_METHOD;
+    use crate::{ETH_CHAIN_ID_METHOD, ETH_SEND_RAW_TRANSACTION_METHOD, IC_SEND_CONFIRM_BLOCK};
 
     #[test]
     fn test_is_update_call() {
         assert!(is_update_call(ETH_SEND_RAW_TRANSACTION_METHOD));
+        assert!(is_update_call(IC_SEND_CONFIRM_BLOCK));
         assert!(!is_update_call(ETH_CHAIN_ID_METHOD));
     }
 }

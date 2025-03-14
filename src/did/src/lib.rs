@@ -29,6 +29,7 @@ pub mod fees;
 pub mod rpc;
 #[cfg(test)]
 mod test_utils;
+pub mod utils;
 
 pub use block::Block;
 pub use error::{ExitFatal, HaltError};
