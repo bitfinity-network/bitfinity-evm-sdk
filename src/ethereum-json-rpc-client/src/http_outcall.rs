@@ -2,13 +2,14 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
+use did::rpc::request::RpcRequest;
+use did::rpc::response::RpcResponse;
 use ic_cdk::api::management_canister::http_request::{
     self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
 };
 #[cfg(feature = "sanitize-http-outcall")]
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_exports::ic_cdk;
-use jsonrpc_core::Request;
 
 use crate::Client;
 
@@ -104,8 +105,8 @@ fn sanitize_http_response(raw_response: TransformArgs) -> HttpResponse {
 impl Client for HttpOutcallClient {
     fn send_rpc_request(
         &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>> {
+        request: RpcRequest,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<RpcResponse>> + Send>> {
         let url = self.url.clone();
         let max_response_bytes = self.max_response_bytes;
         let body = serde_json::to_vec(&request).expect("failed to serialize body");
