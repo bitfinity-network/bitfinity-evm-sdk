@@ -10,7 +10,6 @@ use alloy::rpc::types::{TransactionInput, TransactionRequest};
 use did::rpc::params::Params;
 use did::{BlockNumber, H160, H256, U256};
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
-
 use rpc_client::RpcReqwestClient;
 use serial_test::serial;
 
@@ -21,18 +20,18 @@ fn to_hash(string: &str) -> H256 {
 }
 
 fn reqwest_client() -> EthJsonRpcClient<RpcReqwestClient> {
-    // let rpc_client = match std::env::var("ALCHEMY_API_KEY").ok() {
-    //     Some(apikey) => {
-    //         log::info!("ALCHEMY_API_KEY set, using Alchemy RPC endpoint");
-    //         RpcReqwestClient::alchemy(apikey)
-    //     }
-    //     None => {
-    //         log::warn!("ALCHEMY_API_KEY not set, using public RPC endpoint");
-    //         RpcReqwestClient::public()
-    //     }
-    // };
-    let client = RpcReqwestClient::alchemy("".to_string());
-    EthJsonRpcClient::new(client)
+    let rpc_client = match std::env::var("ALCHEMY_API_KEY").ok() {
+        Some(apikey) => {
+            log::info!("ALCHEMY_API_KEY set, using Alchemy RPC endpoint");
+            RpcReqwestClient::alchemy(apikey)
+        }
+        None => {
+            log::warn!("ALCHEMY_API_KEY not set, using public RPC endpoint");
+            RpcReqwestClient::public()
+        }
+    };
+
+    EthJsonRpcClient::new(rpc_client)
 }
 
 #[tokio::test]

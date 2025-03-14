@@ -1,7 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use alloy::rpc::json_rpc::{RequestPacket, Response, ResponsePacket};
 use anyhow::Context;
 use did::rpc::request::RpcRequest;
 use did::rpc::response::RpcResponse;

@@ -357,31 +357,12 @@ impl<C: Client> EthJsonRpcClient<C> {
         params: Params,
         id: Id,
     ) -> anyhow::Result<R> {
-        // let request = Request::Single(Call::MethodCall(MethodCall {
-        //     jsonrpc: Some(Version::V2),
-        //     method,
-        //     params,
-        //     id,
-        // }));
-
         let request = RpcRequest::Single(Request {
             meta: RequestMeta::new(method.into(), id),
             params,
         });
 
         let response = self.client.send_rpc_request(request).await?;
-
-        dbg!(&response);
-
-        // match response {
-        //     Response::Single(response) => match response {
-        //         Output::Success(result) => {
-        //             serde_json::from_value(result.result).context("failed to deserialize value")
-        //         }
-        //         Output::Failure(err) => Err(anyhow::format_err!("{err:?}")),
-        //     },
-        //     Response::Batch(_) => Err(anyhow::format_err!("unexpected response type: batch")),
-        // }
 
         match response {
             RpcResponse::Single(response) => match response.payload {
@@ -444,10 +425,8 @@ impl<C: Client> EthJsonRpcClient<C> {
                 .collect::<Vec<_>>();
             let chunk_size = requests.len();
             let request = RpcRequest::Batch(requests);
-            println!("REQUEST {request:?}");
 
             let response = self.client.send_rpc_request(request).await?;
-            println!("RESPONSE {response:?}");
 
             match response {
                 RpcResponse::Single(response) => match response.payload {

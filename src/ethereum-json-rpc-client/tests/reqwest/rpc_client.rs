@@ -114,7 +114,7 @@ impl AlchemyRpcReqwestClient {
     /// Get endpoint for Alchemy API
     #[inline]
     fn endpoint(&self) -> String {
-        format!("https://eth-mainnet.alchemyapi.io/v2/WV407BEiBmjNJfKo9Uo_55u0z0ITyCOX")
+        format!("https://eth-mainnet.alchemyapi.io/v2/{}", self.apikey)
     }
 }
 
@@ -136,12 +136,10 @@ impl Client for AlchemyRpcReqwestClient {
             );
             let result = client.send_rpc_request(request.clone()).await;
 
-            println!("RESULT {result:?}");
-
             match result {
                 Ok(RpcResponse::Single(ref response)) => {
                     if response.payload.is_success() {
-                        return result;
+                        result
                     } else {
                         anyhow::bail!("call failed: {response:?}")
                     }
@@ -149,7 +147,7 @@ impl Client for AlchemyRpcReqwestClient {
                 Ok(RpcResponse::Batch(batch))
                     if batch.iter().all(|output| output.payload.is_success()) =>
                 {
-                    return Ok(RpcResponse::Batch(batch))
+                    Ok(RpcResponse::Batch(batch))
                 }
                 Ok(result) => {
                     println!("call failed: {result:?}");

@@ -63,6 +63,7 @@ lightspeed_scheduler = "0.60"
 log = "0.4"
 num = "0.4"
 port_check = "0.2"
+proptest = { version = "1.6.0", default-features = false, features = ["std"] }
 rand = { version = "0.8", features = ["std_rng", "small_rng"] }
 reqwest = { version = "0.12", default-features = false }
 serial_test = "3"

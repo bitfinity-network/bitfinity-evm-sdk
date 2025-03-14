@@ -122,7 +122,7 @@ async fn test_batched_request() {
 
                 let data = match response_1.payload {
                     ResponsePayload::Success(ref response) => {
-                        serde_json::from_str::<Vec<(H160, U256)>>(response.get().clone())
+                        serde_json::from_str::<Vec<(H160, U256)>>(response.get())
                     }
                     _ => panic!("unexpected return type"),
                 };
@@ -131,7 +131,7 @@ async fn test_batched_request() {
                 assert_eq!(response_2.id, Id::String("eth_blockNumber".to_string()));
                 let data = match response_2.payload {
                     ResponsePayload::Success(ref response) => {
-                        serde_json::from_str::<String>(response.get().clone())
+                        serde_json::from_str::<String>(response.get())
                     }
                     _ => panic!("unexpected return type"),
                 };
@@ -278,7 +278,7 @@ async fn test_get_block_by_number_variants() {
                 {
                     let latest_block = match latest_response.payload {
                         ResponsePayload::Success(ref response) => {
-                            serde_json::from_str::<Block<H256>>(response.get().clone())
+                            serde_json::from_str::<Block<H256>>(response.get())
                         }
                         _ => panic!("unexpected return type"),
                     };
@@ -291,7 +291,7 @@ async fn test_get_block_by_number_variants() {
                 {
                     let earliest_block = match earliest_response.payload {
                         ResponsePayload::Success(ref response) => {
-                            serde_json::from_str::<Block<H256>>(response.get().clone())
+                            serde_json::from_str::<Block<H256>>(response.get())
                         }
                         _ => panic!("unexpected return type"),
                     };
@@ -303,7 +303,7 @@ async fn test_get_block_by_number_variants() {
                 {
                     let number_block = match number_response.payload {
                         ResponsePayload::Success(ref response) => {
-                            serde_json::from_str::<Block<H256>>(response.get().clone())
+                            serde_json::from_str::<Block<H256>>(response.get())
                         }
                         _ => panic!("unexpected return type"),
                     };

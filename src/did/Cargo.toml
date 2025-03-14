@@ -34,5 +34,6 @@ thiserror = { workspace = true }
 [dev-dependencies]
 alloy = { workspace = true, features = ["rand"] }
 eth-signer = { workspace = true }
+proptest = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }

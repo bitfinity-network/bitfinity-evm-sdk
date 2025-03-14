@@ -1,7 +1,7 @@
 use core::fmt;
 use std::marker::PhantomData;
 
-use alloy::rpc::json_rpc::{Response, ResponsePacket, ResponsePayload};
+use alloy::rpc::json_rpc::Response;
 use serde::de::{self, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_bytes::ByteBuf;

@@ -1,9 +1,8 @@
 use alloy::rpc::json_rpc::Request;
-use serde::{Deserialize, Serialize};
-
-use crate::constant::{JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME, UPGRADE_HTTP_METHODS};
+use serde::Serialize;
 
 use super::params::Params;
+use crate::constant::{JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME, UPGRADE_HTTP_METHODS};
 
 /// Counts of the methods contained in a RpcRequest
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -17,7 +16,7 @@ pub struct MethodCallCount {
 }
 
 /// Represents jsonrpc request which can be both a batch or a single request
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum RpcRequest {
     Batch(Vec<Request<Params>>),

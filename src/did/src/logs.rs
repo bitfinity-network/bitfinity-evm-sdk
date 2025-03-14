@@ -55,7 +55,7 @@ impl TryFrom<Value> for LogFilter {
                     ),
                     data: None,
                 };
-                return Err(err);
+                Err(err)
             } else {
                 let mut filter: LogFilter =
                     serde_json::from_value(value).map_err(|_| Self::Error::parse_error())?;

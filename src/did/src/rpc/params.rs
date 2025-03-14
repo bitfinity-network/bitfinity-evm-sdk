@@ -1,6 +1,9 @@
 use alloy::rpc::json_rpc::ErrorPayload;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use super::invalid_params_with_details;
 
 /// Request parameters for JSON-RPC calls.
 /// This enum covers all common parameter formats for JSON-RPC requests.
@@ -13,8 +16,6 @@ pub enum Params {
     Array(Vec<Value>),
     /// Map of string keys to values
     Map(serde_json::Map<String, Value>),
-    /// Raw JSON value (used for complex or unknown parameter formats)
-    Raw(String),
 }
 
 impl Params {
@@ -33,18 +34,13 @@ impl Params {
         Params::Map(map)
     }
 
-    /// Create parameters from a raw JSON string
-    pub fn new_raw(json: impl Into<String>) -> Self {
-        Params::Raw(json.into())
-    }
-
     /// Parse parameters into the expected type
     pub fn parse<D>(self) -> Result<D, ErrorPayload>
     where
         D: DeserializeOwned,
     {
         let value: Value = self.into();
-        serde_json::from_value(value).map_err(|_| ErrorPayload::invalid_params())
+        serde_json::from_value(value).map_err(|e| invalid_params_with_details(e.to_string()))
     }
 }
 
@@ -54,16 +50,16 @@ impl From<Params> for Value {
             Params::Array(vec) => Value::Array(vec),
             Params::Map(map) => Value::Object(map),
             Params::None => Value::Null,
-            Params::Raw(json) => serde_json::from_str(&json).unwrap(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Params;
     use alloy::rpc::json_rpc::ErrorPayload;
     use serde_json;
+
+    use super::Params;
 
     #[test]
     fn params_deserialization() {
@@ -105,16 +101,16 @@ mod tests {
         let err2 = v2.unwrap_err();
 
         // then
-        assert_eq!(err1.code, -32016);
+        assert_eq!(err1.code, -32602);
         assert_eq!(
             err1.message,
-            "Invalid params: invalid type: boolean `true`, expected a string."
+            "Invalid params: invalid type: boolean `true`, expected a string"
         );
         assert!(err1.data.is_none());
-        assert_eq!(err2.code, -32016);
+        assert_eq!(err2.code, -32602);
         assert_eq!(
             err2.message,
-            "Invalid params: invalid length 2, expected a tuple of size 3."
+            "Invalid params: invalid length 2, expected a tuple of size 3"
         );
         assert!(err2.data.is_none());
     }
