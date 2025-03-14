@@ -1,6 +1,5 @@
 use alloy::rpc::json_rpc::ErrorPayload;
 
-pub mod accessor;
 pub mod params;
 pub mod request;
 pub mod response;
