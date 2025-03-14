@@ -9,17 +9,24 @@ use candid::{CandidType, Nat};
 use derive_more::{From, Into};
 use ic_stable_structures::{Bound, Bounded, Storable};
 use num::BigUint;
-use serde::Serialize;
 
-#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Hash, From, Into)]
-#[serde(transparent)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, From, Into)]
 pub struct U256(pub alloy::primitives::U256);
 
-#[derive(
-    Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, Hash, From, Into,
-)]
-#[serde(transparent)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, From, Into)]
 pub struct U64(pub alloy::primitives::U64);
+
+impl serde::Serialize for U64 {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.to_hex_str())
+    }
+}
+
+impl serde::Serialize for U256 {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.to_hex_str())
+    }
+}
 
 impl<'de> serde::Deserialize<'de> for U64 {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -673,5 +680,21 @@ mod tests {
         let decoded_value: U64 = serde_json::from_value(encoded_primitive).unwrap();
 
         assert_eq!(value, decoded_value);
+    }
+
+    #[test]
+    fn test_should_serialize_bincode_u256() {
+        let value = U256::from(rand::random::<u128>());
+        let encoded = bincode::serialize(&value).unwrap();
+        let decoded: U256 = bincode::deserialize(&encoded).unwrap();
+        assert_eq!(value, decoded);
+    }
+
+    #[test]
+    fn test_should_serialize_bincode_u64() {
+        let value = U64::from(rand::random::<u64>());
+        let encoded = bincode::serialize(&value).unwrap();
+        let decoded: U64 = bincode::deserialize(&encoded).unwrap();
+        assert_eq!(value, decoded);
     }
 }
