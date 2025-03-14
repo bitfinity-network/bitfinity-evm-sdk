@@ -12,6 +12,7 @@ use itertools::Itertools;
 pub use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
@@ -377,12 +378,32 @@ impl<C: Client> EthJsonRpcClient<C> {
         params: impl IntoIterator<Item = (Params, Id)>,
         max_batch_size: usize,
     ) -> anyhow::Result<Vec<R>> {
+        let value_from_json =
+            |value| serde_json::from_value::<R>(value).map_err(anyhow::Error::from);
+
+        let raw_results = self
+            .batch_request_raw(
+                params.into_iter().map(|(param, id)| (method, param, id)),
+                max_batch_size,
+            )
+            .await?;
+
+        raw_results
+            .into_iter()
+            .map(value_from_json)
+            .collect::<anyhow::Result<Vec<R>>>()
+    }
+
+    /// Performs a batch request to different eth metods.
+    pub async fn batch_request_raw(
+        &self,
+        params: impl IntoIterator<Item = (&str, Params, Id)>,
+        max_batch_size: usize,
+    ) -> anyhow::Result<Vec<Value>> {
         let mut results = Vec::new();
 
-        let value_from_json = |value| serde_json::from_value::<R>(value);
-
         // Collect chunks before iteration, otherwise the future won't be `Send`
-        let chunks: Vec<Vec<(Params, Id)>> = params
+        let chunks: Vec<Vec<(&str, Params, Id)>> = params
             .into_iter()
             .chunks(max_batch_size)
             .into_iter()
@@ -391,7 +412,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         for chunk in chunks {
             let method_calls = chunk
                 .into_iter()
-                .map(|(params, id)| {
+                .map(|(method, params, id)| {
                     Call::MethodCall(MethodCall {
                         jsonrpc: Some(Version::V2),
                         method: method.to_owned(),
@@ -409,7 +430,7 @@ impl<C: Client> EthJsonRpcClient<C> {
                 Response::Single(response) => match response {
                     Output::Success(result) => {
                         if chunk_size == 1 {
-                            results.push(value_from_json(result.result)?);
+                            results.push(result.result);
                         } else {
                             anyhow::bail!(
                                 "unexpected number of results: have: 1, expected {chunk_size}"
@@ -425,7 +446,7 @@ impl<C: Client> EthJsonRpcClient<C> {
                         for resp in response.into_iter() {
                             match resp {
                                 Output::Success(resp) => {
-                                    results.push(value_from_json(resp.result)?)
+                                    results.push(resp.result);
                                 }
                                 Output::Failure(err) => {
                                     anyhow::bail!("{err:?}");
