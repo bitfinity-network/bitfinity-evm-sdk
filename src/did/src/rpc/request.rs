@@ -1,5 +1,5 @@
 use alloy::rpc::json_rpc::Request;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::params::Params;
 use crate::constant::{JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME, UPGRADE_HTTP_METHODS};
@@ -16,7 +16,7 @@ pub struct MethodCallCount {
 }
 
 /// Represents jsonrpc request which can be both a batch or a single request
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RpcRequest {
     Batch(Vec<Request<Params>>),
@@ -102,6 +102,27 @@ mod tests {
     }
 
     #[test]
+    fn test_single_request_deserialization() {
+        let json =
+            r#"{"jsonrpc":"2.0","id":1,"method":"eth_getBalance","params":["0x123","latest"]}"#;
+        let request: RpcRequest = serde_json::from_str(json).unwrap();
+
+        match request {
+            RpcRequest::Single(request) => {
+                assert_eq!(request.meta.method, "eth_getBalance");
+                assert_eq!(
+                    request.params,
+                    Params::Array(vec![
+                        serde_json::Value::String("0x123".to_string()),
+                        serde_json::Value::String("latest".to_string()),
+                    ])
+                );
+            }
+            _ => panic!("Expected a single request"),
+        }
+    }
+
+    #[test]
     fn test_batch_request_serialization() {
         let request = RpcRequest::Batch(vec![
             Request {
@@ -136,6 +157,31 @@ mod tests {
             array[1]["method"],
             JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME
         );
+    }
+
+    #[test]
+    fn test_batch_request_deserialization() {
+        let json = r#"[{"jsonrpc":"2.0","id":1,"method":"eth_getBalance","params":["0x123","latest"]},{"jsonrpc":"2.0","id":"second-call","method":"eth_sendRawTransaction","params":["0xrawTransaction"]}]"#;
+        let request: RpcRequest = serde_json::from_str(json).unwrap();
+
+        match request {
+            RpcRequest::Batch(requests) => {
+                assert_eq!(requests.len(), 2);
+                assert_eq!(requests[0].meta.method, "eth_getBalance");
+                assert_eq!(
+                    requests[0].params,
+                    Params::Array(vec![
+                        serde_json::Value::String("0x123".to_string()),
+                        serde_json::Value::String("latest".to_string()),
+                    ])
+                );
+                assert_eq!(
+                    requests[1].meta.method,
+                    JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME
+                );
+            }
+            _ => panic!("Expected a batch request"),
+        }
     }
 
     #[test]
