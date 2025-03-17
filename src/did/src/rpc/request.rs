@@ -27,38 +27,28 @@ impl RpcRequest {
     /// returns the number of read_only and committable methods in the RpcRequest
     pub fn methods_count(&self) -> MethodCallCount {
         match self {
-            RpcRequest::Batch(methods) => {
-                methods
-                    .iter()
-                    .fold(MethodCallCount::default(), |mut count, request| {
-                        let method = request.meta.method.to_string();
-                        if UPGRADE_HTTP_METHODS.contains(&method.as_str()) {
-                            count.commit += 1;
-                            if method == JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME {
-                                count.mint_native_token += 1;
-                            }
-                            count
-                        } else {
-                            count.read_only += 1;
-                            count
-                        }
-                    })
-            }
+            RpcRequest::Batch(methods) => methods
+                .iter()
+                .fold(MethodCallCount::default(), |count, request| {
+                    Self::count_method(count, &request.meta.method)
+                }),
             RpcRequest::Single(request) => {
-                let mut count = MethodCallCount::default();
-                let method = request.meta.method.to_string();
-                if UPGRADE_HTTP_METHODS.contains(&method.as_str()) {
-                    count.commit += 1;
-                    if method == JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME {
-                        count.mint_native_token += 1;
-                    }
-                    count
-                } else {
-                    count.read_only += 1;
-                    count
-                }
+                Self::count_method(MethodCallCount::default(), &request.meta.method)
             }
         }
+    }
+
+    /// Method to count a single method type
+    fn count_method(mut count: MethodCallCount, method: &str) -> MethodCallCount {
+        if UPGRADE_HTTP_METHODS.contains(&method) {
+            count.commit += 1;
+            if method == JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME {
+                count.mint_native_token += 1;
+            }
+        } else {
+            count.read_only += 1;
+        }
+        count
     }
 
     /// returns whether the request contains committable methods
