@@ -1,12 +1,11 @@
 use core::fmt;
-use std::marker::PhantomData;
 
 use alloy::rpc::json_rpc::Response;
 use serde::de::{self, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_bytes::ByteBuf;
 
-/// Response to a `RpcRequest`. If the request was a `Batch` the response will be a `Batch` as well and vice-versa for `One`
+/// Response to a `RpcRequest`. If the request was a `Batch` the response will be a `Batch` as well and vice-versa for `Single`
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum RpcResponse {
@@ -31,11 +30,9 @@ impl<'de> Deserialize<'de> for RpcResponse {
     where
         D: Deserializer<'de>,
     {
-        struct ResponsePacketVisitor {
-            marker: PhantomData<fn() -> RpcResponse>,
-        }
+        struct ResponseVisitor;
 
-        impl<'de> Visitor<'de> for ResponsePacketVisitor {
+        impl<'de> Visitor<'de> for ResponseVisitor {
             type Value = RpcResponse;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -65,9 +62,7 @@ impl<'de> Deserialize<'de> for RpcResponse {
             }
         }
 
-        deserializer.deserialize_any(ResponsePacketVisitor {
-            marker: PhantomData,
-        })
+        deserializer.deserialize_any(ResponseVisitor)
     }
 }
 
