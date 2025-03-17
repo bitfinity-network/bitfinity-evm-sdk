@@ -397,19 +397,13 @@ mod tests {
 
     #[test]
     fn test_bytebuf_from_serialization_error() {
-        // Create a value that can't be serialized to JSON
-        // We'll simulate this by using the ByteBuf::from fallback path
-
-        // First create a valid response
         let response = RpcResponse::Single(Response {
             id: Id::Number(1),
             payload: ResponsePayload::Success(serde_json::value::to_raw_value(&"test").unwrap()),
         });
 
-        // Convert to ByteBuf - this should succeed
         let buf: ByteBuf = response.into();
 
-        // Check that the buffer is not empty and contains valid JSON
         assert!(!buf.is_empty());
         let parsed: Result<serde_json::Value, _> = serde_json::from_slice(&buf);
         assert!(parsed.is_ok(), "Buffer should contain valid JSON");
