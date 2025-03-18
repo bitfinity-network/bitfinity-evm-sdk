@@ -576,13 +576,13 @@ mod tests {
         assert_eq!(err1.code, ErrorCode::InvalidParams);
         assert_eq!(
             err1.message,
-            "Invalid params: invalid type: boolean `true`, expected a string"
+            "invalid type: boolean `true`, expected a string"
         );
         assert!(err1.data.is_none());
         assert_eq!(err2.code, ErrorCode::InvalidParams);
         assert_eq!(
             err2.message,
-            "Invalid params: invalid length 2, expected a tuple of size 3"
+            "invalid length 2, expected a tuple of size 3"
         );
         assert!(err2.data.is_none());
     }
