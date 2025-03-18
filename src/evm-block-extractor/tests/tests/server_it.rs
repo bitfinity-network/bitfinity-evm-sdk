@@ -2,11 +2,12 @@ use std::future::Future;
 use std::sync::Arc;
 
 use alloy::primitives::{Address, B256};
-use alloy::rpc::json_rpc::{Id, Request, RequestMeta, ResponsePayload};
 use did::evm_state::EvmGlobalState;
+use did::rpc::id::Id;
 use did::rpc::params::Params;
-use did::rpc::request::RpcRequest;
-use did::rpc::response::RpcResponse;
+use did::rpc::request::{Request, RpcRequest};
+use did::rpc::response::{Response, RpcResponse};
+use did::rpc::version::Version;
 use did::{Block, BlockNumber, H160, H256, U256, U64};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
@@ -93,18 +94,16 @@ async fn test_batched_request() {
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = RpcRequest::Batch(vec![
             Request {
-                meta: RequestMeta::new(
-                    "ic_getGenesisBalances".into(),
-                    Id::String("ic_getGenesisBalances".to_string()),
-                ),
+                jsonrpc: Some(Version::V2),
+                method: "ic_getGenesisBalances".to_string(),
                 params: Params::Array(vec![]),
+                id: Id::String("ic_getGenesisBalances".to_string()),
             },
             Request {
-                meta: RequestMeta::new(
-                    "eth_blockNumber".into(),
-                    Id::String("eth_blockNumber".to_string()),
-                ),
+                jsonrpc: Some(Version::V2),
+                method: "eth_blockNumber".to_string(),
                 params: Params::Array(vec![]),
+                id: Id::String("eth_blockNumber".to_string()),
             },
         ]);
 
@@ -114,29 +113,13 @@ async fn test_batched_request() {
         };
 
         match &results[..] {
-            [response_1, response_2] => {
-                assert_eq!(
-                    response_1.id,
-                    Id::String("ic_getGenesisBalances".to_string())
-                );
-
-                let data = match response_1.payload {
-                    ResponsePayload::Success(ref response) => {
-                        serde_json::from_str::<Vec<(H160, U256)>>(response.get())
-                    }
-                    _ => panic!("unexpected return type"),
-                };
+            [Response::Success(result_1), Response::Success(result_2)] => {
+                assert_eq!(result_1.id, Id::String("ic_getGenesisBalances".to_string()));
+                let data = serde_json::from_value::<Vec<(H160, U256)>>(result_1.result.clone());
                 assert!(data.is_ok());
 
-                assert_eq!(response_2.id, Id::String("eth_blockNumber".to_string()));
-                let data = match response_2.payload {
-                    ResponsePayload::Success(ref response) => {
-                        serde_json::from_str::<String>(response.get())
-                    }
-                    _ => panic!("unexpected return type"),
-                };
-                assert!(data.is_ok());
-                let data = data.unwrap();
+                assert_eq!(result_2.id, Id::String("eth_blockNumber".to_string()));
+                let data: String = serde_json::from_value(result_2.result.clone()).unwrap();
                 let result = u64::from_str_radix(data.trim_start_matches("0x"), 16).unwrap();
                 assert_eq!(result, BLOCK_COUNT - 1);
             }
@@ -241,76 +224,45 @@ async fn test_get_block_by_number_variants() {
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = RpcRequest::Batch(vec![
-            Request {
-                meta: RequestMeta::new(
-                    "eth_getBlockByNumber".into(),
-                    Id::String("eth_getBlockByNumber".to_string()),
-                ),
+        Request {
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBlockByNumber".to_string(),
                 params: Params::Array(vec![json!("latest"), json!(false)]),
+                id: Id::String("eth_getBlockByNumber".to_string()),
             },
-            Request {
-                meta: RequestMeta::new(
-                    "eth_getBlockByNumber".into(),
-                    Id::String("eth_getBlockByNumber".to_string()),
-                ),
+        Request {
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBlockByNumber".to_string(),
                 params: Params::Array(vec![json!("earliest"), json!(false)]),
+                id: Id::String("eth_getBlockByNumber".to_string()),
             },
-            Request {
-                meta: RequestMeta::new(
-                    "eth_getBlockByNumber".into(),
-                    Id::String("eth_getBlockByNumber".to_string()),
-                ),
+        Request {
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBlockByNumber".to_string(),
                 params: Params::Array(vec![json!("0x5"), json!(false)]),
+                id: Id::String("eth_getBlockByNumber".to_string()),
             },
+
         ]);
 
-        let RpcResponse::Batch(results) = http_client.send_rpc_request(request).await.unwrap()
-        else {
+        let RpcResponse::Batch(results) = http_client.send_rpc_request(request).await.unwrap() else {
             panic!("unexpected return type")
         };
 
         match &results[..] {
-            [latest_response, earliest_response, number_response] => {
-                assert_eq!(
-                    latest_response.id,
-                    Id::String("eth_getBlockByNumber".to_string())
-                );
-                {
-                    let latest_block = match latest_response.payload {
-                        ResponsePayload::Success(ref response) => {
-                            serde_json::from_str::<Block<H256>>(response.get())
-                        }
-                        _ => panic!("unexpected return type"),
-                    };
-                    assert!(latest_block.is_ok());
-                    let latest_block = latest_block.unwrap();
+            [Response::Success(latest_block), Response::Success(earliest_block), Response::Success(number_block)] => {
+                assert_eq!(latest_block.id, Id::String("eth_getBlockByNumber".to_string()));
+                let latest_block: Block<H256> =
+                    serde_json::from_value(latest_block.result.clone()).unwrap();
+                assert_eq!(latest_block.number, U64::from(BLOCK_COUNT - 1));
 
-                    assert_eq!(latest_block.number, U64::from(BLOCK_COUNT - 1));
-                }
+                let earliest_block: Block<H256> =
+                    serde_json::from_value(earliest_block.result.clone()).unwrap();
+                assert_eq!(earliest_block.number, U64::zero());
 
-                {
-                    let earliest_block = match earliest_response.payload {
-                        ResponsePayload::Success(ref response) => {
-                            serde_json::from_str::<Block<H256>>(response.get())
-                        }
-                        _ => panic!("unexpected return type"),
-                    };
-                    assert!(earliest_block.is_ok());
-                    let earliest_block = earliest_block.unwrap();
-                    assert_eq!(earliest_block.number, U64::zero());
-                }
-
-                {
-                    let number_block = match number_response.payload {
-                        ResponsePayload::Success(ref response) => {
-                            serde_json::from_str::<Block<H256>>(response.get())
-                        }
-                        _ => panic!("unexpected return type"),
-                    };
-                    assert!(number_block.is_ok());
-                    let number_block = number_block.unwrap();
-                    assert_eq!(number_block.number, U64::from(5_u64));
-                }
+                let number_block: Block<H256> =
+                    serde_json::from_value(number_block.result.clone()).unwrap();
+                    assert_eq!(number_block.number, U64::from_hex_str("0x5").unwrap());
             }
             _ => panic!("unexpected results"),
         }

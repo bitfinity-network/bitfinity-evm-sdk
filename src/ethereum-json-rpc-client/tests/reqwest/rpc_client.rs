@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use did::rpc::request::RpcRequest;
-use did::rpc::response::RpcResponse;
+use did::rpc::response::{Response, RpcResponse};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::Client;
 use rand::SeedableRng as _;
@@ -77,13 +77,11 @@ impl Client for PublicRpcReqwestClient {
                 let result = client.send_rpc_request(request.clone()).await;
 
                 match result {
-                    Ok(RpcResponse::Single(ref response)) => {
-                        if response.payload.is_success() {
-                            return result;
-                        }
-                    }
+                    Ok(RpcResponse::Single(Response::Success(_))) => return result,
                     Ok(RpcResponse::Batch(batch))
-                        if batch.iter().all(|output| output.payload.is_success()) =>
+                        if batch
+                            .iter()
+                            .all(|output| matches!(output, Response::Success(_))) =>
                     {
                         return Ok(RpcResponse::Batch(batch))
                     }
@@ -137,15 +135,11 @@ impl Client for AlchemyRpcReqwestClient {
             let result = client.send_rpc_request(request.clone()).await;
 
             match result {
-                Ok(RpcResponse::Single(ref response)) => {
-                    if response.payload.is_success() {
-                        result
-                    } else {
-                        anyhow::bail!("call failed: {response:?}")
-                    }
-                }
+                Ok(RpcResponse::Single(Response::Success(_))) => result,
                 Ok(RpcResponse::Batch(batch))
-                    if batch.iter().all(|output| output.payload.is_success()) =>
+                    if batch
+                        .iter()
+                        .all(|output| matches!(output, Response::Success(_))) =>
                 {
                     Ok(RpcResponse::Batch(batch))
                 }

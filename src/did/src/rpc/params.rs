@@ -1,9 +1,9 @@
-use alloy::rpc::json_rpc::{ErrorPayload, Request};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::invalid_params_with_details;
+use super::error::Error;
+use super::request::Request;
 
 /// Request parameters for JSON-RPC calls.
 /// This enum covers all common parameter formats for JSON-RPC requests.
@@ -35,13 +35,18 @@ impl Params {
     }
 
     /// Parse parameters into the expected type
-    pub fn parse<D>(self) -> Result<D, ErrorPayload>
+    pub fn parse<D>(self) -> Result<D, Error>
     where
         D: DeserializeOwned,
     {
         let value: Value = self.into();
-        serde_json::from_value(value).map_err(|e| invalid_params_with_details(e.to_string()))
+        serde_json::from_value(value).map_err(|e| Error::invalid_params(e.to_string()))
     }
+}
+
+/// Default parameters
+pub fn default_params() -> Params {
+    Params::None
 }
 
 impl From<Params> for Value {
@@ -56,10 +61,10 @@ impl From<Params> for Value {
 
 pub trait ParamsAccessors {
     /// Get a required parameter from the params array.
-    fn get_from_vec<T: DeserializeOwned>(&self, index: usize) -> Result<T, ErrorPayload>;
+    fn get_from_vec<T: DeserializeOwned>(&self, index: usize) -> Result<T, Error>;
 
     /// Get an optional parameter from the params object.
-    fn get_from_object<T: DeserializeOwned>(&self, field: &str) -> Result<Option<T>, ErrorPayload>;
+    fn get_from_object<T: DeserializeOwned>(&self, field: &str) -> Result<Option<T>, Error>;
 
     /// Checks the type and the number of parameters.
     ///
@@ -67,32 +72,26 @@ pub trait ParamsAccessors {
     /// - params is not an array
     /// - number of params is less than `len(req_params)`
     /// - number of params is greater than `max`
-    fn validate_params(
-        &self,
-        required_params: &[&str],
-        max_size: usize,
-    ) -> Result<(), ErrorPayload>;
+    fn validate_params(&self, required_params: &[&str], max_size: usize) -> Result<(), Error>;
 
     /// Get a required parameter from the params object.
-    fn required_from_object<T: DeserializeOwned>(&self, field: &str) -> Result<T, ErrorPayload> {
+    fn required_from_object<T: DeserializeOwned>(&self, field: &str) -> Result<T, Error> {
         self.get_from_object(field)?
-            .ok_or_else(|| invalid_params_with_details(format!("missing field '{field}'")))
+            .ok_or_else(|| Error::invalid_params(format!("missing field '{field}'")))
     }
 }
 
-impl ParamsAccessors for Request<Params> {
-    fn get_from_vec<T: DeserializeOwned>(&self, index: usize) -> Result<T, ErrorPayload> {
+impl ParamsAccessors for Request {
+    fn get_from_vec<T: DeserializeOwned>(&self, index: usize) -> Result<T, Error> {
         let Params::Array(params) = &self.params else {
-            return Err(invalid_params_with_details("missing params"));
+            return Err(Error::invalid_params("missing params"));
         };
 
         match params.get(index) {
             Some(value) => serde_json::from_value(value.clone()).map_err(|e| {
-                invalid_params_with_details(format!(
-                    "failed to deserialize value at index {index}: {e}"
-                ))
+                Error::invalid_params(format!("failed to deserialize value at index {index}: {e}"))
             }),
-            None => Err(invalid_params_with_details(format!(
+            None => Err(Error::invalid_params(format!(
                 "index {} exceeds length of params {}",
                 index,
                 params.len()
@@ -100,9 +99,9 @@ impl ParamsAccessors for Request<Params> {
         }
     }
 
-    fn get_from_object<T: DeserializeOwned>(&self, field: &str) -> Result<Option<T>, ErrorPayload> {
+    fn get_from_object<T: DeserializeOwned>(&self, field: &str) -> Result<Option<T>, Error> {
         let Params::Map(params) = &self.params else {
-            return Err(invalid_params_with_details(
+            return Err(Error::invalid_params(
                 "missing params object or params is not an object",
             ));
         };
@@ -110,21 +109,15 @@ impl ParamsAccessors for Request<Params> {
         match params.get(field) {
             Some(value) if value.is_null() => Ok(None),
             Some(value) => serde_json::from_value(value.clone()).map_err(|e| {
-                invalid_params_with_details(format!(
-                    "failed to deserialize value at field {field}: {e}"
-                ))
+                Error::invalid_params(format!("failed to deserialize value at field {field}: {e}"))
             }),
             None => Ok(None),
         }
     }
 
-    fn validate_params(
-        &self,
-        required_params: &[&str],
-        max_size: usize,
-    ) -> Result<(), ErrorPayload> {
+    fn validate_params(&self, required_params: &[&str], max_size: usize) -> Result<(), Error> {
         let Params::Array(params) = &self.params else {
-            return Err(invalid_params_with_details(format!(
+            return Err(Error::invalid_params(format!(
                 "expected 'params' array of at least {} arguments",
                 required_params.len()
             )));
@@ -133,7 +126,7 @@ impl ParamsAccessors for Request<Params> {
         let param_count = params.len();
 
         if param_count < required_params.len() {
-            return Err(invalid_params_with_details(format!(
+            return Err(Error::invalid_params(format!(
                 "expected at least {} argument/s but received {}: required parameters [{}]",
                 required_params.len(),
                 param_count,
@@ -141,7 +134,7 @@ impl ParamsAccessors for Request<Params> {
             )));
         }
         if param_count > max_size {
-            return Err(invalid_params_with_details(format!(
+            return Err(Error::invalid_params(format!(
                 "too many arguments, want at most {max_size}"
             )));
         }
@@ -155,26 +148,32 @@ mod tests {
 
     use alloy::hex;
     use alloy::primitives::{Address, Bytes, B256, B512, U256, U64};
-    use alloy::rpc::json_rpc::{ErrorPayload, RequestMeta};
     use proptest::collection::vec;
     use proptest::prelude::*;
     use serde_json;
     use serde_json::{json, Value};
 
     use super::{Params, *};
+    use crate::rpc::error::ErrorCode;
+    use crate::rpc::id::Id;
+    use crate::rpc::version::Version;
     use crate::BlockNumber;
 
-    fn get_method_call_array(params: Vec<Value>) -> Request<Params> {
+    fn get_method_call_array(params: Vec<Value>) -> Request {
         Request {
             params: Params::Array(params),
-            meta: RequestMeta::new("".into(), alloy::rpc::json_rpc::Id::Number(2)),
+            jsonrpc: Some(Version::V2),
+            method: "test_method".into(),
+            id: Id::Number(1),
         }
     }
 
-    fn get_method_call_object(params: serde_json::Map<String, Value>) -> Request<Params> {
+    fn get_method_call_object(params: serde_json::Map<String, Value>) -> Request {
         Request {
             params: Params::Map(params),
-            meta: RequestMeta::new("".into(), alloy::rpc::json_rpc::Id::Number(2)),
+            jsonrpc: Some(Version::V2),
+            method: "test_method".into(),
+            id: Id::Number(1),
         }
     }
 
@@ -568,19 +567,19 @@ mod tests {
         let params = || serde_json::from_str::<Params>(s).unwrap();
 
         // when
-        let v1: Result<(Option<u8>, String), ErrorPayload> = params().parse();
-        let v2: Result<(u8, bool, String), ErrorPayload> = params().parse();
+        let v1: Result<(Option<u8>, String), Error> = params().parse();
+        let v2: Result<(u8, bool, String), Error> = params().parse();
         let err1 = v1.unwrap_err();
         let err2 = v2.unwrap_err();
 
         // then
-        assert_eq!(err1.code, -32602);
+        assert_eq!(err1.code, ErrorCode::InvalidParams);
         assert_eq!(
             err1.message,
             "Invalid params: invalid type: boolean `true`, expected a string"
         );
         assert!(err1.data.is_none());
-        assert_eq!(err2.code, -32602);
+        assert_eq!(err2.code, ErrorCode::InvalidParams);
         assert_eq!(
             err2.message,
             "Invalid params: invalid length 2, expected a tuple of size 3"

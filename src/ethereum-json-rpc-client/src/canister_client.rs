@@ -24,10 +24,8 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
             log::trace!("CanisterClient - sending 'http_request'. request: {request:?}");
 
             let is_update_call = match &request {
-                RpcRequest::Single(request) => is_update_call(&request.meta.method),
-                RpcRequest::Batch(calls) => calls
-                    .iter()
-                    .any(|request| is_update_call(&request.meta.method)),
+                RpcRequest::Single(request) => is_update_call(&request.method),
+                RpcRequest::Batch(calls) => calls.iter().any(|call| is_update_call(&call.method)),
             };
 
             let args = HttpRequest::new(&request)?;

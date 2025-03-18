@@ -1,16 +1,119 @@
-use core::fmt;
-
-use alloy::rpc::json_rpc::Response;
-use serde::de::{self, MapAccess, SeqAccess, Visitor};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
+use serde_json::Value;
 
-/// Response to a `RpcRequest`. If the request was a `Batch` the response will be a `Batch` as well and vice-versa for `Single`
-#[derive(Clone, Debug, Serialize)]
+use super::error::{Error, ErrorCode};
+use super::id::Id;
+use super::version::Version;
+
+/// Successful response
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Success {
+    /// Protocol version
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jsonrpc: Option<Version>,
+    /// Result
+    pub result: Value,
+    /// Correlation id
+    pub id: Id,
+}
+
+/// Unsuccessful response
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Failure {
+    /// Protocol Version
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jsonrpc: Option<Version>,
+    /// Error
+    pub error: Error,
+    /// Correlation id
+    pub id: Id,
+}
+
+/// Represents output - failure or success
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+#[serde(untagged)]
+pub enum Response {
+    /// Success
+    Success(Success),
+    /// Failure
+    Failure(Failure),
+}
+
+impl Response {
+    /// Creates new failure Response indicating malformed request.
+    pub fn invalid_request(id: Id, jsonrpc: Option<Version>) -> Self {
+        Response::Failure(Failure {
+            id,
+            jsonrpc,
+            error: Error::new(ErrorCode::InvalidRequest),
+        })
+    }
+
+    /// Get the jsonrpc protocol version.
+    pub fn version(&self) -> Option<Version> {
+        match *self {
+            Response::Success(ref s) => s.jsonrpc,
+            Response::Failure(ref f) => f.jsonrpc,
+        }
+    }
+
+    /// Get the correlation id.
+    pub fn id(&self) -> &Id {
+        match *self {
+            Response::Success(ref s) => &s.id,
+            Response::Failure(ref f) => &f.id,
+        }
+    }
+}
+
+/// Synchronous response
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 #[serde(untagged)]
 pub enum RpcResponse {
+    /// Single response
     Single(Response),
+    /// Response to batch request (batch of responses)
     Batch(Vec<Response>),
+}
+
+impl RpcResponse {
+    /// Creates new `Response` with given error and `Version`
+    pub fn from(error: Error, jsonrpc: Option<Version>) -> Self {
+        Failure {
+            id: Id::Null,
+            jsonrpc,
+            error,
+        }
+        .into()
+    }
+
+    /// Deserialize `Response` from given JSON string.
+    ///
+    /// This method will handle an empty string as empty batch response.
+    pub fn from_json(s: &str) -> Result<Self, serde_json::Error> {
+        if s.is_empty() {
+            Ok(RpcResponse::Batch(vec![]))
+        } else {
+            serde_json::from_str::<Self>(s)
+        }
+    }
+}
+
+impl From<Failure> for RpcResponse {
+    fn from(failure: Failure) -> Self {
+        RpcResponse::Single(Response::Failure(failure))
+    }
+}
+
+impl From<Success> for RpcResponse {
+    fn from(success: Success) -> Self {
+        RpcResponse::Single(Response::Success(success))
+    }
 }
 
 impl From<RpcResponse> for ByteBuf {
@@ -25,50 +128,8 @@ impl From<RpcResponse> for ByteBuf {
     }
 }
 
-impl<'de> Deserialize<'de> for RpcResponse {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct ResponseVisitor;
-
-        impl<'de> Visitor<'de> for ResponseVisitor {
-            type Value = RpcResponse;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a single response or a batch of responses")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let mut responses = Vec::new();
-
-                while let Some(response) = seq.next_element()? {
-                    responses.push(response);
-                }
-
-                Ok(RpcResponse::Batch(responses))
-            }
-
-            fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
-            where
-                M: MapAccess<'de>,
-            {
-                let response =
-                    Deserialize::deserialize(de::value::MapAccessDeserializer::new(map))?;
-                Ok(RpcResponse::Single(response))
-            }
-        }
-
-        deserializer.deserialize_any(ResponseVisitor)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use alloy::rpc::json_rpc::{Id, ResponsePayload};
 
     use super::*;
 
@@ -78,8 +139,8 @@ mod tests {
         let response: RpcResponse = serde_json::from_str(json).unwrap();
         match response {
             RpcResponse::Single(resp) => {
-                assert_eq!(resp.id, Id::Number(1));
-                assert!(matches!(resp.payload, ResponsePayload::Success(_)));
+                assert_eq!(resp.id(), &Id::Number(1));
+                assert!(matches!(resp, Response::Success(_)));
             }
             RpcResponse::Batch(_) => panic!("Expected single response"),
         }
@@ -95,8 +156,8 @@ mod tests {
         match response {
             RpcResponse::Batch(responses) => {
                 assert_eq!(responses.len(), 2);
-                assert_eq!(responses[0].id, Id::Number(1));
-                assert_eq!(responses[1].id, Id::Number(2));
+                assert_eq!(responses[0].id(), &Id::Number(1));
+                assert_eq!(responses[1].id(), &Id::Number(2));
             }
             RpcResponse::Single(_) => panic!("Expected batch response"),
         }
@@ -114,20 +175,19 @@ mod tests {
 
     #[test]
     fn test_bytebuf_conversion() {
-        let response = RpcResponse::Single(Response {
+        let response = RpcResponse::Single(Response::Success(Success {
+            jsonrpc: Some(Version::V2),
+            result: "0x1234".into(),
             id: Id::Number(1),
-            payload: ResponsePayload::Success(
-                serde_json::value::to_raw_value(&"0x1234".to_string()).unwrap(),
-            ),
-        });
+        }));
 
         let buf: ByteBuf = response.into();
         let decoded: RpcResponse = serde_json::from_slice(&buf).unwrap();
 
         match decoded {
             RpcResponse::Single(resp) => {
-                assert_eq!(resp.id, Id::Number(1));
-                assert!(matches!(resp.payload, ResponsePayload::Success(_)));
+                assert_eq!(resp.id(), &Id::Number(1));
+                assert!(matches!(resp, Response::Success(_)));
             }
             RpcResponse::Batch(_) => panic!("Expected single response"),
         }
@@ -139,8 +199,8 @@ mod tests {
         let response: RpcResponse = serde_json::from_str(json).unwrap();
         match response {
             RpcResponse::Single(resp) => {
-                assert_eq!(resp.id, Id::Number(1));
-                assert!(matches!(resp.payload, ResponsePayload::Failure(_)));
+                assert_eq!(resp.id(), &Id::Number(1));
+                assert!(matches!(resp, Response::Failure(_)));
             }
             RpcResponse::Batch(_) => panic!("Expected single response"),
         }
@@ -149,12 +209,11 @@ mod tests {
     #[test]
     fn test_serialize_deserialize_single_response_roundtrip() {
         // Create a single response
-        let original = RpcResponse::Single(Response {
+        let original = RpcResponse::Single(Response::Success(Success {
+            jsonrpc: Some(Version::V2),
+            result: serde_json::json!("0xabc123"),
             id: Id::Number(42),
-            payload: ResponsePayload::Success(
-                serde_json::value::to_raw_value(&"0xabc123".to_string()).unwrap(),
-            ),
-        });
+        }));
 
         // Serialize to JSON
         let json = serde_json::to_string(&original).unwrap();
@@ -165,10 +224,10 @@ mod tests {
         // Verify roundtrip
         match (original, deserialized) {
             (RpcResponse::Single(orig), RpcResponse::Single(des)) => {
-                assert_eq!(orig.id, des.id);
-                match (orig.payload, des.payload) {
-                    (ResponsePayload::Success(orig_val), ResponsePayload::Success(des_val)) => {
-                        assert_eq!(orig_val.get(), des_val.get());
+                assert_eq!(orig.id(), des.id());
+                match (orig, des) {
+                    (Response::Success(orig_val), Response::Success(des_val)) => {
+                        assert_eq!(orig_val, des_val);
                     }
                     _ => panic!("Expected Success payloads"),
                 }
@@ -180,23 +239,23 @@ mod tests {
     #[test]
     fn test_serialize_deserialize_batch_response_roundtrip() {
         // Create a batch response
-        let original = RpcResponse::Batch(vec![
-            Response {
-                id: Id::Number(1),
-                payload: ResponsePayload::Success(
-                    serde_json::value::to_raw_value(&"0xabc123".to_string()).unwrap(),
-                ),
-            },
-            Response {
-                id: Id::String("request-2".to_string()),
-                payload: ResponsePayload::Failure(alloy::rpc::json_rpc::ErrorPayload {
-                    code: -32000,
-                    message: "Custom error".into(),
-                    data: Some(serde_json::value::to_raw_value(&"Error details").unwrap()),
-                }),
-            },
-        ]);
 
+        let original = RpcResponse::Batch(vec![
+            Response::Success(Success {
+                jsonrpc: Some(Version::V2),
+                id: Id::Number(1),
+                result: serde_json::json!("0xabc123"),
+            }),
+            Response::Failure(Failure {
+                jsonrpc: Some(Version::V2),
+                id: Id::String("request-2".to_string()),
+                error: Error {
+                    code: ErrorCode::ServerError(-32000),
+                    message: "Custom error".into(),
+                    data: Some(serde_json::json!("Error details")),
+                },
+            }),
+        ]);
         // Serialize to JSON
         let json = serde_json::to_string(&original).unwrap();
 
@@ -204,44 +263,17 @@ mod tests {
         let deserialized: RpcResponse = serde_json::from_str(&json).unwrap();
 
         // Verify roundtrip
-        match (original, deserialized) {
-            (RpcResponse::Batch(orig_batch), RpcResponse::Batch(des_batch)) => {
-                assert_eq!(orig_batch.len(), des_batch.len());
-
-                // Verify first response (success)
-                assert_eq!(orig_batch[0].id, des_batch[0].id);
-                match (&orig_batch[0].payload, &des_batch[0].payload) {
-                    (ResponsePayload::Success(orig_val), ResponsePayload::Success(des_val)) => {
-                        assert_eq!(orig_val.get(), des_val.get());
-                    }
-                    _ => panic!("Expected Success payload for first response"),
-                }
-
-                // Verify second response (error)
-                assert_eq!(orig_batch[1].id, des_batch[1].id);
-                match (&orig_batch[1].payload, &des_batch[1].payload) {
-                    (ResponsePayload::Failure(orig_err), ResponsePayload::Failure(des_err)) => {
-                        assert_eq!(orig_err.code, des_err.code);
-                        assert_eq!(orig_err.message, des_err.message);
-                        assert_eq!(
-                            orig_err.data.as_ref().unwrap().get(),
-                            des_err.data.as_ref().unwrap().get()
-                        );
-                    }
-                    _ => panic!("Expected Error payload for second response"),
-                }
-            }
-            _ => panic!("Expected Batch responses for both original and deserialized"),
-        }
+        assert_eq!(original, deserialized);
     }
 
     #[test]
     fn test_serialize_deserialize_with_null_id() {
         // Create a response with null ID
-        let original = RpcResponse::Single(Response {
-            id: Id::None,
-            payload: ResponsePayload::Success(serde_json::value::to_raw_value(&123).unwrap()),
-        });
+        let original = RpcResponse::Single(Response::Success(Success {
+            jsonrpc: Some(Version::V2),
+            result: serde_json::json!(123),
+            id: Id::Null,
+        }));
 
         // Serialize to JSON
         let json = serde_json::to_string(&original).unwrap();
@@ -249,46 +281,36 @@ mod tests {
         // Deserialize back
         let deserialized: RpcResponse = serde_json::from_str(&json).unwrap();
 
-        match deserialized {
-            RpcResponse::Single(resp) => {
-                assert_eq!(resp.id, Id::None);
-                assert!(matches!(resp.payload, ResponsePayload::Success(_)));
-            }
-            _ => panic!("Expected Single response"),
-        }
+        assert_eq!(original, deserialized);
     }
 
     #[test]
     fn test_bytebuf_roundtrip_with_complex_data() {
         // Create a complex batch response
         let original = RpcResponse::Batch(vec![
-            Response {
+            Response::Success(Success {
+                jsonrpc: Some(Version::V2),
                 id: Id::Number(1),
-                payload: ResponsePayload::Success(
-                    serde_json::value::to_raw_value(&serde_json::json!({
-                        "result": "0xabc123",
-                        "details": {
-                            "status": "success",
-                            "timestamp": 1678923456
-                        }
-                    }))
-                    .unwrap(),
-                ),
-            },
-            Response {
-                id: Id::String("complex-req".to_string()),
-                payload: ResponsePayload::Failure(alloy::rpc::json_rpc::ErrorPayload {
-                    code: -32602,
-                    message: "Invalid params".into(),
-                    data: Some(
-                        serde_json::value::to_raw_value(&serde_json::json!({
-                            "missing": ["param1", "param2"],
-                            "invalid": {"type": "wrong format"}
-                        }))
-                        .unwrap(),
-                    ),
+                result: serde_json::json!({
+                    "result": "0xabc123",
+                    "details": {
+                        "status": "success",
+                        "timestamp": 1678923456
+                    }
                 }),
-            },
+            }),
+            Response::Failure(Failure {
+                jsonrpc: Some(Version::V2),
+                id: Id::String("complex-req".to_string()),
+                error: Error {
+                    code: ErrorCode::InvalidParams,
+                    message: "Invalid params".into(),
+                    data: Some(serde_json::json!({
+                        "missing": ["param1", "param2"],
+                        "invalid": {"type": "wrong format"}
+                    })),
+                },
+            }),
         ]);
 
         // Convert to ByteBuf
@@ -296,14 +318,6 @@ mod tests {
 
         // Convert back from ByteBuf
         let deserialized: RpcResponse = serde_json::from_slice(&buf).unwrap();
-
-        // Basic structure verification
-        match (&original, &deserialized) {
-            (RpcResponse::Batch(orig), RpcResponse::Batch(des)) => {
-                assert_eq!(orig.len(), des.len());
-            }
-            _ => panic!("Expected both to be batch responses"),
-        }
 
         // Re-serialize both to compare JSON equality
         let original_json = serde_json::to_string(&original).unwrap();
@@ -319,7 +333,7 @@ mod tests {
         let response: RpcResponse = serde_json::from_str(json_string_id).unwrap();
         match response {
             RpcResponse::Single(resp) => {
-                assert_eq!(resp.id, Id::String("test-id".to_string()));
+                assert_eq!(resp.id(), &Id::String("test-id".to_string()));
             }
             _ => panic!("Expected single response"),
         }
@@ -329,7 +343,7 @@ mod tests {
         let response: RpcResponse = serde_json::from_str(json_null_id).unwrap();
         match response {
             RpcResponse::Single(resp) => {
-                assert_eq!(resp.id, Id::None);
+                assert_eq!(resp.id(), &Id::Null);
             }
             _ => panic!("Expected single response"),
         }
@@ -339,7 +353,7 @@ mod tests {
         let response: RpcResponse = serde_json::from_str(json_number_id).unwrap();
         match response {
             RpcResponse::Single(resp) => {
-                assert_eq!(resp.id, Id::Number(12345));
+                assert_eq!(resp.id(), &Id::Number(12345));
             }
             _ => panic!("Expected single response"),
         }
@@ -360,20 +374,20 @@ mod tests {
                 assert_eq!(responses.len(), 4);
 
                 // First response - Success with number ID
-                assert_eq!(responses[0].id, Id::Number(1));
-                assert!(matches!(responses[0].payload, ResponsePayload::Success(_)));
+                assert_eq!(responses[0].id(), &Id::Number(1));
+                assert!(matches!(responses[0], Response::Success(_)));
 
                 // Second response - Error with number ID
-                assert_eq!(responses[1].id, Id::Number(2));
-                assert!(matches!(responses[1].payload, ResponsePayload::Failure(_)));
+                assert_eq!(responses[1].id(), &Id::Number(2));
+                assert!(matches!(responses[1], Response::Failure(_)));
 
                 // Third response - Success with string ID
-                assert_eq!(responses[2].id, Id::String("string-id".to_string()));
-                assert!(matches!(responses[2].payload, ResponsePayload::Success(_)));
+                assert_eq!(responses[2].id(), &Id::String("string-id".to_string()));
+                assert!(matches!(responses[2], Response::Success(_)));
 
                 // Fourth response - Error with null ID
-                assert_eq!(responses[3].id, Id::None);
-                assert!(matches!(responses[3].payload, ResponsePayload::Failure(_)));
+                assert_eq!(responses[3].id(), &Id::Null);
+                assert!(matches!(responses[3], Response::Failure(_)));
             }
             _ => panic!("Expected batch response"),
         }
@@ -392,10 +406,11 @@ mod tests {
 
     #[test]
     fn test_bytebuf_from_serialization_error() {
-        let response = RpcResponse::Single(Response {
+        let response = RpcResponse::Single(Response::Success(Success {
+            jsonrpc: Some(Version::V2),
+            result: serde_json::json!("test"),
             id: Id::Number(1),
-            payload: ResponsePayload::Success(serde_json::value::to_raw_value(&"test").unwrap()),
-        });
+        }));
 
         let buf: ByteBuf = response.into();
 

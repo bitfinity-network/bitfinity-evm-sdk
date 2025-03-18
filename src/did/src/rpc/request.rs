@@ -1,26 +1,46 @@
-use alloy::rpc::json_rpc::Request;
 use serde::{Deserialize, Serialize};
 
+use super::id::Id;
 use super::params::Params;
+use super::version::Version;
 use crate::constant::{JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME, UPGRADE_HTTP_METHODS};
+use crate::rpc::params::default_params;
 
-/// Counts of the methods contained in a RpcRequest
-#[derive(Clone, Debug, PartialEq, Default)]
-pub struct MethodCallCount {
-    /// number of read only methods in the RpcRequest
-    pub read_only: usize,
-    /// number of committable methods in the RpcRequest
-    pub commit: usize,
-    /// number of mint native token methods in the RpcRequest
-    pub mint_native_token: usize,
+/// Represents jsonrpc request which is a method call.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Request {
+    /// A String specifying the version of the JSON-RPC protocol.
+    pub jsonrpc: Option<Version>,
+    /// A String containing the name of the method to be invoked.
+    pub method: String,
+    /// A Structured value that holds the parameter values to be used
+    /// during the invocation of the method. This member MAY be omitted.
+    #[serde(default = "default_params")]
+    pub params: Params,
+    /// An identifier established by the Client that MUST contain a String,
+    /// Number, or NULL value if included. If it is not included it is assumed
+    /// to be a notification.
+    pub id: Id,
+}
+
+impl Default for Request {
+    fn default() -> Self {
+        Self {
+            jsonrpc: Some(Version::V2),
+            method: String::new(),
+            params: Params::Array(vec![]),
+            id: Id::Null,
+        }
+    }
 }
 
 /// Represents jsonrpc request which can be both a batch or a single request
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RpcRequest {
-    Batch(Vec<Request<Params>>),
-    Single(Request<Params>),
+    Batch(Vec<Request>),
+    Single(Request),
 }
 
 impl RpcRequest {
@@ -30,10 +50,10 @@ impl RpcRequest {
             RpcRequest::Batch(methods) => methods
                 .iter()
                 .fold(MethodCallCount::default(), |count, request| {
-                    Self::count_method(count, &request.meta.method)
+                    Self::count_method(count, &request.method)
                 }),
             RpcRequest::Single(request) => {
-                Self::count_method(MethodCallCount::default(), &request.meta.method)
+                Self::count_method(MethodCallCount::default(), &request.method)
             }
         }
     }
@@ -54,27 +74,40 @@ impl RpcRequest {
     /// returns whether the request contains committable methods
     pub fn has_commit_methods(&self) -> bool {
         match self {
-            RpcRequest::Batch(methods) => methods.iter().any(|request| {
-                UPGRADE_HTTP_METHODS.contains(&request.meta.method.to_string().as_str())
-            }),
+            RpcRequest::Batch(methods) => methods
+                .iter()
+                .any(|request| UPGRADE_HTTP_METHODS.contains(&request.method.to_string().as_str())),
             RpcRequest::Single(request) => {
-                UPGRADE_HTTP_METHODS.contains(&request.meta.method.to_string().as_str())
+                UPGRADE_HTTP_METHODS.contains(&request.method.to_string().as_str())
             }
         }
     }
 }
 
+/// Counts of the methods contained in a RpcRequest
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct MethodCallCount {
+    /// number of read only methods in the RpcRequest
+    pub read_only: usize,
+    /// number of committable methods in the RpcRequest
+    pub commit: usize,
+    /// number of mint native token methods in the RpcRequest
+    pub mint_native_token: usize,
+}
+
 #[cfg(test)]
 mod tests {
-    use alloy::rpc::json_rpc::{Id, RequestMeta};
 
     use super::*;
     use crate::constant::{IC_SEND_CONFIRM_BLOCK, JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME};
+    use crate::rpc::id::Id;
 
     #[test]
     fn test_single_request_serialization() {
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new("eth_getBalance".into(), Id::Number(1)),
+            id: Id::Number(1),
+            jsonrpc: Some(Version::V2),
+            method: "eth_getBalance".to_string(),
             params: Params::Array(vec![
                 serde_json::Value::String("0x123".to_string()),
                 serde_json::Value::String("latest".to_string()),
@@ -99,7 +132,7 @@ mod tests {
 
         match request {
             RpcRequest::Single(request) => {
-                assert_eq!(request.meta.method, "eth_getBalance");
+                assert_eq!(request.method, "eth_getBalance");
                 assert_eq!(
                     request.params,
                     Params::Array(vec![
@@ -116,17 +149,18 @@ mod tests {
     fn test_batch_request_serialization() {
         let request = RpcRequest::Batch(vec![
             Request {
-                meta: RequestMeta::new("eth_getBalance".into(), Id::Number(1)),
+                id: Id::Number(1),
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBalance".to_string(),
                 params: Params::Array(vec![
                     serde_json::Value::String("0x123".to_string()),
                     serde_json::Value::String("latest".to_string()),
                 ]),
             },
             Request {
-                meta: RequestMeta::new(
-                    JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
-                    Id::String("second-call".to_string()),
-                ),
+                jsonrpc: Some(Version::V2),
+                method: JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
+                id: Id::String("second-call".to_string()),
                 params: Params::Array(vec![serde_json::Value::String(
                     "0xrawTransaction".to_string(),
                 )]),
@@ -157,7 +191,7 @@ mod tests {
         match request {
             RpcRequest::Batch(requests) => {
                 assert_eq!(requests.len(), 2);
-                assert_eq!(requests[0].meta.method, "eth_getBalance");
+                assert_eq!(requests[0].method, "eth_getBalance");
                 assert_eq!(
                     requests[0].params,
                     Params::Array(vec![
@@ -166,7 +200,7 @@ mod tests {
                     ])
                 );
                 assert_eq!(
-                    requests[1].meta.method,
+                    requests[1].method,
                     JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME
                 );
             }
@@ -177,7 +211,9 @@ mod tests {
     #[test]
     fn test_methods_count_single_read_only() {
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new("eth_getBalance".into(), Id::Number(1)),
+            jsonrpc: Some(Version::V2),
+            method: "eth_getBalance".into(),
+            id: Id::Number(1),
             params: Params::Array(vec![]),
         });
 
@@ -190,10 +226,9 @@ mod tests {
     #[test]
     fn test_methods_count_single_commit() {
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new(
-                JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
-                Id::Number(1),
-            ),
+            jsonrpc: Some(Version::V2),
+            method: JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
+            id: Id::Number(1),
             params: Params::Array(vec![]),
         });
 
@@ -206,10 +241,9 @@ mod tests {
     #[test]
     fn test_methods_count_single_mint_native_token() {
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new(
-                JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME.into(),
-                Id::Number(1),
-            ),
+            jsonrpc: Some(Version::V2),
+            method: JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME.into(),
+            id: Id::Number(1),
             params: Params::Array(vec![]),
         });
 
@@ -224,33 +258,37 @@ mod tests {
         let request = RpcRequest::Batch(vec![
             // Read only
             Request {
-                meta: RequestMeta::new("eth_getBalance".into(), Id::Number(1)),
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBalance".into(),
+                id: Id::Number(1),
                 params: Params::Array(vec![]),
             },
             // Read only
             Request {
-                meta: RequestMeta::new("eth_blockNumber".into(), Id::Number(2)),
+                jsonrpc: Some(Version::V2),
+                method: "eth_blockNumber".into(),
+                id: Id::Number(2),
                 params: Params::Array(vec![]),
             },
             // Commit
             Request {
-                meta: RequestMeta::new(
-                    JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
-                    Id::Number(3),
-                ),
+                jsonrpc: Some(Version::V2),
+                method: JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
+                id: Id::Number(3),
                 params: Params::Array(vec![]),
             },
             // Commit with mint
             Request {
-                meta: RequestMeta::new(
-                    JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME.into(),
-                    Id::Number(4),
-                ),
+                jsonrpc: Some(Version::V2),
+                method: JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME.into(),
+                id: Id::Number(4),
                 params: Params::Array(vec![]),
             },
             // Another commit
             Request {
-                meta: RequestMeta::new(IC_SEND_CONFIRM_BLOCK.into(), Id::Number(5)),
+                jsonrpc: Some(Version::V2),
+                method: IC_SEND_CONFIRM_BLOCK.into(),
+                id: Id::Number(5),
                 params: Params::Array(vec![]),
             },
         ]);
@@ -273,7 +311,9 @@ mod tests {
     #[test]
     fn test_has_commit_methods_single_read_only() {
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new("eth_getBalance".into(), Id::Number(1)),
+            jsonrpc: Some(Version::V2),
+            method: "eth_getBalance".into(),
+            id: Id::Number(1),
             params: Params::Array(vec![]),
         });
 
@@ -283,10 +323,9 @@ mod tests {
     #[test]
     fn test_has_commit_methods_single_commit() {
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new(
-                JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
-                Id::Number(1),
-            ),
+            jsonrpc: Some(Version::V2),
+            method: JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
+            id: Id::Number(1),
             params: Params::Array(vec![]),
         });
 
@@ -297,11 +336,15 @@ mod tests {
     fn test_has_commit_methods_batch_all_read_only() {
         let request = RpcRequest::Batch(vec![
             Request {
-                meta: RequestMeta::new("eth_getBalance".into(), Id::Number(1)),
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBalance".into(),
+                id: Id::Number(1),
                 params: Params::Array(vec![]),
             },
             Request {
-                meta: RequestMeta::new("eth_blockNumber".into(), Id::Number(2)),
+                jsonrpc: Some(Version::V2),
+                method: "eth_blockNumber".into(),
+                id: Id::Number(2),
                 params: Params::Array(vec![]),
             },
         ]);
@@ -313,14 +356,15 @@ mod tests {
     fn test_has_commit_methods_batch_with_commit() {
         let request = RpcRequest::Batch(vec![
             Request {
-                meta: RequestMeta::new("eth_getBalance".into(), Id::Number(1)),
+                jsonrpc: Some(Version::V2),
+                method: "eth_getBalance".into(),
+                id: Id::Number(1),
                 params: Params::Array(vec![]),
             },
             Request {
-                meta: RequestMeta::new(
-                    JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
-                    Id::Number(2),
-                ),
+                jsonrpc: Some(Version::V2),
+                method: JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME.into(),
+                id: Id::Number(2),
                 params: Params::Array(vec![]),
             },
         ]);
@@ -353,7 +397,9 @@ mod tests {
         ]));
 
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new("eth_call".into(), Id::Number(1)),
+            jsonrpc: Some(Version::V2),
+            method: "eth_call".into(),
+            id: Id::Number(1),
             params: params.clone(),
         });
 
@@ -368,7 +414,9 @@ mod tests {
 
         // Empty array params
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new("eth_blockNumber".into(), Id::Number(2)),
+            jsonrpc: Some(Version::V2),
+            method: "eth_blockNumber".into(),
+            id: Id::Number(2),
             params: Params::Array(vec![]),
         });
 
@@ -384,7 +432,9 @@ mod tests {
     fn test_different_id_types() {
         // Number ID
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new("eth_getBalance".into(), Id::Number(123)),
+            jsonrpc: Some(Version::V2),
+            method: "eth_getBalance".into(),
+            id: Id::Number(123),
             params: Params::Array(vec![]),
         });
 
@@ -394,10 +444,9 @@ mod tests {
 
         // String ID
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new(
-                "eth_getBalance".into(),
-                Id::String("test-request".to_string()),
-            ),
+            jsonrpc: Some(Version::V2),
+            method: "eth_getBalance".into(),
+            id: Id::String("test-request".to_string()),
             params: Params::Array(vec![]),
         });
 
@@ -407,7 +456,9 @@ mod tests {
 
         // Null ID
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new("eth_getBalance".into(), Id::None),
+            jsonrpc: Some(Version::V2),
+            method: "eth_getBalance".into(),
+            id: Id::Null,
             params: Params::Array(vec![]),
         });
 

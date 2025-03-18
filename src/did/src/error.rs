@@ -2,13 +2,13 @@ use std::borrow::Cow;
 
 use alloy::eips::eip2718::Eip2718Error;
 use alloy::rlp::Error as DecoderError;
-use alloy::rpc::json_rpc::ErrorPayload as Error;
 use candid::{CandidType, Deserialize};
 use serde::Serialize;
 use thiserror::Error;
 
+use crate::rpc::error::ErrorCode;
 use crate::transaction::BlockId;
-use crate::{BlockNumber, H160, U256};
+use crate::{rpc, BlockNumber, H160, U256};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 
@@ -125,7 +125,7 @@ impl From<serde_json::Error> for EvmError {
 }
 
 /// https://docs.alchemy.com/reference/error-reference#kovan-error-codes
-impl From<EvmError> for Error {
+impl From<EvmError> for rpc::error::Error {
     fn from(err: EvmError) -> Self {
         let code = match &err {
             EvmError::InsufficientBalance {
@@ -142,12 +142,10 @@ impl From<EvmError> for Error {
             _ => None,
         };
 
-        Error {
-            code,
-            message: Cow::Owned(err.to_string()),
-            data: data.map(|s| {
-                serde_json::value::to_raw_value(s).expect("failed to serialize error data")
-            }),
+        rpc::error::Error {
+            code: ErrorCode::ServerError(code),
+            message: err.to_string(),
+            data: data.map(|s| s.as_str().into()),
         }
     }
 }

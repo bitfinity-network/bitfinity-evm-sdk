@@ -40,7 +40,6 @@ alloy = { version = "0.9", default-features = false, features = [
     "rpc-types-eth",
     "rlp",
     "serde",
-    "json-rpc",
 ] }
 anyhow = "1.0"
 async-trait = "0.1"

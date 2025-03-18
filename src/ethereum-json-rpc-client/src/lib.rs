@@ -2,14 +2,15 @@ use std::future::Future;
 use std::pin::Pin;
 
 use alloy::consensus::TxEnvelope;
-use alloy::rpc::json_rpc::{Id, Request, RequestMeta, ResponsePayload};
 use alloy::rpc::types::{Log, TransactionRequest};
 use anyhow::Context;
 pub use did::certified::CertifiedResult;
 use did::evm_state::EvmGlobalState;
+use did::rpc::id::Id;
 use did::rpc::params::Params;
-use did::rpc::request::RpcRequest;
-use did::rpc::response::RpcResponse;
+use did::rpc::request::{Request, RpcRequest};
+use did::rpc::response::{Response, RpcResponse};
+use did::rpc::version::Version;
 pub use did::transaction::StorableExecutionResult;
 use did::{
     Block, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo,
@@ -388,8 +389,10 @@ impl<C: Client> EthJsonRpcClient<C> {
         id: Id,
     ) -> anyhow::Result<R> {
         let request = RpcRequest::Single(Request {
-            meta: RequestMeta::new(method.into(), id),
             params,
+            method,
+            id,
+            ..Default::default()
         });
 
         let response = self.client.send_rpc_request(request).await?;
@@ -397,11 +400,11 @@ impl<C: Client> EthJsonRpcClient<C> {
         println!("response: {:?}", response);
 
         match response {
-            RpcResponse::Single(response) => match response.payload {
-                ResponsePayload::Success(success) => {
-                    serde_json::from_str::<R>(success.get()).context("failed to deserialize value")
+            RpcResponse::Single(response) => match response {
+                Response::Success(success) => {
+                    serde_json::from_value(success.result).context("failed to deserialize value")
                 }
-                ResponsePayload::Failure(error_payload) => {
+                Response::Failure(error_payload) => {
                     anyhow::bail!("RPC error: {:?}", error_payload);
                 }
             },
@@ -451,8 +454,11 @@ impl<C: Client> EthJsonRpcClient<C> {
             let requests = chunk
                 .into_iter()
                 .map(|(method, params, id)| Request {
-                    meta: RequestMeta::new(method.to_string().into(), id),
+                    // meta: RequestMeta::new(method.to_string().into(), id),
+                    method: method.to_string(),
+                    id,
                     params,
+                    jsonrpc: Some(Version::V2),
                 })
                 .collect::<Vec<_>>();
             let chunk_size = requests.len();
@@ -461,32 +467,28 @@ impl<C: Client> EthJsonRpcClient<C> {
             let response = self.client.send_rpc_request(request).await?;
 
             match response {
-                RpcResponse::Single(response) => match response.payload {
-                    ResponsePayload::Success(result) => {
+                RpcResponse::Single(response) => match response {
+                    Response::Success(result) => {
                         if chunk_size == 1 {
-                            results.push(
-                                serde_json::from_str::<Value>(result.get())
-                                    .context("failed to deserialize value")?,
-                            );
+                            results.push(result.result);
                         } else {
                             anyhow::bail!(
                                 "unexpected number of results: have: 1, expected {chunk_size}"
                             );
                         }
                     }
-                    ResponsePayload::Failure(err) => {
+                    Response::Failure(err) => {
                         anyhow::bail!("{err:?}");
                     }
                 },
                 RpcResponse::Batch(response) => {
                     if chunk_size == response.len() {
                         for resp in response.into_iter() {
-                            match resp.payload {
-                                ResponsePayload::Success(resp) => results.push(
-                                    serde_json::from_str::<Value>(resp.get())
-                                        .context("failed to deserialize value")?,
-                                ),
-                                ResponsePayload::Failure(err) => {
+                            match resp {
+                                Response::Success(resp) => {
+                                    results.push(resp.result);
+                                }
+                                Response::Failure(err) => {
                                     anyhow::bail!("{err:?}");
                                 }
                             }
