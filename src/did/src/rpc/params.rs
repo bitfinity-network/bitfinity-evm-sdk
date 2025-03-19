@@ -580,10 +580,7 @@ mod tests {
         );
         assert!(err1.data.is_none());
         assert_eq!(err2.code, ErrorCode::InvalidParams);
-        assert_eq!(
-            err2.message,
-            "invalid length 2, expected a tuple of size 3"
-        );
+        assert_eq!(err2.message, "invalid length 2, expected a tuple of size 3");
         assert!(err2.data.is_none());
     }
 
