@@ -6,9 +6,10 @@ use alloy::dyn_abi::{DynSolValue, FunctionExt, JsonAbiExt};
 use alloy::json_abi::Function;
 use alloy::primitives::U64;
 use alloy::rpc::types::{TransactionInput, TransactionRequest};
+use did::rpc::id::Id;
+use did::rpc::params::Params;
 use did::{BlockNumber, H160, H256, U256};
 use ethereum_json_rpc_client::{EthGetLogsParams, EthJsonRpcClient};
-use jsonrpc_core::{Id, Params};
 use rpc_client::RpcReqwestClient;
 use serial_test::serial;
 
@@ -145,14 +146,14 @@ async fn should_perform_batch_request_to_different_methods() {
     let tx_count_params = (
         "eth_getTransactionCount",
         tx_count_input,
-        Id::Str("eth_getTransactionCount".into()),
+        Id::String("eth_getTransactionCount".into()),
     );
 
     let block_number_input = Params::Array(vec![]);
     let block_number_params = (
         "eth_blockNumber",
         block_number_input,
-        Id::Str("eth_blockNumber".into()),
+        Id::String("eth_blockNumber".into()),
     );
 
     let mut response = reqwest_client()

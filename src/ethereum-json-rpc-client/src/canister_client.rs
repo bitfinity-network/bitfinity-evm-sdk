@@ -4,33 +4,28 @@ use std::pin::Pin;
 
 use anyhow::Context;
 use candid::{CandidType, Deserialize};
+use did::constant::UPGRADE_HTTP_METHODS;
+use did::rpc::request::RpcRequest;
+use did::rpc::response::RpcResponse;
 use ic_canister_client::CanisterClient;
-use jsonrpc_core::{Call, Request, Response};
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 
-use crate::{Client, UPGRADE_HTTP_METHODS};
+use crate::Client;
 
 impl<T: CanisterClient + Sync + 'static> Client for T {
     fn send_rpc_request(
         &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
+        request: RpcRequest,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<RpcResponse>> + Send>> {
         let client = self.clone();
 
         Box::pin(async move {
             log::trace!("CanisterClient - sending 'http_request'. request: {request:?}");
 
             let is_update_call = match &request {
-                Request::Single(Call::MethodCall(call)) => is_update_call(&call.method),
-                Request::Batch(calls) => calls.iter().any(|call| {
-                    if let Call::MethodCall(call) = call {
-                        is_update_call(&call.method)
-                    } else {
-                        false
-                    }
-                }),
-                _ => false,
+                RpcRequest::Single(request) => is_update_call(&request.method),
+                RpcRequest::Batch(calls) => calls.iter().any(|call| is_update_call(&call.method)),
             };
 
             let args = HttpRequest::new(&request)?;

@@ -2,7 +2,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::Context;
-use jsonrpc_core::{Request, Response};
+use did::rpc::request::RpcRequest;
+use did::rpc::response::RpcResponse;
 pub use reqwest;
 
 use crate::Client;
@@ -32,8 +33,8 @@ impl ReqwestClient {
 impl Client for ReqwestClient {
     fn send_rpc_request(
         &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
+        request: RpcRequest,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<RpcResponse>> + Send>> {
         log::trace!("ReqwestClient - sending request {request:?}");
 
         let request_builder = self.client.post(&self.endpoint_url).json(&request);
@@ -51,7 +52,7 @@ impl Client for ReqwestClient {
             }
 
             let json_response = response
-                .json::<Response>()
+                .json::<RpcResponse>()
                 .await
                 .context("failed to decode RPC response")?;
 
