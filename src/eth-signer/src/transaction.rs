@@ -1,3 +1,4 @@
+use alloy::consensus::transaction::Recovered;
 use alloy::consensus::{SignableTransaction, TxLegacy};
 use alloy::network::TxSignerSync;
 use alloy::rpc::types::Transaction as AlloyRpcTransaction;
@@ -72,8 +73,7 @@ impl TransactionBuilder<'_, '_> {
 
         let signed = transaction.into_signed(alloy_signature);
         let transaction: DidTransaction = AlloyRpcTransaction {
-            inner: signed.into(),
-            from: self.from.0,
+            inner: Recovered::new_unchecked(signed.into(), self.from.0),
             block_hash: None,
             block_number: None,
             transaction_index: None,

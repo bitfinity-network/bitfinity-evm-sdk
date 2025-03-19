@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-use alloy::consensus::transaction::to_eip155_value;
+use alloy::consensus::transaction::{to_eip155_value, Recovered};
 use alloy::consensus::{
     SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy,
 };
@@ -403,12 +403,11 @@ pub struct Transaction {
 impl From<alloy::consensus::TxEnvelope> for Transaction {
     fn from(tx: alloy::consensus::TxEnvelope) -> Self {
         let tx = alloy::rpc::types::Transaction {
-            inner: tx,
+            inner: Recovered::new_unchecked(tx, Default::default()),
             block_hash: None,
             block_number: None,
             transaction_index: None,
             effective_gas_price: None,
-            from: Default::default(),
         };
         tx.into()
     }
@@ -418,7 +417,7 @@ impl TryFrom<Transaction> for alloy::consensus::TxEnvelope {
     type Error = EvmError;
     fn try_from(value: Transaction) -> Result<Self, Self::Error> {
         let tx = alloy::rpc::types::Transaction::try_from(value)?;
-        Ok(tx.inner)
+        Ok(tx.inner.into_inner())
     }
 }
 
@@ -427,8 +426,8 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
         let signature = tx.inner.signature();
         let signature = Signature::from(*signature);
 
-        match tx.inner {
-            alloy::consensus::TxEnvelope::Legacy(signed) => {
+        match tx.inner.into_parts() {
+            (alloy::consensus::TxEnvelope::Legacy(signed), signer) => {
                 let inner_tx = signed.tx();
                 let chain_id = inner_tx.chain_id();
                 Self {
@@ -446,14 +445,14 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     block_hash: tx.block_hash.map(Into::into),
                     block_number: tx.block_number.map(Into::into),
                     transaction_index: tx.transaction_index.map(Into::into),
-                    from: tx.from.into(),
+                    from: signer.into(),
                     v: signature.v(TxChainInfo::LegacyTx { chain_id }).into(),
                     r: signature.r,
                     s: signature.s,
                     transaction_type: Some(TRANSACTION_TYPE_LEGACY.into()),
                 }
             }
-            alloy::consensus::TxEnvelope::Eip2930(signed) => {
+            (alloy::consensus::TxEnvelope::Eip2930(signed), signer) => {
                 let inner_tx = signed.tx();
                 Self {
                     hash: (*signed.hash()).into(),
@@ -470,14 +469,14 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     block_hash: tx.block_hash.map(Into::into),
                     block_number: tx.block_number.map(Into::into),
                     transaction_index: tx.transaction_index.map(Into::into),
-                    from: tx.from.into(),
+                    from: signer.into(),
                     v: signature.v(TxChainInfo::OtherTx).into(),
                     r: signature.r,
                     s: signature.s,
                     transaction_type: Some(TRANSACTION_TYPE_EIP2930.into()),
                 }
             }
-            alloy::consensus::TxEnvelope::Eip1559(signed) => {
+            (alloy::consensus::TxEnvelope::Eip1559(signed), signer) => {
                 let inner_tx = signed.tx();
                 Self {
                     hash: (*signed.hash()).into(),
@@ -494,7 +493,7 @@ impl From<alloy::rpc::types::Transaction> for Transaction {
                     block_hash: tx.block_hash.map(Into::into),
                     block_number: tx.block_number.map(Into::into),
                     transaction_index: tx.transaction_index.map(Into::into),
-                    from: tx.from.into(),
+                    from: signer.into(),
                     v: signature.v(TxChainInfo::OtherTx).into(),
                     r: signature.r,
                     s: signature.s,
@@ -520,7 +519,7 @@ impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
         let tx_type = tx.transaction_type.unwrap_or_default().0.to::<u64>();
         match tx_type {
             TRANSACTION_TYPE_LEGACY => Ok(alloy::rpc::types::Transaction {
-                inner: TxLegacy {
+                inner: Recovered::new_unchecked(TxLegacy {
                     nonce: tx.nonce.0.to(),
                     gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
                     gas_limit: tx.gas.0.to(),
@@ -529,16 +528,14 @@ impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
                     input: tx.input.into(),
                     chain_id: tx.chain_id.map(|v| v.0.to()),
                 }
-                .into_signed(signature)
-                .into(),
+                .into_signed(signature).into(), tx.from.0),
                 block_hash: tx.block_hash.map(Into::into),
                 block_number: tx.block_number.map(Into::into),
                 transaction_index: tx.transaction_index.map(Into::into),
                 effective_gas_price: None,
-                from: tx.from.into(),
             }),
             TRANSACTION_TYPE_EIP2930 => Ok(alloy::rpc::types::Transaction {
-                inner: TxEip2930 {
+                inner: Recovered::new_unchecked(TxEip2930 {
                     nonce: tx.nonce.0.to(),
                     gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
                     gas_limit: tx.gas.0.to(),
@@ -549,15 +546,14 @@ impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
                     access_list: tx.access_list.map(Into::into).unwrap_or_default(),
                 }
                 .into_signed(signature)
-                .into(),
+                .into(), tx.from.0),
                 block_hash: tx.block_hash.map(Into::into),
                 block_number: tx.block_number.map(Into::into),
                 transaction_index: tx.transaction_index.map(Into::into),
                 effective_gas_price: None,
-                from: tx.from.into(),
             }),
             TRANSACTION_TYPE_EIP1559 => Ok(alloy::rpc::types::Transaction {
-                inner: TxEip1559 {
+                inner: Recovered::new_unchecked(TxEip1559 {
                     nonce: tx.nonce.0.to(),
                     gas_limit: tx.gas.0.to(),
                     to: tx.to.map(|v| v.0).into(),
@@ -572,12 +568,11 @@ impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
                     access_list: tx.access_list.map(Into::into).unwrap_or_default(),
                 }
                 .into_signed(signature)
-                .into(),
+                .into(), tx.from.0),
                 block_hash: tx.block_hash.map(Into::into),
                 block_number: tx.block_number.map(Into::into),
                 transaction_index: tx.transaction_index.map(Into::into),
                 effective_gas_price: None,
-                from: tx.from.into(),
             }),
             _ => {
                 panic!("Unsupported transaction type: {}", tx_type);
