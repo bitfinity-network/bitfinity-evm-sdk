@@ -519,56 +519,66 @@ impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
         let tx_type = tx.transaction_type.unwrap_or_default().0.to::<u64>();
         match tx_type {
             TRANSACTION_TYPE_LEGACY => Ok(alloy::rpc::types::Transaction {
-                inner: Recovered::new_unchecked(TxLegacy {
-                    nonce: tx.nonce.0.to(),
-                    gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
-                    gas_limit: tx.gas.0.to(),
-                    to: tx.to.map(|v| v.0).into(),
-                    value: tx.value.into(),
-                    input: tx.input.into(),
-                    chain_id: tx.chain_id.map(|v| v.0.to()),
-                }
-                .into_signed(signature).into(), tx.from.0),
+                inner: Recovered::new_unchecked(
+                    TxLegacy {
+                        nonce: tx.nonce.0.to(),
+                        gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
+                        gas_limit: tx.gas.0.to(),
+                        to: tx.to.map(|v| v.0).into(),
+                        value: tx.value.into(),
+                        input: tx.input.into(),
+                        chain_id: tx.chain_id.map(|v| v.0.to()),
+                    }
+                    .into_signed(signature)
+                    .into(),
+                    tx.from.0,
+                ),
                 block_hash: tx.block_hash.map(Into::into),
                 block_number: tx.block_number.map(Into::into),
                 transaction_index: tx.transaction_index.map(Into::into),
                 effective_gas_price: None,
             }),
             TRANSACTION_TYPE_EIP2930 => Ok(alloy::rpc::types::Transaction {
-                inner: Recovered::new_unchecked(TxEip2930 {
-                    nonce: tx.nonce.0.to(),
-                    gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
-                    gas_limit: tx.gas.0.to(),
-                    to: tx.to.map(|v| v.0).into(),
-                    value: tx.value.into(),
-                    input: tx.input.into(),
-                    chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
-                    access_list: tx.access_list.map(Into::into).unwrap_or_default(),
-                }
-                .into_signed(signature)
-                .into(), tx.from.0),
+                inner: Recovered::new_unchecked(
+                    TxEip2930 {
+                        nonce: tx.nonce.0.to(),
+                        gas_price: tx.gas_price.map(|v| v.0.to()).unwrap_or_default(),
+                        gas_limit: tx.gas.0.to(),
+                        to: tx.to.map(|v| v.0).into(),
+                        value: tx.value.into(),
+                        input: tx.input.into(),
+                        chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
+                        access_list: tx.access_list.map(Into::into).unwrap_or_default(),
+                    }
+                    .into_signed(signature)
+                    .into(),
+                    tx.from.0,
+                ),
                 block_hash: tx.block_hash.map(Into::into),
                 block_number: tx.block_number.map(Into::into),
                 transaction_index: tx.transaction_index.map(Into::into),
                 effective_gas_price: None,
             }),
             TRANSACTION_TYPE_EIP1559 => Ok(alloy::rpc::types::Transaction {
-                inner: Recovered::new_unchecked(TxEip1559 {
-                    nonce: tx.nonce.0.to(),
-                    gas_limit: tx.gas.0.to(),
-                    to: tx.to.map(|v| v.0).into(),
-                    value: tx.value.into(),
-                    input: tx.input.into(),
-                    chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
-                    max_fee_per_gas: tx.max_fee_per_gas.map(|v| v.0.to()).unwrap_or_default(),
-                    max_priority_fee_per_gas: tx
-                        .max_priority_fee_per_gas
-                        .map(|v| v.0.to())
-                        .unwrap_or_default(),
-                    access_list: tx.access_list.map(Into::into).unwrap_or_default(),
-                }
-                .into_signed(signature)
-                .into(), tx.from.0),
+                inner: Recovered::new_unchecked(
+                    TxEip1559 {
+                        nonce: tx.nonce.0.to(),
+                        gas_limit: tx.gas.0.to(),
+                        to: tx.to.map(|v| v.0).into(),
+                        value: tx.value.into(),
+                        input: tx.input.into(),
+                        chain_id: tx.chain_id.map(|v| v.0.to()).unwrap_or_default(),
+                        max_fee_per_gas: tx.max_fee_per_gas.map(|v| v.0.to()).unwrap_or_default(),
+                        max_priority_fee_per_gas: tx
+                            .max_priority_fee_per_gas
+                            .map(|v| v.0.to())
+                            .unwrap_or_default(),
+                        access_list: tx.access_list.map(Into::into).unwrap_or_default(),
+                    }
+                    .into_signed(signature)
+                    .into(),
+                    tx.from.0,
+                ),
                 block_hash: tx.block_hash.map(Into::into),
                 block_number: tx.block_number.map(Into::into),
                 transaction_index: tx.transaction_index.map(Into::into),
