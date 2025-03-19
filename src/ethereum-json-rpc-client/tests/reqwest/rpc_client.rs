@@ -86,11 +86,9 @@ impl Client for PublicRpcReqwestClient {
                         return Ok(RpcResponse::Batch(batch))
                     }
                     Ok(result) => {
-                        println!("call failed: {result:?}");
                         err = Some(anyhow::anyhow!("call failed: {result:?}"));
                     }
                     Err(e) => {
-                        println!("call failed: {e}");
                         err = Some(e);
                     }
                 }
@@ -144,11 +142,9 @@ impl Client for AlchemyRpcReqwestClient {
                     Ok(RpcResponse::Batch(batch))
                 }
                 Ok(result) => {
-                    println!("call failed: {result:?}");
                     anyhow::bail!("call failed: {result:?}")
                 }
                 Err(e) => {
-                    println!("call failed: {e}");
                     anyhow::bail!("call failed: {e}")
                 }
             }

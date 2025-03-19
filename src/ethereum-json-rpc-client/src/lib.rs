@@ -397,8 +397,6 @@ impl<C: Client> EthJsonRpcClient<C> {
 
         let response = self.client.send_rpc_request(request).await?;
 
-        println!("response: {:?}", response);
-
         match response {
             RpcResponse::Single(response) => match response {
                 Response::Success(success) => {
