@@ -328,18 +328,18 @@ impl<C: Client> BlockExtractor<C> {
             }
             ChainError::InconsistentStorage => {
                 // Discard all blocks after the safe blocks
-                let first_block_to_discard = self
+                if let Some(first_block_to_discard) = self
                     .blockchain
                     .get_block_info()
                     .await?
                     .map(|info| info.safe_block_number + 1)
-                    .unwrap_or_default();
+                {
+                    log::warn!("Discarding blockchain tail starting with {first_block_to_discard}");
 
-                log::warn!("Discarding blockchain tail starting with {first_block_to_discard}");
-
-                self.blockchain
-                    .discard_blocks_from(first_block_to_discard, "inconsistent")
-                    .await?;
+                    self.blockchain
+                        .discard_blocks_from(first_block_to_discard, "inconsistent")
+                        .await?;
+                }
             }
         }
 
