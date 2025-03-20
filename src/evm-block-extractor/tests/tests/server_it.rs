@@ -2,18 +2,20 @@ use std::future::Future;
 use std::sync::Arc;
 
 use alloy::primitives::{Address, B256};
+use did::evm_state::EvmGlobalState;
 use did::{Block, BlockNumber, H160, H256, U256, U64};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
+use ethereum_json_rpc_client::{Client, EthJsonRpcClient, Response};
 use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
-use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
+use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Version};
 use jsonrpsee::server::{Server, ServerHandle};
 use jsonrpsee::RpcModule;
 use rand::random;
 use serde_json::json;
 
 use crate::test_with_clients;
+use crate::tests::block_extractor_it::MockClient;
 
 const BLOCK_COUNT: u64 = 10;
 
@@ -51,7 +53,7 @@ async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Ou
 #[tokio::test]
 async fn test_get_blocks() {
     with_filled_db(|db_client| async {
-        let (http_client, _port, handle) = new_server(db_client).await;
+        let (http_client, _port, handle) = new_server(db_client, None).await;
 
         let block_count = http_client.get_block_number().await.unwrap();
         assert_eq!(block_count, BLOCK_COUNT - 1);
@@ -83,7 +85,7 @@ async fn test_get_blocks() {
 #[tokio::test]
 async fn test_batched_request() {
     with_filled_db(|db_client| async {
-        let (_http_client, port, handle) = new_server(db_client).await;
+        let (_http_client, port, handle) = new_server(db_client, None).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = Request::Batch(vec![
@@ -133,7 +135,7 @@ async fn test_get_genesis_accounts() {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
-        let (http_client, _port, handle) = new_server(db_client.clone()).await;
+        let (http_client, _port, handle) = new_server(db_client.clone(), None).await;
 
         // Test on empty database
         {
@@ -191,7 +193,7 @@ async fn test_get_chain_id() {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
-        let (http_client, _port, handle) = new_server(db_client.clone()).await;
+        let (http_client, _port, handle) = new_server(db_client.clone(), None).await;
 
         let chain_id: u64 = random();
         db_client.insert_chain_id(chain_id).await.unwrap();
@@ -213,7 +215,7 @@ async fn test_get_chain_id() {
 #[tokio::test]
 async fn test_get_block_by_number_variants() {
     with_filled_db(|db_client| async {
-        let (_http_client, port, handle) = new_server(db_client).await;
+        let (_http_client, port, handle) = new_server(db_client, None).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = Request::Batch(vec![
@@ -291,7 +293,7 @@ async fn test_get_last_certified_block() {
             .await
             .unwrap();
 
-        let (http_client, _port, handle) = new_server(db_client.clone()).await;
+        let (http_client, _port, handle) = new_server(db_client.clone(), None).await;
 
         // Act
         let certified_block = http_client.get_last_certified_block().await.unwrap();
@@ -309,10 +311,42 @@ async fn test_get_last_certified_block() {
     .await
 }
 
+#[tokio::test]
+async fn test_get_evm_global_state() {
+    with_filled_db(|db_client| async {
+        let expected_state = EvmGlobalState::Staging {
+            max_block_number: Some(random()),
+        };
+
+        // Create mock EVM client that will return a predefined state
+        let mock_evm_client = Arc::new(EthJsonRpcClient::new(MockClient::new(
+            expected_state.clone(),
+        )));
+
+        let (http_client, _port, handle) = new_server(db_client, Some(mock_evm_client)).await;
+
+        // Call get_evm_global_state and verify we get back the expected state
+        let state = http_client.get_evm_global_state().await.unwrap();
+        assert_eq!(state, expected_state);
+
+        // Cleanup
+        handle.stop().unwrap();
+        handle.stopped().await;
+    })
+    .await
+}
+
 async fn new_server(
     db_client: Arc<dyn DatabaseClient>,
+    evm_client: Option<Arc<EthJsonRpcClient<MockClient>>>,
 ) -> (EthJsonRpcClient<ReqwestClient>, u16, ServerHandle) {
-    let eth = EthImpl::new(db_client);
+    let evm_client = evm_client.unwrap_or_else(|| {
+        Arc::new(EthJsonRpcClient::new(MockClient::new(
+            EvmGlobalState::Enabled,
+        )))
+    });
+
+    let eth = EthImpl::<MockClient>::new(db_client, evm_client);
     let mut module = RpcModule::new(());
     module.merge(EthServer::into_rpc(eth.clone())).unwrap();
     module.merge(ICServer::into_rpc(eth)).unwrap();

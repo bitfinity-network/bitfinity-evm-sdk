@@ -1,16 +1,15 @@
 use std::borrow::Cow;
 use std::fmt;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use alloy::hex::FromHexError;
 use candid::types::{Type, TypeInner};
 use candid::CandidType;
 use derive_more::Display;
 use ic_stable_structures::{Bound, Bounded, Storable};
-use serde::Serialize;
 
-#[derive(Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Serialize, Display, Hash)]
-#[serde(transparent)]
+#[derive(Debug, Default, Clone, PartialOrd, Ord, Eq, PartialEq, Display, Hash)]
 pub struct Hash<T>(pub T);
 
 ///Fixed-size uninterpreted hash type with 8 bytes (64 bits) size.
@@ -27,6 +26,24 @@ pub fn from_hex_str<const SIZE: usize>(mut s: &str) -> Result<[u8; SIZE], FromHe
 
     let mut result = [0u8; SIZE];
     alloy::hex::decode_to_slice(s, &mut result).and(Ok(result))
+}
+
+impl serde::Serialize for H64 {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.to_hex_str())
+    }
+}
+
+impl serde::Serialize for H160 {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.to_hex_str())
+    }
+}
+
+impl serde::Serialize for H256 {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.to_hex_str())
+    }
 }
 
 impl<'de> serde::Deserialize<'de> for H64 {
@@ -74,6 +91,14 @@ impl H64 {
     }
 }
 
+impl FromStr for H64 {
+    type Err = FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_hex_str(s)
+    }
+}
+
 impl H160 {
     pub const BYTE_SIZE: usize = 20;
 
@@ -100,6 +125,14 @@ impl H160 {
     }
 }
 
+impl FromStr for H160 {
+    type Err = FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_hex_str(s)
+    }
+}
+
 impl H256 {
     pub const BYTE_SIZE: usize = 32;
 
@@ -121,6 +154,14 @@ impl H256 {
 
     pub const fn zero() -> Self {
         Self(alloy::primitives::B256::ZERO)
+    }
+}
+
+impl FromStr for H256 {
+    type Err = FromHexError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_hex_str(s)
     }
 }
 
@@ -605,5 +646,36 @@ mod tests {
         let decoded_value: H256 = serde_json::from_value(encoded_primitive).unwrap();
 
         assert_eq!(value, decoded_value);
+    }
+
+    #[test]
+    fn test_should_bincode_h160() {
+        let value = H160::from_hex_str("0xbf380c52c18d5ead99ea719b6fcfbba551df2f7f")
+            .expect("valid address");
+
+        let encoded = bincode::serialize(&value).expect("serialization failed");
+        let decoded: H160 = bincode::deserialize(&encoded).expect("deserialization failed");
+
+        assert_eq!(value, decoded);
+    }
+
+    #[test]
+    fn test_should_bincode_h64() {
+        let value = H64::new(alloy::primitives::B64::random());
+
+        let encoded = bincode::serialize(&value).expect("serialization failed");
+        let decoded: H64 = bincode::deserialize(&encoded).expect("deserialization failed");
+
+        assert_eq!(value, decoded);
+    }
+
+    #[test]
+    fn test_should_bincode_h256() {
+        let value = H256::new(alloy::primitives::B256::random());
+
+        let encoded = bincode::serialize(&value).expect("serialization failed");
+        let decoded: H256 = bincode::deserialize(&encoded).expect("deserialization failed");
+
+        assert_eq!(value, decoded);
     }
 }

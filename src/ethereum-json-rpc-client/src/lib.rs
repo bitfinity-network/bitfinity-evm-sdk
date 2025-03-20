@@ -5,12 +5,17 @@ use alloy::consensus::TxEnvelope;
 use alloy::rpc::types::{Log, TransactionRequest};
 use anyhow::Context;
 pub use did::certified::CertifiedResult;
+use did::evm_state::EvmGlobalState;
 pub use did::transaction::StorableExecutionResult;
-use did::{Block, BlockNumber, Transaction, TransactionReceipt, H160, H256, U256, U64};
+use did::{
+    Block, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo,
+    Transaction, TransactionReceipt, H160, H256, U256, U64,
+};
 use itertools::Itertools;
 pub use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[cfg(feature = "reqwest")]
 pub mod reqwest;
@@ -30,13 +35,22 @@ const ETH_GET_BLOCK_BY_NUMBER_METHOD: &str = "eth_getBlockByNumber";
 const ETH_BLOCK_NUMBER_METHOD: &str = "eth_blockNumber";
 const ETH_GET_TRANSACTION_RECEIPT_METHOD: &str = "eth_getTransactionReceipt";
 const ETH_CALL_METHOD: &str = "eth_call";
-const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const ETH_GET_TRANSACTION_BY_HASH_METHOD: &str = "eth_getTransactionByHash";
 const ETH_GET_LOGS_METHOD: &str = "eth_getLogs";
 const IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD: &str = "ic_getExeResultByHash";
 const IC_GET_GENESIS_BALANCES: &str = "ic_getGenesisBalances";
 const IC_GET_LAST_CERTIFIED_BLOCK: &str = "ic_getLastCertifiedBlock";
+const IC_GET_EVM_GLOBAL_STATE: &str = "ic_getEvmGlobalState";
+const IC_GET_BLOCKCHAIN_BLOCK_INFO: &str = "ic_getBlockchainBlockInfo";
 const ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD: &str = "eth_maxPriorityFeePerGas";
+
+// List of methods that require an `update` IC query endpoint
+const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
+const IC_SEND_CONFIRM_BLOCK: &str = "ic_sendConfirmBlock";
+
+/// The methods will be upgraded when doing http outcalls
+pub(crate) const UPGRADE_HTTP_METHODS: &[&str] =
+    &[ETH_SEND_RAW_TRANSACTION_METHOD, IC_SEND_CONFIRM_BLOCK];
 
 macro_rules! make_params_array {
     ($($items:expr),*) => {
@@ -316,12 +330,45 @@ impl<C: Client> EthJsonRpcClient<C> {
         .await
     }
 
+    /// Returns the EVM global state
+    pub async fn get_evm_global_state(&self) -> anyhow::Result<EvmGlobalState> {
+        self.single_request(
+            IC_GET_EVM_GLOBAL_STATE.to_string(),
+            make_params_array!(),
+            Id::Str(IC_GET_EVM_GLOBAL_STATE.to_string()),
+        )
+        .await
+    }
+
+    /// Returns the blockchain block info
+    pub async fn get_blockchain_block_info(&self) -> anyhow::Result<BlockchainBlockInfo> {
+        self.single_request(
+            IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string(),
+            make_params_array!(),
+            Id::Str(IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string()),
+        )
+        .await
+    }
+
     /// Returns the last certified block
     pub async fn get_last_certified_block(&self) -> anyhow::Result<CertifiedResult<Block<H256>>> {
         self.single_request(
             IC_GET_LAST_CERTIFIED_BLOCK.to_string(),
             make_params_array!(),
             Id::Str(IC_GET_LAST_CERTIFIED_BLOCK.to_string()),
+        )
+        .await
+    }
+
+    /// Sends the confirm block
+    pub async fn send_confirm_block(
+        &self,
+        params: BlockConfirmationData,
+    ) -> anyhow::Result<BlockConfirmationResult> {
+        self.single_request(
+            IC_SEND_CONFIRM_BLOCK.to_string(),
+            make_params_array!(params),
+            Id::Str(IC_SEND_CONFIRM_BLOCK.to_string()),
         )
         .await
     }
@@ -365,12 +412,32 @@ impl<C: Client> EthJsonRpcClient<C> {
         params: impl IntoIterator<Item = (Params, Id)>,
         max_batch_size: usize,
     ) -> anyhow::Result<Vec<R>> {
+        let value_from_json =
+            |value| serde_json::from_value::<R>(value).map_err(anyhow::Error::from);
+
+        let raw_results = self
+            .batch_request_raw(
+                params.into_iter().map(|(param, id)| (method, param, id)),
+                max_batch_size,
+            )
+            .await?;
+
+        raw_results
+            .into_iter()
+            .map(value_from_json)
+            .collect::<anyhow::Result<Vec<R>>>()
+    }
+
+    /// Performs a batch request to different eth metods.
+    pub async fn batch_request_raw(
+        &self,
+        params: impl IntoIterator<Item = (&str, Params, Id)>,
+        max_batch_size: usize,
+    ) -> anyhow::Result<Vec<Value>> {
         let mut results = Vec::new();
 
-        let value_from_json = |value| serde_json::from_value::<R>(value);
-
         // Collect chunks before iteration, otherwise the future won't be `Send`
-        let chunks: Vec<Vec<(Params, Id)>> = params
+        let chunks: Vec<Vec<(&str, Params, Id)>> = params
             .into_iter()
             .chunks(max_batch_size)
             .into_iter()
@@ -379,7 +446,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         for chunk in chunks {
             let method_calls = chunk
                 .into_iter()
-                .map(|(params, id)| {
+                .map(|(method, params, id)| {
                     Call::MethodCall(MethodCall {
                         jsonrpc: Some(Version::V2),
                         method: method.to_owned(),
@@ -397,7 +464,7 @@ impl<C: Client> EthJsonRpcClient<C> {
                 Response::Single(response) => match response {
                     Output::Success(result) => {
                         if chunk_size == 1 {
-                            results.push(value_from_json(result.result)?);
+                            results.push(result.result);
                         } else {
                             anyhow::bail!(
                                 "unexpected number of results: have: 1, expected {chunk_size}"
@@ -413,7 +480,7 @@ impl<C: Client> EthJsonRpcClient<C> {
                         for resp in response.into_iter() {
                             match resp {
                                 Output::Success(resp) => {
-                                    results.push(value_from_json(resp.result)?)
+                                    results.push(resp.result);
                                 }
                                 Output::Failure(err) => {
                                     anyhow::bail!("{err:?}");

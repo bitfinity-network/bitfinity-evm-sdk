@@ -5,6 +5,8 @@
 The EVM block extractor is an advanced tool used to collect EVM blocks and transactions, and send them to a specified data storage. 
 This version is enhanced to handle parallel requests efficiently and integrates with Postgres DB.
 
+The block extractor tool extracts blocks only if the evm-canister global state is `Enabled`.
+
 ## Configuration
 
 ### Usage with Postgres

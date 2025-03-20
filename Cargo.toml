@@ -8,8 +8,6 @@ members = [
     "src/evm-block-extractor",
     "src/evm-canister-client",
     "src/evm-log-extractor",
-    "src/register-evm-agent-core",
-    "src/register-evm-agent",
     "src/signature-verification-canister-client",
 ]
 resolver = "2"
@@ -23,7 +21,7 @@ homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.39.0"
+version = "0.46.0"
 
 [workspace.dependencies]
 did = { path = "src/did" }
@@ -37,23 +35,30 @@ register-evm-agent-core = { path = "src/register-evm-agent-core" }
 register-evm-agent = { path = "src/register-evm-agent" }
 signature-verification-canister-client = { path = "src/signature-verification-canister-client" }
 
-alloy = { version = "0.8", features = ["consensus", "k256", "eips", "rpc-types-eth", "rlp", "serde"] }
+alloy = { version = "0.9", default-features = false, features = [
+    "consensus",
+    "k256",
+    "eips",
+    "rpc-types-eth",
+    "rlp",
+    "serde",
+] }
 anyhow = "1.0"
 async-trait = "0.1"
 bincode = "1.3"
-bytes = "1.7"
+bytes = "1"
 candid = "0.10"
 clap = { version = "4", features = ["derive", "env"] }
 chrono = { version = "0.4", default-features = false }
-derive_more = { version = "1", features = ["display", "from", "into"] }
+derive_more = { version = "2", features = ["display", "from", "into"] }
 env_logger = { version = "0.11.4", default-features = false }
 futures = { version = "0.3", default-features = false }
-ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.23.x" }
-ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.23.x" }
-ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.23.x" }
-ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.23.x" }
-ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.23.x" }
-itertools = "0.13"
+ic-canister = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister", tag = "v0.24.x" }
+ic-canister-client = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-canister-client", tag = "v0.24.x" }
+ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-exports", tag = "v0.24.x" }
+ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.24.x" }
+ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.24.x" }
+itertools = "0.14"
 jsonrpc-core = "18.0"
 jsonrpsee = { version = "0.24", features = ["server", "macros"] }
 lightspeed_scheduler = "0.60"

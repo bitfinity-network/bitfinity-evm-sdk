@@ -2,13 +2,16 @@ use candid::Principal;
 use did::block::BlockResult;
 use did::build::BuildData;
 use did::error::Result;
-use did::evm_reset_state::EvmResetState;
+use did::evm_state::{EvmGlobalState, EvmResetState};
 use did::permission::{Permission, PermissionList};
 use did::revert_blocks::RevertToBlockArgs;
+use did::send_raw_transaction::SendRawTransactionRequest;
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
+use did::unsafe_blocks::ValidateUnsafeBlockArgs;
 use did::{
-    Block, BlockNumber, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
+    Block, BlockConfirmationData, BlockConfirmationResult, BlockConfirmationStrategy, BlockNumber,
+    BlockchainBlockInfo, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
     TransactionReceipt, H160, H256, U256, U64,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
@@ -47,7 +50,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     pub async fn eth_get_transaction_receipt(
         &self,
         hash: H256,
-    ) -> CanisterClientResult<EvmResult<Option<TransactionReceipt>>> {
+    ) -> CanisterClientResult<Option<TransactionReceipt>> {
         self.client
             .query("eth_get_transaction_receipt", (hash,))
             .await
@@ -63,7 +66,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// The hash of the transaction
     pub async fn send_raw_transaction(
         &self,
-        transaction: Transaction,
+        transaction: SendRawTransactionRequest,
     ) -> CanisterClientResult<EvmResult<H256>> {
         self.client
             .update("send_raw_transaction", (transaction,))
@@ -279,7 +282,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// # Returns
     ///
     /// The block at the given block number or tag
-    pub async fn eth_get_blocks_by_number(
+    pub async fn get_blocks_by_number(
         &self,
         from: U64,
         count: U64,
@@ -289,19 +292,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .query(
                 "eth_get_blocks_by_number",
                 (from, count, include_transactions),
-            )
-            .await
-    }
-
-    /// Returns the number of transactions in a block matching the given block number.
-    pub async fn eth_get_block_transaction_count_by_block_number(
-        &self,
-        block_number: BlockNumber,
-    ) -> CanisterClientResult<EvmResult<usize>> {
-        self.client
-            .query(
-                "eth_get_block_transaction_count_by_block_number",
-                (block_number,),
             )
             .await
     }
@@ -411,48 +401,6 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
-    /// Reserves address for a given principal
-    ///
-    /// This is two step process:
-    /// 1. Send a transaction using the `send_raw_transaction` method,
-    ///    attaching the principal that should be reserved as input
-    ///
-    /// 2. Call this method with the principal and the transaction hash from
-    ///    the previous step
-    ///
-    /// # Arguments
-    /// * `principal` - The principal to reserve address for
-    /// * `tx_hash` - The transaction hash of the transaction that reserved the
-    ///   address
-    pub async fn reserve_address(
-        &self,
-        principal: Principal,
-        tx_hash: H256,
-    ) -> CanisterClientResult<EvmResult<()>> {
-        self.client
-            .update("reserve_address", (principal, tx_hash))
-            .await
-    }
-
-    /// Checks if address with given principal is reserved
-    ///
-    /// # Arguments
-    /// * `principal` - The principal to check
-    /// * `address` - The address to check
-    ///
-    /// # Returns
-    ///
-    /// True if address is reserved, false otherwise
-    pub async fn is_address_reserved(
-        &self,
-        principal: Principal,
-        address: H160,
-    ) -> CanisterClientResult<bool> {
-        self.client
-            .query("is_address_reserved", (principal, address))
-            .await
-    }
-
     /// Returns the current logger filter
     pub async fn get_logger_filter(&self) -> CanisterClientResult<Option<String>> {
         self.client.query("get_logger_filter", ()).await
@@ -478,18 +426,19 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("ic_logs", (count, offset)).await
     }
 
-    /// Disable or enable the EVM. This function requires admin permissions.
-    ///
-    /// # Arguments
-    ///
-    /// * `disabled` - Whether to disable or enable the EVM.
-    pub async fn admin_disable_evm(&self, disabled: bool) -> CanisterClientResult<Result<()>> {
-        self.client.update("admin_disable_evm", (disabled,)).await
+    /// Returns the global state of the EVM.
+    pub async fn get_evm_global_state(&self) -> CanisterClientResult<EvmGlobalState> {
+        self.client.query("get_evm_global_state", ()).await
     }
 
-    /// Returns whether the EVM is disabled
-    pub async fn is_evm_disabled(&self) -> CanisterClientResult<bool> {
-        self.client.query("is_evm_disabled", ()).await
+    /// Sets the global state of the EVM.
+    pub async fn admin_set_evm_global_state(
+        &self,
+        state: EvmGlobalState,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_evm_global_state", (state,))
+            .await
     }
 
     /// Adds permissions to a principal and returns the principal permissions
@@ -532,6 +481,31 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client
             .update("admin_set_min_gas_price", (min_gas_price,))
             .await
+    }
+
+    /// Enable or disable unsafe blocks. This function requires admin permissions.
+    pub async fn admin_enable_unsafe_blocks(
+        &self,
+        enabled: bool,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_enable_unsafe_blocks", (enabled,))
+            .await
+    }
+
+    /// Returns whether unsafe blocks are enabled
+    pub async fn is_unsafe_blocks_enabled(&self) -> CanisterClientResult<bool> {
+        self.client.query("is_unsafe_blocks_enabled", ()).await
+    }
+
+    /// Validate unsafe block on the EVM.
+    ///
+    /// Only those with [`did::permission::Permission::ValidateUnsafeBlocks`] can call this method.
+    pub async fn validate_unsafe_block(
+        &self,
+        args: ValidateUnsafeBlockArgs,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client.update("validate_unsafe_block", (args,)).await
     }
 
     /// Returns the chain ID used for signing replay-protected transactions.
@@ -853,5 +827,38 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client
             .update("send_transactions_unchecked", (transactions,))
             .await
+    }
+
+    /// Returns the current block confirmation strategy
+    pub async fn get_block_confirmation_strategy(
+        &self,
+    ) -> CanisterClientResult<BlockConfirmationStrategy> {
+        self.client
+            .query("get_block_confirmation_strategy", ())
+            .await
+    }
+
+    /// Sets the block confirmation strategy.
+    /// This function can only be called by the admin.
+    pub async fn admin_set_block_confirmation_strategy(
+        &self,
+        strategy: BlockConfirmationStrategy,
+    ) -> CanisterClientResult<Result<()>> {
+        self.client
+            .update("admin_set_block_confirmation_strategy", (strategy,))
+            .await
+    }
+
+    /// Attempt to confirm the block with the given hash
+    pub async fn send_confirm_block(
+        &self,
+        data: BlockConfirmationData,
+    ) -> CanisterClientResult<Result<BlockConfirmationResult>> {
+        self.client.update("send_confirm_block", (data,)).await
+    }
+
+    /// Returns information about the blockchain blocks
+    pub async fn get_blockchain_block_info(&self) -> CanisterClientResult<BlockchainBlockInfo> {
+        self.client.query("get_blockchain_block_info", ()).await
     }
 }

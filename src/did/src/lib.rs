@@ -10,7 +10,7 @@ pub mod certified;
 pub mod codec;
 pub mod constant;
 pub mod error;
-pub mod evm_reset_state;
+pub mod evm_state;
 pub mod gas;
 pub mod hash;
 pub mod ic;
@@ -20,13 +20,16 @@ pub mod keccak;
 pub mod logs;
 pub mod permission;
 pub mod revert_blocks;
+pub mod send_raw_transaction;
 pub mod state;
 pub mod transaction;
+pub mod unsafe_blocks;
 
 pub mod fees;
 pub mod http;
 #[cfg(test)]
 mod test_utils;
+pub mod utils;
 
 pub use block::Block;
 pub use error::{ExitFatal, HaltError};
