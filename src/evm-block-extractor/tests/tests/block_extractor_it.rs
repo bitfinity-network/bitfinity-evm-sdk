@@ -20,7 +20,7 @@ use crate::test_with_clients;
 
 #[tokio::test]
 async fn test_extractor_collect_blocks() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let start_block = 0;
@@ -333,7 +333,7 @@ async fn test_mock_client_returns_evm_state() {
 
 #[tokio::test]
 async fn test_extractor_does_not_collect_blocks_if_evm_is_disabled() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let client = MockClient::new(EvmGlobalState::Disabled);
@@ -354,7 +354,7 @@ async fn test_extractor_does_not_collect_blocks_if_evm_is_disabled() {
 
 #[tokio::test]
 async fn test_extractor_does_not_collect_blocks_if_evm_is_staging() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let client = MockClient::new(EvmGlobalState::Staging {
@@ -377,7 +377,7 @@ async fn test_extractor_does_not_collect_blocks_if_evm_is_staging() {
 
 #[tokio::test]
 async fn test_extractor_validate_and_recover_blockchain() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let start_block = 10;
@@ -497,7 +497,7 @@ async fn test_extractor_validate_and_recover_blockchain() {
 
 #[tokio::test]
 async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let start_block = 10;
@@ -602,7 +602,7 @@ async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
 
 #[tokio::test]
 async fn test_server_returns_blocks_according_to_tags() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         // fill db with blocks
@@ -684,7 +684,7 @@ async fn test_server_returns_blocks_according_to_tags() {
 
 #[tokio::test]
 async fn test_extractor_forwards_confirm_block_requests() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let block_info = BlockchainBlockInfo {
