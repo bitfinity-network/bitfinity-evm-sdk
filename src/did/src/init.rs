@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use candid::{CandidType, Nat, Principal};
 use ic_log::LogSettings;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::permission::Permission;
 use crate::{H160, U256};
@@ -47,4 +47,12 @@ impl Default for EvmCanisterInitData {
 }
 
 /// These are the arguments which are taken by the signature verification canister init fn
-pub type SignatureVerificationCanisterInitData = Vec<Principal>;
+#[derive(Debug, Clone, Serialize, CandidType, Deserialize)]
+pub struct SignatureVerificationCanisterInitData {
+    /// Access list of principals that are allowed to send transactions to the EVM canisters
+    pub access_list: Vec<Principal>,
+    /// EVM canister Principal
+    pub evm_canister: Principal,
+    /// Interval for pushing transactions to the EVM canisters
+    pub pushing_timer_interval: Duration,
+}
