@@ -1,4 +1,3 @@
-use std::future::Future;
 use std::sync::Arc;
 
 use alloy::primitives::{Address, B256};
@@ -19,10 +18,10 @@ use crate::tests::block_extractor_it::MockClient;
 
 const BLOCK_COUNT: u64 = 10;
 
-async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Output = ()>>(
+async fn with_filled_db<Func: AsyncFn(Arc<dyn DatabaseClient>) -> ()>(
     func: Func,
 ) {
-    test_with_clients(|db_client| async {
+    test_with_clients(async |db_client| {
         db_client.init(None, false).await.unwrap();
 
         for i in 0..BLOCK_COUNT {
@@ -131,7 +130,7 @@ async fn test_batched_request() {
 
 #[tokio::test]
 async fn test_get_genesis_accounts() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
@@ -189,7 +188,7 @@ async fn test_get_genesis_accounts() {
 
 #[tokio::test]
 async fn test_get_chain_id() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
@@ -273,7 +272,7 @@ async fn test_get_block_by_number_variants() {
 
 #[tokio::test]
 async fn test_get_last_certified_block() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Arrange
         db_client.init(None, false).await.unwrap();
 

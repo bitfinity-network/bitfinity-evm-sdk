@@ -1,4 +1,3 @@
-use std::future::Future;
 use std::sync::Arc;
 
 use evm_block_extractor::config::Database;
@@ -8,7 +7,7 @@ use testcontainers::testcontainers::ContainerAsync;
 
 mod tests;
 
-async fn test_with_clients<T: Fn(Arc<dyn DatabaseClient>) -> F, F: Future<Output = ()>>(test: T) {
+async fn test_with_clients<T: AsyncFn(Arc<dyn DatabaseClient>) -> ()>(test: T) {
     let _ = env_logger::Builder::new().parse_filters("info").try_init();
     println!("----------------------------------");
     println!("Running test with PostgresDbClient");
