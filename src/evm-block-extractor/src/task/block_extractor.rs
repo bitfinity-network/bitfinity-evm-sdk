@@ -123,7 +123,7 @@ impl<C: Client> BlockExtractor<C> {
                     e
                 );
                 None
-            },
+            }
         };
 
         info!(

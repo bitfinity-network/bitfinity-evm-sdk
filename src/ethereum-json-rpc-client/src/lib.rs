@@ -49,8 +49,7 @@ const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const IC_SEND_CONFIRM_BLOCK: &str = "ic_sendConfirmBlock";
 
 /// The methods will be upgraded when doing http outcalls
-pub const UPGRADE_HTTP_METHODS: &[&str] =
-    &[ETH_SEND_RAW_TRANSACTION_METHOD, IC_SEND_CONFIRM_BLOCK];
+pub const UPGRADE_HTTP_METHODS: &[&str] = &[ETH_SEND_RAW_TRANSACTION_METHOD, IC_SEND_CONFIRM_BLOCK];
 
 macro_rules! make_params_array {
     ($($items:expr),*) => {

@@ -18,9 +18,7 @@ use crate::tests::block_extractor_it::MockClient;
 
 const BLOCK_COUNT: u64 = 10;
 
-async fn with_filled_db<Func: AsyncFn(Arc<dyn DatabaseClient>) -> ()>(
-    func: Func,
-) {
+async fn with_filled_db<Func: AsyncFn(Arc<dyn DatabaseClient>) -> ()>(func: Func) {
     test_with_clients(async |db_client| {
         db_client.init(None, false).await.unwrap();
 
