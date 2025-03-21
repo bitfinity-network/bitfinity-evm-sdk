@@ -3,7 +3,7 @@ use std::sync::Arc;
 use alloy::eips::BlockNumberOrTag;
 use alloy::primitives::{Address, U256, U64};
 use did::evm_state::EvmGlobalState;
-use did::{BlockConfirmationData, BlockConfirmationResult};
+use did::{BlockConfirmationData, BlockConfirmationResult, BlockchainBlockInfo};
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::proc_macros::rpc;
@@ -155,20 +155,6 @@ where
     ) -> RpcResult<serde_json::Value> {
         let db = &self.blockchain;
 
-        let block_info_future = async {
-            match db.get_block_info().await {
-                Ok(Some(info)) => Ok(info),
-                Ok(None) => {
-                    log::warn!("No block info set, can't select {block} block.");
-                    Err(ErrorCode::InternalError)
-                }
-                Err(e) => {
-                    log::warn!("Error getting blockchain block info: {:?}", e);
-                    Err(ErrorCode::InternalError)
-                }
-            }
-        };
-
         let Some(latest_block_in_db) =
             self.blockchain
                 .get_latest_block_number()
@@ -181,13 +167,47 @@ where
             return Ok(serde_json::Value::Null);
         };
 
+        let block_info_future = async {
+            match db.get_block_info().await {
+                Ok(Some(info)) => info,
+                Ok(None) => {
+                    log::warn!("No block info set, can't select {block} block.");
+                    // We can't get the block info if the evm-canister version is too old.
+                    // Once all the canisters are updated, we can remove this logic and return instead of proceed.
+                    // TODO: Remove this logic in EPROD-1123
+                    // Err(ErrorCode::InternalError)
+                    BlockchainBlockInfo {
+                        earliest_block_number: 0,
+                        latest_block_number: latest_block_in_db,
+                        safe_block_number: latest_block_in_db,
+                        finalized_block_number: latest_block_in_db,
+                        pending_block_number: latest_block_in_db + 1,
+                    }
+                }
+                Err(e) => {
+                    log::warn!("Error getting blockchain block info: {:?}", e);
+                    // We can't get the block info if the evm-canister version is too old.
+                    // Once all the canisters are updated, we can remove this logic and return instead of proceed.
+                    // TODO: Remove this logic in EPROD-1123
+                    // Err(ErrorCode::InternalError)
+                    BlockchainBlockInfo {
+                        earliest_block_number: 0,
+                        latest_block_number: latest_block_in_db,
+                        safe_block_number: latest_block_in_db,
+                        finalized_block_number: latest_block_in_db,
+                        pending_block_number: latest_block_in_db + 1,
+                    }
+                }
+            }
+        };
+
         let block_number = match block {
             BlockNumberOrTag::Finalized => {
-                let block_info = block_info_future.await?;
+                let block_info = block_info_future.await;
                 block_info.finalized_block_number.min(latest_block_in_db)
             }
             BlockNumberOrTag::Safe => {
-                let block_info = block_info_future.await?;
+                let block_info = block_info_future.await;
                 block_info.safe_block_number.min(latest_block_in_db)
             }
             BlockNumberOrTag::Latest => latest_block_in_db,
