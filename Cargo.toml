@@ -17,6 +17,7 @@ authors = ["Bitfinity Network"]
 categories = ["cryptography::cryptocurrencies"]
 description = "EVM canister SDK"
 edition = "2021"
+rust-version = "1.85"
 homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
