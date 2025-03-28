@@ -17,11 +17,8 @@ chrono = { workspace = true }
 clap = { workspace = true }
 did = { workspace = true }
 env_logger = { workspace = true }
-ethereum-json-rpc-client = { workspace = true, features = [
-    "reqwest",
-] }
+ethereum-json-rpc-client = { workspace = true, features = ["reqwest"] }
 futures = { workspace = true }
-jsonrpc-core = { workspace = true }
 jsonrpsee = { workspace = true }
 lightspeed_scheduler = { workspace = true }
 log = { workspace = true }
@@ -33,10 +30,8 @@ tokio = { workspace = true }
 
 
 [dev-dependencies]
-alloy = { workspace = true, features = ["rand"]}
-jsonrpc-core = { workspace = true }
+alloy = { workspace = true, features = ["rand"] }
 port_check = { workspace = true }
 rand = { workspace = true }
 tempfile = { workspace = true }
 testcontainers = { workspace = true }
-

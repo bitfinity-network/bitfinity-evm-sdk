@@ -1,8 +1,9 @@
 use std::time::Duration;
 
+use did::rpc::request::RpcRequest;
+use did::rpc::response::{Response, RpcResponse};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::Client;
-use jsonrpc_core::{Output, Response};
 use rand::SeedableRng as _;
 
 /// Public ethereum endpoints which can be used to send RPC requests.
@@ -36,10 +37,9 @@ impl RpcReqwestClient {
 impl Client for RpcReqwestClient {
     fn send_rpc_request(
         &self,
-        request: jsonrpc_core::Request,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>,
-    > {
+        request: RpcRequest,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<RpcResponse>> + Send>>
+    {
         match self {
             RpcReqwestClient::Public(client) => client.send_rpc_request(request),
             RpcReqwestClient::Alchemy(client) => client.send_rpc_request(request),
@@ -56,10 +56,9 @@ pub struct PublicRpcReqwestClient;
 impl Client for PublicRpcReqwestClient {
     fn send_rpc_request(
         &self,
-        request: jsonrpc_core::Request,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>,
-    > {
+        request: RpcRequest,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<RpcResponse>> + Send>>
+    {
         Box::pin(async move {
             let mut rng = rand::rngs::StdRng::from_entropy();
 
@@ -78,20 +77,18 @@ impl Client for PublicRpcReqwestClient {
                 let result = client.send_rpc_request(request.clone()).await;
 
                 match result {
-                    Ok(Response::Single(Output::Success(_))) => return result,
-                    Ok(Response::Batch(batch))
+                    Ok(RpcResponse::Single(Response::Success(_))) => return result,
+                    Ok(RpcResponse::Batch(batch))
                         if batch
                             .iter()
-                            .all(|output| matches!(output, Output::Success(_))) =>
+                            .all(|output| matches!(output, Response::Success(_))) =>
                     {
-                        return Ok(Response::Batch(batch))
+                        return Ok(RpcResponse::Batch(batch))
                     }
                     Ok(result) => {
-                        println!("call failed: {result:?}");
                         err = Some(anyhow::anyhow!("call failed: {result:?}"));
                     }
                     Err(e) => {
-                        println!("call failed: {e}");
                         err = Some(e);
                     }
                 }
@@ -113,20 +110,16 @@ impl AlchemyRpcReqwestClient {
     /// Get endpoint for Alchemy API
     #[inline]
     fn endpoint(&self) -> String {
-        format!(
-            "https://eth-mainnet.alchemyapi.io/v2/{apikey}",
-            apikey = self.apikey
-        )
+        format!("https://eth-mainnet.alchemyapi.io/v2/{}", self.apikey)
     }
 }
 
 impl Client for AlchemyRpcReqwestClient {
     fn send_rpc_request(
         &self,
-        request: jsonrpc_core::Request,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>,
-    > {
+        request: RpcRequest,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<RpcResponse>> + Send>>
+    {
         let endpoint = self.endpoint();
 
         Box::pin(async move {
@@ -140,20 +133,18 @@ impl Client for AlchemyRpcReqwestClient {
             let result = client.send_rpc_request(request.clone()).await;
 
             match result {
-                Ok(Response::Single(Output::Success(_))) => result,
-                Ok(Response::Batch(batch))
+                Ok(RpcResponse::Single(Response::Success(_))) => result,
+                Ok(RpcResponse::Batch(batch))
                     if batch
                         .iter()
-                        .all(|output| matches!(output, Output::Success(_))) =>
+                        .all(|output| matches!(output, Response::Success(_))) =>
                 {
-                    Ok(Response::Batch(batch))
+                    Ok(RpcResponse::Batch(batch))
                 }
                 Ok(result) => {
-                    println!("call failed: {result:?}");
                     anyhow::bail!("call failed: {result:?}")
                 }
                 Err(e) => {
-                    println!("call failed: {e}");
                     anyhow::bail!("call failed: {e}")
                 }
             }
