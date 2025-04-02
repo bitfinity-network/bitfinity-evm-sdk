@@ -26,6 +26,7 @@ pub mod transaction;
 pub mod unsafe_blocks;
 
 pub mod fees;
+pub mod rpc;
 #[cfg(test)]
 mod test_utils;
 pub mod utils;

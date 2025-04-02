@@ -112,7 +112,19 @@ impl<C: Client> BlockExtractor<C> {
         // Can't set the block info to the DB right now, because we can't be sure
         // the new block_info.safe_block numbers match with blocks in DB.
         // This must be set to DB after successful validation of the new blocks sequence.
-        let block_info = self.client.get_blockchain_block_info().await?;
+        let block_info = match self.client.get_blockchain_block_info().await {
+            Ok(block_info) => Some(block_info),
+            // We can't get the block info if the evm-canister version is too old.
+            // Once all the canisters are updated, we can remove this logic and return instead of proceed.
+            // TODO: Remove this logic in EPROD-1123
+            Err(e) => {
+                warn!(
+                    "Error getting Block Info: {:?}. The blocks will be extracted anyway.",
+                    e
+                );
+                None
+            }
+        };
 
         info!(
             "Getting blocks from {:?} to {}",
@@ -133,9 +145,11 @@ impl<C: Client> BlockExtractor<C> {
             self.persist_data(evm_blocks).await?;
         }
 
-        // Now we are sure the numbers in the `block_info` describe
-        // correct block sequence in DB.
-        self.blockchain.set_block_info(block_info).await?;
+        if let Some(block_info) = block_info {
+            // Now we are sure the numbers in the `block_info` describe
+            // correct block sequence in DB.
+            self.blockchain.set_block_info(block_info).await?;
+        }
 
         Ok(BlockExtractCollectOutcome::BlocksExtracted {
             from_block: from_block_inclusive,
@@ -314,18 +328,18 @@ impl<C: Client> BlockExtractor<C> {
             }
             ChainError::InconsistentStorage => {
                 // Discard all blocks after the safe blocks
-                let first_block_to_discard = self
+                if let Some(first_block_to_discard) = self
                     .blockchain
                     .get_block_info()
                     .await?
                     .map(|info| info.safe_block_number + 1)
-                    .unwrap_or_default();
+                {
+                    log::warn!("Discarding blockchain tail starting with {first_block_to_discard}");
 
-                log::warn!("Discarding blockchain tail starting with {first_block_to_discard}");
-
-                self.blockchain
-                    .discard_blocks_from(first_block_to_discard, "inconsistent")
-                    .await?;
+                    self.blockchain
+                        .discard_blocks_from(first_block_to_discard, "inconsistent")
+                        .await?;
+                }
             }
         }
 

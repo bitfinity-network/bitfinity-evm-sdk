@@ -6,7 +6,7 @@ use crate::test_with_clients;
 
 #[tokio::test]
 async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, false).await.unwrap();
 
         let mut blocks = Vec::new();
@@ -83,7 +83,7 @@ async fn test_batch_insertion_of_blocks_and_transactions_retrieval() {
 
 #[tokio::test]
 async fn test_retrieval_of_latest_and_oldest_block_number() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, false).await.unwrap();
 
         let latest_block_number = db_client.get_latest_block_number().await.unwrap();
@@ -113,7 +113,7 @@ async fn test_retrieval_of_latest_and_oldest_block_number() {
 
 #[tokio::test]
 async fn test_init_idempotency() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Add a block
         let dummy_block: Block<H256> = Block {
             number: alloy::primitives::U64::from(1).into(),
@@ -153,7 +153,7 @@ async fn test_init_idempotency() {
 
 #[tokio::test]
 async fn test_retrieval_of_transactions_with_blocks() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, false).await.unwrap();
 
         let mut blocks = Vec::new();
@@ -208,7 +208,7 @@ async fn test_retrieval_of_transactions_with_blocks() {
 
 #[tokio::test]
 async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         let block_one: Block<Transaction> = Block::<H256> {
             number: alloy::primitives::U64::from(0).into(),
             hash: alloy::primitives::B256::random().into(),
@@ -265,7 +265,7 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
 
 #[tokio::test]
 async fn test_deletion_and_clearing_of_database() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, false).await.unwrap();
 
         db_client
@@ -295,7 +295,7 @@ async fn test_deletion_and_clearing_of_database() {
 
 #[tokio::test]
 async fn test_database_reset_on_empty_db() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // the first time init is called the DB has no tables
         db_client.init(None, true).await.unwrap();
         assert!(db_client.get_block_by_number(0).await.is_err());
@@ -309,7 +309,7 @@ async fn test_database_reset_on_empty_db() {
 
 #[tokio::test]
 async fn test_check_if_same_block_hash() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, false).await.unwrap();
 
         let dummy_block: Block<H256> = Block {
@@ -348,7 +348,7 @@ async fn test_check_if_same_block_hash() {
 
 #[tokio::test]
 async fn test_insertion_of_blocks_with_txs() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, false).await.unwrap();
 
         let dummy_txn = Transaction {
@@ -382,7 +382,7 @@ async fn test_insertion_of_blocks_with_txs() {
 
 #[tokio::test]
 async fn test_insertion_of_blocks_with_no_txs() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, false).await.unwrap();
 
         let dummy_block: Block<H256> = Block {
@@ -408,7 +408,7 @@ async fn test_insertion_of_blocks_with_no_txs() {
 
 #[tokio::test]
 async fn test_insertion_of_txs_with_no_blocks() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, false).await.unwrap();
 
         let dummy_txn = Transaction {
@@ -438,7 +438,7 @@ async fn test_insertion_of_txs_with_no_blocks() {
 
 #[tokio::test]
 async fn test_insert_and_fetch_genesis_accounts() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
@@ -492,7 +492,7 @@ async fn test_insert_and_fetch_genesis_accounts() {
 
 #[tokio::test]
 async fn test_insert_and_fetch_chain_id() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
@@ -534,7 +534,7 @@ async fn test_insert_and_fetch_chain_id() {
 
 #[tokio::test]
 async fn test_insert_and_fetch_last_block_certified_data() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
@@ -603,7 +603,7 @@ async fn test_insert_and_fetch_last_block_certified_data() {
 
 #[tokio::test]
 async fn test_blockchain_tail_discard_and_get_discarded_entries() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, false).await.unwrap();
 
         let mut blocks = Vec::new();

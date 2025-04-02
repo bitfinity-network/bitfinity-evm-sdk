@@ -6,13 +6,17 @@ use alloy::rpc::types::{Log, TransactionRequest};
 use anyhow::Context;
 pub use did::certified::CertifiedResult;
 use did::evm_state::EvmGlobalState;
+use did::rpc::id::Id;
+use did::rpc::params::Params;
+use did::rpc::request::{Request, RpcRequest};
+use did::rpc::response::{Response, RpcResponse};
+use did::rpc::version::Version;
 pub use did::transaction::StorableExecutionResult;
 use did::{
     Block, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo,
     Transaction, TransactionReceipt, H160, H256, U256, U64,
 };
 use itertools::Itertools;
-pub use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Response, Version};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -48,10 +52,6 @@ const ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD: &str = "eth_maxPriorityFeePerGas";
 const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const IC_SEND_CONFIRM_BLOCK: &str = "ic_sendConfirmBlock";
 
-/// The methods will be upgraded when doing http outcalls
-pub(crate) const UPGRADE_HTTP_METHODS: &[&str] =
-    &[ETH_SEND_RAW_TRANSACTION_METHOD, IC_SEND_CONFIRM_BLOCK];
-
 macro_rules! make_params_array {
     ($($items:expr),*) => {
         Params::Array(vec![$(serde_json::to_value($items)?, )*])
@@ -79,7 +79,7 @@ impl<C: Client> EthJsonRpcClient<C> {
             ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string(),
             make_params_array!(block, false),
             // For some reason some JSON RPC services fail to parse requests with null id
-            Id::Str(ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string()),
+            Id::String(ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string()),
         )
         .await
     }
@@ -93,7 +93,7 @@ impl<C: Client> EthJsonRpcClient<C> {
             ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string(),
             make_params_array!(block, true),
             // For some reason some JSON RPC services fail to parse requests with null id
-            Id::Str(ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string()),
+            Id::String(ETH_GET_BLOCK_BY_NUMBER_METHOD.to_string()),
         )
         .await
     }
@@ -108,7 +108,10 @@ impl<C: Client> EthJsonRpcClient<C> {
             .into_iter()
             .enumerate()
             .map(|(index, block_number)| -> anyhow::Result<(Params, Id)> {
-                Ok((make_params_array!(block_number, true), Id::Num(index as _)))
+                Ok((
+                    make_params_array!(block_number, true),
+                    Id::Number(index as _),
+                ))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
         self.batch_request(ETH_GET_BLOCK_BY_NUMBER_METHOD, params, max_batch_size)
@@ -124,7 +127,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         let params = hashes
             .into_iter()
             .map(|hash| -> anyhow::Result<(Params, Id)> {
-                let id = Id::Str(hash.0.to_string());
+                let id = Id::String(hash.0.to_string());
                 Ok((make_params_array!(hash), id))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
@@ -134,7 +137,7 @@ impl<C: Client> EthJsonRpcClient<C> {
 
     /// Get receipt by hash
     pub async fn get_receipt_by_hash(&self, hash: H256) -> anyhow::Result<TransactionReceipt> {
-        let id = Id::Str(hash.0.to_string());
+        let id = Id::String(hash.0.to_string());
         self.single_request(
             ETH_GET_TRANSACTION_RECEIPT_METHOD.to_string(),
             make_params_array!(hash),
@@ -148,7 +151,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request::<U64>(
             ETH_BLOCK_NUMBER_METHOD.to_string(),
             make_params_array!(),
-            Id::Str(ETH_BLOCK_NUMBER_METHOD.to_string()),
+            Id::String(ETH_BLOCK_NUMBER_METHOD.to_string()),
         )
         .await
         .map(|v| v.0.to())
@@ -159,7 +162,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request::<U64>(
             ETH_CHAIN_ID_METHOD.to_string(),
             Params::Array(vec![]),
-            Id::Str(ETH_CHAIN_ID_METHOD.to_string()),
+            Id::String(ETH_CHAIN_ID_METHOD.to_string()),
         )
         .await
         .map(|v| v.0.to())
@@ -170,7 +173,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_GET_BALANCE_METHOD.to_string(),
             make_params_array!(address, block),
-            Id::Str(ETH_GET_BALANCE_METHOD.to_string()),
+            Id::String(ETH_GET_BALANCE_METHOD.to_string()),
         )
         .await
     }
@@ -180,7 +183,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_GAS_PRICE_METHOD.to_string(),
             make_params_array!(),
-            Id::Str(ETH_GAS_PRICE_METHOD.to_string()),
+            Id::String(ETH_GAS_PRICE_METHOD.to_string()),
         )
         .await
     }
@@ -190,7 +193,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD.to_string(),
             make_params_array!(),
-            Id::Str(ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD.to_string()),
+            Id::String(ETH_MAX_PRIORITY_FEE_PER_GAS_METHOD.to_string()),
         )
         .await
     }
@@ -200,7 +203,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_GET_CODE_METHOD.to_string(),
             make_params_array!(address, block),
-            Id::Str("eth_getCode".to_string()),
+            Id::String("eth_getCode".to_string()),
         )
         .await
     }
@@ -214,7 +217,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request::<U64>(
             ETH_GET_TRANSACTION_COUNT_METHOD.to_string(),
             make_params_array!(address, block),
-            Id::Str(ETH_GET_TRANSACTION_COUNT_METHOD.to_string()),
+            Id::String(ETH_GET_TRANSACTION_COUNT_METHOD.to_string()),
         )
         .await
         .map(|v| v.0.to())
@@ -229,7 +232,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_CALL_METHOD.to_string(),
             make_params_array!(params, block),
-            Id::Str("eth_call".to_string()),
+            Id::String("eth_call".to_string()),
         )
         .await
     }
@@ -240,7 +243,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
             make_params_array!(transaction),
-            Id::Str(ETH_SEND_RAW_TRANSACTION_METHOD.to_string()),
+            Id::String(ETH_SEND_RAW_TRANSACTION_METHOD.to_string()),
         )
         .await
     }
@@ -250,7 +253,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_GET_TRANSACTION_BY_HASH_METHOD.to_string(),
             make_params_array!(hash),
-            Id::Str(ETH_GET_TRANSACTION_BY_HASH_METHOD.to_string()),
+            Id::String(ETH_GET_TRANSACTION_BY_HASH_METHOD.to_string()),
         )
         .await
     }
@@ -264,7 +267,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_SEND_RAW_TRANSACTION_METHOD.to_string(),
             make_params_array!(transaction),
-            Id::Str(ETH_SEND_RAW_TRANSACTION_METHOD.to_string()),
+            Id::String(ETH_SEND_RAW_TRANSACTION_METHOD.to_string()),
         )
         .await
     }
@@ -274,7 +277,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             ETH_GET_LOGS_METHOD.to_string(),
             make_params_array!(params),
-            Id::Str(ETH_GET_LOGS_METHOD.to_string()),
+            Id::String(ETH_GET_LOGS_METHOD.to_string()),
         )
         .await
     }
@@ -284,7 +287,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         &self,
         hash: H256,
     ) -> anyhow::Result<StorableExecutionResult> {
-        let id = Id::Str(hash.to_string());
+        let id = Id::String(hash.to_string());
         self.single_request::<Option<StorableExecutionResult>>(
             IC_GET_TX_EXECUTION_RESULT_BY_HASH_METHOD.to_string(),
             make_params_array!(hash),
@@ -304,7 +307,7 @@ impl<C: Client> EthJsonRpcClient<C> {
             .into_iter()
             .enumerate()
             .map(|(index, hash)| -> anyhow::Result<(Params, Id)> {
-                Ok((make_params_array!(hash), Id::Num(index as _)))
+                Ok((make_params_array!(hash), Id::Number(index as _)))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
@@ -325,7 +328,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             IC_GET_GENESIS_BALANCES.to_string(),
             make_params_array!(),
-            Id::Str(IC_GET_GENESIS_BALANCES.to_string()),
+            Id::String(IC_GET_GENESIS_BALANCES.to_string()),
         )
         .await
     }
@@ -335,7 +338,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             IC_GET_EVM_GLOBAL_STATE.to_string(),
             make_params_array!(),
-            Id::Str(IC_GET_EVM_GLOBAL_STATE.to_string()),
+            Id::String(IC_GET_EVM_GLOBAL_STATE.to_string()),
         )
         .await
     }
@@ -345,7 +348,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string(),
             make_params_array!(),
-            Id::Str(IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string()),
+            Id::String(IC_GET_BLOCKCHAIN_BLOCK_INFO.to_string()),
         )
         .await
     }
@@ -355,7 +358,7 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             IC_GET_LAST_CERTIFIED_BLOCK.to_string(),
             make_params_array!(),
-            Id::Str(IC_GET_LAST_CERTIFIED_BLOCK.to_string()),
+            Id::String(IC_GET_LAST_CERTIFIED_BLOCK.to_string()),
         )
         .await
     }
@@ -368,13 +371,13 @@ impl<C: Client> EthJsonRpcClient<C> {
         self.single_request(
             IC_SEND_CONFIRM_BLOCK.to_string(),
             make_params_array!(params),
-            Id::Str(IC_SEND_CONFIRM_BLOCK.to_string()),
+            Id::String(IC_SEND_CONFIRM_BLOCK.to_string()),
         )
         .await
     }
 
     /// Performs a request.
-    pub async fn request(&self, request: Request) -> anyhow::Result<Response> {
+    pub async fn request(&self, request: RpcRequest) -> anyhow::Result<RpcResponse> {
         self.client.send_rpc_request(request).await
     }
 
@@ -385,23 +388,25 @@ impl<C: Client> EthJsonRpcClient<C> {
         params: Params,
         id: Id,
     ) -> anyhow::Result<R> {
-        let request = Request::Single(Call::MethodCall(MethodCall {
-            jsonrpc: Some(Version::V2),
-            method,
+        let request = RpcRequest::Single(Request {
             params,
+            method,
             id,
-        }));
+            ..Default::default()
+        });
 
         let response = self.client.send_rpc_request(request).await?;
 
         match response {
-            Response::Single(response) => match response {
-                Output::Success(result) => {
-                    serde_json::from_value(result.result).context("failed to deserialize value")
+            RpcResponse::Single(response) => match response {
+                Response::Success(success) => {
+                    serde_json::from_value(success.result).context("failed to deserialize value")
                 }
-                Output::Failure(err) => Err(anyhow::format_err!("{err:?}")),
+                Response::Failure(error_payload) => {
+                    anyhow::bail!("RPC error: {:?}", error_payload);
+                }
             },
-            Response::Batch(_) => Err(anyhow::format_err!("unexpected response type: batch")),
+            RpcResponse::Batch(_) => Err(anyhow::format_err!("unexpected response type: batch")),
         }
     }
 
@@ -428,7 +433,7 @@ impl<C: Client> EthJsonRpcClient<C> {
             .collect::<anyhow::Result<Vec<R>>>()
     }
 
-    /// Performs a batch request to different eth metods.
+    /// Performs a batch request to different eth methods.
     pub async fn batch_request_raw(
         &self,
         params: impl IntoIterator<Item = (&str, Params, Id)>,
@@ -444,25 +449,24 @@ impl<C: Client> EthJsonRpcClient<C> {
             .map(Iterator::collect::<Vec<_>>)
             .collect::<Vec<_>>();
         for chunk in chunks {
-            let method_calls = chunk
+            let requests = chunk
                 .into_iter()
-                .map(|(method, params, id)| {
-                    Call::MethodCall(MethodCall {
-                        jsonrpc: Some(Version::V2),
-                        method: method.to_owned(),
-                        params,
-                        id,
-                    })
+                .map(|(method, params, id)| Request {
+                    // meta: RequestMeta::new(method.to_string().into(), id),
+                    method: method.to_string(),
+                    id,
+                    params,
+                    jsonrpc: Some(Version::V2),
                 })
                 .collect::<Vec<_>>();
-            let chunk_size = method_calls.len();
-            let request = Request::Batch(method_calls);
+            let chunk_size = requests.len();
+            let request = RpcRequest::Batch(requests);
 
             let response = self.client.send_rpc_request(request).await?;
 
             match response {
-                Response::Single(response) => match response {
-                    Output::Success(result) => {
+                RpcResponse::Single(response) => match response {
+                    Response::Success(result) => {
                         if chunk_size == 1 {
                             results.push(result.result);
                         } else {
@@ -471,18 +475,18 @@ impl<C: Client> EthJsonRpcClient<C> {
                             );
                         }
                     }
-                    Output::Failure(err) => {
+                    Response::Failure(err) => {
                         anyhow::bail!("{err:?}");
                     }
                 },
-                Response::Batch(response) => {
+                RpcResponse::Batch(response) => {
                     if chunk_size == response.len() {
                         for resp in response.into_iter() {
                             match resp {
-                                Output::Success(resp) => {
+                                Response::Success(resp) => {
                                     results.push(resp.result);
                                 }
-                                Output::Failure(err) => {
+                                Response::Failure(err) => {
                                     anyhow::bail!("{err:?}");
                                 }
                             }
@@ -527,8 +531,8 @@ pub trait Client: Clone + Send + Sync {
     ///
     fn send_rpc_request(
         &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>>;
+        request: RpcRequest,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<RpcResponse>> + Send>>;
 }
 
 #[cfg(test)]

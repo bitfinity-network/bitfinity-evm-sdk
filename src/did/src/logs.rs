@@ -37,7 +37,7 @@ pub struct LogFilter {
 }
 
 impl TryFrom<Value> for LogFilter {
-    type Error = jsonrpc_core::Error;
+    type Error = crate::rpc::error::Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Object(ref map) = value {
