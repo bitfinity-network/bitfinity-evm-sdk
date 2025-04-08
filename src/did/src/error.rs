@@ -209,7 +209,7 @@ pub enum HaltError {
     Continue,
     Revert(Option<String>),
     PriorityFeeGreaterThanMaxFee,
-    CallGasCostMoreThanGasLimit{
+    CallGasCostMoreThanGasLimit {
         initial_gas: u64,
         gas_limit: u64,
     },
