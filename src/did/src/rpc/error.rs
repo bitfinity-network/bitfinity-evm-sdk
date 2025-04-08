@@ -6,20 +6,26 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
 /// JSONRPC error code
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum ErrorCode {
     /// Invalid JSON was received by the server.
     /// An error occurred on the server while parsing the JSON text.
+    #[error("Parse error")]
     ParseError,
     /// The JSON sent is not a valid Request object.
+    #[error("Invalid request")]
     InvalidRequest,
     /// The method does not exist / is not available.
+    #[error("Method not found")]
     MethodNotFound,
     /// Invalid method parameter(s).
+    #[error("Invalid params")]
     InvalidParams,
     /// Internal JSON-RPC error.
+    #[error("Internal error")]
     InternalError,
     /// Reserved for implementation-defined server-errors.
+    #[error("Server error: {0}")]
     ServerError(i64),
 }
 
@@ -38,15 +44,7 @@ impl ErrorCode {
 
     /// Returns human-readable description
     pub fn description(&self) -> String {
-        let desc = match *self {
-            ErrorCode::ParseError => "Parse error",
-            ErrorCode::InvalidRequest => "Invalid request",
-            ErrorCode::MethodNotFound => "Method not found",
-            ErrorCode::InvalidParams => "Invalid params",
-            ErrorCode::InternalError => "Internal error",
-            ErrorCode::ServerError(_) => "Server error",
-        };
-        desc.to_string()
+        self.to_string()
     }
 }
 
@@ -83,8 +81,9 @@ impl Serialize for ErrorCode {
 }
 
 /// Error object as defined in Spec
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, thiserror::Error, PartialEq, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[error("{code}: {message}")]
 pub struct Error {
     /// Code
     pub code: ErrorCode,
@@ -159,11 +158,3 @@ impl Error {
         }
     }
 }
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}: {}", self.code.description(), self.message)
-    }
-}
-
-impl std::error::Error for Error {}
