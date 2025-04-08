@@ -65,6 +65,9 @@ pub enum EvmError {
     #[error("The transaction has been reverted: {0}")]
     TransactionReverted(String),
 
+    #[error("Transaction type error: {0}")]
+    TransactionTypeError(String),
+
     #[error("Signature Parity is invalid: {0}")]
     InvalidSignatureParity(String),
 
