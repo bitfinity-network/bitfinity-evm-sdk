@@ -504,18 +504,20 @@ mod tests {
 
     #[test]
     fn test_u256_from_hex_should_fail_long_length() {
-        assert!(U256::from_hex_str(
-            "0x18201820182018201820182018201820182018201820182018201820182018212"
-        )
-        .is_err());
+        assert!(
+            U256::from_hex_str(
+                "0x18201820182018201820182018201820182018201820182018201820182018212"
+            )
+            .is_err()
+        );
     }
 
     #[test]
     fn test_u256_from_hex_should_fail_invalid_char() {
-        assert!(U256::from_hex_str(
-            "18201820182018201820182018201820182018201820182018201820182018g"
-        )
-        .is_err());
+        assert!(
+            U256::from_hex_str("18201820182018201820182018201820182018201820182018201820182018g")
+                .is_err()
+        );
     }
 
     #[test]
@@ -621,26 +623,26 @@ mod tests {
 
     #[test]
     fn test_u64_from_hex_should_fail_odd_length() {
-        assert!(U64::from_hex_str(
-            "182018201820182018201820182018201820182018201820182018201820182"
-        )
-        .is_err());
+        assert!(
+            U64::from_hex_str("182018201820182018201820182018201820182018201820182018201820182")
+                .is_err()
+        );
     }
 
     #[test]
     fn test_u64_from_hex_should_fail_long_length() {
-        assert!(U64::from_hex_str(
-            "18201820182018201820182018201820182018201820182018201820182018212"
-        )
-        .is_err());
+        assert!(
+            U64::from_hex_str("18201820182018201820182018201820182018201820182018201820182018212")
+                .is_err()
+        );
     }
 
     #[test]
     fn test_u64_from_hex_should_fail_invalid_char() {
-        assert!(U64::from_hex_str(
-            "18201820182018201820182018201820182018201820182018201820182018g"
-        )
-        .is_err());
+        assert!(
+            U64::from_hex_str("18201820182018201820182018201820182018201820182018201820182018g")
+                .is_err()
+        );
     }
 
     #[test]

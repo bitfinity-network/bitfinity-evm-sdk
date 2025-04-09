@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use ::sqlx::migrate::Migrator;
 use ::sqlx::*;
-use did::{Block, BlockchainBlockInfo, Transaction, H256};
-use serde::de::DeserializeOwned;
+use did::{Block, BlockchainBlockInfo, H256, Transaction};
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use sqlx::postgres::PgRow;
 
 use super::{
-    AccountBalance, CertifiedBlock, DataContainer, DatabaseClient, DiscardedBlock,
-    BLOCKCHAIN_BLOCK_INFO_KEY, CHAIN_ID_KEY, GENESIS_BALANCES_KEY,
+    AccountBalance, BLOCKCHAIN_BLOCK_INFO_KEY, CHAIN_ID_KEY, CertifiedBlock, DataContainer,
+    DatabaseClient, DiscardedBlock, GENESIS_BALANCES_KEY,
 };
 
 static MIGRATOR: Migrator = ::sqlx::migrate!("src_resources/db/postgres/migrations");

@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use did::rpc::request::RpcRequest;
 use did::rpc::response::{Response, RpcResponse};
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::Client;
+use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use rand::SeedableRng as _;
 
 /// Public ethereum endpoints which can be used to send RPC requests.
@@ -83,7 +83,7 @@ impl Client for PublicRpcReqwestClient {
                             .iter()
                             .all(|output| matches!(output, Response::Success(_))) =>
                     {
-                        return Ok(RpcResponse::Batch(batch))
+                        return Ok(RpcResponse::Batch(batch));
                     }
                     Ok(result) => {
                         err = Some(anyhow::anyhow!("call failed: {result:?}"));

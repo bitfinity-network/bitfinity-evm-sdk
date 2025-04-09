@@ -1,4 +1,4 @@
-use crate::{Transaction, H160, U256};
+use crate::{H160, Transaction, U256};
 
 /// Creates an ephemeral transaction to calculate the Proof of Work (PoW)
 /// required by the EVM block confirmation endpoint.

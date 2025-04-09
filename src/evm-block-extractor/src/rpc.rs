@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use alloy::eips::BlockNumberOrTag;
-use alloy::primitives::{Address, U256, U64};
+use alloy::primitives::{Address, U64, U256};
 use did::evm_state::EvmGlobalState;
 use did::{BlockConfirmationData, BlockConfirmationResult, BlockchainBlockInfo};
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};

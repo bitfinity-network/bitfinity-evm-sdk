@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-use alloy::consensus::transaction::{to_eip155_value, Recovered};
+use alloy::consensus::transaction::{Recovered, to_eip155_value};
 use alloy::consensus::{
     SignableTransaction, Transaction as TransactionTrait, TxEip1559, TxEip2930, TxLegacy,
 };
@@ -18,14 +18,14 @@ use sha2::Digest;
 use sha3::Keccak256;
 
 use super::hash::{H160, H256};
-use super::integer::{U256, U64};
+use super::integer::{U64, U256};
 use crate::block::{ExeResult, TransactOut, TransactionExecutionLog};
 use crate::constant::{
     TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
 };
 use crate::error::EvmError;
 use crate::keccak::keccak_hash;
-use crate::{codec, Bytes};
+use crate::{Bytes, codec};
 
 #[derive(Debug, Display, Clone, Copy, PartialEq, Eq)]
 pub enum BlockNumber {
@@ -935,7 +935,7 @@ impl Bloom {
     pub fn from_logs<'a>(logs: impl IntoIterator<Item = &'a TransactionExecutionLog>) -> Bloom {
         let mut result = Bloom::zeros();
         let mut processor = |index, mask| {
-            result.0 .0[index] |= mask;
+            result.0.0[index] |= mask;
             true
         };
         for log in logs {
@@ -1038,7 +1038,7 @@ mod test {
 
     use candid::{Decode, Encode};
     use ic_stable_structures::Storable;
-    use rand::{random, Rng};
+    use rand::{Rng, random};
 
     use super::*;
     use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
@@ -1048,10 +1048,12 @@ mod test {
     fn make_log_1() -> TransactionExecutionLog {
         TransactionExecutionLog {
             address: H160::from_hex_str("22341ae42d6dd7384bc8584e50419ea3ac75b83f").unwrap(),
-            topics: vec![H256::from_hex_str(
-                "04491edcd115127caedbd478e2e7895ed80c7847e903431f94f9cfa579cad47f",
-            )
-            .unwrap()],
+            topics: vec![
+                H256::from_hex_str(
+                    "04491edcd115127caedbd478e2e7895ed80c7847e903431f94f9cfa579cad47f",
+                )
+                .unwrap(),
+            ],
             data: Default::default(),
         }
     }
@@ -1407,7 +1409,7 @@ mod test {
 
             assert_eq!(
                 alloy::primitives::B256::from_str(&hash).unwrap(),
-                transaction.slow_hash().unwrap().0 .0
+                transaction.slow_hash().unwrap().0.0
             );
 
             // from/to rlp

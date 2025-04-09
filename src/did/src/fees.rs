@@ -5,7 +5,7 @@ use crate::constant::{
     TRANSACTION_TYPE_EIP1559, TRANSACTION_TYPE_EIP2930, TRANSACTION_TYPE_LEGACY,
 };
 use crate::transaction::StorableExecutionResult;
-use crate::{Transaction, U256, U64};
+use crate::{Transaction, U64, U256};
 
 #[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize, CandidType)]
 #[serde(rename_all = "camelCase")]

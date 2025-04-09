@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use did::evm_state::EvmGlobalState;
 use did::BlockNumber;
+use did::evm_state::EvmGlobalState;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use log::*;
 use tokio::time::Duration;
@@ -257,7 +257,10 @@ impl<C: Client> BlockExtractor<C> {
                     .await?;
             }
             Err(e) => {
-                error!("Error getting genesis balances: {:?}. The process will not be stopped but there will be missing genesis balances in the DB", e);
+                error!(
+                    "Error getting genesis balances: {:?}. The process will not be stopped but there will be missing genesis balances in the DB",
+                    e
+                );
             }
         }
 
@@ -278,7 +281,10 @@ impl<C: Client> BlockExtractor<C> {
                 self.blockchain.insert_chain_id(chain_id).await?;
             }
             Err(e) => {
-                error!("Error getting chain id: {:?}. The process will not be stopped but the chain id will be missing in the DB", e);
+                error!(
+                    "Error getting chain id: {:?}. The process will not be stopped but the chain id will be missing in the DB",
+                    e
+                );
             }
         }
 

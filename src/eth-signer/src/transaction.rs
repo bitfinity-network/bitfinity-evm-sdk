@@ -180,9 +180,11 @@ mod test {
         {
             let wallet = LocalWallet::new_with_credential(key, from, Some(chain_id));
             let verifying_key = wallet.credential().verifying_key();
-            assert!(verifying_key
-                .verify_prehash(signature_hash.as_slice(), &signature.to_k256().unwrap())
-                .is_ok());
+            assert!(
+                verifying_key
+                    .verify_prehash(signature_hash.as_slice(), &signature.to_k256().unwrap())
+                    .is_ok()
+            );
         }
 
         // verify eip-155 signature

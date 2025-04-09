@@ -1,7 +1,7 @@
 use candid::Principal;
 use did::build::BuildData;
 use did::error::SignatureVerificationError;
-use did::{Transaction, H160};
+use did::{H160, Transaction};
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 
 /// This is the result type for all SignatureVerification canister calls.

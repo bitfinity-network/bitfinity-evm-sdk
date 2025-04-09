@@ -11,8 +11,8 @@ use did::transaction::StorableExecutionResult;
 use did::unsafe_blocks::ValidateUnsafeBlockArgs;
 use did::{
     Block, BlockConfirmationData, BlockConfirmationResult, BlockConfirmationStrategy, BlockNumber,
-    BlockchainBlockInfo, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, Transaction,
-    TransactionReceipt, H160, H256, U256, U64,
+    BlockchainBlockInfo, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, H160, H256,
+    Transaction, TransactionReceipt, U64, U256,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};

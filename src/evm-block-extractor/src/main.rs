@@ -4,14 +4,14 @@ use std::time::Duration;
 
 use clap::Parser;
 use env_logger::Builder;
-use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::EthJsonRpcClient;
+use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use evm_block_extractor::config::ExtractorArgs;
 use evm_block_extractor::server::{server_start, server_stop};
 use evm_block_extractor::task::block_extractor::start_extractor;
+use lightspeed_scheduler::JobExecutor;
 use lightspeed_scheduler::job::Job;
 use lightspeed_scheduler::scheduler::Scheduler;
-use lightspeed_scheduler::JobExecutor;
 use log::*;
 
 #[tokio::main]

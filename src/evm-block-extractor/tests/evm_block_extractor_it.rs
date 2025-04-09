@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use evm_block_extractor::config::Database;
 use evm_block_extractor::database::DatabaseClient;
-use testcontainers::testcontainers::runners::AsyncRunner;
 use testcontainers::testcontainers::ContainerAsync;
+use testcontainers::testcontainers::runners::AsyncRunner;
 
 mod tests;
 
