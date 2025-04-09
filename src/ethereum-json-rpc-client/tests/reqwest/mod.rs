@@ -284,19 +284,19 @@ async fn should_get_transaction_receipts() {
             .get_block_by_number(BlockNumber::Number(11588465u64.into()))
             .await
             .unwrap();
-        if let Ok(receipts) = reqwest_client()
+        match reqwest_client()
             .get_receipts_by_hash(
                 vec![block.transactions[0].clone(), block.transactions[1].clone()],
                 MAX_BATCH_SIZE,
             )
             .await
-        {
+        { Ok(receipts) => {
             assert_eq!(receipts[0].gas_used, Some(21000u64.into()));
             assert_eq!(receipts[1].gas_used, Some(52358u64.into()));
             return;
-        } else {
+        } _ => {
             tokio::time::sleep(Duration::from_secs(5)).await;
-        }
+        }}
     }
 
     panic!("Failed to get transaction receipts");

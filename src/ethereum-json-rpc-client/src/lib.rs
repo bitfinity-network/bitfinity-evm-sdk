@@ -53,7 +53,7 @@ const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const IC_SEND_CONFIRM_BLOCK: &str = "ic_sendConfirmBlock";
 
 macro_rules! make_params_array {
-    ($($items:expr),*) => {
+    ($($items:expr_2021),*) => {
         Params::Array(vec![$(serde_json::to_value($items)?, )*])
     };
 }
