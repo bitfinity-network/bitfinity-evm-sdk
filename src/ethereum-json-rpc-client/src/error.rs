@@ -1,7 +1,7 @@
 //! Error types for the Ethereum JSON-RPC client.
 
-use did::rpc::response::Failure;
 use did::H256;
+use did::rpc::response::Failure;
 use ic_exports::ic_kit::RejectionCode;
 use thiserror::Error;
 

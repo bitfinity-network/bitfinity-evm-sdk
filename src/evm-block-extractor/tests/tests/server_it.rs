@@ -7,13 +7,13 @@ use did::rpc::params::Params;
 use did::rpc::request::{Request, RpcRequest};
 use did::rpc::response::{Response, RpcResponse};
 use did::rpc::version::Version;
-use did::{Block, BlockNumber, H160, H256, U256, U64};
+use did::{Block, BlockNumber, H160, H256, U64, U256};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
-use jsonrpsee::server::{Server, ServerHandle};
 use jsonrpsee::RpcModule;
+use jsonrpsee::server::{Server, ServerHandle};
 use rand::random;
 use serde_json::json;
 
@@ -221,34 +221,41 @@ async fn test_get_block_by_number_variants() {
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
         let request = RpcRequest::Batch(vec![
-        Request {
+            Request {
                 jsonrpc: Some(Version::V2),
                 method: "eth_getBlockByNumber".to_string(),
                 params: Params::Array(vec![json!("latest"), json!(false)]),
                 id: Id::String("eth_getBlockByNumber".to_string()),
             },
-        Request {
+            Request {
                 jsonrpc: Some(Version::V2),
                 method: "eth_getBlockByNumber".to_string(),
                 params: Params::Array(vec![json!("earliest"), json!(false)]),
                 id: Id::String("eth_getBlockByNumber".to_string()),
             },
-        Request {
+            Request {
                 jsonrpc: Some(Version::V2),
                 method: "eth_getBlockByNumber".to_string(),
                 params: Params::Array(vec![json!("0x5"), json!(false)]),
                 id: Id::String("eth_getBlockByNumber".to_string()),
             },
-
         ]);
 
-        let RpcResponse::Batch(results) = http_client.send_rpc_request(request).await.unwrap() else {
+        let RpcResponse::Batch(results) = http_client.send_rpc_request(request).await.unwrap()
+        else {
             panic!("unexpected return type")
         };
 
         match &results[..] {
-            [Response::Success(latest_block), Response::Success(earliest_block), Response::Success(number_block)] => {
-                assert_eq!(latest_block.id, Id::String("eth_getBlockByNumber".to_string()));
+            [
+                Response::Success(latest_block),
+                Response::Success(earliest_block),
+                Response::Success(number_block),
+            ] => {
+                assert_eq!(
+                    latest_block.id,
+                    Id::String("eth_getBlockByNumber".to_string())
+                );
                 let latest_block: Block<H256> =
                     serde_json::from_value(latest_block.result.clone()).unwrap();
                 assert_eq!(latest_block.number, U64::from(BLOCK_COUNT - 1));
@@ -259,7 +266,7 @@ async fn test_get_block_by_number_variants() {
 
                 let number_block: Block<H256> =
                     serde_json::from_value(number_block.result.clone()).unwrap();
-                    assert_eq!(number_block.number, U64::from_hex_str("0x5").unwrap());
+                assert_eq!(number_block.number, U64::from_hex_str("0x5").unwrap());
             }
             _ => panic!("unexpected results"),
         }

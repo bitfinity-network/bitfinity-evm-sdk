@@ -2,7 +2,7 @@ pub mod postgres_db_client;
 
 use chrono::{DateTime, Utc};
 use did::certified::CertifiedResult;
-use did::{Block, BlockchainBlockInfo, Transaction, H160, H256, U256};
+use did::{Block, BlockchainBlockInfo, H160, H256, Transaction, U256};
 use serde::{Deserialize, Serialize};
 
 /// Account balance
@@ -103,7 +103,7 @@ pub trait DatabaseClient: Send + Sync {
 
     /// Returns a discarded block by its hash.
     async fn get_discarded_block_by_hash(&self, block_hash: H256)
-        -> anyhow::Result<DiscardedBlock>;
+    -> anyhow::Result<DiscardedBlock>;
 
     /// Returns block info from storage.
     ///

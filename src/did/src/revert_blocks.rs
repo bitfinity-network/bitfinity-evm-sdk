@@ -29,10 +29,7 @@ impl Display for RevertToBlockArgs {
         write!(
             f,
             "{{from_block_number: {}, from_block_hash: {}, to_block_number: {}, to_block_hash: {}}}",
-            self.from_block_number,
-            self.from_block_hash,
-            self.to_block_number,
-            self.to_block_hash
+            self.from_block_number, self.from_block_hash, self.to_block_number, self.to_block_hash
         )
     }
 }

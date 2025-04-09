@@ -4,7 +4,7 @@ use alloy::primitives::{Address, U256};
 use alloy::rpc::types::TransactionRequest;
 use candid::Principal;
 use eth_signer::ic_sign::{DerivationPath, IcSigner, SigningKeyId};
-use ic_canister::{generate_idl, update, Canister, Idl, PreUpdate};
+use ic_canister::{Canister, Idl, PreUpdate, generate_idl, update};
 
 #[derive(Canister)]
 pub struct TestCanister {

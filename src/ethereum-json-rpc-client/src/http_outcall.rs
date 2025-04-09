@@ -231,10 +231,12 @@ mod tests {
         let sanitized: HttpResponse = sanitize_http_response(transform_args);
         assert_eq!(sanitized.headers.len(), 3);
         assert_eq!(sanitized.status, Nat::from(200u128));
-        assert!(sanitized
-            .headers
-            .iter()
-            .any(|header| header.name == "content-type"));
+        assert!(
+            sanitized
+                .headers
+                .iter()
+                .any(|header| header.name == "content-type")
+        );
         assert!(!sanitized.headers.iter().any(|header| header.name == "date"));
     }
 }

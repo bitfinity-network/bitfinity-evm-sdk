@@ -83,7 +83,7 @@ impl Client for PublicRpcReqwestClient {
                             .iter()
                             .all(|output| matches!(output, Response::Success(_))) =>
                     {
-                        return Ok(RpcResponse::Batch(batch))
+                        return Ok(RpcResponse::Batch(batch));
                     }
                     Ok(RpcResponse::Single(Response::Failure(failure))) => {
                         err = Some(JsonRpcError::Evm(failure));

@@ -219,8 +219,8 @@ mod tests {
     use ic_exports::ic_kit::MockContext;
 
     use super::{IcSigner, *};
-    use crate::ic_sign::SigningKeyId;
     use crate::LocalWallet;
+    use crate::ic_sign::SigningKeyId;
 
     fn init_context() -> LocalWallet {
         MockContext::new().inject();

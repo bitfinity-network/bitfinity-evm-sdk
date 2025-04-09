@@ -147,17 +147,17 @@ mod tests {
     use std::str::FromStr;
 
     use alloy::hex;
-    use alloy::primitives::{Address, Bytes, B256, B512, U256, U64};
+    use alloy::primitives::{Address, B256, B512, Bytes, U64, U256};
     use proptest::collection::vec;
     use proptest::prelude::*;
     use serde_json;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     use super::{Params, *};
+    use crate::BlockNumber;
     use crate::rpc::error::ErrorCode;
     use crate::rpc::id::Id;
     use crate::rpc::version::Version;
-    use crate::BlockNumber;
 
     fn get_method_call_array(params: Vec<Value>) -> Request {
         Request {
