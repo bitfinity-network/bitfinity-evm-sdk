@@ -3,12 +3,12 @@ use std::borrow::Cow;
 use alloy::consensus::SignableTransaction;
 use alloy::network::TxSigner as NetworkTxSigner;
 use alloy::primitives::PrimitiveSignature;
+use alloy::signers::Signer;
 use alloy::signers::k256::ecdsa::{self, SigningKey};
 use alloy::signers::utils::secret_key_to_address;
-use alloy::signers::Signer;
 use candid::CandidType;
 use did::transaction::Signature as DidSignature;
-use did::{codec, H160};
+use did::{H160, codec};
 #[cfg(feature = "ic_sign")]
 pub use ic_sign::{IcSigner, ManagementCanisterSigner, SigningKeyId};
 use ic_stable_structures::{Bound, Storable};

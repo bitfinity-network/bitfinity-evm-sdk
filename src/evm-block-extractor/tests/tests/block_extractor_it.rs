@@ -11,7 +11,7 @@ use did::rpc::params::Params;
 use did::rpc::request::{Request, RpcRequest};
 use did::rpc::response::{Failure, Response, RpcResponse, Success};
 use did::{
-    keccak, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo, H160,
+    BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo, H160, keccak,
 };
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient};

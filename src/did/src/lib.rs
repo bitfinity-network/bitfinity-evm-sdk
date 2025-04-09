@@ -35,8 +35,8 @@ pub use block::Block;
 pub use error::{ExitFatal, HaltError};
 pub use fees::FeeHistory;
 pub use gas::*;
-pub use hash::{H160, H256, H64};
-pub use integer::{U256, U64};
+pub use hash::{H64, H160, H256};
+pub use integer::{U64, U256};
 pub use transaction::{BlockId, BlockNumber, Transaction, TransactionReceipt};
 
 pub use crate::bytes::Bytes;

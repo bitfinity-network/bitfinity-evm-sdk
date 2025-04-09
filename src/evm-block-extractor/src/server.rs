@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
-use jsonrpsee::server::{Server, ServerHandle};
 use jsonrpsee::RpcModule;
+use jsonrpsee::server::{Server, ServerHandle};
 use log::*;
 
 use crate::database::DatabaseClient;

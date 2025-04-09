@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
-use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::PgPool;
+use sqlx::postgres::{PgConnectOptions, PgSslMode};
 
-use crate::database::postgres_db_client::PostgresDbClient;
 use crate::database::DatabaseClient;
+use crate::database::postgres_db_client::PostgresDbClient;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 

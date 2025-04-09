@@ -13,8 +13,8 @@ use did::rpc::response::{Response, RpcResponse};
 use did::rpc::version::Version;
 pub use did::transaction::StorableExecutionResult;
 use did::{
-    Block, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo,
-    Transaction, TransactionReceipt, H160, H256, U256, U64,
+    Block, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo, H160,
+    H256, Transaction, TransactionReceipt, U64, U256,
 };
 use itertools::Itertools;
 use serde::de::DeserializeOwned;
@@ -53,7 +53,7 @@ const ETH_SEND_RAW_TRANSACTION_METHOD: &str = "eth_sendRawTransaction";
 const IC_SEND_CONFIRM_BLOCK: &str = "ic_sendConfirmBlock";
 
 macro_rules! make_params_array {
-    ($($items:expr),*) => {
+    ($($items:expr_2021),*) => {
         Params::Array(vec![$(serde_json::to_value($items)?, )*])
     };
 }
@@ -542,25 +542,30 @@ mod tests {
     #[test]
     fn test_eth_get_logs_params_serialization() {
         let get_logs_params = EthGetLogsParams {
-            address: Some(vec![H160::from_hex_str(
-                "0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907",
-            )
-            .unwrap()]),
+            address: Some(vec![
+                H160::from_hex_str("0xb59f67a8bff5d8cd03f6ac17265c550ed8f33907").unwrap(),
+            ]),
             from_block: BlockNumber::Number(42u64.into()),
             to_block: BlockNumber::Latest,
             topics: Some(vec![
-                vec![H256::from_hex_str(
-                    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-                )
-                .unwrap()],
-                vec![H256::from_hex_str(
-                    "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75",
-                )
-                .unwrap()],
-                vec![H256::from_hex_str(
-                    "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078",
-                )
-                .unwrap()],
+                vec![
+                    H256::from_hex_str(
+                        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+                    )
+                    .unwrap(),
+                ],
+                vec![
+                    H256::from_hex_str(
+                        "0x00000000000000000000000000b46c2526e227482e2ebb8f4c69e4674d262e75",
+                    )
+                    .unwrap(),
+                ],
+                vec![
+                    H256::from_hex_str(
+                        "0x00000000000000000000000054a2d42a40f51259dedd1978f6c118a0f0eff078",
+                    )
+                    .unwrap(),
+                ],
             ]),
         };
 

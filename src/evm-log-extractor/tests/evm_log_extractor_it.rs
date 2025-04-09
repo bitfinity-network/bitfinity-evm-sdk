@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
 use candid::utils::ArgumentEncoder;
-use candid::{decode_args, encode_args, CandidType};
+use candid::{CandidType, decode_args, encode_args};
 use evm_canister_client::client::{Log, Logs};
 use evm_canister_client::{CanisterClient, CanisterClientResult, EvmCanisterClient};
-use evm_log_extractor::job::logs::{run_logs_job, LogsJobSettings};
+use evm_log_extractor::job::logs::{LogsJobSettings, run_logs_job};
 use serde::de::DeserializeOwned;
-use tokio::fs::{read_dir, File};
+use tokio::fs::{File, read_dir};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 #[derive(Clone)]

@@ -1,4 +1,4 @@
-use did::{Block, Transaction, H160, H256, U256, U64};
+use did::{Block, H160, H256, Transaction, U64, U256};
 use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use rand::random;
 
@@ -121,10 +121,12 @@ async fn test_init_idempotency() {
             ..Default::default()
         };
 
-        assert!(db_client
-            .insert_block_data(&[dummy_block], &[])
-            .await
-            .is_err());
+        assert!(
+            db_client
+                .insert_block_data(&[dummy_block], &[])
+                .await
+                .is_err()
+        );
 
         // First initialization - creates tables
         db_client.init(None, false).await.unwrap();
@@ -136,10 +138,12 @@ async fn test_init_idempotency() {
             ..Default::default()
         };
 
-        assert!(db_client
-            .insert_block_data(&[dummy_block], &[])
-            .await
-            .is_ok());
+        assert!(
+            db_client
+                .insert_block_data(&[dummy_block], &[])
+                .await
+                .is_ok()
+        );
 
         assert!(db_client.init(None, false).await.is_ok());
 
@@ -227,10 +231,12 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
 
         db_client.init(None, false).await.unwrap();
 
-        assert!(db_client
-            .insert_block_data(&[block_one.clone().into()], &[])
-            .await
-            .is_ok());
+        assert!(
+            db_client
+                .insert_block_data(&[block_one.clone().into()], &[])
+                .await
+                .is_ok()
+        );
 
         let block = db_client.get_block_by_number(0).await.unwrap();
 
@@ -248,10 +254,12 @@ async fn test_deletion_and_creation_of_table_when_earliest_blocks_are_different(
         assert!(latest_block_number.is_none());
 
         // Add a block
-        assert!(db_client
-            .insert_block_data(&[block_two.clone().into()], &[])
-            .await
-            .is_ok());
+        assert!(
+            db_client
+                .insert_block_data(&[block_two.clone().into()], &[])
+                .await
+                .is_ok()
+        );
 
         // Retrieve the block
         let block = db_client.get_block_by_number(0).await.unwrap();
@@ -693,12 +701,14 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
                 .await
                 .unwrap();
 
-            assert!(discarded
-                .block
-                .transactions
-                .iter()
-                .zip(block.transactions.iter())
-                .all(|(a, b)| &a.hash == b));
+            assert!(
+                discarded
+                    .block
+                    .transactions
+                    .iter()
+                    .zip(block.transactions.iter())
+                    .all(|(a, b)| &a.hash == b)
+            );
         }
     })
     .await;

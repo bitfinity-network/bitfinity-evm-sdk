@@ -5,7 +5,7 @@ use candid::CandidType;
 use ic_stable_structures::Storable;
 use serde::{Deserialize, Serialize};
 
-use crate::{codec, Bytes, H160, H256, U256};
+use crate::{Bytes, H160, H256, U256, codec};
 
 /// Account full data
 #[derive(Debug, candid::CandidType, PartialEq, Eq, Clone, Serialize, Deserialize)]

@@ -5,11 +5,11 @@ use clap::Parser;
 use env_logger::Builder;
 use evm_canister_client::{EvmCanisterClient, IcAgentClient};
 use evm_log_extractor::config::LogExtractorConfig;
-use evm_log_extractor::job::logs::{run_logs_job, LogsJobSettings};
+use evm_log_extractor::job::logs::{LogsJobSettings, run_logs_job};
+use lightspeed_scheduler::JobExecutor;
 use lightspeed_scheduler::job::Job;
 use lightspeed_scheduler::scheduler::Scheduler;
-use lightspeed_scheduler::JobExecutor;
-use log::{info, SetLoggerError};
+use log::{SetLoggerError, info};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

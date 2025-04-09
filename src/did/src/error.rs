@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::rpc::error::ErrorCode;
 use crate::transaction::BlockId;
-use crate::{rpc, BlockNumber, H160, U256};
+use crate::{BlockNumber, H160, U256, rpc};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 
@@ -65,8 +65,8 @@ pub enum EvmError {
     #[error("The transaction has been reverted: {0}")]
     TransactionReverted(String),
 
-    #[error("Precompile: {0}")]
-    Precompile(String),
+    #[error("Transaction type error: {0}")]
+    TransactionTypeError(String),
 
     #[error("Signature Parity is invalid: {0}")]
     InvalidSignatureParity(String),
@@ -191,7 +191,7 @@ pub enum HaltError {
     Other(Cow<'static, str>),
     OpcodeNotFound,
     CallNotAllowedInsideStatic,
-    InvalidOpcode,
+    InvalidFEOpcode,
     NotActivated,
     FatalExternalError,
     GasPriceLessThanBasefee,
@@ -209,7 +209,10 @@ pub enum HaltError {
     Continue,
     Revert(Option<String>),
     PriorityFeeGreaterThanMaxFee,
-    CallGasCostMoreThanGasLimit,
+    CallGasCostMoreThanGasLimit {
+        initial_gas: u64,
+        gas_limit: u64,
+    },
     NonceTooHigh {
         tx: u64,
         state: u64,
@@ -221,6 +224,8 @@ pub enum HaltError {
     CreateInitcodeSizeLimit,
     InvalidChainId,
     StateChangeDuringStaticCall,
+    InvalidEXTCALLTarget,
+    SubRoutineStackOverflow,
 
     /// Aux data overflow, new aux data is larger tha u16 max size.
     EofAuxDataOverflow,
