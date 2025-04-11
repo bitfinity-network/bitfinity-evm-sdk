@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::rpc::error::ErrorCode;
 use crate::transaction::BlockId;
-use crate::{BlockNumber, H160, U256, rpc};
+use crate::{BlockNumber, U256, rpc};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 

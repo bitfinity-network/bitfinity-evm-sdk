@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -26,7 +27,7 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
                 RpcRequest::Batch(calls) => calls.iter().any(|call| is_update_call(&call.method)),
             };
 
-            let args = HttpRequest::new(&request);
+            let args = HttpRequest::new(&request)?;
 
             let http_response: HttpResponse = if is_update_call {
                 client.update("http_request_update", (args,)).await
