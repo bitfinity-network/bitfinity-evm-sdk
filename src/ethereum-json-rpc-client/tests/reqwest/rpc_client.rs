@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use did::rpc::request::RpcRequest;
 use did::rpc::response::{Response, RpcResponse};
-use ethereum_json_rpc_client::Client;
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
+use ethereum_json_rpc_client::{Client, JsonRpcError, JsonRpcResult};
 use rand::SeedableRng as _;
 
 /// Public ethereum endpoints which can be used to send RPC requests.
@@ -38,7 +38,7 @@ impl Client for RpcReqwestClient {
     fn send_rpc_request(
         &self,
         request: RpcRequest,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<RpcResponse>> + Send>>
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = JsonRpcResult<RpcResponse>> + Send>>
     {
         match self {
             RpcReqwestClient::Public(client) => client.send_rpc_request(request),
@@ -57,7 +57,7 @@ impl Client for PublicRpcReqwestClient {
     fn send_rpc_request(
         &self,
         request: RpcRequest,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<RpcResponse>> + Send>>
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = JsonRpcResult<RpcResponse>> + Send>>
     {
         Box::pin(async move {
             let mut rng = rand::rngs::StdRng::from_entropy();
@@ -85,8 +85,22 @@ impl Client for PublicRpcReqwestClient {
                     {
                         return Ok(RpcResponse::Batch(batch));
                     }
-                    Ok(result) => {
-                        err = Some(anyhow::anyhow!("call failed: {result:?}"));
+                    Ok(RpcResponse::Single(Response::Failure(failure))) => {
+                        err = Some(JsonRpcError::Evm(failure));
+                    }
+                    Ok(RpcResponse::Batch(batch)) => {
+                        let failure = batch
+                            .iter()
+                            .find(|resp| matches!(resp, Response::Failure(_)))
+                            .map(|resp| {
+                                if let Response::Failure(failure) = resp {
+                                    JsonRpcError::Evm(failure.clone())
+                                } else {
+                                    unreachable!()
+                                }
+                            })
+                            .unwrap();
+                        err = Some(failure);
                     }
                     Err(e) => {
                         err = Some(e);
@@ -118,7 +132,7 @@ impl Client for AlchemyRpcReqwestClient {
     fn send_rpc_request(
         &self,
         request: RpcRequest,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<RpcResponse>> + Send>>
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = JsonRpcResult<RpcResponse>> + Send>>
     {
         let endpoint = self.endpoint();
 
@@ -141,12 +155,24 @@ impl Client for AlchemyRpcReqwestClient {
                 {
                     Ok(RpcResponse::Batch(batch))
                 }
-                Ok(result) => {
-                    anyhow::bail!("call failed: {result:?}")
+                Ok(RpcResponse::Single(Response::Failure(failure))) => {
+                    Err(JsonRpcError::Evm(failure))
                 }
-                Err(e) => {
-                    anyhow::bail!("call failed: {e}")
+                Ok(RpcResponse::Batch(batch)) => {
+                    let failure = batch
+                        .iter()
+                        .find(|resp| matches!(resp, Response::Failure(_)))
+                        .map(|resp| {
+                            if let Response::Failure(failure) = resp {
+                                JsonRpcError::Evm(failure.clone())
+                            } else {
+                                unreachable!()
+                            }
+                        })
+                        .unwrap();
+                    Err(failure)
                 }
+                Err(e) => Err(e),
             }
         })
     }

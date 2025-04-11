@@ -14,7 +14,7 @@ use did::{
     BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo, H160, keccak,
 };
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient};
+use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient, JsonRpcResult};
 use evm_block_extractor::database::AccountBalance;
 use evm_block_extractor::server;
 use evm_block_extractor::task::block_extractor::{BlockExtractCollectOutcome, BlockExtractor};
@@ -294,7 +294,7 @@ impl Client for MockClient {
     fn send_rpc_request(
         &self,
         request: RpcRequest,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<RpcResponse>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = JsonRpcResult<RpcResponse>> + Send>> {
         let response = match request {
             RpcRequest::Single(call) => RpcResponse::Single(self.process_single_call(call)),
             RpcRequest::Batch(calls) => {
