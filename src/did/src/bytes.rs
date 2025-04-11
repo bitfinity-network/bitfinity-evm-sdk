@@ -1,8 +1,8 @@
 use std::fmt;
 use std::rc::Rc;
 
-use candid::types::*;
 use candid::CandidType;
+use candid::types::*;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]

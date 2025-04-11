@@ -1,16 +1,16 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use anyhow::Context;
+use did::rpc::request::RpcRequest;
+use did::rpc::response::RpcResponse;
 use ic_cdk::api::management_canister::http_request::{
     self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
 };
 #[cfg(feature = "sanitize-http-outcall")]
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_exports::ic_cdk;
-use jsonrpc_core::Request;
 
-use crate::Client;
+use crate::{Client, JsonRpcError, JsonRpcResult};
 
 /// EVM client that uses HTTPS Outcalls to communicate with EVM.
 ///
@@ -104,8 +104,8 @@ fn sanitize_http_response(raw_response: TransformArgs) -> HttpResponse {
 impl Client for HttpOutcallClient {
     fn send_rpc_request(
         &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<jsonrpc_core::Response>> + Send>> {
+        request: RpcRequest,
+    ) -> Pin<Box<dyn Future<Output = JsonRpcResult<RpcResponse>> + Send>> {
         let url = self.url.clone();
         let max_response_bytes = self.max_response_bytes;
         let body = serde_json::to_vec(&request).expect("failed to serialize body");
@@ -114,12 +114,11 @@ impl Client for HttpOutcallClient {
         Box::pin(async move {
             log::trace!("CanisterClient - sending 'http_outcall'. url: {url}");
 
-            let parsed_url = url::Url::parse(&url)
-                .map_err(|e| anyhow::format_err!("failed to parse url `{url}`: {e}"))?;
+            let parsed_url = url::Url::parse(&url)?;
 
             let host = parsed_url
                 .host_str()
-                .ok_or_else(|| anyhow::format_err!("no host in url `{parsed_url}`"))?;
+                .ok_or_else(|| JsonRpcError::UrlMissingHost(parsed_url.clone()))?;
 
             let headers = vec![
                 HttpHeader {
@@ -147,14 +146,18 @@ impl Client for HttpOutcallClient {
 
             let cycles_available = ic_exports::ic_cdk::api::canister_balance128();
             if cycles_available < cost {
-                anyhow::bail!("Too few cycles, expected: {cost}, available: {cycles_available}");
+                return Err(JsonRpcError::InsufficientCycles {
+                    available: cycles_available,
+                    cost,
+                });
             }
 
             let http_response = http_request::http_request(request, cost)
                 .await
                 .map(|(res,)| res)
-                .map_err(|(r, m)| {
-                    anyhow::format_err!(format!("RejectionCode: {r:?}, Error: {m}"))
+                .map_err(|(r, m)| JsonRpcError::CanisterCall {
+                    rejection_code: r,
+                    message: m,
                 })?;
 
             log::trace!(
@@ -164,8 +167,7 @@ impl Client for HttpOutcallClient {
                 String::from_utf8_lossy(&http_response.body)
             );
 
-            let response = serde_json::from_slice(&http_response.body)
-                .context("failed to deserialize RPC response")?;
+            let response = serde_json::from_slice(&http_response.body)?;
 
             log::trace!("CanisterClient - Deserialized response: {response:?}");
 
@@ -192,12 +194,12 @@ pub fn http_request_required_cycles(arg: &CanisterHttpRequestArgument) -> u128 {
 }
 
 #[cfg(test)]
+#[cfg(feature = "sanitize-http-outcall")]
 mod tests {
     use candid::Nat;
 
     use super::*;
 
-    #[cfg(feature = "sanitize-http-outcall")]
     #[test]
     fn sanitize_http_response_removes_extra_headers() {
         let transform_args = TransformArgs {
@@ -229,10 +231,12 @@ mod tests {
         let sanitized: HttpResponse = sanitize_http_response(transform_args);
         assert_eq!(sanitized.headers.len(), 3);
         assert_eq!(sanitized.status, Nat::from(200u128));
-        assert!(sanitized
-            .headers
-            .iter()
-            .any(|header| header.name == "content-type"));
+        assert!(
+            sanitized
+                .headers
+                .iter()
+                .any(|header| header.name == "content-type")
+        );
         assert!(!sanitized.headers.iter().any(|header| header.name == "date"));
     }
 }

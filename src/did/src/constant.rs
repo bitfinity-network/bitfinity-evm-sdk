@@ -8,3 +8,19 @@ pub const TRANSACTION_TYPE_LEGACY: u64 = 0;
 pub const TRANSACTION_TYPE_EIP2930: u64 = 1;
 /// Identifier for Eip1559 Transaction
 pub const TRANSACTION_TYPE_EIP1559: u64 = 2;
+
+/// The methods will be upgraded when doing http outcalls
+pub const UPGRADE_HTTP_METHODS: &[&str] = &[
+    JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME,
+    JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME,
+    IC_SEND_CONFIRM_BLOCK,
+];
+
+pub const JSON_RPC_METHOD_ETH_SEND_RAW_TRANSACTION_NAME: &str = "eth_sendRawTransaction";
+
+/// This endpoint is used for minting tokens, on the testnet
+///
+/// NB: This endpoint is only enabled with the testnet feature
+pub const JSON_RPC_METHOD_IC_MINT_NATIVE_TOKEN_NAME: &str = "ic_mintNativeToken";
+
+pub const IC_SEND_CONFIRM_BLOCK: &str = "ic_sendConfirmBlock";

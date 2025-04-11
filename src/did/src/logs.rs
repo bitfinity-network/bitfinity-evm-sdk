@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::formats::PreferOne;
-use serde_with::{serde_as, OneOrMany};
+use serde_with::{OneOrMany, serde_as};
 
-use crate::{BlockNumber, Bytes, H160, H256, U256, U64};
+use crate::{BlockNumber, Bytes, H160, H256, U64, U256};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]
@@ -37,7 +37,7 @@ pub struct LogFilter {
 }
 
 impl TryFrom<Value> for LogFilter {
-    type Error = jsonrpc_core::Error;
+    type Error = crate::rpc::error::Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Object(ref map) = value {
@@ -140,14 +140,16 @@ mod tests {
         assert!(LogFilter::try_from(json!([])).is_err());
         assert!(LogFilter::try_from(json!("str")).is_err());
         assert!(LogFilter::try_from(json!(42)).is_err());
-        assert!(LogFilter::try_from(
-            json!({"blockHash": get_block_hash_1_str(), "fromBlock": "earliest"})
-        )
-        .is_err());
-        assert!(LogFilter::try_from(
-            json!({"blockHash": get_block_hash_1_str(), "toBlock": "0x01"})
-        )
-        .is_err());
+        assert!(
+            LogFilter::try_from(
+                json!({"blockHash": get_block_hash_1_str(), "fromBlock": "earliest"})
+            )
+            .is_err()
+        );
+        assert!(
+            LogFilter::try_from(json!({"blockHash": get_block_hash_1_str(), "toBlock": "0x01"}))
+                .is_err()
+        );
     }
 
     #[test]

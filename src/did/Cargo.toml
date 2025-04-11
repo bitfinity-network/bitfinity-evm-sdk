@@ -7,6 +7,7 @@ name = "did"
 authors.workspace = true
 homepage.workspace = true
 version.workspace = true
+rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -21,7 +22,6 @@ candid = { workspace = true }
 derive_more = { workspace = true }
 ic-log = { workspace = true }
 ic-stable-structures = { workspace = true }
-jsonrpc-core = { workspace = true }
 log = { workspace = true }
 num = { workspace = true }
 serde = { workspace = true }
@@ -35,5 +35,6 @@ thiserror = { workspace = true }
 [dev-dependencies]
 alloy = { workspace = true, features = ["rand"] }
 eth-signer = { workspace = true }
+proptest = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true }

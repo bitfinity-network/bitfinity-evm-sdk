@@ -4,12 +4,12 @@ use alloy::eips::eip2718::Eip2718Error;
 use alloy::primitives::SignatureError;
 use alloy::rlp::Error as DecoderError;
 use candid::{CandidType, Deserialize};
-use jsonrpc_core::{Error, ErrorCode};
 use serde::Serialize;
 use thiserror::Error;
 
+use crate::rpc::error::ErrorCode;
 use crate::transaction::BlockId;
-use crate::{BlockNumber, U256};
+use crate::{BlockNumber, H160, U256, rpc};
 
 pub type Result<T> = std::result::Result<T, EvmError>;
 
@@ -66,8 +66,8 @@ pub enum EvmError {
     #[error("The transaction has been reverted: {0}")]
     TransactionReverted(String),
 
-    #[error("Precompile: {0}")]
-    Precompile(String),
+    #[error("Transaction type error: {0}")]
+    TransactionTypeError(String),
 
     #[error("Signature Parity is invalid: {0}")]
     InvalidSignatureParity(String),
@@ -126,7 +126,7 @@ impl From<serde_json::Error> for EvmError {
 }
 
 /// https://docs.alchemy.com/reference/error-reference#kovan-error-codes
-impl From<EvmError> for jsonrpc_core::error::Error {
+impl From<EvmError> for rpc::error::Error {
     fn from(err: EvmError) -> Self {
         let code = match &err {
             EvmError::InsufficientBalance {
@@ -143,7 +143,7 @@ impl From<EvmError> for jsonrpc_core::error::Error {
             _ => None,
         };
 
-        Error {
+        rpc::error::Error {
             code: ErrorCode::ServerError(code),
             message: err.to_string(),
             data: data.map(|s| s.as_str().into()),
@@ -192,7 +192,7 @@ pub enum HaltError {
     Other(Cow<'static, str>),
     OpcodeNotFound,
     CallNotAllowedInsideStatic,
-    InvalidOpcode,
+    InvalidFEOpcode,
     NotActivated,
     FatalExternalError,
     GasPriceLessThanBasefee,
@@ -210,7 +210,10 @@ pub enum HaltError {
     Continue,
     Revert(Option<String>),
     PriorityFeeGreaterThanMaxFee,
-    CallGasCostMoreThanGasLimit,
+    CallGasCostMoreThanGasLimit {
+        initial_gas: u64,
+        gas_limit: u64,
+    },
     NonceTooHigh {
         tx: u64,
         state: u64,
@@ -222,6 +225,8 @@ pub enum HaltError {
     CreateInitcodeSizeLimit,
     InvalidChainId,
     StateChangeDuringStaticCall,
+    InvalidEXTCALLTarget,
+    SubRoutineStackOverflow,
 
     /// Aux data overflow, new aux data is larger tha u16 max size.
     EofAuxDataOverflow,

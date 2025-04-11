@@ -5,6 +5,7 @@ authors.workspace = true
 homepage.workspace = true
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
@@ -22,13 +23,11 @@ sanitize-http-outcall = []
 
 [dependencies]
 alloy = { workspace = true }
-anyhow = { workspace = true }
 candid = { workspace = true }
 did = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }
 ic-exports = { workspace = true }
 itertools = { workspace = true }
-jsonrpc-core = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true, optional = true, features = [
   "gzip",
@@ -39,6 +38,7 @@ reqwest = { workspace = true, optional = true, features = [
 serde = { workspace = true }
 serde_bytes = { workspace = true }
 serde_json = { workspace = true }
+thiserror = { workspace = true }
 url = { workspace = true, optional = true }
 
 [dev-dependencies]

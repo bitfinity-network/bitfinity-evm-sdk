@@ -1,11 +1,11 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use anyhow::Context;
-use jsonrpc_core::{Request, Response};
+use did::rpc::request::RpcRequest;
+use did::rpc::response::RpcResponse;
 pub use reqwest;
 
-use crate::Client;
+use crate::{Client, JsonRpcError, JsonRpcResult};
 
 /// Reqwest client implementation.
 #[derive(Clone)]
@@ -32,28 +32,22 @@ impl ReqwestClient {
 impl Client for ReqwestClient {
     fn send_rpc_request(
         &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
+        request: RpcRequest,
+    ) -> Pin<Box<dyn Future<Output = JsonRpcResult<RpcResponse>> + Send>> {
         log::trace!("ReqwestClient - sending request {request:?}");
 
         let request_builder = self.client.post(&self.endpoint_url).json(&request);
 
         Box::pin(async move {
-            let response = request_builder
-                .send()
-                .await
-                .context("failed to send RPC request")?;
+            let response = request_builder.send().await?;
 
             if !response.status().is_success() {
                 let status = response.status();
                 let text = response.text().await.unwrap_or_default();
-                anyhow::bail!("RPC request failed: {status} - {text}");
+                return Err(JsonRpcError::Http { code: status, text });
             }
 
-            let json_response = response
-                .json::<Response>()
-                .await
-                .context("failed to decode RPC response")?;
+            let json_response = response.json::<RpcResponse>().await?;
 
             log::trace!("response: {:?}", json_response);
             Ok(json_response)

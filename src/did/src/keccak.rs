@@ -1,7 +1,7 @@
 use alloy::rlp::Encodable;
 
-use crate::hash::Hash;
 use crate::H256;
+use crate::hash::Hash;
 
 /// The KECCAK of the RLP encoding of empty data, used in empty trie node, genesis block.
 /// https://docs.rs/keccak-hash/latest/keccak_hash/constant.KECCAK_NULL_RLP.html

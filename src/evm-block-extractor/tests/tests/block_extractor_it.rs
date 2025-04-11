@@ -5,22 +5,26 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use did::evm_state::EvmGlobalState;
+use did::rpc::error::Error;
+use did::rpc::id::Id;
+use did::rpc::params::Params;
+use did::rpc::request::{Request, RpcRequest};
+use did::rpc::response::{Failure, Response, RpcResponse, Success};
 use did::{
-    keccak, BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo, H160,
+    BlockConfirmationData, BlockConfirmationResult, BlockNumber, BlockchainBlockInfo, H160, keccak,
 };
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient};
+use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient, JsonRpcResult};
 use evm_block_extractor::database::AccountBalance;
 use evm_block_extractor::server;
 use evm_block_extractor::task::block_extractor::{BlockExtractCollectOutcome, BlockExtractor};
-use jsonrpc_core::{Call, Failure, Output, Params, Request, Response};
 use serde::de::DeserializeOwned;
 
 use crate::test_with_clients;
 
 #[tokio::test]
 async fn test_extractor_collect_blocks() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let start_block = 0;
@@ -155,111 +159,112 @@ impl MockClient {
         }
     }
 
-    fn process_single_call(&self, call: Call) -> Output {
-        match call {
-            Call::MethodCall(method_call) => match method_call.method.as_str() {
-                "ic_getEvmGlobalState" => Output::Success(jsonrpc_core::Success {
-                    jsonrpc: None,
-                    result: serde_json::to_value(&self.evm_global_state).unwrap(),
-                    id: method_call.id,
-                }),
-                "eth_getBlockByNumber" => {
-                    let number: BlockNumber = Self::get_from_vec(&method_call.params, 0);
-                    let block = match number {
-                        BlockNumber::Latest | BlockNumber::Finalized | BlockNumber::Safe => {
-                            self.blocks.last_key_value().map(|(_, v)| v.clone())
-                        }
-                        BlockNumber::Earliest => {
-                            self.blocks.last_key_value().map(|(_, v)| v.clone())
-                        }
-                        BlockNumber::Pending => unimplemented!(),
-                        BlockNumber::Number(n) => self.blocks.get(&n.as_u64()).cloned(),
-                    };
-                    match block {
-                        Some(block) => Output::Success(jsonrpc_core::Success {
-                            jsonrpc: None,
-                            result: serde_json::to_value(block).unwrap(),
-                            id: method_call.id,
-                        }),
-                        None => Output::Failure(Failure {
-                            jsonrpc: None,
-                            error: jsonrpc_core::Error::invalid_params("block not found"),
-                            id: method_call.id,
-                        }),
+    fn process_single_call(&self, call: Request) -> Response {
+        match call.method.as_str() {
+            "ic_getEvmGlobalState" => Response::Success(Success {
+                jsonrpc: None,
+                result: serde_json::to_value(&self.evm_global_state).unwrap(),
+                id: call.id,
+            }),
+            "eth_getBlockByNumber" => {
+                let number: BlockNumber = Self::get_from_vec(&call.params, 0);
+                let block = match number {
+                    BlockNumber::Latest | BlockNumber::Finalized | BlockNumber::Safe => {
+                        self.blocks.last_key_value().map(|(_, v)| v.clone())
                     }
-                }
-                "ic_getLastCertifiedBlock" => {
-                    let data = self
-                        .blocks
-                        .last_key_value()
-                        .map(|(_, v)| v)
-                        .cloned()
-                        .unwrap_or_else(|| did::Block::default().into_full_block(vec![]).unwrap());
-                    Output::Success(jsonrpc_core::Success {
+                    BlockNumber::Earliest => self.blocks.last_key_value().map(|(_, v)| v.clone()),
+                    BlockNumber::Pending => unimplemented!(),
+                    BlockNumber::Number(n) => self.blocks.get(&n.as_u64()).cloned(),
+                };
+                match block {
+                    Some(block) => Response::Success(Success {
                         jsonrpc: None,
-                        result: serde_json::to_value(&CertifiedResult {
-                            data,
-                            witness: vec![4, 5, 6u8],
-                            certificate: vec![7, 8, 9],
-                        })
-                        .unwrap(),
-                        id: method_call.id,
-                    })
-                }
-                "eth_chainId" => Output::Success(jsonrpc_core::Success {
-                    jsonrpc: None,
-                    result: serde_json::to_value(CHAIN_ID.to_string()).unwrap(),
-                    id: method_call.id,
-                }),
-                "ic_sendConfirmBlock" => Output::Success(jsonrpc_core::Success {
-                    jsonrpc: None,
-                    result: serde_json::to_value(BlockConfirmationResult::Confirmed).unwrap(),
-                    id: method_call.id,
-                }),
-                "ic_getGenesisBalances" => {
-                    let balances: Vec<_> =
-                        (1..=32).map(|i| (i32_to_h160(i), i32_to_h256(i))).collect();
-                    Output::Success(jsonrpc_core::Success {
+                        result: serde_json::to_value(block).unwrap(),
+                        id: call.id,
+                    }),
+                    None => Response::Failure(Failure {
                         jsonrpc: None,
-                        result: serde_json::to_value(balances).unwrap(),
-                        id: method_call.id,
-                    })
+                        error: Error::invalid_params("block not found"),
+                        id: call.id,
+                    }),
                 }
-                "ic_getBlockchainBlockInfo" => Output::Success(jsonrpc_core::Success {
+            }
+            "ic_getLastCertifiedBlock" => {
+                let data = self
+                    .blocks
+                    .last_key_value()
+                    .map(|(_, v)| v)
+                    .cloned()
+                    .unwrap_or_else(|| did::Block::default().into_full_block(vec![]).unwrap());
+                Response::Success(Success {
                     jsonrpc: None,
-                    result: serde_json::to_value(BlockchainBlockInfo {
-                        earliest_block_number: self
-                            .blocks
-                            .first_key_value()
-                            .map(|(k, _)| *k)
-                            .unwrap_or_default(),
-                        latest_block_number: self
-                            .blocks
-                            .last_key_value()
-                            .map(|(k, _)| *k)
-                            .unwrap_or_default(),
-                        safe_block_number: self
-                            .blocks
-                            .last_key_value()
-                            .map(|(k, _)| *k)
-                            .unwrap_or_default(),
-                        finalized_block_number: self
-                            .blocks
-                            .last_key_value()
-                            .map(|(k, _)| *k)
-                            .unwrap_or_default(),
-                        pending_block_number: self
-                            .blocks
-                            .last_key_value()
-                            .map(|(k, _)| *k + 1)
-                            .unwrap_or_default(),
+                    result: serde_json::to_value(&CertifiedResult {
+                        data,
+                        witness: vec![4, 5, 6u8],
+                        certificate: vec![7, 8, 9],
                     })
                     .unwrap(),
-                    id: method_call.id,
-                }),
-                _ => unimplemented!(),
-            },
-            _ => unimplemented!(),
+                    id: call.id,
+                })
+            }
+            "eth_chainId" => Response::Success(Success {
+                jsonrpc: None,
+                result: serde_json::to_value(CHAIN_ID.to_string()).unwrap(),
+                id: call.id,
+            }),
+            "ic_sendConfirmBlock" => Response::Success(Success {
+                jsonrpc: None,
+                result: serde_json::to_value(BlockConfirmationResult::Confirmed).unwrap(),
+                id: call.id,
+            }),
+            "ic_getGenesisBalances" => {
+                let balances: Vec<_> = (1..=32).map(|i| (i32_to_h160(i), i32_to_h256(i))).collect();
+                Response::Success(Success {
+                    jsonrpc: None,
+                    result: serde_json::to_value(balances).unwrap(),
+                    id: call.id,
+                })
+            }
+            "ic_getBlockchainBlockInfo" => Response::Success(Success {
+                jsonrpc: None,
+                result: serde_json::to_value(BlockchainBlockInfo {
+                    earliest_block_number: self
+                        .blocks
+                        .first_key_value()
+                        .map(|(k, _)| *k)
+                        .unwrap_or_default(),
+                    latest_block_number: self
+                        .blocks
+                        .last_key_value()
+                        .map(|(k, _)| *k)
+                        .unwrap_or_default(),
+                    safe_block_number: self
+                        .blocks
+                        .last_key_value()
+                        .map(|(k, _)| *k)
+                        .unwrap_or_default(),
+                    finalized_block_number: self
+                        .blocks
+                        .last_key_value()
+                        .map(|(k, _)| *k)
+                        .unwrap_or_default(),
+                    pending_block_number: self
+                        .blocks
+                        .last_key_value()
+                        .map(|(k, _)| *k + 1)
+                        .unwrap_or_default(),
+                })
+                .unwrap(),
+                id: call.id,
+            }),
+            _ => {
+                log::warn!("Unknown method: {}", call.method);
+                Response::Failure(Failure {
+                    jsonrpc: None,
+                    error: Error::method_not_found(),
+                    id: call.id,
+                })
+            }
         }
     }
 
@@ -288,17 +293,17 @@ fn i32_to_h256(i: i32) -> did::H256 {
 impl Client for MockClient {
     fn send_rpc_request(
         &self,
-        request: Request,
-    ) -> Pin<Box<dyn Future<Output = anyhow::Result<Response>> + Send>> {
+        request: RpcRequest,
+    ) -> Pin<Box<dyn Future<Output = JsonRpcResult<RpcResponse>> + Send>> {
         let response = match request {
-            Request::Single(call) => Response::Single(self.process_single_call(call)),
-            Request::Batch(calls) => {
+            RpcRequest::Single(call) => RpcResponse::Single(self.process_single_call(call)),
+            RpcRequest::Batch(calls) => {
                 let processed = calls
                     .into_iter()
                     .map(|c| self.process_single_call(c))
                     .collect();
 
-                Response::Batch(processed)
+                RpcResponse::Batch(processed)
             }
         };
         Box::pin(async { Ok(response) })
@@ -310,30 +315,28 @@ async fn test_mock_client_returns_evm_state() {
     let client = MockClient::new(EvmGlobalState::Enabled);
 
     let response = client
-        .send_rpc_request(Request::Single(Call::MethodCall(
-            jsonrpc_core::MethodCall {
-                jsonrpc: None,
-                method: "ic_getEvmGlobalState".to_string(),
-                params: jsonrpc_core::Params::None,
-                id: jsonrpc_core::Id::Num(1),
-            },
-        )))
+        .send_rpc_request(RpcRequest::Single(Request {
+            jsonrpc: None,
+            method: "ic_getEvmGlobalState".to_string(),
+            params: Params::None,
+            id: Id::Number(1),
+        }))
         .await
         .unwrap();
 
     assert_eq!(
         response,
-        Response::Single(Output::Success(jsonrpc_core::Success {
+        RpcResponse::Single(Response::Success(Success {
             jsonrpc: None,
             result: serde_json::to_value(EvmGlobalState::Enabled).unwrap(),
-            id: jsonrpc_core::Id::Num(1),
+            id: Id::Number(1),
         }))
     );
 }
 
 #[tokio::test]
 async fn test_extractor_does_not_collect_blocks_if_evm_is_disabled() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let client = MockClient::new(EvmGlobalState::Disabled);
@@ -354,7 +357,7 @@ async fn test_extractor_does_not_collect_blocks_if_evm_is_disabled() {
 
 #[tokio::test]
 async fn test_extractor_does_not_collect_blocks_if_evm_is_staging() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let client = MockClient::new(EvmGlobalState::Staging {
@@ -377,7 +380,7 @@ async fn test_extractor_does_not_collect_blocks_if_evm_is_staging() {
 
 #[tokio::test]
 async fn test_extractor_validate_and_recover_blockchain() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let start_block = 10;
@@ -497,7 +500,7 @@ async fn test_extractor_validate_and_recover_blockchain() {
 
 #[tokio::test]
 async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let start_block = 10;
@@ -602,7 +605,7 @@ async fn test_extractor_skips_incorrect_sequence_of_new_blocks() {
 
 #[tokio::test]
 async fn test_server_returns_blocks_according_to_tags() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         // fill db with blocks
@@ -684,7 +687,7 @@ async fn test_server_returns_blocks_according_to_tags() {
 
 #[tokio::test]
 async fn test_extractor_forwards_confirm_block_requests() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         db_client.init(None, true).await.unwrap();
 
         let block_info = BlockchainBlockInfo {

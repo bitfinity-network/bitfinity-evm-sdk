@@ -4,8 +4,8 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use alloy::hex::FromHexError;
-use candid::types::{Type, TypeInner};
 use candid::CandidType;
+use candid::types::{Type, TypeInner};
 use derive_more::Display;
 use ic_stable_structures::{Bound, Bounded, Storable};
 

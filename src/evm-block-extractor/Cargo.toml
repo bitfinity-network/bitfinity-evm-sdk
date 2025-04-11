@@ -1,8 +1,13 @@
 [package]
 name = "evm-block-extractor"
-version = "0.1.0"
-edition = "2021"
 
+authors.workspace = true
+homepage.workspace = true
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 alloy = { workspace = true }
@@ -12,11 +17,8 @@ chrono = { workspace = true }
 clap = { workspace = true }
 did = { workspace = true }
 env_logger = { workspace = true }
-ethereum-json-rpc-client = { workspace = true, features = [
-    "reqwest",
-] }
+ethereum-json-rpc-client = { workspace = true, features = ["reqwest"] }
 futures = { workspace = true }
-jsonrpc-core = { workspace = true }
 jsonrpsee = { workspace = true }
 lightspeed_scheduler = { workspace = true }
 log = { workspace = true }
@@ -28,10 +30,8 @@ tokio = { workspace = true }
 
 
 [dev-dependencies]
-alloy = { workspace = true, features = ["rand"]}
-jsonrpc-core = { workspace = true }
+alloy = { workspace = true, features = ["rand"] }
 port_check = { workspace = true }
 rand = { workspace = true }
 tempfile = { workspace = true }
 testcontainers = { workspace = true }
-

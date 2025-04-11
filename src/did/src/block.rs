@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-use alloy::primitives::{keccak256, Log as AlloyLog, LogData};
-use alloy::rlp::{encode_list, Decodable, Encodable, Header, PayloadView};
+use alloy::primitives::{Log as AlloyLog, LogData, keccak256};
+use alloy::rlp::{Decodable, Encodable, Header, PayloadView, encode_list};
 use bytes::BufMut;
 use candid::{CandidType, Deserialize};
 use ic_stable_structures::{Bound, Storable};
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::transaction::Bloom;
 use super::{H160, H256, U256};
@@ -17,7 +17,7 @@ use crate::error::EvmError;
 use crate::hash::H64;
 use crate::integer::U64;
 use crate::keccak::{KECCAK_EMPTY_LIST_RLP, KECCAK_NULL_RLP};
-use crate::{codec, HaltError, Transaction};
+use crate::{HaltError, Transaction, codec};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, CandidType)]
 pub struct Block<TX> {
@@ -555,8 +555,8 @@ mod test {
     use candid::{Decode, Encode};
 
     use super::*;
-    use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
     use crate::BlockId;
+    use crate::test_utils::{read_all_files_to_json, test_candid_roundtrip, test_json_roundtrip};
 
     #[test]
     fn test_storable_block() {

@@ -1,16 +1,19 @@
-use std::future::Future;
 use std::sync::Arc;
 
 use alloy::primitives::{Address, B256};
 use did::evm_state::EvmGlobalState;
-use did::{Block, BlockNumber, H160, H256, U256, U64};
+use did::rpc::id::Id;
+use did::rpc::params::Params;
+use did::rpc::request::{Request, RpcRequest};
+use did::rpc::response::{Response, RpcResponse};
+use did::rpc::version::Version;
+use did::{Block, BlockNumber, H160, H256, U64, U256};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
-use ethereum_json_rpc_client::{Client, EthJsonRpcClient, Response};
+use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
 use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
-use jsonrpc_core::{Call, Id, MethodCall, Output, Params, Request, Version};
-use jsonrpsee::server::{Server, ServerHandle};
 use jsonrpsee::RpcModule;
+use jsonrpsee::server::{Server, ServerHandle};
 use rand::random;
 use serde_json::json;
 
@@ -19,10 +22,8 @@ use crate::tests::block_extractor_it::MockClient;
 
 const BLOCK_COUNT: u64 = 10;
 
-async fn with_filled_db<Func: Fn(Arc<dyn DatabaseClient>) -> Fut, Fut: Future<Output = ()>>(
-    func: Func,
-) {
-    test_with_clients(|db_client| async {
+async fn with_filled_db<Func: AsyncFn(Arc<dyn DatabaseClient>) -> ()>(func: Func) {
+    test_with_clients(async |db_client| {
         db_client.init(None, false).await.unwrap();
 
         for i in 0..BLOCK_COUNT {
@@ -88,32 +89,33 @@ async fn test_batched_request() {
         let (_http_client, port, handle) = new_server(db_client, None).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
-        let request = Request::Batch(vec![
-            Call::MethodCall(MethodCall {
+        let request = RpcRequest::Batch(vec![
+            Request {
                 jsonrpc: Some(Version::V2),
                 method: "ic_getGenesisBalances".to_string(),
                 params: Params::Array(vec![]),
-                id: Id::Str("ic_getGenesisBalances".to_string()),
-            }),
-            Call::MethodCall(MethodCall {
+                id: Id::String("ic_getGenesisBalances".to_string()),
+            },
+            Request {
                 jsonrpc: Some(Version::V2),
                 method: "eth_blockNumber".to_string(),
                 params: Params::Array(vec![]),
-                id: Id::Str("eth_blockNumber".to_string()),
-            }),
+                id: Id::String("eth_blockNumber".to_string()),
+            },
         ]);
 
-        let Response::Batch(results) = http_client.send_rpc_request(request).await.unwrap() else {
+        let RpcResponse::Batch(results) = http_client.send_rpc_request(request).await.unwrap()
+        else {
             panic!("unexpected return type")
         };
 
         match &results[..] {
-            [Output::Success(result_1), Output::Success(result_2)] => {
-                assert_eq!(result_1.id, Id::Str("ic_getGenesisBalances".to_string()));
+            [Response::Success(result_1), Response::Success(result_2)] => {
+                assert_eq!(result_1.id, Id::String("ic_getGenesisBalances".to_string()));
                 let data = serde_json::from_value::<Vec<(H160, U256)>>(result_1.result.clone());
                 assert!(data.is_ok());
 
-                assert_eq!(result_2.id, Id::Str("eth_blockNumber".to_string()));
+                assert_eq!(result_2.id, Id::String("eth_blockNumber".to_string()));
                 let data: String = serde_json::from_value(result_2.result.clone()).unwrap();
                 let result = u64::from_str_radix(data.trim_start_matches("0x"), 16).unwrap();
                 assert_eq!(result, BLOCK_COUNT - 1);
@@ -131,7 +133,7 @@ async fn test_batched_request() {
 
 #[tokio::test]
 async fn test_get_genesis_accounts() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
@@ -189,7 +191,7 @@ async fn test_get_genesis_accounts() {
 
 #[tokio::test]
 async fn test_get_chain_id() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
@@ -218,35 +220,42 @@ async fn test_get_block_by_number_variants() {
         let (_http_client, port, handle) = new_server(db_client, None).await;
 
         let http_client = ReqwestClient::new(format!("http://127.0.0.1:{port}"));
-        let request = Request::Batch(vec![
-            Call::MethodCall(MethodCall {
+        let request = RpcRequest::Batch(vec![
+            Request {
                 jsonrpc: Some(Version::V2),
                 method: "eth_getBlockByNumber".to_string(),
                 params: Params::Array(vec![json!("latest"), json!(false)]),
-                id: Id::Str("eth_getBlockByNumber".to_string()),
-            }),
-            Call::MethodCall(MethodCall {
+                id: Id::String("eth_getBlockByNumber".to_string()),
+            },
+            Request {
                 jsonrpc: Some(Version::V2),
                 method: "eth_getBlockByNumber".to_string(),
                 params: Params::Array(vec![json!("earliest"), json!(false)]),
-                id: Id::Str("eth_getBlockByNumber".to_string()),
-            }),
-            Call::MethodCall(MethodCall {
+                id: Id::String("eth_getBlockByNumber".to_string()),
+            },
+            Request {
                 jsonrpc: Some(Version::V2),
                 method: "eth_getBlockByNumber".to_string(),
                 params: Params::Array(vec![json!("0x5"), json!(false)]),
-                id: Id::Str("eth_getBlockByNumber".to_string()),
-            }),
-
+                id: Id::String("eth_getBlockByNumber".to_string()),
+            },
         ]);
 
-        let Response::Batch(results) = http_client.send_rpc_request(request).await.unwrap() else {
+        let RpcResponse::Batch(results) = http_client.send_rpc_request(request).await.unwrap()
+        else {
             panic!("unexpected return type")
         };
 
         match &results[..] {
-            [Output::Success(latest_block), Output::Success(earliest_block), Output::Success(number_block)] => {
-                assert_eq!(latest_block.id, Id::Str("eth_getBlockByNumber".to_string()));
+            [
+                Response::Success(latest_block),
+                Response::Success(earliest_block),
+                Response::Success(number_block),
+            ] => {
+                assert_eq!(
+                    latest_block.id,
+                    Id::String("eth_getBlockByNumber".to_string())
+                );
                 let latest_block: Block<H256> =
                     serde_json::from_value(latest_block.result.clone()).unwrap();
                 assert_eq!(latest_block.number, U64::from(BLOCK_COUNT - 1));
@@ -257,7 +266,7 @@ async fn test_get_block_by_number_variants() {
 
                 let number_block: Block<H256> =
                     serde_json::from_value(number_block.result.clone()).unwrap();
-                    assert_eq!(number_block.number, U64::from_hex_str("0x5").unwrap());
+                assert_eq!(number_block.number, U64::from_hex_str("0x5").unwrap());
             }
             _ => panic!("unexpected results"),
         }
@@ -273,7 +282,7 @@ async fn test_get_block_by_number_variants() {
 
 #[tokio::test]
 async fn test_get_last_certified_block() {
-    test_with_clients(|db_client| async move {
+    test_with_clients(async move |db_client| {
         // Arrange
         db_client.init(None, false).await.unwrap();
 
