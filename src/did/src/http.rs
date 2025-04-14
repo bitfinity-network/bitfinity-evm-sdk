@@ -2,10 +2,14 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use candid::CandidType;
-use jsonrpc_core::{Error, Failure, Id, Version};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
+
+use crate::rpc::error::Error;
+use crate::rpc::id::Id;
+use crate::rpc::response::Failure;
+use crate::rpc::version::Version;
 
 // A HTTP response.
 #[derive(Clone, Debug, CandidType, Deserialize)]
