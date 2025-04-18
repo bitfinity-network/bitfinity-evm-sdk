@@ -39,7 +39,9 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("admin_add_principal_to_access_list", (principal,)).await
+        self.client
+            .update("admin_add_principal_to_access_list", (principal,))
+            .await
     }
 
     /// Remove principal from the access control list
@@ -79,9 +81,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     pub async fn get_evm_canister(
         &self,
     ) -> CanisterClientResult<SignatureVerificationResult<Principal>> {
-        self.client
-            .query("get_evm_canister", ())
-            .await
+        self.client.query("get_evm_canister", ()).await
     }
 
     /// Sets the evm canister for the transaction forwarding
@@ -93,5 +93,4 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
             .update("admin_set_evm_canister", (principal,))
             .await
     }
-
 }
