@@ -35,20 +35,20 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     }
 
     /// Add principal to the access control list
-    pub async fn add_principal_to_access_list(
+    pub async fn admin_add_principal_to_access_list(
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("admin_add_access", (principal,)).await
+        self.client.update("admin_add_principal_to_access_list", (principal,)).await
     }
 
     /// Remove principal from the access control list
-    pub async fn remove_principal_from_access_list(
+    pub async fn admin_remove_principal_from_access_list(
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
         self.client
-            .update("admin_remove_access", (principal,))
+            .update("admin_remove_principal_from_access_list", (principal,))
             .await
     }
 
@@ -58,7 +58,7 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     }
 
     /// Set the owner of the canister
-    pub async fn set_owner(
+    pub async fn admin_set_owner(
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
@@ -75,38 +75,23 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
         self.client.query("get_canister_build_data", ()).await
     }
 
-    /// Add evm canister to the access control list
-    pub async fn add_evm_canister_to_access_list(
+    /// Get the evm canister for the transaction forwarding
+    pub async fn get_evm_canister(
+        &self,
+    ) -> CanisterClientResult<SignatureVerificationResult<Principal>> {
+        self.client
+            .query("get_evm_canister", ())
+            .await
+    }
+
+    /// Sets the evm canister for the transaction forwarding
+    pub async fn admin_set_evm_canister(
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
         self.client
-            .update("admin_add_evm_canister", (principal,))
+            .update("admin_set_evm_canister", (principal,))
             .await
     }
 
-    /// Remove evm canister from the access control list
-    pub async fn remove_evm_canister_from_access_list(
-        &self,
-        principal: Principal,
-    ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client
-            .update("admin_remove_evm_canister", (principal,))
-            .await
-    }
-
-    /// Interval for pushing transactions to the evm canisters
-    pub async fn get_pushing_timer_interval(&self) -> CanisterClientResult<u64> {
-        self.client.query("pushing_timer_interval", ()).await
-    }
-
-    /// Set the interval for pushing transactions to the evm canisters
-    pub async fn set_pushing_timer_interval(
-        &self,
-        interval: u64,
-    ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client
-            .update("admin_set_pushing_timer_interval", (interval,))
-            .await
-    }
 }
