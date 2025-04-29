@@ -22,7 +22,7 @@ homepage = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
 include = ["src/**/*", "LICENSE", "README.md"]
 license = "MIT"
 repository = "https://github.com/bitfinity-network/bitfinity-evm-sdk"
-version = "0.49.0"
+version = "0.50.0"
 
 [workspace.dependencies]
 did = { path = "src/did" }
@@ -34,7 +34,7 @@ evm-canister-client = { path = "src/evm-canister-client" }
 evm-log-extractor = { path = "src/evm-log-extractor" }
 signature-verification-canister-client = { path = "src/signature-verification-canister-client" }
 
-alloy = { version = "0.13", default-features = false, features = [
+alloy = { version = "0.15", default-features = false, features = [
     "consensus",
     "k256",
     "eips",
@@ -58,8 +58,8 @@ ic-exports = { git = "https://github.com/bitfinity-network/canister-sdk", packag
 ic-log = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-log", tag = "v0.24.x" }
 ic-stable-structures = { git = "https://github.com/bitfinity-network/canister-sdk", package = "ic-stable-structures", tag = "v0.24.x" }
 itertools = "0.14"
-jsonrpsee = { version = "0.24", features = ["server", "macros"] }
-lightspeed_scheduler = "0.60"
+jsonrpsee = { version = "0.25", features = ["server", "macros"] }
+lightspeed_scheduler = "0.63"
 log = "0.4"
 num = "0.4"
 port_check = "0.2"

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use alloy::consensus::SignableTransaction;
 use alloy::network::TxSigner as NetworkTxSigner;
-use alloy::primitives::PrimitiveSignature;
+use alloy::primitives::Signature as PrimitiveSignature;
 use alloy::signers::Signer;
 use alloy::signers::k256::ecdsa::{self, SigningKey};
 use alloy::signers::utils::secret_key_to_address;
@@ -339,7 +339,7 @@ mod test {
         let digest = [42u8; 32];
         let signature = signer.sign_digest(digest).await.unwrap();
 
-        let recovered = alloy::primitives::PrimitiveSignature::from(signature)
+        let recovered = alloy::primitives::Signature::from(signature)
             .recover_address_from_prehash(&alloy::primitives::B256::from_slice(&digest))
             .unwrap();
 

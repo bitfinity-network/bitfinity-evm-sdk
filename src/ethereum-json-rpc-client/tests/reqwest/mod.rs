@@ -107,10 +107,7 @@ async fn should_perform_eth_call() {
         .unwrap();
 
     let result_address = func
-        .abi_decode_output(
-            &alloy::hex::decode(result.trim_start_matches("0x")).unwrap(),
-            false,
-        )
+        .abi_decode_output(&alloy::hex::decode(result.trim_start_matches("0x")).unwrap())
         .unwrap()
         .first()
         .cloned()
