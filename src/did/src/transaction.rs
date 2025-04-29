@@ -228,7 +228,7 @@ impl Signature {
     /// Recovers an [`Address`] from this signature and the given prehashed message.
     /// e.g.: signature.recover_from(&tx.signature_hash())
     pub fn recover_from(&self, signature_hash: &H256) -> Result<H160, EvmError> {
-        let primitive_signature = alloy::primitives::PrimitiveSignature::from(self);
+        let primitive_signature = alloy::primitives::Signature::from(self);
         let recovered_from = primitive_signature
             .recover_address_from_prehash(&signature_hash.0)
             .map_err(|err| EvmError::SignatureError(format!("{err:?}")))?;
@@ -249,20 +249,20 @@ impl Signature {
     }
 }
 
-impl From<Signature> for alloy::primitives::PrimitiveSignature {
+impl From<Signature> for alloy::primitives::Signature {
     fn from(value: Signature) -> Self {
-        alloy::primitives::PrimitiveSignature::new(value.r.0, value.s.0, value.y_parity.as_bool())
+        alloy::primitives::Signature::new(value.r.0, value.s.0, value.y_parity.as_bool())
     }
 }
 
-impl From<&Signature> for alloy::primitives::PrimitiveSignature {
+impl From<&Signature> for alloy::primitives::Signature {
     fn from(value: &Signature) -> Self {
-        alloy::primitives::PrimitiveSignature::new(value.r.0, value.s.0, value.y_parity.as_bool())
+        alloy::primitives::Signature::new(value.r.0, value.s.0, value.y_parity.as_bool())
     }
 }
 
-impl From<alloy::primitives::PrimitiveSignature> for Signature {
-    fn from(value: alloy::primitives::PrimitiveSignature) -> Self {
+impl From<alloy::primitives::Signature> for Signature {
+    fn from(value: alloy::primitives::Signature) -> Self {
         Self {
             r: U256(value.r()),
             s: U256(value.s()),
@@ -514,7 +514,7 @@ impl TryFrom<Transaction> for alloy::rpc::types::Transaction {
     fn try_from(tx: Transaction) -> Result<Self, EvmError> {
         let signature = Signature::new_from_rsv(tx.r, tx.s, tx.v.as_u64())?;
 
-        let signature = alloy::primitives::PrimitiveSignature::from(signature);
+        let signature = alloy::primitives::Signature::from(signature);
 
         let tx_type = tx.transaction_type.unwrap_or_default().0.to::<u64>();
         match tx_type {
@@ -1604,7 +1604,7 @@ mod test {
 
     #[test]
     fn primitive_signature_roundtrip() {
-        let signature = alloy::primitives::PrimitiveSignature::new(
+        let signature = alloy::primitives::Signature::new(
             alloy::primitives::U256::from(random::<u64>()),
             alloy::primitives::U256::from(random::<u64>()),
             random(),
@@ -1613,7 +1613,7 @@ mod test {
         let roundtrip_signature = Signature::from(signature);
         assert_eq!(
             signature,
-            alloy::primitives::PrimitiveSignature::from(roundtrip_signature)
+            alloy::primitives::Signature::from(roundtrip_signature)
         );
     }
 

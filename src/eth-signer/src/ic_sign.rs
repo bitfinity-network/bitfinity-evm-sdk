@@ -1,7 +1,7 @@
 use std::fmt;
 
 use alloy::consensus::SignableTransaction;
-use alloy::primitives::{Address, PrimitiveSignature, SignatureError, U256};
+use alloy::primitives::{Address, Signature as PrimitiveSignature, SignatureError, U256};
 use alloy::signers::k256::ecdsa::{RecoveryId, Signature as EcsaSignature, VerifyingKey};
 use alloy::signers::utils::public_key_to_address;
 use candid::{CandidType, Principal};
@@ -281,7 +281,7 @@ mod tests {
             .await
             .unwrap();
 
-        let primitive_signature = alloy::primitives::PrimitiveSignature::from(signature);
+        let primitive_signature = alloy::primitives::Signature::from(signature);
 
         let recovered_from = primitive_signature
             .recover_address_from_prehash(&tx.signature_hash())
