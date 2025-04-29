@@ -35,19 +35,23 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     }
 
     /// Add principal to the access control list
-    pub async fn add_principal_to_access_list(
+    pub async fn admin_add_principal_to_access_list(
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("add_access", (principal,)).await
+        self.client
+            .update("admin_add_principal_to_access_list", (principal,))
+            .await
     }
 
     /// Remove principal from the access control list
-    pub async fn remove_principal_from_access_list(
+    pub async fn admin_remove_principal_from_access_list(
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("remove_access", (principal,)).await
+        self.client
+            .update("admin_remove_principal_from_access_list", (principal,))
+            .await
     }
 
     /// Get the owner of the canister
@@ -56,11 +60,11 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     }
 
     /// Set the owner of the canister
-    pub async fn set_owner(
+    pub async fn admin_set_owner(
         &self,
         principal: Principal,
     ) -> CanisterClientResult<SignatureVerificationResult<()>> {
-        self.client.update("set_owner", (principal,)).await
+        self.client.update("admin_set_owner", (principal,)).await
     }
 
     /// Get the access control list
@@ -71,5 +75,22 @@ impl<C: CanisterClient> SignatureVerificationCanisterClient<C> {
     /// Returns the build data of the canister.
     pub async fn get_canister_build_data(&self) -> CanisterClientResult<BuildData> {
         self.client.query("get_canister_build_data", ()).await
+    }
+
+    /// Get the evm canister for the transaction forwarding
+    pub async fn get_evm_canister(
+        &self,
+    ) -> CanisterClientResult<SignatureVerificationResult<Principal>> {
+        self.client.query("get_evm_canister", ()).await
+    }
+
+    /// Sets the evm canister for the transaction forwarding
+    pub async fn admin_set_evm_canister(
+        &self,
+        principal: Principal,
+    ) -> CanisterClientResult<SignatureVerificationResult<()>> {
+        self.client
+            .update("admin_set_evm_canister", (principal,))
+            .await
     }
 }

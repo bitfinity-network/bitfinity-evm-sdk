@@ -20,6 +20,9 @@ pub enum Permission {
     UpdateLogsConfiguration,
     /// Allows calling the endpoints to set validate unsafe blocks
     ValidateUnsafeBlocks,
+    /// Allows the signature verification canister to send transaction to
+    /// the EVM Canister
+    PrivilegedSendTransaction,
 }
 
 #[derive(Debug, Clone, Default, CandidType, Deserialize, PartialEq, Eq, serde::Serialize)]
