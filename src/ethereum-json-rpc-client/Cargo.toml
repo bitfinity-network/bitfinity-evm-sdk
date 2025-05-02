@@ -19,13 +19,14 @@ reqwest = ["dep:reqwest"]
 http-outcall = ["dep:url"]
 # Adds an API method `sanitize_http_response` to the canister and `HttpOutcallClient::new_sanitized` method to use it.
 # We feature-gate it because it changes the API of the canister which is not always necessary.
-sanitize-http-outcall = []
+sanitize-http-outcall = ["dep:ic-cdk"]
 
 [dependencies]
 alloy = { workspace = true }
 candid = { workspace = true }
 did = { workspace = true }
 ic-canister-client = { workspace = true, optional = true }
+ic-cdk = { workspace = true, optional = true }
 ic-exports = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }

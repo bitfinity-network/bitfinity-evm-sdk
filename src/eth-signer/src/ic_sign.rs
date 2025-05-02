@@ -7,10 +7,10 @@ use alloy::signers::utils::public_key_to_address;
 use candid::{CandidType, Principal};
 use did::transaction::{Parity, Signature as DidSignature};
 use ic_canister::virtual_canister_call;
-use ic_exports::ic_cdk::api::call::RejectionCode;
-use ic_exports::ic_cdk::api::management_canister::ecdsa::{
-    EcdsaCurve, EcdsaKeyId, EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
-    SignWithEcdsaResponse,
+use ic_exports::ic_cdk::call::Error as CallError;
+use ic_exports::ic_cdk::management_canister::{
+    EcdsaCurve, EcdsaKeyId, EcdsaPublicKeyArgs, EcdsaPublicKeyResult, SignWithEcdsaArgs,
+    SignWithEcdsaResult,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -19,8 +19,8 @@ pub type DerivationPath = Vec<Vec<u8>>;
 
 #[derive(Debug, Error)]
 pub enum IcSignerError {
-    #[error("IC failed to sign data with rejection code {0:?}: {1}")]
-    SigningFailed(RejectionCode, String),
+    #[error("IC failed to sign data: {0}")]
+    SigningFailed(#[from] CallError),
 
     #[error("from address is not specified in transaction")]
     FromAddressNotPresent,
@@ -128,7 +128,7 @@ impl IcSigner {
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
     ) -> Result<DidSignature, IcSignerError> {
-        let request = SignWithEcdsaArgument {
+        let request = SignWithEcdsaArgs {
             key_id: EcdsaKeyId {
                 curve: EcdsaCurve::Secp256k1,
                 name: key_id.to_string(),
@@ -141,11 +141,10 @@ impl IcSigner {
             Principal::management_canister(),
             "sign_with_ecdsa",
             (request,),
-            SignWithEcdsaResponse,
+            SignWithEcdsaResult,
             100_000_000_000
         )
-        .await
-        .map_err(|(code, msg)| IcSignerError::SigningFailed(code, msg))?
+        .await?
         .signature;
 
         // IC doesn't support recovery id signature parameter, so we
@@ -175,7 +174,7 @@ impl IcSigner {
         key_id: SigningKeyId,
         derivation_path: DerivationPath,
     ) -> Result<Vec<u8>, IcSignerError> {
-        let request = EcdsaPublicKeyArgument {
+        let request = EcdsaPublicKeyArgs {
             canister_id: None,
             derivation_path,
             key_id: EcdsaKeyId {
@@ -187,10 +186,10 @@ impl IcSigner {
             Principal::management_canister(),
             "ecdsa_public_key",
             (request,),
-            EcdsaPublicKeyResponse
+            EcdsaPublicKeyResult
         )
         .await
-        .map_err(|(code, msg)| IcSignerError::SigningFailed(code, msg))
+        .map_err(IcSignerError::from)
         .map(|response| response.public_key)
     }
 
@@ -212,9 +211,8 @@ mod tests {
     use candid::Principal;
     use did::H256;
     use ic_canister::register_virtual_responder;
-    use ic_exports::ic_cdk::api::management_canister::ecdsa::{
-        EcdsaPublicKeyArgument, EcdsaPublicKeyResponse, SignWithEcdsaArgument,
-        SignWithEcdsaResponse,
+    use ic_exports::ic_cdk::management_canister::{
+        EcdsaPublicKeyArgs, EcdsaPublicKeyResult, SignWithEcdsaArgs, SignWithEcdsaResult,
     };
     use ic_exports::ic_kit::MockContext;
 
@@ -232,19 +230,19 @@ mod tests {
         register_virtual_responder(
             Principal::management_canister(),
             "sign_with_ecdsa",
-            move |args: (SignWithEcdsaArgument,)| {
+            move |args: (SignWithEcdsaArgs,)| {
                 let hash = args.0.message_hash;
                 let h256 = H256::from_slice(&hash);
                 let signature = wallet_to_sign.sign_hash_sync(&h256.0).unwrap();
                 let signature: Vec<u8> = signature.as_bytes().into_iter().take(64).collect();
-                SignWithEcdsaResponse { signature }
+                SignWithEcdsaResult { signature }
             },
         );
 
         register_virtual_responder(
             Principal::management_canister(),
             "ecdsa_public_key",
-            move |_: (EcdsaPublicKeyArgument,)| EcdsaPublicKeyResponse {
+            move |_: (EcdsaPublicKeyArgs,)| EcdsaPublicKeyResult {
                 public_key: pubkey.as_bytes().to_vec(),
                 chain_code: vec![],
             },

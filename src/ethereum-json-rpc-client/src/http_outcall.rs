@@ -3,12 +3,12 @@ use std::pin::Pin;
 
 use did::rpc::request::RpcRequest;
 use did::rpc::response::RpcResponse;
-use ic_cdk::api::management_canister::http_request::{
-    self, CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
+use ic_exports::ic_cdk;
+use ic_exports::ic_cdk::management_canister::{
+    self, HttpHeader, HttpMethod, HttpRequestArgs, TransformContext,
 };
 #[cfg(feature = "sanitize-http-outcall")]
-use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
-use ic_exports::ic_cdk;
+use ic_exports::ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 
 use crate::{Client, JsonRpcError, JsonRpcResult};
 
@@ -69,10 +69,15 @@ impl HttpOutcallClient {
     /// Only available with Cargo feature `sanitize-http-outcall`.
     #[cfg(feature = "sanitize-http-outcall")]
     pub fn sanitized(mut self) -> Self {
-        self.transform_context = Some(TransformContext::from_name(
-            "sanitize_http_response".into(),
-            vec![],
-        ));
+        use ic_exports::ic_cdk::management_canister::TransformFunc;
+
+        self.transform_context = Some(TransformContext {
+            function: TransformFunc(candid::Func {
+                method: "sanitize_http_response".to_string(),
+                principal: ic_exports::ic_cdk::api::canister_self(),
+            }),
+            context: vec![],
+        });
         self
     }
 
@@ -91,7 +96,7 @@ impl HttpOutcallClient {
 
 #[cfg(feature = "sanitize-http-outcall")]
 #[ic_cdk::query]
-fn sanitize_http_response(raw_response: TransformArgs) -> HttpResponse {
+fn sanitize_http_response(raw_response: TransformArgs) -> HttpRequestResult {
     const USE_HEADERS: &[&str] = &["content-encoding", "content-length", "content-type", "host"];
     let TransformArgs { mut response, .. } = raw_response;
     response
@@ -133,7 +138,7 @@ impl Client for HttpOutcallClient {
             log::trace!("Making http request to {url} with headers: {headers:?}");
             log::trace!("Request body is: {}", String::from_utf8_lossy(&body));
 
-            let request = CanisterHttpRequestArgument {
+            let request = HttpRequestArgs {
                 url,
                 max_response_bytes,
                 method: HttpMethod::POST,
@@ -142,9 +147,9 @@ impl Client for HttpOutcallClient {
                 transform,
             };
 
-            let cost = http_request_required_cycles(&request);
+            let cost = management_canister::cost_http_request(&request);
 
-            let cycles_available = ic_exports::ic_cdk::api::canister_balance128();
+            let cycles_available = ic_exports::ic_cdk::api::canister_cycle_balance();
             if cycles_available < cost {
                 return Err(JsonRpcError::InsufficientCycles {
                     available: cycles_available,
@@ -152,13 +157,7 @@ impl Client for HttpOutcallClient {
                 });
             }
 
-            let http_response = http_request::http_request(request, cost)
-                .await
-                .map(|(res,)| res)
-                .map_err(|(r, m)| JsonRpcError::CanisterCall {
-                    rejection_code: r,
-                    message: m,
-                })?;
+            let http_response = management_canister::http_request(&request).await?;
 
             log::trace!(
                 "CanisterClient - Response from http_outcall'. Response: {} {:?}. Body: {}",
@@ -176,23 +175,6 @@ impl Client for HttpOutcallClient {
     }
 }
 
-// Calculate cycles for http_request
-// NOTE:
-// https://github.com/dfinity/cdk-rs/blob/710a6cdcc3eb03d2392df1dfd5f047dff9deee80/examples/management_canister/src/caller/lib.rs#L7-L19
-pub fn http_request_required_cycles(arg: &CanisterHttpRequestArgument) -> u128 {
-    let max_response_bytes = match arg.max_response_bytes {
-        Some(ref n) => *n as u128,
-        None => 2 * 1024 * 1024u128, // default 2MiB
-    };
-    let arg_raw = candid::utils::encode_args((arg,)).expect("Failed to encode arguments.");
-    // The fee is for a 13-node subnet to demonstrate a typical usage.
-    (3_000_000u128
-        + 60_000u128 * 13
-        + (arg_raw.len() as u128 + "http_request".len() as u128) * 400
-        + max_response_bytes * 800)
-        * 13
-}
-
 #[cfg(test)]
 #[cfg(feature = "sanitize-http-outcall")]
 mod tests {
@@ -203,7 +185,7 @@ mod tests {
     #[test]
     fn sanitize_http_response_removes_extra_headers() {
         let transform_args = TransformArgs {
-            response: HttpResponse {
+            response: HttpRequestResult {
                 status: 200u128.into(),
                 headers: vec![
                     HttpHeader {
@@ -228,7 +210,7 @@ mod tests {
             context: vec![],
         };
 
-        let sanitized: HttpResponse = sanitize_http_response(transform_args);
+        let sanitized: HttpRequestResult = sanitize_http_response(transform_args);
         assert_eq!(sanitized.headers.len(), 3);
         assert_eq!(sanitized.status, Nat::from(200u128));
         assert!(
