@@ -2,7 +2,7 @@
 
 use did::H256;
 use did::rpc::response::Failure;
-use ic_exports::ic_kit::RejectionCode;
+use ic_exports::ic_cdk::call::Error as CallError;
 use thiserror::Error;
 
 /// Result type for the Ethereum JSON-RPC client.
@@ -15,13 +15,8 @@ pub enum JsonRpcError {
     #[cfg(feature = "ic-canister-client")]
     #[error("Canister client error: {0}")]
     CanisterClient(#[from] ic_canister_client::CanisterClientError),
-    #[error("Canister call failed with code: {rejection_code:?}: {message}")]
-    CanisterCall {
-        /// Canister [`RejectionCode`].
-        rejection_code: RejectionCode,
-        /// Canister rejection message.
-        message: String,
-    },
+    #[error("Canister call failed: {0}")]
+    CanisterCall(#[from] CallError),
     /// Error while parsing the JSON response.
     #[error("Invalid JSON response: {0}")]
     Json(#[from] serde_json::Error),
