@@ -11,21 +11,35 @@ use jsonrpsee::types::{ErrorCode, ErrorObject};
 
 use crate::database::{CertifiedBlock, DatabaseClient};
 
-#[derive(Clone)]
-pub struct EthImpl<C>
+pub struct EthImpl<C, DB>
 where
+    DB: DatabaseClient,
     C: Client + Send + Sync + 'static,
 {
-    pub blockchain: Arc<dyn DatabaseClient + 'static>,
+    pub blockchain: Arc<DB>,
     pub evm_client: Arc<EthJsonRpcClient<C>>,
 }
 
-impl<C> EthImpl<C>
+impl <C, DB> Clone for EthImpl<C, DB>
 where
+    DB: DatabaseClient,
+    C: Client + Send + Sync + 'static,
+ {
+    fn clone(&self) -> Self {
+        Self {
+            blockchain: self.blockchain.clone(),
+            evm_client: self.evm_client.clone(),
+        }
+    }
+}
+
+impl<C, DB> EthImpl<C, DB>
+where
+    DB: DatabaseClient,
     C: Client + Send + Sync + 'static,
 {
     pub fn new(
-        db: Arc<dyn DatabaseClient + 'static>,
+        db: Arc<DB>,
         evm_client: Arc<EthJsonRpcClient<C>>,
     ) -> Self {
         Self {
@@ -74,9 +88,10 @@ pub trait IC {
     ) -> RpcResult<BlockConfirmationResult>;
 }
 
-#[async_trait::async_trait]
-impl<C> ICServer for EthImpl<C>
+#[jsonrpsee::core::async_trait]
+impl<C, DB> ICServer for EthImpl<C, DB>
 where
+    DB: DatabaseClient + Send + Sync + 'static,
     C: Client + Send + Sync + 'static,
 {
     async fn get_genesis_balances(&self) -> RpcResult<Vec<(Address, U256)>> {
@@ -143,9 +158,10 @@ where
     }
 }
 
-#[async_trait::async_trait]
-impl<C> EthServer for EthImpl<C>
+#[jsonrpsee::core::async_trait]
+impl<C, DB> EthServer for EthImpl<C, DB>
 where
+    DB: DatabaseClient + Send + Sync + 'static,
     C: Client + Send + Sync + 'static,
 {
     async fn get_block_by_number(

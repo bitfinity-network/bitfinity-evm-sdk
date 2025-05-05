@@ -71,7 +71,6 @@ impl PostgresDbClient {
     }
 }
 
-#[async_trait::async_trait]
 impl DatabaseClient for PostgresDbClient {
     async fn init(&self, block: Option<Block<H256>>, reset_database: bool) -> anyhow::Result<()> {
         MIGRATOR.run(&self.pool).await?;

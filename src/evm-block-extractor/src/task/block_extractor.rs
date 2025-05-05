@@ -10,9 +10,9 @@ use crate::config::ExtractorArgs;
 use crate::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 
 /// Starts the block extractor process
-pub async fn start_extractor<C: Client>(
+pub async fn start_extractor<C: Client, DB: DatabaseClient>(
     config: ExtractorArgs,
-    db_client: Arc<dyn DatabaseClient>,
+    db_client: Arc<DB>,
     evm_client: Arc<EthJsonRpcClient<C>>,
 ) -> anyhow::Result<()> {
     let earliest_block = evm_client
@@ -44,11 +44,11 @@ pub async fn start_extractor<C: Client>(
 }
 
 /// Extracts blocks from an EVMC and stores them in a database
-pub struct BlockExtractor<C: Client> {
+pub struct BlockExtractor<C: Client, DB: DatabaseClient> {
     client: Arc<EthJsonRpcClient<C>>,
     request_time_out_secs: u64,
     rpc_batch_size: usize,
-    blockchain: Arc<dyn DatabaseClient>,
+    blockchain: Arc<DB>,
 }
 
 /// Outcome of the block extraction process
@@ -60,12 +60,12 @@ pub enum BlockExtractCollectOutcome {
     BlocksExtracted { from_block: u64, to_block: u64 },
 }
 
-impl<C: Client> BlockExtractor<C> {
+impl<C: Client, DB: DatabaseClient> BlockExtractor<C, DB> {
     pub fn new(
         client: Arc<EthJsonRpcClient<C>>,
         request_time_out_secs: u64,
         rpc_batch_size: usize,
-        blockchain: Arc<dyn DatabaseClient>,
+        blockchain: Arc<DB>,
     ) -> Self {
         Self {
             client,
@@ -366,13 +366,15 @@ mod tests {
     use did::keccak;
     use ethereum_json_rpc_client::reqwest::ReqwestClient;
 
+    use crate::database::postgres_db_client::PostgresDbClient;
+
     use super::*;
 
     #[test]
     fn test_validate_chain_without_blocks_in_storage() {
         let latest_block_in_storage = Option::<did::Block<did::H256>>::None;
         let sequence = generate_valid_blocks_sequence(10, did::H256::default());
-        BlockExtractor::<ReqwestClient>::validate_chain(latest_block_in_storage, &sequence)
+        BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(latest_block_in_storage, &sequence)
             .unwrap();
     }
 
@@ -384,7 +386,7 @@ mod tests {
         let hash = block.hash.clone();
         let latest_block_in_storage = Some(block);
         let sequence = generate_valid_blocks_sequence(10, hash);
-        BlockExtractor::<ReqwestClient>::validate_chain(latest_block_in_storage, &sequence)
+        BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(latest_block_in_storage, &sequence)
             .unwrap();
     }
 
@@ -397,7 +399,7 @@ mod tests {
         let invalid_parent_hash = keccak::keccak_hash(&[1, 2, 3]);
         let sequence = generate_valid_blocks_sequence(10, invalid_parent_hash);
         let err =
-            BlockExtractor::<ReqwestClient>::validate_chain(latest_block_in_storage, &sequence)
+            BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(latest_block_in_storage, &sequence)
                 .unwrap_err();
         assert!(matches!(err, ChainError::InconsistentStorage))
     }
@@ -415,7 +417,7 @@ mod tests {
         sequence[5].parent_hash = keccak::keccak_hash(&[1, 2, 3, 4]);
 
         let err =
-            BlockExtractor::<ReqwestClient>::validate_chain(latest_block_in_storage, &sequence)
+            BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(latest_block_in_storage, &sequence)
                 .unwrap_err();
         assert!(matches!(err, ChainError::InconsistentSequence))
     }

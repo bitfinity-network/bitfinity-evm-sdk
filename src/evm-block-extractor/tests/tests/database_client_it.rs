@@ -1,5 +1,5 @@
 use did::{Block, H160, H256, Transaction, U64, U256};
-use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
+use evm_block_extractor::database::{postgres_db_client::PostgresDbClient, AccountBalance, CertifiedBlock, DatabaseClient};
 use rand::random;
 
 use crate::test_with_clients;
@@ -715,7 +715,7 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
 }
 
 async fn check_blocks_with_txs_storage_state(
-    db_client: &dyn DatabaseClient,
+    db_client: &PostgresDbClient,
     blocks: &[Block<did::H256>],
     storage_state: StorageState,
 ) -> bool {
