@@ -20,11 +20,11 @@ where
     pub evm_client: Arc<EthJsonRpcClient<C>>,
 }
 
-impl <C, DB> Clone for EthImpl<C, DB>
+impl<C, DB> Clone for EthImpl<C, DB>
 where
     DB: DatabaseClient,
     C: Client + Send + Sync + 'static,
- {
+{
     fn clone(&self) -> Self {
         Self {
             blockchain: self.blockchain.clone(),
@@ -38,10 +38,7 @@ where
     DB: DatabaseClient,
     C: Client + Send + Sync + 'static,
 {
-    pub fn new(
-        db: Arc<DB>,
-        evm_client: Arc<EthJsonRpcClient<C>>,
-    ) -> Self {
+    pub fn new(db: Arc<DB>, evm_client: Arc<EthJsonRpcClient<C>>) -> Self {
         Self {
             blockchain: db,
             evm_client,

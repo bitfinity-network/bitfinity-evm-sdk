@@ -1,5 +1,6 @@
 use did::{Block, H160, H256, Transaction, U64, U256};
-use evm_block_extractor::database::{postgres_db_client::PostgresDbClient, AccountBalance, CertifiedBlock, DatabaseClient};
+use evm_block_extractor::database::postgres_db_client::PostgresDbClient;
+use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use rand::random;
 
 use crate::test_with_clients;

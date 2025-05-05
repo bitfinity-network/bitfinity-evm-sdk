@@ -366,16 +366,18 @@ mod tests {
     use did::keccak;
     use ethereum_json_rpc_client::reqwest::ReqwestClient;
 
-    use crate::database::postgres_db_client::PostgresDbClient;
-
     use super::*;
+    use crate::database::postgres_db_client::PostgresDbClient;
 
     #[test]
     fn test_validate_chain_without_blocks_in_storage() {
         let latest_block_in_storage = Option::<did::Block<did::H256>>::None;
         let sequence = generate_valid_blocks_sequence(10, did::H256::default());
-        BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(latest_block_in_storage, &sequence)
-            .unwrap();
+        BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(
+            latest_block_in_storage,
+            &sequence,
+        )
+        .unwrap();
     }
 
     #[test]
@@ -386,8 +388,11 @@ mod tests {
         let hash = block.hash.clone();
         let latest_block_in_storage = Some(block);
         let sequence = generate_valid_blocks_sequence(10, hash);
-        BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(latest_block_in_storage, &sequence)
-            .unwrap();
+        BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(
+            latest_block_in_storage,
+            &sequence,
+        )
+        .unwrap();
     }
 
     #[test]
@@ -398,9 +403,11 @@ mod tests {
         let latest_block_in_storage = Some(block);
         let invalid_parent_hash = keccak::keccak_hash(&[1, 2, 3]);
         let sequence = generate_valid_blocks_sequence(10, invalid_parent_hash);
-        let err =
-            BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(latest_block_in_storage, &sequence)
-                .unwrap_err();
+        let err = BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(
+            latest_block_in_storage,
+            &sequence,
+        )
+        .unwrap_err();
         assert!(matches!(err, ChainError::InconsistentStorage))
     }
 
@@ -416,9 +423,11 @@ mod tests {
         // break the sequnce
         sequence[5].parent_hash = keccak::keccak_hash(&[1, 2, 3, 4]);
 
-        let err =
-            BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(latest_block_in_storage, &sequence)
-                .unwrap_err();
+        let err = BlockExtractor::<ReqwestClient, PostgresDbClient>::validate_chain(
+            latest_block_in_storage,
+            &sequence,
+        )
+        .unwrap_err();
         assert!(matches!(err, ChainError::InconsistentSequence))
     }
 
