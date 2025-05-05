@@ -676,7 +676,7 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
 
         assert!(
             check_blocks_with_txs_storage_state(
-                &*db_client,
+                &db_client,
                 &blocks[..FIRST_REMOVED_BLOCK as usize - 1],
                 StorageState::Present,
             )
@@ -685,7 +685,7 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
 
         assert!(
             check_blocks_with_txs_storage_state(
-                &*db_client,
+                &db_client,
                 &blocks[FIRST_REMOVED_BLOCK as usize - 1..],
                 StorageState::NotPresent,
             )
