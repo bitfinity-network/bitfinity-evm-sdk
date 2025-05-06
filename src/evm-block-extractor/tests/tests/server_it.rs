@@ -10,6 +10,7 @@ use did::rpc::version::Version;
 use did::{Block, BlockNumber, H160, H256, U64, U256};
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{Client, EthJsonRpcClient};
+use evm_block_extractor::database::postgres_db_client::PostgresDbClient;
 use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use evm_block_extractor::rpc::{EthImpl, EthServer, ICServer};
 use jsonrpsee::RpcModule;
@@ -22,7 +23,7 @@ use crate::tests::block_extractor_it::MockClient;
 
 const BLOCK_COUNT: u64 = 10;
 
-async fn with_filled_db<Func: AsyncFn(Arc<dyn DatabaseClient>) -> ()>(func: Func) {
+async fn with_filled_db<Func: AsyncFn(Arc<PostgresDbClient>) -> ()>(func: Func) {
     test_with_clients(async |db_client| {
         db_client.init(None, false).await.unwrap();
 
@@ -346,7 +347,7 @@ async fn test_get_evm_global_state() {
 }
 
 async fn new_server(
-    db_client: Arc<dyn DatabaseClient>,
+    db_client: Arc<PostgresDbClient>,
     evm_client: Option<Arc<EthJsonRpcClient<MockClient>>>,
 ) -> (EthJsonRpcClient<ReqwestClient>, u16, ServerHandle) {
     let evm_client = evm_client.unwrap_or_else(|| {
@@ -355,7 +356,7 @@ async fn new_server(
         )))
     });
 
-    let eth = EthImpl::<MockClient>::new(db_client, evm_client);
+    let eth = EthImpl::<MockClient, PostgresDbClient>::new(db_client, evm_client);
     let mut module = RpcModule::new(());
     module.merge(EthServer::into_rpc(eth.clone())).unwrap();
     module.merge(ICServer::into_rpc(eth)).unwrap();

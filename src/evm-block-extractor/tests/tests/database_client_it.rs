@@ -1,4 +1,5 @@
 use did::{Block, H160, H256, Transaction, U64, U256};
+use evm_block_extractor::database::postgres_db_client::PostgresDbClient;
 use evm_block_extractor::database::{AccountBalance, CertifiedBlock, DatabaseClient};
 use rand::random;
 
@@ -675,7 +676,7 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
 
         assert!(
             check_blocks_with_txs_storage_state(
-                &*db_client,
+                &db_client,
                 &blocks[..FIRST_REMOVED_BLOCK as usize - 1],
                 StorageState::Present,
             )
@@ -684,7 +685,7 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
 
         assert!(
             check_blocks_with_txs_storage_state(
-                &*db_client,
+                &db_client,
                 &blocks[FIRST_REMOVED_BLOCK as usize - 1..],
                 StorageState::NotPresent,
             )
@@ -715,7 +716,7 @@ async fn test_blockchain_tail_discard_and_get_discarded_entries() {
 }
 
 async fn check_blocks_with_txs_storage_state(
-    db_client: &dyn DatabaseClient,
+    db_client: &PostgresDbClient,
     blocks: &[Block<did::H256>],
     storage_state: StorageState,
 ) -> bool {

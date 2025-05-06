@@ -21,7 +21,6 @@ log = { workspace = true }
 tokio = { workspace = true }
 
 [dev-dependencies]
-async-trait = { workspace = true }
 candid = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }

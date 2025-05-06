@@ -15,7 +15,7 @@ use did::{
 };
 use ethereum_json_rpc_client::reqwest::ReqwestClient;
 use ethereum_json_rpc_client::{CertifiedResult, Client, EthJsonRpcClient, JsonRpcResult};
-use evm_block_extractor::database::AccountBalance;
+use evm_block_extractor::database::{AccountBalance, DatabaseClient};
 use evm_block_extractor::server;
 use evm_block_extractor::task::block_extractor::{BlockExtractCollectOutcome, BlockExtractor};
 use serde::de::DeserializeOwned;
