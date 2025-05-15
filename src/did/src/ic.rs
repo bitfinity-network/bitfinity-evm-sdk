@@ -116,10 +116,11 @@ pub struct BlockchainBlockInfo {
 
 /// Strategy for confirming a block.
 /// When a block is confirmed, it becomes `safe`.
-#[derive(Debug, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, CandidType, Serialize, Deserialize, PartialEq, Eq)]
 pub enum BlockConfirmationStrategy {
     /// The block does not require any particular confirmation,
     /// it is always considered safe.
+    #[default]
     None,
 
     /// The block requires a proof of work to be considered safe.
