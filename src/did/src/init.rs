@@ -5,7 +5,7 @@ use ic_log::LogSettings;
 use serde::{Deserialize, Serialize};
 
 use crate::permission::Permission;
-use crate::{H160, U256};
+use crate::{BlockConfirmationStrategy, H160, U256};
 
 /// These are the arguments which are taken by the evm canister init fn
 #[derive(Debug, Clone, CandidType, Deserialize)]
@@ -27,6 +27,8 @@ pub struct EvmCanisterInitData {
     pub genesis_accounts: Vec<(H160, Option<U256>)>,
     /// Coinbase address
     pub coinbase: H160,
+    /// Block confirmation strategy
+    pub block_confirmation_strategy: BlockConfirmationStrategy,
 }
 
 impl Default for EvmCanisterInitData {
@@ -42,6 +44,7 @@ impl Default for EvmCanisterInitData {
             owner: Principal::management_canister(),
             genesis_accounts: vec![],
             coinbase: Default::default(),
+            block_confirmation_strategy: BlockConfirmationStrategy::default(),
         }
     }
 }
