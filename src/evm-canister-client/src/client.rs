@@ -550,14 +550,14 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
 
     /// Sets the coinbase address.
     pub async fn admin_set_coinbase(
-        &mut self,
+        &self,
         coinbase: H160,
     ) -> CanisterClientResult<EvmResult<()>> {
         self.client.update("admin_set_coinbase", (coinbase,)).await
     }
 
     /// Removes all transactions from the transaction pool.
-    pub async fn admin_clear_pool(&mut self) -> CanisterClientResult<EvmResult<()>> {
+    pub async fn admin_clear_pool(&self) -> CanisterClientResult<EvmResult<()>> {
         self.client.update("admin_clear_pool", ()).await
     }
 
