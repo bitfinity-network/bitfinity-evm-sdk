@@ -549,10 +549,7 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     }
 
     /// Sets the coinbase address.
-    pub async fn admin_set_coinbase(
-        &self,
-        coinbase: H160,
-    ) -> CanisterClientResult<EvmResult<()>> {
+    pub async fn admin_set_coinbase(&self, coinbase: H160) -> CanisterClientResult<EvmResult<()>> {
         self.client.update("admin_set_coinbase", (coinbase,)).await
     }
 
