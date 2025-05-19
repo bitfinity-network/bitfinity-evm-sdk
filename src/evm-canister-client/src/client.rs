@@ -11,8 +11,8 @@ use did::transaction::StorableExecutionResult;
 use did::unsafe_blocks::ValidateUnsafeBlockArgs;
 use did::{
     Block, BlockConfirmationData, BlockConfirmationResult, BlockConfirmationStrategy, BlockNumber,
-    BlockchainBlockInfo, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, H160, H256,
-    Transaction, TransactionReceipt, U64, U256,
+    BlockchainBlockInfo, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, FeeHistory,
+    H160, H256, Transaction, TransactionReceipt, U64, U256,
 };
 use ic_canister_client::{CanisterClient, CanisterClientResult};
 pub use ic_log::writer::{Log, Logs};
@@ -317,6 +317,55 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
             .await
     }
 
+    /// Returns the maximum priority fee per gas that should be paid by a transaction
+    /// to be included in the next block.
+    ///
+    /// It uses a default gas ratio threshold of 75% to determine if a block is nearly empty.
+    ///
+    /// Returns error variant only if there's no block data available.
+    ///
+    /// See <https://docs.alchemy.com/reference/eth-maxpriorityfeepergas>.
+    pub async fn eth_max_priority_fee_per_gas(&self) -> CanisterClientResult<EvmResult<U256>> {
+        self.client.query("eth_max_priority_fee_per_gas", ()).await
+    }
+
+    /// Reports the fee history, for the given amount of blocks, up until the
+    /// newest block provided.
+    ///
+    /// # JSON RPC
+    ///
+    /// This method can also be called through PRC method [`eth_feeHistory`](evm_core::rpc::EthRpc::eth_fee_history).
+    ///
+    /// # Ethereum spec
+    ///
+    /// See <https://docs.alchemy.com/reference/eth-feehistory>.
+    pub async fn eth_fee_history(
+        &self,
+        block_count: u64,
+        newest_block: BlockNumber,
+        reward_percentiles: Option<Vec<f64>>,
+    ) -> CanisterClientResult<EvmResult<FeeHistory>> {
+        self.client
+            .query(
+                "eth_fee_history",
+                (block_count, newest_block, reward_percentiles),
+            )
+            .await
+    }
+
+    /// Returns an estimate of the current price per gas in wei.
+    ///
+    /// # JSON RPC
+    ///
+    /// This method can also be called by [`eth_gasPrice`](evm_core::rpc::EthRpc::eth_gas_price) JSON RPC method.
+    ///
+    /// # Ethereum spec
+    ///
+    /// See <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gasprice>.
+    pub async fn eth_gas_price(&self) -> CanisterClientResult<EvmResult<U256>> {
+        self.client.query("eth_gas_price", ()).await
+    }
+
     /// Execute a call on the EVM without modifying the state
     /// See [eth_call](https://eth.wiki/json-rpc/API#eth_call)
     ///
@@ -431,6 +480,12 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("get_evm_global_state", ()).await
     }
 
+    /// Returns the max pool size. This is the maximum amount of transactions
+    /// that can be in the pool.
+    pub async fn get_max_tx_pool_size(&self) -> CanisterClientResult<usize> {
+        self.client.query("get_max_tx_pool_size", ()).await
+    }
+
     /// Sets the global state of the EVM.
     pub async fn admin_set_evm_global_state(
         &self,
@@ -491,6 +546,19 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client
             .update("admin_enable_unsafe_blocks", (enabled,))
             .await
+    }
+
+    /// Sets the coinbase address.
+    pub async fn admin_set_coinbase(
+        &mut self,
+        coinbase: H160,
+    ) -> CanisterClientResult<EvmResult<()>> {
+        self.client.update("admin_set_coinbase", (coinbase,)).await
+    }
+
+    /// Removes all transactions from the transaction pool.
+    pub async fn admin_clear_pool(&mut self) -> CanisterClientResult<EvmResult<()>> {
+        self.client.update("admin_clear_pool", ()).await
     }
 
     /// Returns whether unsafe blocks are enabled
