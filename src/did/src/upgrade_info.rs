@@ -28,3 +28,9 @@ impl Storable for UpgradeInfo {
         Decode!(&bytes, UpgradeInfo).expect("Failed to decode UpgradeInfo")
     }
 }
+
+#[derive(CandidType, Deserialize, Clone, Debug)]
+pub struct PaginatedUpgradeInfo {
+    pub info: Vec<UpgradeInfo>,
+    pub total_count: u64,
+}
