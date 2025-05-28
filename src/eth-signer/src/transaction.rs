@@ -89,6 +89,7 @@ impl TransactionBuilder<'_, '_> {
 mod test {
 
     use alloy::consensus::TxEnvelope;
+    use alloy::consensus::transaction::SignerRecoverable;
     use alloy::signers::k256::ecdsa::signature::hazmat::PrehashVerifier;
     use alloy::signers::utils::secret_key_to_address;
 
