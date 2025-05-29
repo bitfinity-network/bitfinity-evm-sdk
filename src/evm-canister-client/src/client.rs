@@ -9,6 +9,7 @@ use did::send_raw_transaction::SendRawTransactionRequest;
 use did::state::BasicAccount;
 use did::transaction::StorableExecutionResult;
 use did::unsafe_blocks::ValidateUnsafeBlockArgs;
+use did::upgrade_info::PaginatedUpgradeInfo;
 use did::{
     Block, BlockConfirmationData, BlockConfirmationResult, BlockConfirmationStrategy, BlockNumber,
     BlockchainBlockInfo, BlockchainStorageLimits, Bytes, EstimateGasRequest, EvmStats, FeeHistory,
@@ -925,5 +926,16 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
     /// Returns information about the blockchain blocks
     pub async fn get_blockchain_block_info(&self) -> CanisterClientResult<BlockchainBlockInfo> {
         self.client.query("get_blockchain_block_info", ()).await
+    }
+
+    /// Returns the upgrade info paginated by count and offset
+    pub async fn get_upgrade_info_paginated(
+        &self,
+        count: u64,
+        offset: usize,
+    ) -> CanisterClientResult<PaginatedUpgradeInfo> {
+        self.client
+            .query("get_upgrade_info_paginated", (count, offset))
+            .await
     }
 }
