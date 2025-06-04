@@ -2,7 +2,7 @@ use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
 /// Contains the build data.
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct BuildData {
     pub cargo_target_triple: String,
     pub cargo_features: String,

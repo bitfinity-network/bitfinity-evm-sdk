@@ -7,7 +7,7 @@ use serde::Deserialize;
 use crate::build::BuildData;
 
 /// Historical information about the canister
-#[derive(CandidType, Deserialize, Clone, Default, Debug)]
+#[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct UpgradeInfo {
     /// The build data of the canister
     pub build_data: BuildData,
@@ -27,10 +27,4 @@ impl Storable for UpgradeInfo {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Decode!(&bytes, UpgradeInfo).expect("Failed to decode UpgradeInfo")
     }
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-pub struct PaginatedUpgradeInfo {
-    pub info: Vec<UpgradeInfo>,
-    pub total_count: u64,
 }
