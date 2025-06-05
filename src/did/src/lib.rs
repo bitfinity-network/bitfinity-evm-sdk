@@ -30,6 +30,7 @@ pub mod http;
 pub mod rpc;
 #[cfg(test)]
 mod test_utils;
+pub mod upgrade_info;
 pub mod utils;
 
 pub use block::Block;
