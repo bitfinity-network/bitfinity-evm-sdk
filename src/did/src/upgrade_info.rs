@@ -6,14 +6,14 @@ use serde::Deserialize;
 
 use crate::build::BuildData;
 
-/// Historical information about the canister
 #[derive(CandidType, Deserialize, Clone, Debug)]
+/// Information about a canister upgrade, tracking deployment details and blockchain state.
 pub struct UpgradeInfo {
-    /// The build data of the canister
+    /// Compilation and build information for the deployed canister version
     pub build_data: BuildData,
-    /// The timestamp of the deployment
+    /// Unix timestamp (in seconds) when the upgrade was deployed.
     pub deploy_ts: u64,
-    /// The last block number
+    /// The blockchain block number at the time the upgrade was performed.
     pub last_block_number: u64,
 }
 

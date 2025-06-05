@@ -928,10 +928,8 @@ impl<C: CanisterClient> EvmCanisterClient<C> {
         self.client.query("get_blockchain_block_info", ()).await
     }
 
-    /// Returns the upgrade info for the canister of the last `count` entries
+    /// Returns the details of the last `count` canister upgrades.
     pub async fn get_upgrade_info(&self, count: u64) -> CanisterClientResult<UpgradeInfo> {
-        self.client
-            .query("get_upgrade_info_paginated", (count,))
-            .await
+        self.client.query("get_upgrade_info", (count,)).await
     }
 }
