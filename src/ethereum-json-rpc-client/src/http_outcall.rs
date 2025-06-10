@@ -48,32 +48,10 @@ impl HttpOutcallClient {
     ///
     /// Transform context is used to sanitize HTTP responses before checking for consensus.
     ///
-    /// You can use [`sanitized`] method to set up default transform context. (Available with
-    /// Cargo feature `sanitize-http-outcall`)
-    ///
     /// # Arguments
     /// * `transform_context` - method to use to sanitize HTTP response
     pub fn with_transform(mut self, transform_context: TransformContext) -> Self {
         self.transform_context = Some(transform_context);
-        self
-    }
-
-    /// Sets default transform context for the client.
-    ///
-    /// The default sanitize drops most of HTTP headers that may prevent consensus on the response.
-    ///
-    /// Only available with Cargo feature `sanitize-http-outcall`.
-    #[cfg(feature = "sanitize-http-outcall")]
-    pub fn sanitized(mut self) -> Self {
-        use ic_exports::ic_cdk::management_canister::TransformFunc;
-
-        self.transform_context = Some(TransformContext {
-            function: TransformFunc(candid::Func {
-                method: "sanitize_http_response".to_string(),
-                principal: ic_exports::ic_cdk::api::canister_self(),
-            }),
-            context: vec![],
-        });
         self
     }
 
@@ -88,17 +66,6 @@ impl HttpOutcallClient {
     pub fn set_max_response_bytes(&mut self, max_response_bytes: Option<u64>) {
         self.max_response_bytes = max_response_bytes;
     }
-}
-
-#[cfg(feature = "sanitize-http-outcall")]
-fn sanitize_http_response(raw_response: ic_exports::ic_cdk::management_canister::TransformArgs) -> ic_exports::ic_cdk::management_canister::HttpRequestResult {
-    const USE_HEADERS: &[&str] = &["content-encoding", "content-length", "content-type", "host"];
-    let ic_exports::ic_cdk::management_canister::TransformArgs { mut response, .. } = raw_response;
-    response
-        .headers
-        .retain(|header| USE_HEADERS.iter().any(|v| v == &header.name.to_lowercase()));
-
-    response
 }
 
 impl Client for HttpOutcallClient {
@@ -167,54 +134,5 @@ impl Client for HttpOutcallClient {
 
             Ok(response)
         })
-    }
-}
-
-#[cfg(test)]
-#[cfg(feature = "sanitize-http-outcall")]
-mod tests {
-    use candid::Nat;
-    use ic_exports::ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
-
-    use super::*;
-
-    #[test]
-    fn sanitize_http_response_removes_extra_headers() {
-        let transform_args = TransformArgs {
-            response: HttpRequestResult {
-                status: 200u128.into(),
-                headers: vec![
-                    HttpHeader {
-                        name: "content-type".to_string(),
-                        value: "application/json".to_string(),
-                    },
-                    HttpHeader {
-                        name: "content-length".to_string(),
-                        value: "42".to_string(),
-                    },
-                    HttpHeader {
-                        name: "content-encoding".to_string(),
-                        value: "gzip".to_string(),
-                    },
-                    HttpHeader {
-                        name: "date".to_string(),
-                        value: "Fri, 11 Oct 2024 10:25:08 GMT".to_string(),
-                    },
-                ],
-                body: vec![],
-            },
-            context: vec![],
-        };
-
-        let sanitized: HttpRequestResult = sanitize_http_response(transform_args);
-        assert_eq!(sanitized.headers.len(), 3);
-        assert_eq!(sanitized.status, Nat::from(200u128));
-        assert!(
-            sanitized
-                .headers
-                .iter()
-                .any(|header| header.name == "content-type")
-        );
-        assert!(!sanitized.headers.iter().any(|header| header.name == "date"));
     }
 }
