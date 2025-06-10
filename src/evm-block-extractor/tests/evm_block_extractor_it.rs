@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use evm_block_extractor::config::Database;
-use evm_block_extractor::database::DatabaseClient;
+use evm_block_extractor::database::postgres_db_client::PostgresDbClient;
 use testcontainers::testcontainers::ContainerAsync;
 use testcontainers::testcontainers::runners::AsyncRunner;
 
 mod tests;
 
-async fn test_with_clients<T: AsyncFn(Arc<dyn DatabaseClient>) -> ()>(test: T) {
+async fn test_with_clients<T: AsyncFn(Arc<PostgresDbClient>) -> ()>(test: T) {
     let _ = env_logger::Builder::new().parse_filters("info").try_init();
     println!("----------------------------------");
     println!("Running test with PostgresDbClient");
@@ -17,7 +17,7 @@ async fn test_with_clients<T: AsyncFn(Arc<dyn DatabaseClient>) -> ()>(test: T) {
 }
 
 async fn new_postgres_db_client() -> (
-    Arc<dyn DatabaseClient>,
+    Arc<PostgresDbClient>,
     ContainerAsync<testcontainers::postgres::Postgres>,
 ) {
     let node = testcontainers::postgres::Postgres::default()

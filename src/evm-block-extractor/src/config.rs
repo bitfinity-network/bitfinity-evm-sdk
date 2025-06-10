@@ -4,7 +4,6 @@ use clap::{Parser, Subcommand};
 use sqlx::PgPool;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 
-use crate::database::DatabaseClient;
 use crate::database::postgres_db_client::PostgresDbClient;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -78,7 +77,7 @@ pub enum Database {
 
 impl Database {
     /// Build a database client based on the database type
-    pub async fn build_client(self) -> anyhow::Result<Arc<dyn DatabaseClient>> {
+    pub async fn build_client(self) -> anyhow::Result<Arc<PostgresDbClient>> {
         match self {
             Database::Postgres {
                 username,

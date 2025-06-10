@@ -12,7 +12,6 @@ repository.workspace = true
 [dependencies]
 alloy = { workspace = true }
 anyhow = { workspace = true }
-async-trait = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }
 did = { workspace = true }

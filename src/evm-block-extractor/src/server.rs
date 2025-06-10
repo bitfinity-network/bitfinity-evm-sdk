@@ -9,9 +9,9 @@ use crate::database::DatabaseClient;
 use crate::rpc::{EthImpl, EthServer, ICServer};
 
 /// Start the RPC server
-pub async fn server_start(
+pub async fn server_start<DB: DatabaseClient + Send + Sync + 'static>(
     server_address: &str,
-    db_client: Arc<dyn DatabaseClient>,
+    db_client: Arc<DB>,
     evm_client: Arc<EthJsonRpcClient<impl Client + 'static>>,
 ) -> anyhow::Result<ServerHandle> {
     info!("Start server");

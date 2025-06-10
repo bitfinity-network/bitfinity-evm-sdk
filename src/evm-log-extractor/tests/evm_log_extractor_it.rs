@@ -14,7 +14,6 @@ struct MockCanisterClient {
     max_logs: usize,
 }
 
-#[async_trait::async_trait]
 impl CanisterClient for MockCanisterClient {
     async fn update<T, R>(&self, _method: &str, _args: T) -> CanisterClientResult<R>
     where
