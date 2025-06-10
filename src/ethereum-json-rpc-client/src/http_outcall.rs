@@ -3,13 +3,9 @@ use std::pin::Pin;
 
 use did::rpc::request::RpcRequest;
 use did::rpc::response::RpcResponse;
-use ic_exports::ic_cdk;
 use ic_exports::ic_cdk::management_canister::{
     self, HttpHeader, HttpMethod, HttpRequestArgs, TransformContext,
 };
-#[cfg(feature = "sanitize-http-outcall")]
-use ic_exports::ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
-
 use crate::{Client, JsonRpcError, JsonRpcResult};
 
 /// EVM client that uses HTTPS Outcalls to communicate with EVM.
@@ -95,10 +91,9 @@ impl HttpOutcallClient {
 }
 
 #[cfg(feature = "sanitize-http-outcall")]
-#[ic_cdk::query]
-fn sanitize_http_response(raw_response: TransformArgs) -> HttpRequestResult {
+fn sanitize_http_response(raw_response: ic_exports::ic_cdk::management_canister::TransformArgs) -> ic_exports::ic_cdk::management_canister::HttpRequestResult {
     const USE_HEADERS: &[&str] = &["content-encoding", "content-length", "content-type", "host"];
-    let TransformArgs { mut response, .. } = raw_response;
+    let ic_exports::ic_cdk::management_canister::TransformArgs { mut response, .. } = raw_response;
     response
         .headers
         .retain(|header| USE_HEADERS.iter().any(|v| v == &header.name.to_lowercase()));
@@ -179,6 +174,7 @@ impl Client for HttpOutcallClient {
 #[cfg(feature = "sanitize-http-outcall")]
 mod tests {
     use candid::Nat;
+    use ic_exports::ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 
     use super::*;
 
