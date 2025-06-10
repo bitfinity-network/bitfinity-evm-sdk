@@ -14,7 +14,7 @@ pub enum JsonRpcError {
     /// Canister client error [`ic_canister_client::CanisterClientError`]
     #[cfg(feature = "ic-canister-client")]
     #[error("Canister client error: {0}")]
-    CanisterClient(#[from] ic_canister_client::CanisterClientError),
+    CanisterClient(#[from] Box<ic_canister_client::CanisterClientError>),
     #[error("Canister call failed: {0}")]
     CanisterCall(#[from] CallError),
     /// Error while parsing the JSON response.

@@ -14,7 +14,7 @@ pub enum EvmResetState {
     /// End of the reset process.
     /// It sets the state to the given block.
     /// If the block state hash is not equal to the current state hash, it will fail.
-    End(Block<H256>),
+    End(Box<Block<H256>>),
 }
 
 /// The EVM global state

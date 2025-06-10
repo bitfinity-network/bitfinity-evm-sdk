@@ -36,7 +36,7 @@ impl<T: CanisterClient + Sync + 'static> Client for T {
             }
             .map_err(|e| {
                 log::warn!("failed to send RPC request: {e}");
-                JsonRpcError::CanisterClient(e)
+                JsonRpcError::CanisterClient(e.into())
             })?;
 
             let response = serde_json::from_slice(&http_response.body)?;
