@@ -1,12 +1,12 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use crate::{Client, JsonRpcError, JsonRpcResult};
 use did::rpc::request::RpcRequest;
 use did::rpc::response::RpcResponse;
 use ic_exports::ic_cdk::management_canister::{
     self, HttpHeader, HttpMethod, HttpRequestArgs, TransformContext,
 };
-use crate::{Client, JsonRpcError, JsonRpcResult};
 
 /// EVM client that uses HTTPS Outcalls to communicate with EVM.
 ///
